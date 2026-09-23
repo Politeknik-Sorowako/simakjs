@@ -222,6 +222,16 @@ export default function TabRekaman(props: TabRekamanProps) {
     }
   };
 
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) {
+      setSortOrder((p) => (p === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'nama' || field === 'nim' ? 'asc' : 'desc');
+    }
+    setPage(1);
+  };
+
   const resetFilters = () => {
     setSearch('');
     setDebouncedSearch('');
@@ -324,47 +334,21 @@ export default function TabRekaman(props: TabRekamanProps) {
           <Show when={props.canManage}>
             <input
               type="checkbox"
+              aria-label="Pilih semua rekaman"
               checked={isAllSelected()}
               onChange={(e) => toggleSelectAll(e.currentTarget.checked)}
               class="accent-brand-600"
             />
           </Show>,
-          <SortableHeader
-            field="nama"
-            sortBy={sortBy()}
-            sortOrder={sortOrder()}
-            onSort={(f) => {
-              setSortBy(f);
-              setSortOrder('asc');
-              setPage(1);
-            }}
-          >
+          <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
             Mahasiswa
           </SortableHeader>,
-          <SortableHeader
-            field="tanggal"
-            sortBy={sortBy()}
-            sortOrder={sortOrder()}
-            onSort={(f) => {
-              setSortBy(f);
-              setSortOrder('desc');
-              setPage(1);
-            }}
-          >
+          <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
             Tanggal
           </SortableHeader>,
           'Sumber',
           'Jenis',
-          <SortableHeader
-            field="durasi"
-            sortBy={sortBy()}
-            sortOrder={sortOrder()}
-            onSort={(f) => {
-              setSortBy(f);
-              setSortOrder('desc');
-              setPage(1);
-            }}
-          >
+          <SortableHeader field="durasi" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
             Durasi
           </SortableHeader>,
           'Keterangan',
@@ -389,6 +373,7 @@ export default function TabRekaman(props: TabRekamanProps) {
                   <td class="py-4 px-6">
                     <input
                       type="checkbox"
+                      aria-label="Pilih rekaman baris ini"
                       checked={selectedIds().has(row.id)}
                       onChange={(e) => toggleSelect(row.id)}
                       class="accent-brand-600"

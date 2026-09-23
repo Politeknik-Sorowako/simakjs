@@ -4,6 +4,7 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 import {
   bayarKompensasiSchema,
   bulkDeleteKompensasiBayarSchema,
+  deleteKompensasiBayarSchema,
   getByBapSchema,
   getKompensasiMahasiswaDetailSchema,
   getKompensasiStatsSchema,
@@ -44,4 +45,4 @@ export const presensiRoutes = new Elysia({ prefix: '/presensi' })
   .post('/kompensasi/bayar/import', PresensiController.importKompensasiBayar, importKompensasiBayarSchema)
   .post('/kompensasi/bayar/bulk-delete', PresensiController.bulkDeleteKompensasiBayar, bulkDeleteKompensasiBayarSchema)
   .put('/kompensasi/bayar/:id', PresensiController.updateKompensasiBayar, updateKompensasiBayarSchema)
-  .delete('/kompensasi/bayar/:id', PresensiController.deleteKompensasiBayar);
+  .delete('/kompensasi/bayar/:id', PresensiController.deleteKompensasiBayar, deleteKompensasiBayarSchema);

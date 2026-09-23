@@ -473,6 +473,8 @@ export default function TabRekap(props: TabRekapProps) {
       >
         <SuspenseDetail
           detail={mhsDetail()}
+          error={mhsDetail.error}
+          onRetry={refetchDetail}
           onExport={handleExportRiwayat}
           onCetak={handleCetak}
           canManage={props.canManage}
@@ -530,6 +532,8 @@ export default function TabRekap(props: TabRekapProps) {
 function SuspenseDetail(props: {
   detail: KompensasiDetailResponse | null | undefined;
   loading?: boolean;
+  error?: unknown;
+  onRetry?: () => void;
   onExport: (d: KompensasiDetailResponse) => void;
   onCetak: (d: KompensasiDetailResponse) => void;
   onBayar: (id: number) => void;
@@ -539,7 +543,26 @@ function SuspenseDetail(props: {
   return (
     <Show
       when={d()}
-      fallback={<div class="p-6 text-center text-secondary-400 dark:text-secondary-200">Memuat riwayat...</div>}
+      fallback={
+        <div class="p-6 text-center">
+          <Show
+            when={!props.error}
+            fallback={
+              <div class="flex flex-col items-center gap-3">
+                <div class="text-danger-600 dark:text-danger-400 font-bold text-sm">Gagal memuat riwayat</div>
+                <div class="text-xs text-secondary-400 dark:text-secondary-200 max-w-md break-words">
+                  {props.error instanceof Error ? props.error.message : String(props.error)}
+                </div>
+                <Button onClick={props.onRetry} variant="secondary" class="!px-4 !py-1.5 text-xs font-bold">
+                  Coba Lagi
+                </Button>
+              </div>
+            }
+          >
+            <div class="text-secondary-400 dark:text-secondary-200">Memuat riwayat...</div>
+          </Show>
+        </div>
+      }
     >
       {(detail) => (
         <div class="flex flex-col gap-5 max-h-[78vh] overflow-y-auto pr-2">

@@ -3,7 +3,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { kompensasiAdminController, type PaymentRow } from '../../controllers/kompensasiAdminController';
 import { mahasiswaController } from '../../controllers/mahasiswaController';
-import { type PaymentItem, presensiController } from '../../controllers/presensiController';
+import { presensiController } from '../../controllers/presensiController';
 import { prodiController } from '../../controllers/prodiController';
 import { type ExportColumn, exportToExcel, exportToPDF } from '../../utils/export';
 import { fmtTanggal, getTodayString } from '../../utils/format';
@@ -299,6 +299,16 @@ export default function TabPembayaran(props: TabPembayaranProps) {
     }
   };
 
+  const toggleSort = (field: string) => {
+    if (sortBy() === field) {
+      setSortOrder((p) => (p === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'nama' || field === 'nim' ? 'asc' : 'desc');
+    }
+    setPage(1);
+  };
+
   const meta = () => data()?.meta;
   const totalPages = () => Math.max(meta()?.totalPages || 0, 1);
 
@@ -424,46 +434,20 @@ export default function TabPembayaran(props: TabPembayaranProps) {
           <Show when={props.canManage}>
             <input
               type="checkbox"
+              aria-label="Pilih semua pembayaran"
               checked={isAllSelected()}
               onChange={(e) => toggleSelectAll(e.currentTarget.checked)}
               class="accent-brand-600"
             />
           </Show>,
-          <SortableHeader
-            field="tanggal"
-            sortBy={sortBy()}
-            sortOrder={sortOrder()}
-            onSort={(f) => {
-              setSortBy(f);
-              setSortOrder('desc');
-              setPage(1);
-            }}
-          >
+          <SortableHeader field="tanggal" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
             Tanggal Bayar
           </SortableHeader>,
-          <SortableHeader
-            field="nama"
-            sortBy={sortBy()}
-            sortOrder={sortOrder()}
-            onSort={(f) => {
-              setSortBy(f);
-              setSortOrder('asc');
-              setPage(1);
-            }}
-          >
+          <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
             Mahasiswa
           </SortableHeader>,
           'Prodi',
-          <SortableHeader
-            field="jumlahMenit"
-            sortBy={sortBy()}
-            sortOrder={sortOrder()}
-            onSort={(f) => {
-              setSortBy(f);
-              setSortOrder('desc');
-              setPage(1);
-            }}
-          >
+          <SortableHeader field="jumlahMenit" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
             Menit
           </SortableHeader>,
           'Keterangan',
@@ -488,6 +472,7 @@ export default function TabPembayaran(props: TabPembayaranProps) {
                   <td class="py-4 px-6">
                     <input
                       type="checkbox"
+                      aria-label="Pilih pembayaran baris ini"
                       checked={selectedIds().has(row.id)}
                       onChange={(e) => toggleSelect(row.id)}
                       class="accent-brand-600"
@@ -652,5 +637,3 @@ export default function TabPembayaran(props: TabPembayaranProps) {
     </div>
   );
 }
-
-export type { PaymentItem };

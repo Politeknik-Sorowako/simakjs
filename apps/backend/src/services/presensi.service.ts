@@ -976,13 +976,20 @@ export class PresensiService {
     const offset = ((params.page ?? 1) - 1) * limit;
 
     let orderClause = sql`${kompensasiBayar.tanggal} DESC, ${kompensasiBayar.id} DESC`;
-    const order = params.sortOrder === 'asc' ? 'ASC' : 'DESC';
-    if (params.sortBy === 'nama') {
-      orderClause = sql`${mahasiswa.nama} ${sql.raw(order)}, ${kompensasiBayar.tanggal} DESC`;
+    if (params.sortOrder === 'asc') {
+      if (params.sortBy === 'nama') {
+        orderClause = sql`${mahasiswa.nama} ASC, ${kompensasiBayar.tanggal} DESC`;
+      } else if (params.sortBy === 'nim') {
+        orderClause = sql`${mahasiswa.nim} ASC, ${kompensasiBayar.tanggal} DESC`;
+      } else if (params.sortBy === 'jumlahMenit') {
+        orderClause = sql`${kompensasiBayar.jumlahMenit} ASC, ${kompensasiBayar.tanggal} DESC`;
+      }
+    } else if (params.sortBy === 'nama') {
+      orderClause = sql`${mahasiswa.nama} DESC, ${kompensasiBayar.tanggal} DESC`;
     } else if (params.sortBy === 'nim') {
-      orderClause = sql`${mahasiswa.nim} ${sql.raw(order)}, ${kompensasiBayar.tanggal} DESC`;
+      orderClause = sql`${mahasiswa.nim} DESC, ${kompensasiBayar.tanggal} DESC`;
     } else if (params.sortBy === 'jumlahMenit') {
-      orderClause = sql`${kompensasiBayar.jumlahMenit} ${sql.raw(order)}, ${kompensasiBayar.tanggal} DESC`;
+      orderClause = sql`${kompensasiBayar.jumlahMenit} DESC, ${kompensasiBayar.tanggal} DESC`;
     }
 
     const [[totalRow], rows] = await Promise.all([
