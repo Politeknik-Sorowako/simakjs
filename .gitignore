@@ -74,3 +74,5 @@ apps/backend/src/graphify-out/
 apps/backend/backups/*
 
 014_prompt-workflow.md
+.opencode/plans/
+docs/product_backlog.md
