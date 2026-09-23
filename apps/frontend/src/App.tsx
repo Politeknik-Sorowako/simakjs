@@ -32,7 +32,6 @@ const AdmisiSesi = lazy(() => import('./routes/AdmisiSesi'));
 const AngkatanKurikulum = lazy(() => import('./routes/AngkatanKurikulum'));
 const ApelKelola = lazy(() => import('./routes/ApelKelola'));
 const ApelMonitor = lazy(() => import('./routes/ApelMonitor'));
-const ApelVerifikasi = lazy(() => import('./routes/ApelVerifikasi'));
 const AuditLog = lazy(() => import('./routes/AuditLog'));
 const AdmisiDaftarUlangNIM = lazy(() => import('./routes/admisi/AdmisiDaftarUlangNIM'));
 const AdmisiImportUjian = lazy(() => import('./routes/admisi/AdmisiImportUjian'));
@@ -55,7 +54,6 @@ const Cpmk = lazy(() => import('./routes/Cpmk'));
 const CutiMahasiswa = lazy(() => import('./routes/CutiMahasiswa'));
 const Dashboard = lazy(() => import('./routes/Dashboard'));
 const Dosen = lazy(() => import('./routes/Dosen'));
-const DuplicateRiskKompensasi = lazy(() => import('./routes/DuplicateRiskKompensasi'));
 const EvaluasiKurikulum = lazy(() => import('./routes/EvaluasiKurikulum'));
 const EvaluasiSistem = lazy(() => import('./routes/EvaluasiSistem'));
 const InputNilai = lazy(() => import('./routes/InputNilai'));
@@ -63,6 +61,7 @@ const KelasKuliah = lazy(() => import('./routes/KelasKuliah'));
 const KeuanganDashboard = lazy(() => import('./routes/KeuanganDashboard'));
 const Khs = lazy(() => import('./routes/Khs'));
 const KhsCetak = lazy(() => import('./routes/KhsCetak'));
+const KetidakhadiranKompensasi = lazy(() => import('./routes/KetidakhadiranKompensasi'));
 const KompensasiMahasiswa = lazy(() => import('./routes/KompensasiMahasiswa'));
 const KompensasiManual = lazy(() => import('./routes/KompensasiManual'));
 const KonfigurasiAbout = lazy(() => import('./routes/KonfigurasiAbout'));
@@ -72,7 +71,6 @@ const KonfigurasiScopeProdi = lazy(() => import('./routes/KonfigurasiScopeProdi'
 const Krs = lazy(() => import('./routes/Krs'));
 const KrsCetak = lazy(() => import('./routes/KrsCetak'));
 const Kurikulum = lazy(() => import('./routes/Kurikulum'));
-const LaporanKompensasi = lazy(() => import('./routes/LaporanKompensasi'));
 const LaporanObe = lazy(() => import('./routes/LaporanObe'));
 const Mahasiswa = lazy(() => import('./routes/Mahasiswa'));
 const MahasiswaKeluar = lazy(() => import('./routes/MahasiswaKeluar'));
@@ -85,7 +83,6 @@ const Pengguna = lazy(() => import('./routes/Pengguna'));
 const PeriodeAkademik = lazy(() => import('./routes/PeriodeAkademik'));
 const PetaObe = lazy(() => import('./routes/PetaObe'));
 const PresensiMahasiswa = lazy(() => import('./routes/PresensiMahasiswa'));
-const PresensiUnknown = lazy(() => import('./routes/PresensiUnknown'));
 const Profil = lazy(() => import('./routes/Profil'));
 const ProfilLulusan = lazy(() => import('./routes/ProfilLulusan'));
 const ProgramStudi = lazy(() => import('./routes/ProgramStudi'));
@@ -269,7 +266,15 @@ function AppContent() {
             path="/laporan-kompensasi"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <LaporanKompensasi />
+                <Navigate href="/ketidakhadiran-kompensasi?tab=rekap" />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ketidakhadiran-kompensasi"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi']}>
+                <KetidakhadiranKompensasi />
               </ProtectedRoute>
             }
           />
@@ -286,7 +291,7 @@ function AppContent() {
             path="/duplicate-risk-kompensasi"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
-                <DuplicateRiskKompensasi />
+                <Navigate href="/ketidakhadiran-kompensasi?tab=rekaman" />
               </ProtectedRoute>
             }
           />
@@ -301,8 +306,8 @@ function AppContent() {
           <Route
             path="/apel/verifikasi"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'prodi']}>
-                <ApelVerifikasi />
+              <ProtectedRoute allowedRoles={['admin', 'prodi', 'kaprodi']}>
+                <Navigate href="/ketidakhadiran-kompensasi?tab=ketidakhadiran" />
               </ProtectedRoute>
             }
           />
@@ -317,8 +322,8 @@ function AppContent() {
           <Route
             path="/presensi-unknown"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi']}>
-                <PresensiUnknown />
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi']}>
+                <Navigate href="/ketidakhadiran-kompensasi?tab=ketidakhadiran" />
               </ProtectedRoute>
             }
           />

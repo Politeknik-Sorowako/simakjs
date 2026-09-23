@@ -6,7 +6,7 @@ export class VerifikasiUnknownController {
   static async verify({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'prodi'])) {
+      if (!allowed(user, ['admin', 'super_admin', 'prodi', 'kaprodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
       }
@@ -38,7 +38,7 @@ export class VerifikasiUnknownController {
   static async getList({ set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'prodi'])) {
+      if (!allowed(user, ['admin', 'super_admin', 'prodi', 'kaprodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
       }
@@ -53,7 +53,7 @@ export class VerifikasiUnknownController {
   static async getRekapHarian({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();
-      if (!allowed(user, ['admin', 'super_admin', 'prodi'])) {
+      if (!allowed(user, ['admin', 'super_admin', 'prodi', 'kaprodi'])) {
         set.status = 403;
         return { error: 'Akses ditolak. Hanya Admin/Admin Prodi.' };
       }
