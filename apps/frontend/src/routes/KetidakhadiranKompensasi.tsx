@@ -1,5 +1,5 @@
 import { useSearchParams } from '@solidjs/router';
-import { createSignal, onMount, Show } from 'solid-js';
+import { createSignal, For, onMount, Show } from 'solid-js';
 import TabKetidakhadiran from '../components/kompensasi/TabKetidakhadiran';
 import TabPembayaran from '../components/kompensasi/TabPembayaran';
 import TabRekaman from '../components/kompensasi/TabRekaman';
@@ -30,7 +30,6 @@ export default function KetidakhadiranKompensasi() {
 
   onMount(() => {
     const initial = normalizeTab(searchParams.tab as string | undefined);
-    setTab(initial);
     setSearchParams({ tab: initial }, { replace: true });
   });
 
@@ -80,8 +79,6 @@ export default function KetidakhadiranKompensasi() {
     </MainLayout>
   );
 }
-
-import { For } from 'solid-js';
 
 function ForTabs(props: { active: () => TabKey; onChange: (key: TabKey) => void }) {
   return (

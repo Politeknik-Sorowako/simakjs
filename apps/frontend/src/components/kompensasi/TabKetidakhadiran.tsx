@@ -62,7 +62,11 @@ export default function TabKetidakhadiran() {
   const [previewLoading, setPreviewLoading] = createSignal(false);
 
   let searchTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => clearTimeout(searchTimer));
+  onCleanup(() => {
+    clearTimeout(searchTimer);
+    const url = previewUrl();
+    if (url) URL.revokeObjectURL(url);
+  });
 
   createEffect(() => {
     const q = search();
@@ -317,7 +321,7 @@ export default function TabKetidakhadiran() {
                       {row.verifiedByName}
                       <Show when={row.verifiedAt}>
                         {' · '}
-                        {fmtTanggal(row.verifiedAt as string)}
+                        {fmtTanggal(row.verifiedAt)}
                       </Show>
                     </div>
                   </Show>

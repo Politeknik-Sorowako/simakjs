@@ -360,6 +360,26 @@ export const bulkDeleteKompensasiBayarSchema = {
   },
 };
 
+export const deleteKompensasiBayarSchema = {
+  detail: {
+    tags: ['Kompensasi'],
+    summary: 'Hapus Pembayaran Kompensasi',
+    description: 'Menghapus satu catatan pembayaran kompensasi berdasarkan ID.',
+  },
+  params: t.Object({
+    id: t.Numeric(),
+  }),
+  response: {
+    200: t.Object({
+      success: t.Boolean(),
+      id: t.Integer(),
+    }),
+    400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+    404: t.Object({ error: t.String() }),
+  },
+};
+
 export const uploadSuratIzinSchema = {
   detail: {
     tags: ['Presensi'],
