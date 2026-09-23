@@ -158,3 +158,14 @@ export function FilterField(props: { label: string; children: JSX.Element }) {
     </div>
   );
 }
+
+export function RefreshingBadge(props: { show: boolean }) {
+  return (
+    <Show when={props.show}>
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400">
+        <span class="w-3 h-3 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+        Memperbarui…
+      </span>
+    </Show>
+  );
+}
