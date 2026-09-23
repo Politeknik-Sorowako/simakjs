@@ -16,7 +16,7 @@ import { SearchableSelect, type SelectOption } from '../ui/SearchableSelect';
 import { SortableHeader } from '../ui/SortableHeader';
 import { StudentAvatar } from '../ui/StudentAvatar';
 import { Table } from '../ui/Table';
-import { EmptyState, ErrorState, FilterField, TableLoadingFallback } from './shared';
+import { EmptyState, ErrorState, FilterField, RefreshingBadge, TableLoadingFallback } from './shared';
 
 const PER_PAGE_DEFAULT = 20;
 
@@ -312,6 +312,12 @@ export default function TabPembayaran(props: TabPembayaranProps) {
   const meta = () => data()?.meta;
   const totalPages = () => Math.max(meta()?.totalPages || 0, 1);
 
+  createEffect(() => {
+    if (data.error && data()) {
+      toast.showToast('Gagal memperbarui data. Menampilkan data sebelumnya.', 'error');
+    }
+  });
+
   return (
     <div class="flex flex-col gap-4">
       <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-5 shadow-card dark:shadow-card-dark flex flex-col gap-3">
@@ -389,22 +395,25 @@ export default function TabPembayaran(props: TabPembayaranProps) {
         </div>
         <div class="flex items-center justify-between">
           <span class="text-xs text-secondary-400 dark:text-secondary-300">{meta()?.total ?? 0} pembayaran</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSearch('');
-              setDebouncedSearch('');
-              setFilterProdi(workspace.selectedProdiId() ?? undefined);
-              setTglDari('');
-              setTglSampai('');
-              setSortBy('tanggal');
-              setSortOrder('desc');
-              setPage(1);
-            }}
-            class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
-          >
-            Reset Filter
-          </button>
+          <div class="flex items-center gap-4">
+            <RefreshingBadge show={data.loading && !!data()} />
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setDebouncedSearch('');
+                setFilterProdi(workspace.selectedProdiId() ?? undefined);
+                setTglDari('');
+                setTglSampai('');
+                setSortBy('tanggal');
+                setSortOrder('desc');
+                setPage(1);
+              }}
+              class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
+            >
+              Reset Filter
+            </button>
+          </div>
         </div>
       </div>
 
@@ -458,13 +467,13 @@ export default function TabPembayaran(props: TabPembayaranProps) {
         <Show when={data.loading && !data()}>
           <For each={Array.from({ length: 5 })}>{() => <TableLoadingFallback cols={props.canManage ? 8 : 7} />}</For>
         </Show>
-        <Show when={data.error}>
+        <Show when={data.error && !data()}>
           <ErrorState
             message={data.error instanceof Error ? data.error.message : String(data.error)}
             onRetry={refetch}
           />
         </Show>
-        <Show when={!data.loading && !data.error}>
+        <Show when={data() && !data.error}>
           <For each={data()?.data || []} fallback={<EmptyState message="Tidak ada pembayaran kompensasi." />}>
             {(row) => (
               <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">

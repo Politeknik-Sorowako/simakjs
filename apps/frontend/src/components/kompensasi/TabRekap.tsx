@@ -17,7 +17,15 @@ import { Pagination } from '../ui/Pagination';
 import { SearchableSelect, type SelectOption } from '../ui/SearchableSelect';
 import { StudentAvatar } from '../ui/StudentAvatar';
 import { Table } from '../ui/Table';
-import { DurasiText, EmptyState, ErrorState, FilterField, KpiCard, TableLoadingFallback } from './shared';
+import {
+  DurasiText,
+  EmptyState,
+  ErrorState,
+  FilterField,
+  KpiCard,
+  RefreshingBadge,
+  TableLoadingFallback,
+} from './shared';
 
 const PER_PAGE_DEFAULT = 20;
 
@@ -260,6 +268,12 @@ export default function TabRekap(props: TabRekapProps) {
   const meta = () => data()?.meta;
   const totalPages = () => Math.max(meta()?.totalPages || 0, 1);
 
+  createEffect(() => {
+    if (data.error && data()) {
+      toast.showToast('Gagal memperbarui data. Menampilkan data sebelumnya.', 'error');
+    }
+  });
+
   return (
     <div class="flex flex-col gap-4">
       <Show when={stats()}>
@@ -336,21 +350,24 @@ export default function TabRekap(props: TabRekapProps) {
         </div>
         <div class="flex items-center justify-between">
           <span class="text-xs text-secondary-400 dark:text-secondary-300">{meta()?.total ?? 0} mahasiswa</span>
-          <button
-            type="button"
-            onClick={() => {
-              setSearch('');
-              setDebouncedSearch('');
-              setFilterProdi(workspace.selectedProdiId() ?? undefined);
-              setStatusLunas('belum_lunas');
-              setSortBy('sisa');
-              setSortOrder('desc');
-              setPage(1);
-            }}
-            class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
-          >
-            Reset Filter
-          </button>
+          <div class="flex items-center gap-4">
+            <RefreshingBadge show={data.loading && !!data()} />
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setDebouncedSearch('');
+                setFilterProdi(workspace.selectedProdiId() ?? undefined);
+                setStatusLunas('belum_lunas');
+                setSortBy('sisa');
+                setSortOrder('desc');
+                setPage(1);
+              }}
+              class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
+            >
+              Reset Filter
+            </button>
+          </div>
         </div>
       </div>
 
@@ -385,13 +402,13 @@ export default function TabRekap(props: TabRekapProps) {
         <Show when={data.loading && !data()}>
           <For each={Array.from({ length: 5 })}>{() => <TableLoadingFallback cols={6} />}</For>
         </Show>
-        <Show when={data.error}>
+        <Show when={data.error && !data()}>
           <ErrorState
             message={data.error instanceof Error ? data.error.message : String(data.error)}
             onRetry={refetch}
           />
         </Show>
-        <Show when={!data.loading && !data.error}>
+        <Show when={data() && !data.error}>
           <For each={data()?.data || []} fallback={<EmptyState message="Tidak ada data rekap kompensasi." />}>
             {(item: KompensasiLaporanItem) => (
               <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">

@@ -17,6 +17,7 @@ import {
   EmptyState,
   ErrorState,
   FilterField,
+  RefreshingBadge,
   StatusBadge,
   SumberBadge,
   TableLoadingFallback,
@@ -106,6 +107,12 @@ export default function TabKetidakhadiran() {
         sortOrder: params.sortOrder,
       }),
   );
+
+  createEffect(() => {
+    if (data.error && data()) {
+      toast.showToast('Gagal memperbarui data. Menampilkan data sebelumnya.', 'error');
+    }
+  });
 
   const prodiOptions = (): SelectOption[] => [
     { value: '', label: 'Semua Prodi' },
@@ -223,13 +230,16 @@ export default function TabKetidakhadiran() {
           <span class="text-xs text-secondary-400 dark:text-secondary-300">
             {meta()?.total ?? 0} data ketidakhadiran
           </span>
-          <button
-            type="button"
-            onClick={resetFilters}
-            class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
-          >
-            Reset Filter
-          </button>
+          <div class="flex items-center gap-4">
+            <RefreshingBadge show={data.loading && !!data()} />
+            <button
+              type="button"
+              onClick={resetFilters}
+              class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
+            >
+              Reset Filter
+            </button>
+          </div>
         </div>
       </div>
 
@@ -257,13 +267,13 @@ export default function TabKetidakhadiran() {
         <Show when={data.loading && !data()}>
           <For each={Array.from({ length: 5 })}>{() => <TableLoadingFallback cols={9} />}</For>
         </Show>
-        <Show when={data.error}>
+        <Show when={data.error && !data()}>
           <ErrorState
             message={data.error instanceof Error ? data.error.message : String(data.error)}
             onRetry={refetch}
           />
         </Show>
-        <Show when={!data.loading && !data.error}>
+        <Show when={data() && !data.error}>
           <For each={data()?.data || []} fallback={<EmptyState message="Tidak ada data ketidakhadiran." />}>
             {(row) => (
               <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 transition-colors dark:hover:bg-secondary-800/30">
