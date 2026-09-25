@@ -1,4 +1,4 @@
-import { useBeforeLeave } from '@solidjs/router';
+import { useBeforeLeave, useSearchParams } from '@solidjs/router';
 import {
   createEffect,
   createMemo,
@@ -9,6 +9,7 @@ import {
   onMount,
   Show,
   Suspense,
+  untrack,
 } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { IconActionButton } from '../components/ui/IconActionButton';
@@ -34,9 +35,12 @@ export default function ApelKelola() {
   const auth = useAuth();
   const toast = useToast();
   const ws = useWorkspace();
+  const [searchParams] = useSearchParams();
 
-  const [selectedKelompok, setSelectedKelompok] = createSignal<number | null>(null);
-  const [selectedSesi, setSelectedSesi] = createSignal<number | null>(null);
+  const initialKelompok = searchParams.kelompok ? Number(searchParams.kelompok) || null : null;
+  const initialSesi = searchParams.sesi ? Number(searchParams.sesi) || null : null;
+  const [selectedKelompok, setSelectedKelompok] = createSignal<number | null>(initialKelompok);
+  const [selectedSesi, setSelectedSesi] = createSignal<number | null>(initialSesi);
   const [tanggal, setTanggal] = createSignal(getTodayString());
   const [shift, setShift] = createSignal('pagi');
   const [jamMulai, setJamMulai] = createSignal(getCurrentTimeString());
@@ -144,6 +148,17 @@ export default function ApelKelola() {
     setJamMulai(getCurrentTimeString());
     setShowBukaSesiModal(true);
   };
+
+  // Sinkronkan deep-link (?kelompok=&sesi=) hanya saat URL berubah. Pilihan lokal
+  // di-untrack agar tidak menjadi dependency (mencegah URL lama menimpa pilihan user).
+  createEffect(() => {
+    const k = searchParams.kelompok ? Number(searchParams.kelompok) || null : null;
+    const s = searchParams.sesi ? Number(searchParams.sesi) || null : null;
+    const currentK = untrack(selectedKelompok);
+    const currentS = untrack(selectedSesi);
+    if (k !== null && k !== currentK) setSelectedKelompok(k);
+    if (s !== null && s !== currentS) setSelectedSesi(s);
+  });
 
   // Resource Data Kelompok (Memuat seluruh kelompok apel kampus)
   const [kelompokList, { refetch: refetchKelompok }] = createResource(async () => {

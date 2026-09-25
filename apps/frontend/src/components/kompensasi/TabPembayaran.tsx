@@ -1,6 +1,5 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { kompensasiAdminController, type PaymentRow } from '../../controllers/kompensasiAdminController';
 import { mahasiswaController } from '../../controllers/mahasiswaController';
 import { presensiController } from '../../controllers/presensiController';
@@ -17,10 +16,12 @@ import { SortableHeader } from '../ui/SortableHeader';
 import { StudentAvatar } from '../ui/StudentAvatar';
 import { Table } from '../ui/Table';
 import { EmptyState, ErrorState, FilterField, RefreshingBadge, TableLoadingFallback } from './shared';
+import type { SharedKompensasiFilters } from './sharedKompensasiFilters';
 
 const PER_PAGE_DEFAULT = 20;
 
 interface TabPembayaranProps {
+  filters: SharedKompensasiFilters;
   canManage: boolean;
 }
 
@@ -33,15 +34,9 @@ interface PayForm {
 
 export default function TabPembayaran(props: TabPembayaranProps) {
   const toast = useToast();
-  const workspace = useWorkspace();
 
   const [page, setPage] = createSignal(1);
   const [limit, setLimit] = createSignal(PER_PAGE_DEFAULT);
-  const [search, setSearch] = createSignal('');
-  const [debouncedSearch, setDebouncedSearch] = createSignal('');
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(workspace.selectedProdiId() ?? undefined);
-  const [tglDari, setTglDari] = createSignal('');
-  const [tglSampai, setTglSampai] = createSignal('');
   const [sortBy, setSortBy] = createSignal('tanggal');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
 
@@ -65,20 +60,16 @@ export default function TabPembayaran(props: TabPembayaranProps) {
   const [mhsSearch, setMhsSearch] = createSignal('');
   const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
 
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
   let mhsTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => {
-    clearTimeout(searchTimer);
-    clearTimeout(mhsTimer);
-  });
+  onCleanup(() => clearTimeout(mhsTimer));
 
+  // Reset halaman ke 1 setiap filter bersama berubah (search memakai nilai ter-debounce agar satu fetch).
   createEffect(() => {
-    const q = search();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      setDebouncedSearch(q);
-      setPage(1);
-    }, 350);
+    props.filters.debouncedSearch();
+    props.filters.prodiId();
+    props.filters.tglDari();
+    props.filters.tglSampai();
+    setPage(1);
   });
 
   createEffect(() => {
@@ -105,10 +96,10 @@ export default function TabPembayaran(props: TabPembayaranProps) {
     () => ({
       page: page(),
       limit: limit(),
-      search: debouncedSearch(),
-      prodiId: filterProdi(),
-      tglDari: tglDari(),
-      tglSampai: tglSampai(),
+      search: props.filters.debouncedSearch(),
+      prodiId: props.filters.prodiId(),
+      tglDari: props.filters.tglDari(),
+      tglSampai: props.filters.tglSampai(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
     }),
@@ -261,10 +252,10 @@ export default function TabPembayaran(props: TabPembayaranProps) {
       const res = await kompensasiAdminController.getRiwayatPembayaran({
         page: p,
         limit: limitP,
-        search: debouncedSearch() || undefined,
-        prodiId: filterProdi(),
-        tglDari: tglDari() || undefined,
-        tglSampai: tglSampai() || undefined,
+        search: props.filters.debouncedSearch() || undefined,
+        prodiId: props.filters.prodiId(),
+        tglDari: props.filters.tglDari() || undefined,
+        tglSampai: props.filters.tglSampai() || undefined,
       });
       all.push(...res.data);
       if (p * limitP >= res.meta.total) break;
@@ -341,8 +332,8 @@ export default function TabPembayaran(props: TabPembayaranProps) {
                 type="text"
                 placeholder="Cari NIM atau nama mahasiswa..."
                 class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-secondary-400"
-                value={search()}
-                onInput={(e) => setSearch(e.currentTarget.value)}
+                value={props.filters.search()}
+                onInput={(e) => props.filters.setSearch(e.currentTarget.value)}
               />
             </FilterField>
           </div>
@@ -350,9 +341,9 @@ export default function TabPembayaran(props: TabPembayaranProps) {
             <FilterField label="Program Studi">
               <SearchableSelect
                 options={prodiOptions()}
-                value={filterProdi()}
+                value={props.filters.prodiId()}
                 onChange={(v) => {
-                  setFilterProdi(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
+                  props.filters.setProdiId(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
                   setPage(1);
                 }}
                 placeholder="Semua Prodi"
@@ -362,12 +353,17 @@ export default function TabPembayaran(props: TabPembayaranProps) {
           <div class="min-w-[220px]">
             <FilterField label="Rentang Tanggal Bayar">
               <div class="flex items-center gap-2">
-                <Input type="date" value={tglDari()} onInput={(e) => setTglDari(e.currentTarget.value)} class="!py-2" />
+                <Input
+                  type="date"
+                  value={props.filters.tglDari()}
+                  onInput={(e) => props.filters.setTglDari(e.currentTarget.value)}
+                  class="!py-2"
+                />
                 <span class="text-secondary-400">–</span>
                 <Input
                   type="date"
-                  value={tglSampai()}
-                  onInput={(e) => setTglSampai(e.currentTarget.value)}
+                  value={props.filters.tglSampai()}
+                  onInput={(e) => props.filters.setTglSampai(e.currentTarget.value)}
                   class="!py-2"
                 />
               </div>
@@ -413,11 +409,7 @@ export default function TabPembayaran(props: TabPembayaranProps) {
             <button
               type="button"
               onClick={() => {
-                setSearch('');
-                setDebouncedSearch('');
-                setFilterProdi(workspace.selectedProdiId() ?? undefined);
-                setTglDari('');
-                setTglSampai('');
+                props.filters.resetShared();
                 setSortBy('tanggal');
                 setSortOrder('desc');
                 setPage(1);

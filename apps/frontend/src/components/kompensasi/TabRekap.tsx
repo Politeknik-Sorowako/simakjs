@@ -1,6 +1,5 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
 import {
   type KompensasiDetailResponse,
   type KompensasiLaporanItem,
@@ -27,22 +26,20 @@ import {
   RefreshingBadge,
   TableLoadingFallback,
 } from './shared';
+import type { SharedKompensasiFilters } from './sharedKompensasiFilters';
 
 const PER_PAGE_DEFAULT = 20;
 
 interface TabRekapProps {
+  filters: SharedKompensasiFilters;
   canManage: boolean;
 }
 
 export default function TabRekap(props: TabRekapProps) {
   const toast = useToast();
-  const workspace = useWorkspace();
 
   const [page, setPage] = createSignal(1);
   const [limit, setLimit] = createSignal(PER_PAGE_DEFAULT);
-  const [search, setSearch] = createSignal('');
-  const [debouncedSearch, setDebouncedSearch] = createSignal('');
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(workspace.selectedProdiId() ?? undefined);
   const [statusLunas, setStatusLunas] = createSignal('belum_lunas');
   const [sortBy, setSortBy] = createSignal('sisa');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
@@ -55,16 +52,11 @@ export default function TabRekap(props: TabRekapProps) {
   const [savingPay, setSavingPay] = createSignal(false);
   const [isExporting, setIsExporting] = createSignal(false);
 
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => clearTimeout(searchTimer));
-
+  // Reset halaman ke 1 setiap filter bersama berubah (search memakai nilai ter-debounce agar satu fetch).
   createEffect(() => {
-    const q = search();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      setDebouncedSearch(q);
-      setPage(1);
-    }, 350);
+    props.filters.debouncedSearch();
+    props.filters.prodiId();
+    setPage(1);
   });
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -75,8 +67,8 @@ export default function TabRekap(props: TabRekapProps) {
     () => ({
       page: page(),
       limit: limit(),
-      search: debouncedSearch(),
-      prodiId: filterProdi(),
+      search: props.filters.debouncedSearch(),
+      prodiId: props.filters.prodiId(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
       statusLunas: statusLunas(),
@@ -196,8 +188,8 @@ export default function TabRekap(props: TabRekapProps) {
       const res = await presensiController.getLaporanKompensasi(
         1,
         200,
-        debouncedSearch() || undefined,
-        typeof filterProdi() === 'number' ? filterProdi() : undefined,
+        props.filters.debouncedSearch() || undefined,
+        typeof props.filters.prodiId() === 'number' ? props.filters.prodiId() : undefined,
         sortBy(),
         sortOrder(),
         statusLunas(),
@@ -219,8 +211,8 @@ export default function TabRekap(props: TabRekapProps) {
       const res = await presensiController.getLaporanKompensasi(
         1,
         200,
-        debouncedSearch() || undefined,
-        typeof filterProdi() === 'number' ? filterProdi() : undefined,
+        props.filters.debouncedSearch() || undefined,
+        typeof props.filters.prodiId() === 'number' ? props.filters.prodiId() : undefined,
         sortBy(),
         sortOrder(),
         statusLunas(),
@@ -323,8 +315,8 @@ export default function TabRekap(props: TabRekapProps) {
                 type="text"
                 placeholder="Cari NIM atau nama mahasiswa..."
                 class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-secondary-400"
-                value={search()}
-                onInput={(e) => setSearch(e.currentTarget.value)}
+                value={props.filters.search()}
+                onInput={(e) => props.filters.setSearch(e.currentTarget.value)}
               />
             </FilterField>
           </div>
@@ -332,9 +324,9 @@ export default function TabRekap(props: TabRekapProps) {
             <FilterField label="Program Studi">
               <SearchableSelect
                 options={prodiOptions()}
-                value={filterProdi()}
+                value={props.filters.prodiId()}
                 onChange={(v) => {
-                  setFilterProdi(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
+                  props.filters.setProdiId(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
                   setPage(1);
                 }}
                 placeholder="Semua Prodi"
@@ -383,9 +375,7 @@ export default function TabRekap(props: TabRekapProps) {
             <button
               type="button"
               onClick={() => {
-                setSearch('');
-                setDebouncedSearch('');
-                setFilterProdi(workspace.selectedProdiId() ?? undefined);
+                props.filters.resetShared();
                 setStatusLunas('belum_lunas');
                 setSortBy('sisa');
                 setSortOrder('desc');

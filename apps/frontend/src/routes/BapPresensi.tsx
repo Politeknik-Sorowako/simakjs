@@ -174,7 +174,8 @@ export default function BapPresensi() {
   const [activeTab, setActiveTab] = createSignal<'teori' | 'praktikum'>('teori');
 
   // Praktikum (Rombel) state
-  const [selectedRombelId, setSelectedRombelId] = createSignal<number | null>(null);
+  const initialRombelId = searchParams.rombel ? Number(searchParams.rombel) || null : null;
+  const [selectedRombelId, setSelectedRombelId] = createSignal<number | null>(initialRombelId);
   const [syncLoadingPresensiId, setSyncLoadingPresensiId] = createSignal<number | null>(null);
   const [syncLoadingNilai, setSyncLoadingNilai] = createSignal(false);
 
