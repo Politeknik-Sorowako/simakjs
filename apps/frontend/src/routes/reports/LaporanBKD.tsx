@@ -27,14 +27,13 @@ import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helper
 import { type ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
 const PRESENSI_STATUS: {
-  key: keyof { hadir: number; sakit: number; izin: number; alpa: number; telat: number };
+  key: keyof { hadir: number; sakit: number; izin: number; alpa: number };
   label: string;
 }[] = [
   { key: 'hadir', label: 'H' },
   { key: 'sakit', label: 'S' },
   { key: 'izin', label: 'I' },
   { key: 'alpa', label: 'A' },
-  { key: 'telat', label: 'T' },
 ];
 
 const MENU_ITEM_CLASS =
@@ -597,7 +596,7 @@ export default function LaporanBKD() {
                     <th class="py-3 px-5 text-center">SKS</th>
                     <th class="py-3 px-5 text-center">Pertemuan</th>
                     <th class="py-3 px-5 text-center">Menit</th>
-                    <th class="py-3 px-5 text-center">Presensi (H/S/I/A/T)</th>
+                    <th class="py-3 px-5 text-center">Presensi (H/S/I/A)</th>
                     <th class="py-3 px-5 text-center">% Hadir</th>
                   </tr>
                 </thead>
@@ -665,7 +664,7 @@ export default function LaporanBKD() {
                     <th class="py-3 px-5">Group</th>
                     <th class="py-3 px-5 text-center">Pertemuan</th>
                     <th class="py-3 px-5 text-center">Menit</th>
-                    <th class="py-3 px-5 text-center">Presensi (H/S/I/A/T)</th>
+                    <th class="py-3 px-5 text-center">Presensi (H/S/I/A)</th>
                     <th class="py-3 px-5 text-center">% Hadir</th>
                   </tr>
                 </thead>
@@ -732,7 +731,7 @@ export default function LaporanBKD() {
                     <th class="py-3 px-5">Tanggal</th>
                     <th class="py-3 px-5">Materi</th>
                     <th class="py-3 px-5 text-center">Durasi</th>
-                    <th class="py-3 px-5 text-center">H/S/I/A/T</th>
+                    <th class="py-3 px-5 text-center">H/S/I/A</th>
                     <th class="py-3 px-5 text-center">Total</th>
                   </tr>
                 </thead>
@@ -764,9 +763,7 @@ export default function LaporanBKD() {
                           <span class="font-bold text-secondary-800 dark:text-white">S</span>:
                           {p.presensiRingkasan.sakit}{' '}
                           <span class="font-bold text-secondary-800 dark:text-white">I</span>:{p.presensiRingkasan.izin}{' '}
-                          <span class="font-bold text-secondary-800 dark:text-white">A</span>:{p.presensiRingkasan.alpa}{' '}
-                          <span class="font-bold text-secondary-800 dark:text-white">T</span>:
-                          {p.presensiRingkasan.telat}
+                          <span class="font-bold text-secondary-800 dark:text-white">A</span>:{p.presensiRingkasan.alpa}
                         </td>
                         <td class="py-3 px-5 text-center">{p.presensiRingkasan.total}</td>
                       </tr>
@@ -795,7 +792,6 @@ export default function LaporanBKD() {
                     <th class="py-3 px-5 text-center">S</th>
                     <th class="py-3 px-5 text-center">I</th>
                     <th class="py-3 px-5 text-center">A</th>
-                    <th class="py-3 px-5 text-center">T</th>
                     <th class="py-3 px-5 text-center">Total Hadir</th>
                     <th class="py-3 px-5 text-center">% Hadir</th>
                   </tr>
@@ -805,7 +801,7 @@ export default function LaporanBKD() {
                     each={rekapMhsPraktikum()}
                     fallback={
                       <tr>
-                        <td colspan="11" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                        <td colspan="10" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
                           Tidak ada data presensi praktikum
                         </td>
                       </tr>
@@ -824,7 +820,6 @@ export default function LaporanBKD() {
                         <td class="py-3 px-5 text-center">{m.sakit}</td>
                         <td class="py-3 px-5 text-center">{m.izin}</td>
                         <td class="py-3 px-5 text-center">{m.alpa}</td>
-                        <td class="py-3 px-5 text-center">{m.telat}</td>
                         <td class="py-3 px-5 text-center">{m.totalKehadiran}</td>
                         <td class="py-3 px-5 text-center">{m.persentaseHadir}%</td>
                       </tr>

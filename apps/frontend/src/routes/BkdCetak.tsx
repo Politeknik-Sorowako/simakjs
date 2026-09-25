@@ -17,14 +17,13 @@ import {
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../utils/bkd-helpers';
 
 const PRESENSI_LABEL: {
-  key: keyof { hadir: number; sakit: number; izin: number; alpa: number; telat: number };
+  key: keyof { hadir: number; sakit: number; izin: number; alpa: number };
   label: string;
 }[] = [
   { key: 'hadir', label: 'H' },
   { key: 'sakit', label: 'S' },
   { key: 'izin', label: 'I' },
   { key: 'alpa', label: 'A' },
-  { key: 'telat', label: 'T' },
 ];
 
 export default function BkdCetak() {
@@ -195,7 +194,7 @@ export default function BkdCetak() {
           <h4>A. Rekap Presensi per Mahasiswa</h4>
           <table>
             <thead>
-              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total Hadir</th><th>% Hadir</th></tr>
+              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total Hadir</th><th>% Hadir</th></tr>
             </thead>
             <tbody>
               ${rk.mahasiswa
@@ -203,7 +202,7 @@ export default function BkdCetak() {
                   (m, i) => `
                 <tr>
                   <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
-                  <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(m.alpa)}</td><td>${escapeHtml(m.telat)}</td>
+                  <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(m.alpa)}</td>
                   <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
                 </tr>`,
                 )
@@ -213,7 +212,7 @@ export default function BkdCetak() {
           <h4>B. Rekap Presensi per Sesi</h4>
           <table>
             <thead>
-              <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total</th></tr>
+              <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total</th></tr>
             </thead>
             <tbody>
               ${sesi
@@ -222,7 +221,7 @@ export default function BkdCetak() {
                 <tr>
                   <td>${i + 1}</td><td>${escapeHtml(p.pertemuanKe)}</td><td>${escapeHtml(p.tanggal)}</td>
                   <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(p.presensiRingkasan.izin)}</td>
-                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.telat)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
+                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
                 </tr>`,
                 )
                 .join('')}
@@ -325,7 +324,7 @@ export default function BkdCetak() {
           <h4>A. Rekap Presensi per Mahasiswa</h4>
           <table>
             <thead>
-              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total Hadir</th><th>% Hadir</th></tr>
+              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total Hadir</th><th>% Hadir</th></tr>
             </thead>
             <tbody>
               ${rk.mahasiswa
@@ -335,7 +334,7 @@ export default function BkdCetak() {
                   <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
                   <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(
                     m.alpa,
-                  )}</td><td>${escapeHtml(m.telat)}</td>
+                  )}</td>
                   <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
                 </tr>`,
                 )
@@ -345,7 +344,7 @@ export default function BkdCetak() {
           <h4>B. Rekap Presensi per Sesi</h4>
           <table>
             <thead>
-              <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total</th></tr>
+              <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total</th></tr>
             </thead>
             <tbody>
               ${sesi
@@ -356,9 +355,7 @@ export default function BkdCetak() {
                   <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(
                     p.presensiRingkasan.izin,
                   )}</td>
-                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.telat)}</td><td>${escapeHtml(
-                    p.presensiRingkasan.total,
-                  )}</td>
+                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
                 </tr>`,
                 )
                 .join('')}
@@ -578,7 +575,6 @@ export default function BkdCetak() {
                       <th class="border-r border-secondary-200 p-2 text-center">S</th>
                       <th class="border-r border-secondary-200 p-2 text-center">I</th>
                       <th class="border-r border-secondary-200 p-2 text-center">A</th>
-                      <th class="p-2 text-center">T</th>
                       <th class="p-2 text-center">% Hadir</th>
                     </tr>
                   </thead>
@@ -625,7 +621,6 @@ export default function BkdCetak() {
                       <th class="border-r border-secondary-200 p-2 text-center">S</th>
                       <th class="border-r border-secondary-200 p-2 text-center">I</th>
                       <th class="border-r border-secondary-200 p-2 text-center">A</th>
-                      <th class="p-2 text-center">T</th>
                       <th class="p-2 text-center">% Hadir</th>
                     </tr>
                   </thead>
@@ -654,7 +649,7 @@ export default function BkdCetak() {
                     </For>
                     <Show when={rowsPraktikum().length === 0}>
                       <tr>
-                        <td colspan="12" class="p-4 text-center text-secondary-400">
+                        <td colspan="11" class="p-4 text-center text-secondary-400">
                           Tidak ada data praktikum pada periode ini.
                         </td>
                       </tr>
@@ -684,7 +679,6 @@ export default function BkdCetak() {
                       <th class="border-r border-secondary-200 p-2 text-center">S</th>
                       <th class="border-r border-secondary-200 p-2 text-center">I</th>
                       <th class="border-r border-secondary-200 p-2 text-center">A</th>
-                      <th class="border-r border-secondary-200 p-2 text-center">T</th>
                       <th class="p-2 text-center">Total</th>
                     </tr>
                   </thead>
@@ -702,14 +696,13 @@ export default function BkdCetak() {
                           <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.sakit}</td>
                           <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.izin}</td>
                           <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.alpa}</td>
-                          <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.telat}</td>
                           <td class="p-2 text-center">{p.presensiRingkasan.total}</td>
                         </tr>
                       )}
                     </For>
                     <Show when={riwayatPraktikum().length === 0}>
                       <tr>
-                        <td colspan="12" class="p-4 text-center text-secondary-400">
+                        <td colspan="11" class="p-4 text-center text-secondary-400">
                           Tidak ada riwayat pertemuan praktikum.
                         </td>
                       </tr>
@@ -733,7 +726,6 @@ export default function BkdCetak() {
                       <th class="border-r border-secondary-200 p-2 text-center">S</th>
                       <th class="border-r border-secondary-200 p-2 text-center">I</th>
                       <th class="border-r border-secondary-200 p-2 text-center">A</th>
-                      <th class="border-r border-secondary-200 p-2 text-center">T</th>
                       <th class="border-r border-secondary-200 p-2 text-center">Total Hadir</th>
                       <th class="p-2 text-center">% Hadir</th>
                     </tr>
@@ -750,7 +742,6 @@ export default function BkdCetak() {
                           <td class="border-r border-secondary-200 p-2 text-center">{m.sakit}</td>
                           <td class="border-r border-secondary-200 p-2 text-center">{m.izin}</td>
                           <td class="border-r border-secondary-200 p-2 text-center">{m.alpa}</td>
-                          <td class="border-r border-secondary-200 p-2 text-center">{m.telat}</td>
                           <td class="border-r border-secondary-200 p-2 text-center">{m.totalKehadiran}</td>
                           <td class="p-2 text-center">{m.persentaseHadir}%</td>
                         </tr>
@@ -758,7 +749,7 @@ export default function BkdCetak() {
                     </For>
                     <Show when={rekapMhsPraktikum().length === 0}>
                       <tr>
-                        <td colspan="11" class="p-4 text-center text-secondary-400">
+                        <td colspan="10" class="p-4 text-center text-secondary-400">
                           Tidak ada data presensi praktikum.
                         </td>
                       </tr>
