@@ -182,6 +182,7 @@ export default function LaporanBKD() {
             <SearchableSelect
               label="Periode"
               placeholder="Pilih Periode"
+              isLoading={periodes.loading}
               value={selectedPeriode()}
               onChange={(v) => setSelectedPeriode(String(v))}
               options={[
@@ -207,6 +208,7 @@ export default function LaporanBKD() {
               <SearchableSelect
                 label="Dosen"
                 placeholder="Pilih Dosen"
+                isLoading={dosens.loading}
                 value={selectedDosen()}
                 onChange={(v) => setSelectedDosen(String(v))}
                 options={[
