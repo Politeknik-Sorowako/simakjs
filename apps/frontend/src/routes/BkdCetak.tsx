@@ -1,8 +1,19 @@
 import { useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
-import { type BkdRekap, bkdController } from '../controllers/bkdController';
-import { filterKelasBerBap, filterKelasBerpresensi } from '../utils/bkd-bulk-print';
+import {
+  type BkdPertemuanPraktikum,
+  type BkdRekap,
+  type BkdRekapMahasiswaPraktikumRow,
+  type BkdRiwayatPraktikumRow,
+  bkdController,
+} from '../controllers/bkdController';
+import {
+  filterKelasBerBap,
+  filterKelasBerpresensi,
+  filterRombelBerBap,
+  filterRombelBerpresensi,
+} from '../utils/bkd-bulk-print';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../utils/bkd-helpers';
 
 const PRESENSI_LABEL: {
@@ -53,6 +64,53 @@ export default function BkdCetak() {
   const rekapBimbingan = () => hitungRekapPerTanggal(bimbingan());
 
   const rincianBimbingan = () => hitungRincianSesi(bimbingan());
+
+  const rowsPraktikum = () => rekap()?.mengajarPraktikum || [];
+  const rekapPresensiPraktikum = () => rekap()?.rekapPresensiPraktikum || [];
+
+  const riwayatPraktikum = () => {
+    const list: BkdRiwayatPraktikumRow[] = [];
+    for (const m of rowsPraktikum()) {
+      for (const p of m.pertemuan) {
+        list.push({
+          namaGroup: m.namaGroup,
+          namaKelas: m.namaKelas,
+          kode: m.mataKuliah.kode,
+          namaMk: m.mataKuliah.nama,
+          sesiKe: p.sesiKe,
+          tanggal: p.tanggal,
+          materi: p.materi,
+          durasiMenit: p.durasiMenit,
+          presensiRingkasan: p.presensiRingkasan,
+        });
+      }
+    }
+    return list.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+  };
+
+  const rekapMhsPraktikum = () => {
+    const list: BkdRekapMahasiswaPraktikumRow[] = [];
+    for (const r of rekapPresensiPraktikum()) {
+      for (const m of r.mahasiswa) {
+        list.push({
+          namaGroup: r.namaGroup,
+          namaKelas: r.namaKelas,
+          kode: r.mataKuliah.kode,
+          namaMk: r.mataKuliah.nama,
+          nim: m.nim,
+          nama: m.nama,
+          hadir: m.hadir,
+          sakit: m.sakit,
+          izin: m.izin,
+          alpa: m.alpa,
+          telat: m.telat,
+          totalKehadiran: m.totalKehadiran,
+          persentaseHadir: m.persentaseHadir,
+        });
+      }
+    }
+    return list;
+  };
 
   function escapeHtml(value: unknown): string {
     if (value == null) return '';
@@ -188,6 +246,142 @@ export default function BkdCetak() {
     );
   };
 
+  const openBapPraktikumBulkPrintWindow = () => {
+    const data = rekap();
+    if (!data) {
+      window.alert('Data BKD belum termuat.');
+      return;
+    }
+    const rombelBerisi = filterRombelBerBap(data.mengajarPraktikum || []);
+    if (rombelBerisi.length === 0) {
+      window.alert('Tidak ada sesi BAP praktikum untuk dicetak.');
+      return;
+    }
+    const rowsHtml = rombelBerisi
+      .map(
+        (mk) => `
+        <div class="section">
+          <h3>[PRAKTIKUM] [${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(
+            mk.namaKelas,
+          )} · Group ${escapeHtml(mk.namaGroup)}${mk.mataKuliah.sksPraktek != null ? ` · SKS Praktikum: ${escapeHtml(mk.mataKuliah.sksPraktek)}` : ''}</h3>
+          <table>
+            <thead>
+              <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
+            </thead>
+            <tbody>
+              ${mk.pertemuan
+                .map(
+                  (p, i) => `
+                <tr>
+                  <td>${i + 1}</td>
+                  <td>${escapeHtml(p.sesiKe)}</td>
+                  <td>${escapeHtml(p.tanggal)}</td>
+                  <td>${p.tema ? `${escapeHtml(p.tema)} — ` : ''}${escapeHtml(p.materi)}</td>
+                  <td>${escapeHtml(p.durasiMenit)} mnt</td>
+                  <td></td>
+                </tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>
+          <div class="sign-area">
+            <div class="sign-box">
+              <p class="sign-gap">(_______________)</p>
+              <p>${escapeHtml(data.dosen.nama)}</p>
+            </div>
+          </div>
+        </div>`,
+      )
+      .join('');
+
+    openPrintWindow(
+      'BAP-Praktikum-Bulk',
+      'BERITA ACARA PRAKTIKUM (BAP PRAKTIKUM)',
+      data,
+      `<p class="sub">Seluruh rombel & sesi praktikum per periode</p>${rowsHtml}`,
+    );
+  };
+
+  const openPresensiPraktikumBulkPrintWindow = () => {
+    const data = rekap();
+    if (!data) return;
+    const pertemuanByRombel = new Map<number, BkdPertemuanPraktikum[]>();
+    for (const mk of data.mengajarPraktikum || []) pertemuanByRombel.set(mk.rombelId, mk.pertemuan);
+    const rombelBerisi = filterRombelBerpresensi(data.rekapPresensiPraktikum || []);
+    if (rombelBerisi.length === 0) {
+      window.alert('Tidak ada data presensi praktikum untuk dicetak.');
+      return;
+    }
+    const rowsHtml = rombelBerisi
+      .map((rk) => {
+        const sesi = pertemuanByRombel.get(rk.rombelId) || [];
+        return `
+        <div class="section">
+          <h3>[PRAKTIKUM] [${escapeHtml(rk.mataKuliah.kode)}] ${escapeHtml(rk.mataKuliah.nama)} · Kelas ${escapeHtml(
+            rk.namaKelas,
+          )} · Group ${escapeHtml(rk.namaGroup)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(
+            rk.totalMenit,
+          )} mnt${rk.mataKuliah.sksPraktek != null ? `, SKS Praktikum: ${escapeHtml(rk.mataKuliah.sksPraktek)}` : ''})</h3>
+          <h4>A. Rekap Presensi per Mahasiswa</h4>
+          <table>
+            <thead>
+              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total Hadir</th><th>% Hadir</th></tr>
+            </thead>
+            <tbody>
+              ${rk.mahasiswa
+                .map(
+                  (m, i) => `
+                <tr>
+                  <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
+                  <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(
+                    m.alpa,
+                  )}</td><td>${escapeHtml(m.telat)}</td>
+                  <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
+                </tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>
+          <h4>B. Rekap Presensi per Sesi</h4>
+          <table>
+            <thead>
+              <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>T</th><th>Total</th></tr>
+            </thead>
+            <tbody>
+              ${sesi
+                .map(
+                  (p, i) => `
+                <tr>
+                  <td>${i + 1}</td><td>${escapeHtml(p.sesiKe)}</td><td>${escapeHtml(p.tanggal)}</td>
+                  <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(
+                    p.presensiRingkasan.izin,
+                  )}</td>
+                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.telat)}</td><td>${escapeHtml(
+                    p.presensiRingkasan.total,
+                  )}</td>
+                </tr>`,
+                )
+                .join('')}
+            </tbody>
+          </table>
+          <div class="sign-area">
+            <div class="sign-box">
+              <p class="sign-gap">(_______________)</p>
+              <p>${escapeHtml(data.dosen.nama)}</p>
+            </div>
+          </div>
+        </div>`;
+      })
+      .join('');
+
+    openPrintWindow(
+      'Rekap-Presensi-Praktikum',
+      'REKAP PRESENSI PRAKTIKUM',
+      data,
+      `<p class="sub">Seluruh rombel & sesi praktikum per periode</p>${rowsHtml}`,
+    );
+  };
+
   const openPrintWindow = (title: string, heading: string, data: NonNullable<BkdRekap>, bodyHtml: string) => {
     const html = `<!DOCTYPE html>
 <html>
@@ -250,6 +444,20 @@ export default function BkdCetak() {
           class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
         >
           📊 Cetak Rekap Presensi
+        </button>
+        <button
+          type="button"
+          onClick={openBapPraktikumBulkPrintWindow}
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+        >
+          🧪 Cetak BAP Praktikum (Semua Rombel)
+        </button>
+        <button
+          type="button"
+          onClick={openPresensiPraktikumBulkPrintWindow}
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+        >
+          📊 Cetak Rekap Presensi Praktikum
         </button>
         <button
           type="button"
@@ -395,9 +603,173 @@ export default function BkdCetak() {
                 </table>
               </div>
 
+              <p class="mt-3 text-xs font-semibold text-secondary-700">
+                Grand Total (Teori + Praktikum): {data().ringkasan.grandPertemuan ?? data().ringkasan.totalPertemuan}{' '}
+                pertemuan / {data().ringkasan.grandMenit ?? data().ringkasan.totalMenit} menit
+              </p>
+
               <div class="mt-6">
                 <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
-                  C1. Rekap Bimbingan per Tanggal
+                  C1. Rekap Mengajar Praktikum &amp; Presensi
+                </h4>
+                <table class="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
+                      <th class="border-r border-secondary-200 p-2">Mata Kuliah</th>
+                      <th class="border-r border-secondary-200 p-2">Kelas</th>
+                      <th class="border-r border-secondary-200 p-2">Group</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">SKS Prak</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Pertemuan</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Menit</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">H</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">S</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">I</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">A</th>
+                      <th class="p-2 text-center">T</th>
+                      <th class="p-2 text-center">% Hadir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={rowsPraktikum()}>
+                      {(r) => (
+                        <tr class="border-b border-secondary-200">
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">
+                            {r.mataKuliah.nama}
+                          </td>
+                          <td class="border-r border-secondary-200 p-2">{r.namaKelas}</td>
+                          <td class="border-r border-secondary-200 p-2">{r.namaGroup}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">
+                            {r.mataKuliah.sksPraktek ?? '-'}
+                          </td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{r.jumlahPertemuan}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{r.totalMenit}</td>
+                          <For each={PRESENSI_LABEL}>
+                            {(st) => (
+                              <td class="border-r border-secondary-200 p-2 text-center">{r.presensi[st.key]}</td>
+                            )}
+                          </For>
+                          <td class="p-2 text-center">{r.presensi.persen}%</td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={rowsPraktikum().length === 0}>
+                      <tr>
+                        <td colspan="12" class="p-4 text-center text-secondary-400">
+                          Tidak ada data praktikum pada periode ini.
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
+                <p class="mt-2 text-xs text-secondary-500">
+                  Catatan: Sesi praktikum yang dihitung adalah sesi yang diampu dosen ini, baik sebagai instruktur
+                  rombel maupun pengisi BAP praktikum.
+                </p>
+              </div>
+
+              <div class="mt-6">
+                <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
+                  C2. Riwayat Pertemuan Praktikum
+                </h4>
+                <table class="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
+                      <th class="border-r border-secondary-200 p-2">Mata Kuliah</th>
+                      <th class="border-r border-secondary-200 p-2">Group</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Sesi</th>
+                      <th class="border-r border-secondary-200 p-2">Tanggal</th>
+                      <th class="border-r border-secondary-200 p-2">Materi</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Durasi</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">H</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">S</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">I</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">A</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">T</th>
+                      <th class="p-2 text-center">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={riwayatPraktikum()}>
+                      {(p) => (
+                        <tr class="border-b border-secondary-200">
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{p.namaMk}</td>
+                          <td class="border-r border-secondary-200 p-2">{p.namaGroup}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.sesiKe}</td>
+                          <td class="border-r border-secondary-200 p-2">{p.tanggal}</td>
+                          <td class="border-r border-secondary-200 p-2">{p.materi}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.durasiMenit}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.hadir}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.sakit}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.izin}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.alpa}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{p.presensiRingkasan.telat}</td>
+                          <td class="p-2 text-center">{p.presensiRingkasan.total}</td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={riwayatPraktikum().length === 0}>
+                      <tr>
+                        <td colspan="12" class="p-4 text-center text-secondary-400">
+                          Tidak ada riwayat pertemuan praktikum.
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-6">
+                <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
+                  C3. Rekap Presensi Praktikum per Mahasiswa
+                </h4>
+                <table class="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr class="border-b border-secondary-200 bg-secondary-50 font-bold uppercase text-secondary-500">
+                      <th class="border-r border-secondary-200 p-2">Mata Kuliah</th>
+                      <th class="border-r border-secondary-200 p-2">Group</th>
+                      <th class="border-r border-secondary-200 p-2">NIM</th>
+                      <th class="border-r border-secondary-200 p-2">Nama</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">H</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">S</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">I</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">A</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">T</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">Total Hadir</th>
+                      <th class="p-2 text-center">% Hadir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <For each={rekapMhsPraktikum()}>
+                      {(m) => (
+                        <tr class="border-b border-secondary-200">
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{m.namaMk}</td>
+                          <td class="border-r border-secondary-200 p-2">{m.namaGroup}</td>
+                          <td class="border-r border-secondary-200 p-2">{m.nim}</td>
+                          <td class="border-r border-secondary-200 p-2 font-bold text-secondary-800">{m.nama}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{m.hadir}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{m.sakit}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{m.izin}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{m.alpa}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{m.telat}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">{m.totalKehadiran}</td>
+                          <td class="p-2 text-center">{m.persentaseHadir}%</td>
+                        </tr>
+                      )}
+                    </For>
+                    <Show when={rekapMhsPraktikum().length === 0}>
+                      <tr>
+                        <td colspan="11" class="p-4 text-center text-secondary-400">
+                          Tidak ada data presensi praktikum.
+                        </td>
+                      </tr>
+                    </Show>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="mt-6">
+                <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
+                  D. Rekap Bimbingan per Tanggal
                 </h4>
                 <table class="w-full border-collapse text-left text-xs">
                   <thead>
@@ -430,7 +802,7 @@ export default function BkdCetak() {
 
               <div class="mt-6">
                 <h4 class="mb-2 text-sm font-bold uppercase tracking-widest text-secondary-600">
-                  C2. Rincian Sesi Bimbingan
+                  E. Rincian Sesi Bimbingan
                 </h4>
                 <table class="w-full border-collapse text-left text-xs">
                   <thead>

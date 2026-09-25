@@ -10,7 +10,13 @@
 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { BkdMengajar, BkdRekap, BkdRekapPresensiKelas } from '../controllers/bkdController';
+import type {
+  BkdMengajar,
+  BkdMengajarPraktikum,
+  BkdRekap,
+  BkdRekapPresensiKelas,
+  BkdRekapPresensiRombel,
+} from '../controllers/bkdController';
 
 interface KopOptions {
   orientasi: 'portrait' | 'landscape';
@@ -57,7 +63,7 @@ function gambarKop(doc: jsPDF, opts: KopOptions): { startY: number } {
     infoY += 4.5;
   }
 
-  doc.setDrawColor(99, 102, 241);
+  doc.setDrawColor(0, 102, 204);
   doc.setLineWidth(0.5);
   doc.line(margin, infoY + 1, pageWidth - margin, infoY + 1);
   return { startY: infoY + 8 };
@@ -101,6 +107,11 @@ function judulKelas(m: BkdMengajar): string {
   return `[${m.mataKuliah.kode}] ${m.mataKuliah.nama} — Kelas ${m.namaKelas}`;
 }
 
+function judulRombel(m: BkdMengajarPraktikum): string {
+  const sksPrak = m.mataKuliah.sksPraktek != null ? ` · SKS Praktikum: ${m.mataKuliah.sksPraktek}` : '';
+  return `[${m.mataKuliah.kode}] ${m.mataKuliah.nama} — Kelas ${m.namaKelas} · Group ${m.namaGroup}${sksPrak}`;
+}
+
 /** Kelas yang memiliki minimal satu sesi BAP (seksi kosong dilewati saat cetak). */
 export function filterKelasBerBap(mengajar: BkdMengajar[]): BkdMengajar[] {
   return mengajar.filter((m) => m.pertemuan.length > 0);
@@ -108,6 +119,16 @@ export function filterKelasBerBap(mengajar: BkdMengajar[]): BkdMengajar[] {
 
 /** Kelas yang memiliki minimal satu baris presensi mahasiswa (seksi kosong dilewati saat cetak). */
 export function filterKelasBerpresensi(rekap: BkdRekapPresensiKelas[]): BkdRekapPresensiKelas[] {
+  return rekap.filter((r) => r.mahasiswa.length > 0);
+}
+
+/** Rombel yang memiliki minimal satu sesi BAP praktikum (seksi kosong dilewati saat cetak). */
+export function filterRombelBerBap(mengajar: BkdMengajarPraktikum[]): BkdMengajarPraktikum[] {
+  return mengajar.filter((m) => m.pertemuan.length > 0);
+}
+
+/** Rombel yang memiliki minimal satu baris presensi praktikum (seksi kosong dilewati saat cetak). */
+export function filterRombelBerpresensi(rekap: BkdRekapPresensiRombel[]): BkdRekapPresensiRombel[] {
   return rekap.filter((r) => r.mahasiswa.length > 0);
 }
 
@@ -255,7 +276,7 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
       body: sesiRows,
       startY: afterMhs + 11,
       styles: { fontSize: 8, cellPadding: 1.5 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [0, 102, 204], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [249, 250, 251] },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
@@ -277,4 +298,180 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
 
   gambarFooter(doc);
   doc.save(`Rekap-Presensi-${rekap.dosen.nama || 'Dosen'}-${rekap.periode.nama || ''}.pdf`);
+}
+
+export function exportBapPraktikumBulkPDF(rekap: BkdRekap) {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const margin = 14;
+
+  const { startY } = gambarKop(doc, {
+    orientasi: 'portrait',
+    judul: 'Berita Acara Praktikum (BAP Praktikum)',
+    rekap,
+  });
+
+  filterRombelBerBap(rekap.mengajarPraktikum || []).forEach((mk, idx) => {
+    if (idx > 0) doc.addPage();
+
+    doc.setFontSize(10);
+    doc.setTextColor(31, 41, 55);
+    doc.text(`[PRAKTIKUM] ${judulRombel(mk)}`, margin, startY + 2);
+
+    const rows = mk.pertemuan.map((p, i) => [
+      String(i + 1),
+      String(p.sesiKe),
+      formatTanggalBulan(p.tanggal),
+      p.tema ? `${p.tema} — ${p.materi}` : p.materi,
+      `${p.durasiMenit} mnt`,
+      '',
+    ]);
+
+    autoTable(doc, {
+      head: [['No', 'Sesi', 'Tanggal', 'Materi', 'Durasi', 'Tanda Tangan']],
+      body: rows,
+      startY: startY + 8,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [31, 41, 55], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 16, halign: 'center' },
+        5: { cellWidth: 30, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    const lastY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? startY + 18;
+    gambarTandaTangan(doc, rekap.dosen.nama, lastY);
+  });
+
+  gambarFooter(doc);
+  doc.save(`BAP-Praktikum-Bulk-${rekap.dosen.nama || 'Dosen'}-${rekap.periode.nama || ''}.pdf`);
+}
+
+export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
+  const doc = new jsPDF('l', 'mm', 'a4');
+  const margin = 14;
+
+  const { startY } = gambarKop(doc, { orientasi: 'landscape', judul: 'Rekap Presensi Praktikum', rekap });
+
+  // Map rombelId -> pertemuan (dari BkdMengajarPraktikum) untuk tabel ringkas per sesi.
+  const pertemuanByRombel = new Map<number, BkdMengajarPraktikum['pertemuan']>();
+  for (const m of rekap.mengajarPraktikum || []) pertemuanByRombel.set(m.rombelId, m.pertemuan);
+
+  const rombelRekap = filterRombelBerpresensi(
+    rekap.rekapPresensiPraktikum && rekap.rekapPresensiPraktikum.length > 0
+      ? rekap.rekapPresensiPraktikum
+      : (rekap.mengajarPraktikum || []).map((m) => ({
+          rombelId: m.rombelId,
+          namaGroup: m.namaGroup,
+          kelasId: m.kelasId,
+          namaKelas: m.namaKelas,
+          mataKuliah: m.mataKuliah,
+          jumlahPertemuan: m.jumlahPertemuan,
+          totalMenit: m.totalMenit,
+          mahasiswa: [],
+        })),
+  );
+
+  rombelRekap.forEach((rk, idx) => {
+    if (idx > 0) doc.addPage();
+
+    doc.setFontSize(10);
+    doc.setTextColor(31, 41, 55);
+    doc.text(
+      `[PRAKTIKUM] [${rk.mataKuliah.kode}] ${rk.mataKuliah.nama} — Kelas ${rk.namaKelas} · Group ${rk.namaGroup} (${rk.jumlahPertemuan} pertemuan, ${rk.totalMenit} mnt${
+        rk.mataKuliah.sksPraktek != null ? `, SKS Praktikum: ${rk.mataKuliah.sksPraktek}` : ''
+      })`,
+      margin,
+      startY + 2,
+    );
+
+    // Tabel agregat per mahasiswa.
+    doc.setFontSize(8);
+    doc.setTextColor(55, 65, 81);
+    doc.text('A. Rekap Presensi per Mahasiswa', margin, startY + 9);
+
+    const mhsRows = rk.mahasiswa.map((m, i) => [
+      String(i + 1),
+      m.nim,
+      m.nama,
+      String(m.hadir),
+      String(m.sakit),
+      String(m.izin),
+      String(m.alpa),
+      String(m.telat),
+      String(m.totalKehadiran),
+      `${m.persentaseHadir}%`,
+    ]);
+
+    autoTable(doc, {
+      head: [['No', 'NIM', 'Nama', 'H', 'S', 'I', 'A', 'T', 'Total Hadir', '% Hadir']],
+      body: mhsRows,
+      startY: startY + 12,
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [31, 41, 55], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 30, halign: 'center' },
+        3: { cellWidth: 14, halign: 'center' },
+        4: { cellWidth: 14, halign: 'center' },
+        5: { cellWidth: 14, halign: 'center' },
+        6: { cellWidth: 14, halign: 'center' },
+        7: { cellWidth: 14, halign: 'center' },
+        8: { cellWidth: 22, halign: 'center' },
+        9: { cellWidth: 18, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    // Tabel ringkas per sesi.
+    const afterMhs = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? startY + 20;
+    doc.setFontSize(8);
+    doc.setTextColor(55, 65, 81);
+    doc.text('B. Rekap Presensi per Sesi', margin, afterMhs + 8);
+
+    const pertemuan = pertemuanByRombel.get(rk.rombelId) || [];
+    const sesiRows = pertemuan.map((p, i) => [
+      String(i + 1),
+      String(p.sesiKe),
+      formatTanggalBulan(p.tanggal),
+      String(p.presensiRingkasan.hadir),
+      String(p.presensiRingkasan.sakit),
+      String(p.presensiRingkasan.izin),
+      String(p.presensiRingkasan.alpa),
+      String(p.presensiRingkasan.telat),
+      String(p.presensiRingkasan.total),
+    ]);
+
+    autoTable(doc, {
+      head: [['No', 'Sesi', 'Tanggal', 'H', 'S', 'I', 'A', 'T', 'Total']],
+      body: sesiRows,
+      startY: afterMhs + 11,
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      headStyles: { fillColor: [0, 102, 204], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      columnStyles: {
+        0: { cellWidth: 12, halign: 'center' },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 26, halign: 'center' },
+        3: { cellWidth: 14, halign: 'center' },
+        4: { cellWidth: 14, halign: 'center' },
+        5: { cellWidth: 14, halign: 'center' },
+        6: { cellWidth: 14, halign: 'center' },
+        7: { cellWidth: 14, halign: 'center' },
+        8: { cellWidth: 16, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
+    });
+
+    const lastY = (doc as unknown as { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? afterMhs + 16;
+    gambarTandaTangan(doc, rekap.dosen.nama, lastY);
+  });
+
+  gambarFooter(doc);
+  doc.save(`Rekap-Presensi-Praktikum-${rekap.dosen.nama || 'Dosen'}-${rekap.periode.nama || ''}.pdf`);
 }
