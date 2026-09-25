@@ -44,8 +44,8 @@ function gambarKop(doc: jsPDF, opts: KopOptions): { startY: number } {
 
   const infoLines = [
     `Periode Akademik: ${opts.rekap.periode.nama || '-'}`,
-    `Nama Dosen: ${opts.rekap.dosen.nama || '-'}     NIP: ${opts.rekap.dosen.nip || '-'}     NIDN: ${
-      opts.rekap.dosen.nidn || '-'
+    `Nama Dosen: ${opts.rekap.dosen.nama || '-'}     NIP: ${opts.rekap.dosen.nip || '-'}     NUPTK: ${
+      opts.rekap.dosen.nuptk || opts.rekap.dosen.nidn || '-'
     }`,
     `Program Studi: ${opts.rekap.dosen.prodi || '-'}`,
   ];

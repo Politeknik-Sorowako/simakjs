@@ -230,6 +230,7 @@ export class BkdService {
         nip: dosenProfile.nip,
         nama: dosenProfile.nama,
         nidn: dosenProfile.nidn,
+        nuptk: dosenProfile.nuptk,
         prodi: (dosenProfile.programStudi?.nama as string | undefined) || '-',
       },
       periode: { id: periode.id, nama: periode.nama },

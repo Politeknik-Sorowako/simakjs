@@ -19,6 +19,36 @@ import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
 import { getTodayString } from '../utils/format';
 
+const POHON_ILMU_SUGGESTIONS = [
+  'Ilmu Komputer',
+  'Matematika dan Ilmu Pengetahuan Alam',
+  'Teknik',
+  'Ilmu Pendidikan',
+  'Ilmu Ekonomi',
+  'Ilmu Kesehatan',
+  'Ilmu Sosial dan Humaniora',
+  'Ilmu Hukum',
+  'Ilmu Budaya',
+  'Ilmu Agama',
+];
+
+const CABANG_ILMU_SUGGESTIONS = [
+  'Rekayasa Perangkat Lunak',
+  'Teknik Informatika',
+  'Sistem Informasi',
+  'Teknologi Informasi',
+  'Manajemen Informatika',
+  'Teknik Elektro',
+  'Teknik Pertambangan',
+  'Teknik Industri',
+  'Teknik Sipil',
+  'Pendidikan Teknologi Informasi',
+  'Pendidikan Matematika',
+  'Akuntansi',
+  'Manajemen',
+  'Bisnis Digital',
+];
+
 export default function Dosen() {
   const toast = useToast();
   const [search, setSearch] = createSignal('');
@@ -37,6 +67,10 @@ export default function Dosen() {
     { header: 'Nama Dosen', accessor: 'nama' },
     { header: 'Email', accessor: 'email' },
     { header: 'Program Studi', accessor: 'programStudi.nama' },
+    { header: 'NIDN', accessor: 'nidn' },
+    { header: 'NUPTK', accessor: 'nuptk' },
+    { header: 'Pohon Ilmu', accessor: 'pohonIlmu' },
+    { header: 'Cabang Ilmu', accessor: 'cabangIlmu' },
   ];
 
   const auth = useAuth();
@@ -81,6 +115,9 @@ export default function Dosen() {
   const [email, setEmail] = createSignal('');
   const [prodiId, setProdiId] = createSignal<number>(0);
   const [nidn, setNidn] = createSignal('');
+  const [nuptk, setNuptk] = createSignal('');
+  const [pohonIlmu, setPohonIlmu] = createSignal('');
+  const [cabangIlmu, setCabangIlmu] = createSignal('');
   const [nik, setNik] = createSignal('');
   const [gender, setGender] = createSignal<'L' | 'P' | ''>('');
   const [birthdate, setBirthdate] = createSignal('');
@@ -95,6 +132,9 @@ export default function Dosen() {
     const firstProdi = prodis()?.data?.[0]?.id || 0;
     setProdiId(firstProdi);
     setNidn('');
+    setNuptk('');
+    setPohonIlmu('');
+    setCabangIlmu('');
     setNik('');
     setGender('L');
     setBirthdate('');
@@ -110,6 +150,9 @@ export default function Dosen() {
     setEmail(item.email);
     setProdiId(item.programStudiId || 0);
     setNidn(item.nidn || '');
+    setNuptk(item.nuptk || '');
+    setPohonIlmu(item.pohonIlmu || '');
+    setCabangIlmu(item.cabangIlmu || '');
     setNik(item.nik || '');
     setGender(item.jenisKelamin || 'L');
     setBirthdate(item.tanggalLahir ? String(item.tanggalLahir).split('T')[0] : '');
@@ -128,6 +171,9 @@ export default function Dosen() {
         email: email(),
         programStudiId: Number(prodiId()),
         nidn: nidn() || null,
+        nuptk: nuptk() || null,
+        pohonIlmu: pohonIlmu() || null,
+        cabangIlmu: cabangIlmu() || null,
         nik: nik() || null,
         jenisKelamin: gender() === '' ? null : (gender() as 'L' | 'P'),
         tanggalLahir: birthdate() || null,
@@ -242,6 +288,9 @@ export default function Dosen() {
             'email',
             'programStudiKode',
             'nidn',
+            'nuptk',
+            'pohonIlmu',
+            'cabangIlmu',
             'nik',
             'jenisKelamin',
             'tanggalLahir',
@@ -254,7 +303,7 @@ export default function Dosen() {
 
         <div class="max-w-xs">
           <Input
-            placeholder="Cari NIP atau nama..."
+            placeholder="Cari NIP, NUPTK, atau nama..."
             value={search()}
             onInput={(e) => {
               const value = e.currentTarget.value;
@@ -290,6 +339,10 @@ export default function Dosen() {
               <SortableHeader field="nidn" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                 NIDN
               </SortableHeader>,
+              <SortableHeader field="nuptk" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                NUPTK
+              </SortableHeader>,
+              'Pohon / Cabang Ilmu',
               'Aksi',
             ]}
           >
@@ -311,6 +364,14 @@ export default function Dosen() {
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.email}</td>
                   <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.nidn || '-'}</td>
+                  <td class="px-6 py-4 font-mono text-secondary-500 dark:text-secondary-200">{item.nuptk || '-'}</td>
+                  <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">
+                    {item.pohonIlmu || '-'}
+                    <Show when={item.pohonIlmu && item.cabangIlmu}>
+                      <span class="text-secondary-300 dark:text-secondary-600"> · </span>
+                    </Show>
+                    {item.pohonIlmu ? item.cabangIlmu || '' : ''}
+                  </td>
                   <td class="px-6 py-4 flex gap-2">
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">
                       Edit
@@ -324,7 +385,7 @@ export default function Dosen() {
             </For>
             <Show when={dosens()?.data.length === 0}>
               <tr>
-                <td colspan="6" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                <td colspan="9" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
                   Tidak ada data dosen ditemukan.
                 </td>
               </tr>
@@ -392,10 +453,30 @@ export default function Dosen() {
                 placeholder="Nomor Induk Dosen Nasional"
               />
               <Input
+                label="NUPTK"
+                value={nuptk()}
+                onInput={(e) => setNuptk(e.currentTarget.value)}
+                placeholder="Nomor Unik Pendidik dan Tenaga Kependidikan"
+              />
+              <Input
                 label="NIK"
                 value={nik()}
                 onInput={(e) => setNik(e.currentTarget.value)}
                 placeholder="Nomor Induk Kependudukan"
+              />
+              <Input
+                label="Pohon Ilmu"
+                list="pohon-ilmu-list"
+                value={pohonIlmu()}
+                onInput={(e) => setPohonIlmu(e.currentTarget.value)}
+                placeholder="Contoh: Ilmu Komputer"
+              />
+              <Input
+                label="Cabang Ilmu"
+                list="cabang-ilmu-list"
+                value={cabangIlmu()}
+                onInput={(e) => setCabangIlmu(e.currentTarget.value)}
+                placeholder="Contoh: Rekayasa Perangkat Lunak"
               />
               <Input
                 isSelect
@@ -420,6 +501,12 @@ export default function Dosen() {
                 placeholder="Kota tempat lahir"
               />
             </div>
+            <datalist id="pohon-ilmu-list">
+              <For each={POHON_ILMU_SUGGESTIONS}>{(opt) => <option value={opt} />}</For>
+            </datalist>
+            <datalist id="cabang-ilmu-list">
+              <For each={CABANG_ILMU_SUGGESTIONS}>{(opt) => <option value={opt} />}</For>
+            </datalist>
             <div class="flex justify-end gap-2 border-t pt-4">
               <Button type="button" variant="secondary" onClick={() => setShowModal(false)}>
                 Batal

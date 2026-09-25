@@ -9,6 +9,9 @@ export interface CreateDosenDto {
   programStudiId?: number;
   idPddikti?: string;
   nidn?: string;
+  nuptk?: string;
+  pohonIlmu?: string;
+  cabangIlmu?: string;
   nik?: string;
   jenisKelamin?: 'L' | 'P';
   tanggalLahir?: string;
@@ -29,7 +32,12 @@ export class DosenService {
 
     if (search) {
       conditions.push(
-        or(ilike(dosen.nama, `%${search}%`), ilike(dosen.nip, `%${search}%`), ilike(dosen.email, `%${search}%`)),
+        or(
+          ilike(dosen.nama, `%${search}%`),
+          ilike(dosen.nip, `%${search}%`),
+          ilike(dosen.email, `%${search}%`),
+          ilike(dosen.nuptk, `%${search}%`),
+        ),
       );
     }
     if (programStudiId !== undefined) {
@@ -49,6 +57,7 @@ export class DosenService {
       nip: dosen.nip,
       nama: dosen.nama,
       email: dosen.email,
+      nuptk: dosen.nuptk,
       programStudiId: dosen.programStudiId,
     } as const;
     const sortColumn = sortColumnMap[sortBy as keyof typeof sortColumnMap] ?? dosen.nama;
@@ -93,6 +102,9 @@ export class DosenService {
       tanggalLahir: data.tanggalLahir?.trim() ? data.tanggalLahir : null,
       tempatLahir: data.tempatLahir?.trim() ? data.tempatLahir : null,
       nidn: data.nidn?.trim() ? data.nidn : null,
+      nuptk: data.nuptk?.trim() ? data.nuptk : null,
+      pohonIlmu: data.pohonIlmu?.trim() ? data.pohonIlmu : null,
+      cabangIlmu: data.cabangIlmu?.trim() ? data.cabangIlmu : null,
       idPddikti: data.idPddikti?.trim() ? data.idPddikti : null,
     };
     const [newDosen] = await db.insert(dosen).values(sanitized).returning();
@@ -105,6 +117,9 @@ export class DosenService {
     if ('tanggalLahir' in data) sanitized.tanggalLahir = data.tanggalLahir?.trim() ? data.tanggalLahir : null;
     if ('tempatLahir' in data) sanitized.tempatLahir = data.tempatLahir?.trim() ? data.tempatLahir : null;
     if ('nidn' in data) sanitized.nidn = data.nidn?.trim() ? data.nidn : null;
+    if ('nuptk' in data) sanitized.nuptk = data.nuptk?.trim() ? data.nuptk : null;
+    if ('pohonIlmu' in data) sanitized.pohonIlmu = data.pohonIlmu?.trim() ? data.pohonIlmu : null;
+    if ('cabangIlmu' in data) sanitized.cabangIlmu = data.cabangIlmu?.trim() ? data.cabangIlmu : null;
     if ('idPddikti' in data) sanitized.idPddikti = data.idPddikti?.trim() ? data.idPddikti : null;
 
     const [updatedDosen] = await db.update(dosen).set(sanitized).where(eq(dosen.id, id)).returning();
