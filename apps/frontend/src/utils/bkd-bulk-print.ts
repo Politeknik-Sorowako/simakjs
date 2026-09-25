@@ -63,7 +63,7 @@ function gambarKop(doc: jsPDF, opts: KopOptions): { startY: number } {
     infoY += 4.5;
   }
 
-  doc.setDrawColor(99, 102, 241);
+  doc.setDrawColor(0, 102, 204);
   doc.setLineWidth(0.5);
   doc.line(margin, infoY + 1, pageWidth - margin, infoY + 1);
   return { startY: infoY + 8 };
@@ -108,7 +108,8 @@ function judulKelas(m: BkdMengajar): string {
 }
 
 function judulRombel(m: BkdMengajarPraktikum): string {
-  return `[${m.mataKuliah.kode}] ${m.mataKuliah.nama} — Kelas ${m.namaKelas} · Group ${m.namaGroup}`;
+  const sksPrak = m.mataKuliah.sksPraktek != null ? ` · SKS Praktikum: ${m.mataKuliah.sksPraktek}` : '';
+  return `[${m.mataKuliah.kode}] ${m.mataKuliah.nama} — Kelas ${m.namaKelas} · Group ${m.namaGroup}${sksPrak}`;
 }
 
 /** Kelas yang memiliki minimal satu sesi BAP (seksi kosong dilewati saat cetak). */
@@ -275,7 +276,7 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
       body: sesiRows,
       startY: afterMhs + 11,
       styles: { fontSize: 8, cellPadding: 1.5 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [0, 102, 204], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [249, 250, 251] },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },
@@ -381,7 +382,9 @@ export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
     doc.setFontSize(10);
     doc.setTextColor(31, 41, 55);
     doc.text(
-      `[PRAKTIKUM] [${rk.mataKuliah.kode}] ${rk.mataKuliah.nama} — Kelas ${rk.namaKelas} · Group ${rk.namaGroup} (${rk.jumlahPertemuan} pertemuan, ${rk.totalMenit} mnt)`,
+      `[PRAKTIKUM] [${rk.mataKuliah.kode}] ${rk.mataKuliah.nama} — Kelas ${rk.namaKelas} · Group ${rk.namaGroup} (${rk.jumlahPertemuan} pertemuan, ${rk.totalMenit} mnt${
+        rk.mataKuliah.sksPraktek != null ? `, SKS Praktikum: ${rk.mataKuliah.sksPraktek}` : ''
+      })`,
       margin,
       startY + 2,
     );
@@ -449,7 +452,7 @@ export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
       body: sesiRows,
       startY: afterMhs + 11,
       styles: { fontSize: 8, cellPadding: 1.5 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [0, 102, 204], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [249, 250, 251] },
       columnStyles: {
         0: { cellWidth: 12, halign: 'center' },

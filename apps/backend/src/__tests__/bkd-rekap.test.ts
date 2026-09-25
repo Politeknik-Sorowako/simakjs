@@ -460,4 +460,97 @@ describe('BKD Rekap', () => {
       grandMenit: 200,
     });
   });
+
+  it('BKD rekap: scoping periode BAP praktikum & kalkulasi sksPraktek', async () => {
+    const prodiId = (await db.query.programStudi.findFirst())?.id;
+
+    // MK praktikum dengan sksPraktek pada periode aktif.
+    const [mkPrakSks] = await db
+      .insert(mataKuliah)
+      .values({
+        programStudiId: prodiId,
+        kode: `MKPS_${Date.now()}`,
+        nama: 'Praktikum Mesin',
+        sksTotal: 2,
+        sksPraktek: 1,
+      })
+      .returning();
+    const [kelasPrakSks] = await db
+      .insert(kelasKuliah)
+      .values({ mataKuliahId: mkPrakSks.id, periodeId, namaKelas: 'C' })
+      .returning();
+    const [rombelPrakSks] = await db
+      .insert(rombelPraktikum)
+      .values({ kelasKuliahId: kelasPrakSks.id, namaGroup: 'Prak-C', instrukturId: dosenId })
+      .returning();
+    await db.insert(rombelPraktikumMahasiswa).values({ rombelPraktikumId: rombelPrakSks.id, mahasiswaId: mhsId });
+    await db
+      .insert(bapPraktikum)
+      .values({
+        rombelPraktikumId: rombelPrakSks.id,
+        tanggal: '2025-09-05',
+        sesiKe: 1,
+        materi: 'Praktik Mesin Dasar',
+        durasiMenit: 100,
+        instrukturId: dosenId,
+      })
+      .returning();
+
+    // BAP praktikum periode lampau — tidak boleh bocor ke rekap periode aktif.
+    await db.insert(periodeAkademik).values({ id: '20241', nama: 'Ganjil 2024/2025', aktif: false });
+    const [kelasLama] = await db
+      .insert(kelasKuliah)
+      .values({ mataKuliahId: mkPrakSks.id, periodeId: '20241', namaKelas: 'L' })
+      .returning();
+    const [rombelLama] = await db
+      .insert(rombelPraktikum)
+      .values({ kelasKuliahId: kelasLama.id, namaGroup: 'Prak-L', instrukturId: dosenId })
+      .returning();
+    await db
+      .insert(bapPraktikum)
+      .values({
+        rombelPraktikumId: rombelLama.id,
+        tanggal: '2024-09-01',
+        sesiKe: 1,
+        materi: 'Praktik Lama',
+        durasiMenit: 100,
+        instrukturId: dosenId,
+      })
+      .returning();
+
+    const res = await app.handle(
+      new Request(`http://localhost/bkd/rekap?dosenId=${dosenId}&periodeId=${periodeId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: {
+        mengajarPraktikum: {
+          namaGroup: string;
+          mataKuliah: { sks: number; sksPraktek: number | null };
+        }[];
+        ringkasan: {
+          totalSksTeori: number;
+          totalSksPraktikum: number;
+          grandSks: number;
+          totalRombelPraktikum: number;
+        };
+      };
+    };
+
+    const groups = body.data.mengajarPraktikum.map((r) => r.namaGroup).sort();
+    expect(groups).toEqual(['Prak-A', 'Prak-C']);
+
+    const prakC = body.data.mengajarPraktikum.find((r) => r.namaGroup === 'Prak-C');
+    expect(prakC?.mataKuliah).toMatchObject({ sks: 2, sksPraktek: 1 });
+
+    expect(body.data.ringkasan).toMatchObject({
+      totalSksTeori: 3,
+      totalSksPraktikum: 1,
+      grandSks: 4,
+      totalRombelPraktikum: 2,
+    });
+  });
 });

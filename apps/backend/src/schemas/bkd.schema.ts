@@ -5,7 +5,7 @@ export const getRekapBkdSchema = {
     tags: ['BKD'],
     summary: 'Rekap BKD Dosen (Mengajar, Presensi, Praktikum, Bimbingan)',
     description:
-      'Mengambil rekapitulasi beban kerja dosen (BKD) per periode: agregat mengajar per kelas/mata kuliah (SKS, jumlah pertemuan, total menit), rekap presensi, rekap mengajar & presensi praktikum per rombel (instruktur rombel / pengisi BAP praktikum), dan riwayat bimbingan akademik.',
+      'Mengambil rekapitulasi beban kerja dosen (BKD) per periode: agregat mengajar per kelas/mata kuliah (SKS, jumlah pertemuan, total menit), rekap presensi, rekap mengajar & presensi praktikum per rombel (instruktur rombel / pengisi BAP praktikum, termasuk SKS praktikum), dan riwayat bimbingan akademik.',
   },
   query: t.Object({
     dosenId: t.Optional(t.Numeric({ error: 'ID Dosen tidak valid' })),
