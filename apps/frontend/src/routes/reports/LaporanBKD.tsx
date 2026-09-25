@@ -1,7 +1,6 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
-import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -25,7 +24,7 @@ import {
 } from '../../utils/bkd-bulk-print';
 import { exportBkdRekapCSV, exportBkdRekapExcel } from '../../utils/bkd-export';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
-import { ExportColumn } from '../../utils/export';
+import { type ExportColumn, exportToCSV, exportToExcel, exportToPDF } from '../../utils/export';
 
 const PRESENSI_STATUS: {
   key: keyof { hadir: number; sakit: number; izin: number; alpa: number; telat: number };
@@ -37,6 +36,9 @@ const PRESENSI_STATUS: {
   { key: 'alpa', label: 'A' },
   { key: 'telat', label: 'T' },
 ];
+
+const MENU_ITEM_CLASS =
+  'w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-secondary-700 transition-colors hover:bg-secondary-100 hover:text-secondary-900 dark:text-secondary-200 dark:hover:bg-secondary-800';
 
 export default function LaporanBKD() {
   const auth = useAuth();
@@ -279,6 +281,76 @@ export default function LaporanBKD() {
     ...rowsPraktikum().map((r) => ({ ...r, jenis: 'Praktikum', group: r.namaGroup })),
   ];
 
+  // Dropdown "Cetak & Ekspor" — satu pintu akses untuk seluruh aksi cetak/ekspor BKD.
+  const [actionsOpen, setActionsOpen] = createSignal(false);
+  let actionsRef: HTMLDivElement | undefined;
+
+  const closeActions = () => setActionsOpen(false);
+  const runAction = (fn: () => void) => () => {
+    closeActions();
+    fn();
+  };
+
+  const handleClickOutsideActions = (e: MouseEvent) => {
+    if (actionsRef && !actionsRef.contains(e.target as Node)) closeActions();
+  };
+
+  onMount(() => {
+    document.addEventListener('click', handleClickOutsideActions);
+    onCleanup(() => document.removeEventListener('click', handleClickOutsideActions));
+  });
+
+  const handleCetakMandiri = () => {
+    if (!selectedPeriode()) {
+      toast.showToast('Pilih periode terlebih dahulu', 'info');
+      return;
+    }
+    const url = `/bkd/cetak?dosenId=${selectedDosen() || (isDosenRole() ? 0 : '')}&periodeId=${selectedPeriode()}`;
+    window.open(url, '_blank');
+  };
+
+  const handleTableExcel = () => {
+    const data = exportRows();
+    if (data.length === 0) {
+      toast.showToast('Tidak ada data untuk diekspor', 'info');
+      return;
+    }
+    try {
+      exportToExcel(data, columns, 'BKD');
+      toast.showToast('Ekspor berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal mengunduh data ekspor', 'error');
+    }
+  };
+
+  const handleTablePdf = () => {
+    const data = exportRows();
+    if (data.length === 0) {
+      toast.showToast('Tidak ada data untuk diekspor', 'info');
+      return;
+    }
+    try {
+      exportToPDF(data, columns, 'BKD', 'Laporan BKD / Beban Dosen');
+      toast.showToast('Ekspor berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal mengunduh data ekspor', 'error');
+    }
+  };
+
+  const handleTableCsv = () => {
+    const data = exportRows();
+    if (data.length === 0) {
+      toast.showToast('Tidak ada data untuk diekspor', 'info');
+      return;
+    }
+    try {
+      exportToCSV(data, columns, 'BKD');
+      toast.showToast('Ekspor berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal mengunduh data ekspor', 'error');
+    }
+  };
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -289,67 +361,82 @@ export default function LaporanBKD() {
               Rekapitulasi beban kerja dosen: mengajar, praktikum, presensi, dan bimbingan akademik per periode
             </p>
           </div>
-          <div class="flex items-center gap-2">
-            <Show when={selectedPeriode()}>
-              <a
-                href={`/bkd/cetak?dosenId=${selectedDosen() || (isDosenRole() ? 0 : '')}&periodeId=${selectedPeriode()}`}
-                target="_blank"
-                class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 print:hidden"
+          <div class="relative" ref={actionsRef}>
+            <button
+              type="button"
+              onClick={() => setActionsOpen(!actionsOpen())}
+              disabled={rekap.loading}
+              class="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-50 print:hidden"
+            >
+              <span class="text-base">🖨️</span>
+              <span>Cetak &amp; Ekspor</span>
+              <svg
+                class={`h-4 w-4 transition-transform ${actionsOpen() ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                🖨️ Cetak Mandiri
-              </a>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <Show when={actionsOpen()}>
+              <div class="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-secondary-200 bg-white p-2 shadow-xl dark:border-secondary-700 dark:bg-secondary-900">
+                <p class="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-secondary-400">
+                  Cetak Dokumen
+                </p>
+                <button type="button" onClick={runAction(handleCetakMandiri)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">🖨️</span>
+                  <span>Cetak Mandiri (Halaman)</span>
+                </button>
+                <button type="button" onClick={runAction(handleBapPdf)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📄</span>
+                  <span>BAP Perkuliahan (PDF)</span>
+                </button>
+                <button type="button" onClick={runAction(handlePresensiPdf)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📊</span>
+                  <span>Rekap Presensi Teori (PDF)</span>
+                </button>
+                <button type="button" onClick={runAction(handleBapPraktikumPdf)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">🧪</span>
+                  <span>BAP Praktikum (PDF)</span>
+                </button>
+                <button type="button" onClick={runAction(handlePresensiPraktikumPdf)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📊</span>
+                  <span>Rekap Presensi Praktikum (PDF)</span>
+                </button>
+
+                <div class="my-1 border-t border-secondary-100 dark:border-secondary-700" />
+                <p class="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-secondary-400">
+                  Ekspor Rekap
+                </p>
+                <button type="button" onClick={runAction(handleRekapCsv)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📄</span>
+                  <span>Rekap Lengkap (CSV)</span>
+                </button>
+                <button type="button" onClick={runAction(handleRekapExcel)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📊</span>
+                  <span>Rekap Lengkap (Excel)</span>
+                </button>
+
+                <div class="my-1 border-t border-secondary-100 dark:border-secondary-700" />
+                <p class="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-secondary-400">
+                  Ekspor Tabel
+                </p>
+                <button type="button" onClick={runAction(handleTableExcel)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📊</span>
+                  <span>Tabel Mengajar (Excel)</span>
+                </button>
+                <button type="button" onClick={runAction(handleTablePdf)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📄</span>
+                  <span>Tabel Mengajar (PDF)</span>
+                </button>
+                <button type="button" onClick={runAction(handleTableCsv)} class={MENU_ITEM_CLASS}>
+                  <span class="text-base">📋</span>
+                  <span>Tabel Mengajar (CSV)</span>
+                </button>
+              </div>
             </Show>
-            <Show when={rekap()?.data}>
-              <button
-                type="button"
-                onClick={handleBapPdf}
-                disabled={rekap.loading}
-                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
-              >
-                📄 BAP (PDF)
-              </button>
-              <button
-                type="button"
-                onClick={handlePresensiPdf}
-                disabled={rekap.loading}
-                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
-              >
-                📊 Presensi (PDF)
-              </button>
-              <button
-                type="button"
-                onClick={handleBapPraktikumPdf}
-                disabled={rekap.loading}
-                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
-              >
-                🧪 BAP Praktikum (PDF)
-              </button>
-              <button
-                type="button"
-                onClick={handlePresensiPraktikumPdf}
-                disabled={rekap.loading}
-                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
-              >
-                📊 Presensi Praktikum (PDF)
-              </button>
-              <button
-                type="button"
-                onClick={handleRekapCsv}
-                disabled={rekap.loading}
-                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
-              >
-                📄 Rekap CSV
-              </button>
-              <button
-                type="button"
-                onClick={handleRekapExcel}
-                disabled={rekap.loading}
-                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
-              >
-                📊 Rekap Excel
-              </button>
-            </Show>
-            <ExportButtonGroup data={exportRows} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
           </div>
         </div>
 
