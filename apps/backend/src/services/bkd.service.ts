@@ -23,11 +23,15 @@ const MATERI_SYNC_PRAKTIKUM = '[Praktikum]%';
 function hitungStatusPresensi(entries: { status: string }[]) {
   const ringkasan = { hadir: 0, sakit: 0, izin: 0, alpa: 0, telat: 0, total: entries.length };
   for (const pr of entries) {
-    if (pr.status === 'hadir') ringkasan.hadir++;
+    // Status Telat (T) disamakan dengan Hadir (H) pada seluruh rekap kehadiran
+    // (BKD & laporan presensi): tetap tercatat untuk riwayat kompensasi,
+    // tetapi dianggap hadir dalam perhitungan persentase kehadiran.
+    if (pr.status === 'hadir' || pr.status === 'telat' || pr.status === 'terlambat') ringkasan.hadir++;
     else if (pr.status === 'sakit') ringkasan.sakit++;
     else if (pr.status === 'izin') ringkasan.izin++;
-    else if (pr.status === 'alpa') ringkasan.alpa++;
-    else if (pr.status === 'telat' || pr.status === 'terlambat') ringkasan.telat++;
+    // Status unknown (?) yang belum diverifikasi admin sementara dianggap Alpa (A)
+    // sampai status sebenarnya dikonfirmasi.
+    else if (pr.status === 'alpa' || pr.status === 'unknown') ringkasan.alpa++;
   }
   return ringkasan;
 }
@@ -133,11 +137,11 @@ export class BkdService {
           mahasiswaId: presensi.mahasiswaId,
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
-          hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
+          hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} IN ('hadir', 'telat', 'terlambat') THEN 1 ELSE 0 END), 0)`,
           sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
           izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
-          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
-          telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'telat' OR ${presensi.status} = 'terlambat' THEN 1 ELSE 0 END), 0)`,
+          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} IN ('alpa', 'unknown') THEN 1 ELSE 0 END), 0)`,
+          telat: sql<number>`0`,
         })
         .from(presensi)
         .innerJoin(bap, eq(presensi.bapId, bap.id))
@@ -398,11 +402,11 @@ export class BkdService {
           mahasiswaId: presensiPraktikum.mahasiswaId,
           nim: mahasiswa.nim,
           nama: mahasiswa.nama,
-          hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
+          hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} IN ('hadir', 'telat', 'terlambat') THEN 1 ELSE 0 END), 0)`,
           sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
           izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
-          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
-          telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} = 'telat' OR ${presensiPraktikum.status} = 'terlambat' THEN 1 ELSE 0 END), 0)`,
+          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensiPraktikum.status} IN ('alpa', 'unknown') THEN 1 ELSE 0 END), 0)`,
+          telat: sql<number>`0`,
         })
         .from(presensiPraktikum)
         .innerJoin(bapPraktikum, eq(presensiPraktikum.bapPraktikumId, bapPraktikum.id))

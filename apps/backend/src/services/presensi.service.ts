@@ -1076,8 +1076,8 @@ export class PresensiService {
         hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
         sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
         izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
-        alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
-        telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'telat' THEN 1 ELSE 0 END), 0)`,
+        alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} IN ('alpa', 'unknown') THEN 1 ELSE 0 END), 0)`,
+        telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} IN ('telat', 'terlambat') THEN 1 ELSE 0 END), 0)`,
       })
       .from(presensi)
       .innerJoin(mahasiswa, eq(presensi.mahasiswaId, mahasiswa.id))
@@ -1100,8 +1100,9 @@ export class PresensiService {
         izin: Number(m.izin),
         alpa: Number(m.alpa),
         telat: Number(m.telat),
-        totalKehadiran: Number(m.hadir) + Number(m.sakit) + Number(m.izin),
-        persentaseHadir: pt > 0 ? Math.round(((Number(m.hadir) + Number(m.sakit) + Number(m.izin)) / pt) * 100) : 0,
+        totalKehadiran: Number(m.hadir) + Number(m.telat) + Number(m.sakit) + Number(m.izin),
+        persentaseHadir:
+          pt > 0 ? Math.round(((Number(m.hadir) + Number(m.telat) + Number(m.sakit) + Number(m.izin)) / pt) * 100) : 0,
       })),
     };
   }
@@ -1156,8 +1157,8 @@ export class PresensiService {
           hadir: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'hadir' THEN 1 ELSE 0 END), 0)`,
           sakit: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'sakit' THEN 1 ELSE 0 END), 0)`,
           izin: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'izin' THEN 1 ELSE 0 END), 0)`,
-          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'alpa' THEN 1 ELSE 0 END), 0)`,
-          telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} = 'telat' THEN 1 ELSE 0 END), 0)`,
+          alpa: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} IN ('alpa', 'unknown') THEN 1 ELSE 0 END), 0)`,
+          telat: sql<number>`COALESCE(SUM(CASE WHEN ${presensi.status} IN ('telat', 'terlambat') THEN 1 ELSE 0 END), 0)`,
         })
         .from(presensi)
         .where(and(eq(presensi.mahasiswaId, mahasiswaId), sql`${presensi.bapId} IN (${sql.join(bapIds, sql`, `)})`));
@@ -1176,7 +1177,12 @@ export class PresensiService {
         alpa: Number(p?.alpa || 0),
         telat: Number(p?.telat || 0),
         persentaseHadir:
-          pt > 0 ? Math.round(((Number(p?.hadir || 0) + Number(p?.sakit || 0) + Number(p?.izin || 0)) / pt) * 100) : 0,
+          pt > 0
+            ? Math.round(
+                ((Number(p?.hadir || 0) + Number(p?.telat || 0) + Number(p?.sakit || 0) + Number(p?.izin || 0)) / pt) *
+                  100,
+              )
+            : 0,
       });
     }
 
@@ -1250,9 +1256,10 @@ export class PresensiService {
           kelasKuliahId: bap.kelasKuliahId,
           mahasiswaId: presensi.mahasiswaId,
           totalPertemuan: sql<number>`COUNT(DISTINCT ${bap.id})`.as('total_pertemuan'),
-          hadirOk: sql<number>`COUNT(CASE WHEN ${presensi.status} IN ('hadir', 'sakit', 'izin') THEN 1 END)`.as(
-            'hadir_ok',
-          ),
+          hadirOk:
+            sql<number>`COUNT(CASE WHEN ${presensi.status} IN ('hadir', 'sakit', 'izin', 'telat', 'terlambat') THEN 1 END)`.as(
+              'hadir_ok',
+            ),
         })
         .from(presensi)
         .innerJoin(bap, eq(presensi.bapId, bap.id))
@@ -1386,9 +1393,10 @@ export class PresensiService {
           mahasiswaId: presensi.mahasiswaId,
           kelasKuliahId: bap.kelasKuliahId,
           totalPertemuan: sql<number>`COUNT(DISTINCT ${bap.id})`.as('total_pertemuan'),
-          hadirOk: sql<number>`COUNT(CASE WHEN ${presensi.status} IN ('hadir', 'sakit', 'izin') THEN 1 END)`.as(
-            'hadir_ok',
-          ),
+          hadirOk:
+            sql<number>`COUNT(CASE WHEN ${presensi.status} IN ('hadir', 'sakit', 'izin', 'telat', 'terlambat') THEN 1 END)`.as(
+              'hadir_ok',
+            ),
         })
         .from(presensi)
         .innerJoin(bap, eq(presensi.bapId, bap.id))

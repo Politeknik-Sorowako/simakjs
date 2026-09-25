@@ -614,5 +614,158 @@ describe('BAP, Presensi & Kompensasi API', () => {
       const mhsList = await resMhsList.json();
       expect(Array.isArray(mhsList)).toBe(true);
     });
+
+    it('status telat/terlambat=hadir & unknown belum diverifikasi=alpa pada seluruh laporan rekap presensi', async () => {
+      const { krs } = await import('../models/schema');
+
+      // 5 sesi BAP: hadir, telat, terlambat (hasil verifikasi admin), alpa, unknown (belum diverifikasi).
+      // Bulk diposting admin karena dosen/instruktur hanya boleh set hadir/telat/unknown.
+      const statuses = ['hadir', 'telat', 'terlambat', 'alpa', 'unknown'];
+      let unknownBapId: number | undefined;
+      for (let i = 0; i < statuses.length; i++) {
+        const bapRes = await app.handle(
+          new Request('http://localhost/bap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${dosenToken}` },
+            body: JSON.stringify({
+              kelasKuliahId: kelasId,
+              pertemuanKe: i + 1,
+              tanggal: `2026-09-0${i + 1}`,
+              materi: `Materi ${i + 1}`,
+            }),
+          }),
+        );
+        expect(bapRes.status).toBe(201);
+        const bapData = (await bapRes.json()) as { id: number };
+        if (statuses[i] === 'unknown') unknownBapId = bapData.id;
+
+        const presRes = await app.handle(
+          new Request('http://localhost/presensi/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+            body: JSON.stringify({
+              bapId: bapData.id,
+              presensiList: [{ mahasiswaId: mhsId, status: statuses[i], durasiMangkir: 0 }],
+            }),
+          }),
+        );
+        expect(presRes.status).toBe(200);
+      }
+
+      // Rekap per kelas: Telat masuk pembilang %; unknown dikategorikan Alpa.
+      const resKelas = await app.handle(
+        new Request(`http://localhost/presensi/rekap-kehadiran?kelasKuliahId=${kelasId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resKelas.status).toBe(200);
+      const kelasBody = (await resKelas.json()) as {
+        totalPertemuan: number;
+        mahasiswa: {
+          hadir: number;
+          telat: number;
+          alpa: number;
+          totalKehadiran: number;
+          persentaseHadir: number;
+        }[];
+      };
+      expect(kelasBody.totalPertemuan).toBe(5);
+      expect(kelasBody.mahasiswa).toHaveLength(1);
+      const m = kelasBody.mahasiswa[0];
+      expect(m.hadir).toBe(1);
+      expect(m.telat).toBe(2);
+      expect(m.alpa).toBe(2);
+      expect(m.totalKehadiran).toBe(3);
+      expect(m.persentaseHadir).toBe(60);
+
+      // KRS wajib agar kelas ikut terpilih oleh rekap-kehadiran-mahasiswa & filter periode.
+      await db.insert(krs).values({ mahasiswaId: mhsId, kelasKuliahId: kelasId });
+
+      const assertSemuaRekap = async (ekspektasi: { alpa: number; persentase: number }) => {
+        // Rekap per mahasiswa per kelas.
+        const resMhs = await app.handle(
+          new Request(
+            `http://localhost/presensi/rekap-kehadiran-mahasiswa?mahasiswaId=${mhsId}&periodeId=${periodeId}`,
+            {
+              headers: { Authorization: `Bearer ${adminToken}` },
+            },
+          ),
+        );
+        expect(resMhs.status).toBe(200);
+        const mhsDetail = (await resMhs.json()) as {
+          detail: { persentaseHadir: number }[];
+          summary: { rataPersentaseHadir: number };
+        };
+        expect(mhsDetail.detail[0].persentaseHadir).toBe(ekspektasi.persentase);
+        expect(mhsDetail.summary.rataPersentaseHadir).toBe(ekspektasi.persentase);
+
+        // Daftar kelas (CTE hadirOk).
+        const resList = await app.handle(
+          new Request(`http://localhost/presensi/rekap-kelas-list?periodeId=${periodeId}`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+          }),
+        );
+        expect(resList.status).toBe(200);
+        const kelasList = (await resList.json()) as { rataPersentaseHadir: number }[];
+        expect(kelasList).toHaveLength(1);
+        expect(kelasList[0].rataPersentaseHadir).toBe(ekspektasi.persentase);
+
+        // Daftar mahasiswa (CTE hadirOk).
+        const resMhsList = await app.handle(
+          new Request(`http://localhost/presensi/rekap-mahasiswa-list?periodeId=${periodeId}`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+          }),
+        );
+        expect(resMhsList.status).toBe(200);
+        const mhsList = (await resMhsList.json()) as { rataPersentaseHadir: number }[];
+        expect(mhsList).toHaveLength(1);
+        expect(mhsList[0].rataPersentaseHadir).toBe(ekspektasi.persentase);
+
+        // Kolom Alpa rekap per kelas mencerminkan kategori terbaru.
+        const resKelasAkhir = await app.handle(
+          new Request(`http://localhost/presensi/rekap-kehadiran?kelasKuliahId=${kelasId}`, {
+            headers: { Authorization: `Bearer ${adminToken}` },
+          }),
+        );
+        const kelasAkhir = (await resKelasAkhir.json()) as {
+          mahasiswa: { alpa: number }[];
+        };
+        expect(kelasAkhir.mahasiswa[0].alpa).toBe(ekspektasi.alpa);
+      };
+
+      await assertSemuaRekap({ alpa: 2, persentase: 60 });
+
+      // Konfirmasi admin mengubah status sebenarnya: unknown -> SAKIT.
+      // Setelah konfirmasi, unknown tidak lagi dihitung sebagai alpa; % naik.
+      expect(unknownBapId).toBeDefined();
+      const listBap = (await (
+        await app.handle(
+          new Request(`http://localhost/presensi/bap/${unknownBapId}`, {
+            method: 'GET',
+            headers: { Authorization: `Bearer ${adminToken}` },
+          }),
+        )
+      ).json()) as { id: number; status: string }[];
+      const unknownRow = listBap.find((r) => r.status === 'unknown');
+      expect(unknownRow).toBeDefined();
+
+      const verifRes = await app.handle(
+        new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+          body: JSON.stringify({
+            sumber: 'BAP',
+            sumberId: unknownRow!.id,
+            statusKonfirmasi: 'SAKIT',
+            durasiMenit: 100,
+            keterangan: 'Konfirmasi test: unknown menjadi sakit',
+          }),
+        }),
+      );
+      expect(verifRes.status).toBe(200);
+
+      // Setelah konfirmasi: alpa turun (1), % naik (80 dari 5 sesi).
+      await assertSemuaRekap({ alpa: 1, persentase: 80 });
+    });
   });
 });

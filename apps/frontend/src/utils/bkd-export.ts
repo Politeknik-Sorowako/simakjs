@@ -41,10 +41,6 @@ const teoriColumns: ExportColumn[] = [
     accessor: (r: Record<string, unknown>) => (r.presensi as { alpa?: number } | undefined)?.alpa ?? 0,
   },
   {
-    header: 'Telat',
-    accessor: (r: Record<string, unknown>) => (r.presensi as { telat?: number } | undefined)?.telat ?? 0,
-  },
-  {
     header: '% Hadir',
     accessor: (r: Record<string, unknown>) => (r.presensi as { persen?: number } | undefined)?.persen ?? 0,
   },
@@ -86,10 +82,6 @@ const praktikumColumns: ExportColumn[] = [
     accessor: (r: Record<string, unknown>) => (r.presensi as { alpa?: number } | undefined)?.alpa ?? 0,
   },
   {
-    header: 'Telat',
-    accessor: (r: Record<string, unknown>) => (r.presensi as { telat?: number } | undefined)?.telat ?? 0,
-  },
-  {
     header: '% Hadir',
     accessor: (r: Record<string, unknown>) => (r.presensi as { persen?: number } | undefined)?.persen ?? 0,
   },
@@ -106,7 +98,6 @@ const presensiPraktikumColumns: ExportColumn[] = [
   { header: 'Sakit', accessor: 'sakit' },
   { header: 'Izin', accessor: 'izin' },
   { header: 'Alpa', accessor: 'alpa' },
-  { header: 'Telat', accessor: 'telat' },
   { header: 'Total Kehadiran', accessor: 'totalKehadiran' },
   { header: '% Hadir', accessor: (r: Record<string, unknown>) => `${r.persentaseHadir ?? 0}%` },
 ];
@@ -136,7 +127,6 @@ function flattenPresensiPraktikum(rekap: BkdRekap): FlatRow[] {
         sakit: m.sakit,
         izin: m.izin,
         alpa: m.alpa,
-        telat: m.telat,
         totalKehadiran: m.totalKehadiran,
         persentaseHadir: m.persentaseHadir,
       });
@@ -215,7 +205,6 @@ const csvColumns: ExportColumn[] = [
   { header: 'Sakit', accessor: 'sakit' },
   { header: 'Izin', accessor: 'izin' },
   { header: 'Alpa', accessor: 'alpa' },
-  { header: 'Telat', accessor: 'telat' },
   { header: 'Total Kehadiran', accessor: 'totalKehadiran' },
   { header: '% Hadir', accessor: 'persen' },
   { header: 'Tanggal', accessor: 'tanggal' },
