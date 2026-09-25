@@ -40,6 +40,7 @@ function parseSort(sortBy?: string, sortOrder?: string): SQL<unknown> {
 
 const verifiedUser = aliasedTable(users, 'verified_user');
 const creatorUser = aliasedTable(users, 'creator_user');
+const kelasKuliahBap = aliasedTable(kelasKuliah, 'kelas_kuliah_bap');
 
 /**
  * Kolom konteks sumber (kelas/sesi + MK/kelompok) untuk tabel terpusat
@@ -66,7 +67,24 @@ const SUMBER_CONTEXT_SQL = {
     WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${presensiPraktikum.lampiranEvidens}
     ELSE NULL END`,
   namaKelas: sql<string | null>`CASE
-    WHEN ${ketidakhadiranMahasiswa.sumber} IN ('BAP', 'PRAKTIKUM') THEN ${kelasKuliah.namaKelas}
+    WHEN ${ketidakhadiranMahasiswa.sumber} IN ('BAP', 'PRAKTIKUM')
+      THEN COALESCE(${kelasKuliah.namaKelas}, ${kelasKuliahBap.namaKelas})
+    ELSE NULL END`,
+  kelasKuliahId: sql<number | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${bap.kelasKuliahId}
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${rombelPraktikum.kelasKuliahId}
+    ELSE NULL END`,
+  bapId: sql<number | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${bap.id}
+    ELSE NULL END`,
+  bapPraktikumId: sql<number | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${bapPraktikum.id}
+    ELSE NULL END`,
+  rombelPraktikumId: sql<number | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${rombelPraktikum.id}
+    ELSE NULL END`,
+  namaGroup: sql<string | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${rombelPraktikum.namaGroup}
     ELSE NULL END`,
   mataKuliahKode: sql<string | null>`CASE
     WHEN ${ketidakhadiranMahasiswa.sumber} IN ('BAP', 'PRAKTIKUM') THEN ${mataKuliah.kode}
@@ -79,6 +97,15 @@ const SUMBER_CONTEXT_SQL = {
     ELSE NULL END`,
   kelompokNama: sql<string | null>`CASE
     WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${kelompokApel.namaKelompok}
+    ELSE NULL END`,
+  sesiApelId: sql<number | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${sesiApel.id}
+    ELSE NULL END`,
+  kelompokApelId: sql<number | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${sesiApel.kelompokApelId}
+    ELSE NULL END`,
+  tanggalSesiApel: sql<string | null>`CASE
+    WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${sesiApel.tanggal}
     ELSE NULL END`,
   shift: sql<string | null>`CASE
     WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN ${sesiApel.shift}
@@ -139,8 +166,9 @@ function baseQuery() {
     .leftJoin(sesiApel, eq(presensiApel.sesiApelId, sesiApel.id))
     .leftJoin(kelompokApel, eq(sesiApel.kelompokApelId, kelompokApel.id))
     .leftJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
-    .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
-    .leftJoin(dosen, eq(bap.dosenId, dosen.id));
+    .leftJoin(kelasKuliahBap, eq(bap.kelasKuliahId, kelasKuliahBap.id))
+    .leftJoin(mataKuliah, sql`${mataKuliah.id} = COALESCE(${kelasKuliah.mataKuliahId}, ${kelasKuliahBap.mataKuliahId})`)
+    .leftJoin(dosen, sql`${dosen.id} = COALESCE(${bap.dosenId}, ${bapPraktikum.instrukturId})`);
 }
 
 interface BaseFilterParams {

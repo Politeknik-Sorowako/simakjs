@@ -27,6 +27,14 @@ export interface KetidakhadiranRow {
   pertemuanKe?: number | null;
   materi?: string | null;
   lampiranEvidens?: string | null;
+  kelasKuliahId?: number | null;
+  bapId?: number | null;
+  bapPraktikumId?: number | null;
+  rombelPraktikumId?: number | null;
+  namaGroup?: string | null;
+  sesiApelId?: number | null;
+  kelompokApelId?: number | null;
+  tanggalSesiApel?: string | null;
   namaKelas?: string | null;
   mataKuliahKode?: string | null;
   mataKuliahNama?: string | null;
