@@ -5,14 +5,23 @@ import { ExportButtonGroup } from '../../components/reports/ExportButton';
 import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { type BkdRekap, bkdController } from '../../controllers/bkdController';
+import {
+  type BkdRekap,
+  type BkdRekapMahasiswaPraktikumRow,
+  type BkdRiwayatPraktikumRow,
+  bkdController,
+} from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import {
   exportBapBulkPDF,
+  exportBapPraktikumBulkPDF,
   exportPresensiBulkPDF,
+  exportPresensiPraktikumBulkPDF,
   filterKelasBerBap,
   filterKelasBerpresensi,
+  filterRombelBerBap,
+  filterRombelBerpresensi,
 } from '../../utils/bkd-bulk-print';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
 import { ExportColumn } from '../../utils/export';
@@ -102,13 +111,99 @@ export default function LaporanBKD() {
     }
   };
 
+  const handleBapPraktikumPdf = () => {
+    const data = rekap()?.data;
+    if (!data) {
+      toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
+      return;
+    }
+    if (filterRombelBerBap(data.mengajarPraktikum || []).length === 0) {
+      toast.showToast('Tidak ada sesi BAP praktikum untuk dicetak', 'info');
+      return;
+    }
+    try {
+      exportBapPraktikumBulkPDF(data);
+      toast.showToast('PDF BAP praktikum berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal membuat PDF BAP praktikum', 'error');
+    }
+  };
+
+  const handlePresensiPraktikumPdf = () => {
+    const data = rekap()?.data;
+    if (!data) {
+      toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
+      return;
+    }
+    if (filterRombelBerpresensi(data.rekapPresensiPraktikum || []).length === 0) {
+      toast.showToast('Tidak ada data presensi praktikum untuk dicetak', 'info');
+      return;
+    }
+    try {
+      exportPresensiPraktikumBulkPDF(data);
+      toast.showToast('PDF rekap presensi praktikum berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal membuat PDF rekap presensi praktikum', 'error');
+    }
+  };
+
   // Tabel A: rekap bimbingan per tanggal.
   const rekapBimbingan = createMemo(() => hitungRekapPerTanggal(bimbingan()));
 
   // Tabel B: rincian per sesi bimbingan.
   const rincianBimbingan = createMemo(() => hitungRincianSesi(bimbingan()));
+  const rowsPraktikum = (): NonNullable<BkdRekap['mengajarPraktikum']> => rekap()?.data.mengajarPraktikum || [];
+  const rekapPresensiPraktikum = (): NonNullable<BkdRekap['rekapPresensiPraktikum']> =>
+    rekap()?.data.rekapPresensiPraktikum || [];
+
+  // Riwayat pertemuan praktikum: satu baris per sesi BAP praktikum.
+  const riwayatPraktikum = createMemo(() => {
+    const list: BkdRiwayatPraktikumRow[] = [];
+    for (const m of rowsPraktikum()) {
+      for (const p of m.pertemuan) {
+        list.push({
+          namaGroup: m.namaGroup,
+          namaKelas: m.namaKelas,
+          kode: m.mataKuliah.kode,
+          namaMk: m.mataKuliah.nama,
+          sesiKe: p.sesiKe,
+          tanggal: p.tanggal,
+          materi: p.materi,
+          durasiMenit: p.durasiMenit,
+          presensiRingkasan: p.presensiRingkasan,
+        });
+      }
+    }
+    return list.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+  });
+
+  // Rekap presensi praktikum per mahasiswa: satu baris per mahasiswa per rombel.
+  const rekapMhsPraktikum = createMemo(() => {
+    const list: BkdRekapMahasiswaPraktikumRow[] = [];
+    for (const r of rekapPresensiPraktikum()) {
+      for (const m of r.mahasiswa) {
+        list.push({
+          namaGroup: r.namaGroup,
+          namaKelas: r.namaKelas,
+          kode: r.mataKuliah.kode,
+          namaMk: r.mataKuliah.nama,
+          nim: m.nim,
+          nama: m.nama,
+          hadir: m.hadir,
+          sakit: m.sakit,
+          izin: m.izin,
+          alpa: m.alpa,
+          telat: m.telat,
+          totalKehadiran: m.totalKehadiran,
+          persentaseHadir: m.persentaseHadir,
+        });
+      }
+    }
+    return list;
+  });
 
   const columns: ExportColumn[] = [
+    { header: 'Jenis', accessor: 'jenis' },
     {
       header: 'Kode MK',
       accessor: (row: Record<string, unknown>) => (row.mataKuliah as { kode?: string })?.kode || '-',
@@ -118,6 +213,7 @@ export default function LaporanBKD() {
       accessor: (row: Record<string, unknown>) => (row.mataKuliah as { nama?: string })?.nama || '-',
     },
     { header: 'Kelas', accessor: 'namaKelas' },
+    { header: 'Group', accessor: 'group' },
     { header: 'SKS', accessor: (row: Record<string, unknown>) => (row.mataKuliah as { sks?: number })?.sks ?? '-' },
     { header: 'Pertemuan', accessor: 'jumlahPertemuan' },
     { header: 'Total Menit', accessor: 'totalMenit' },
@@ -135,6 +231,12 @@ export default function LaporanBKD() {
     },
   ];
 
+  // Data ekspor mencakup teori + praktikum; kolom 'Jenis'/'Group' membedakan keduanya.
+  const exportRows = (): Record<string, unknown>[] => [
+    ...rows().map((r) => ({ ...r, jenis: 'Teori', group: '-' })),
+    ...rowsPraktikum().map((r) => ({ ...r, jenis: 'Praktikum', group: r.namaGroup })),
+  ];
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -142,7 +244,7 @@ export default function LaporanBKD() {
           <div>
             <h1 class="page-title">Laporan BKD / Beban Dosen</h1>
             <p class="text-base text-secondary-500 dark:text-secondary-200">
-              Rekapitulasi beban kerja dosen: mengajar, presensi, dan bimbingan akademik per periode
+              Rekapitulasi beban kerja dosen: mengajar, praktikum, presensi, dan bimbingan akademik per periode
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -172,8 +274,24 @@ export default function LaporanBKD() {
               >
                 📊 Presensi (PDF)
               </button>
+              <button
+                type="button"
+                onClick={handleBapPraktikumPdf}
+                disabled={rekap.loading}
+                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
+              >
+                🧪 BAP Praktikum (PDF)
+              </button>
+              <button
+                type="button"
+                onClick={handlePresensiPraktikumPdf}
+                disabled={rekap.loading}
+                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
+              >
+                📊 Presensi Praktikum (PDF)
+              </button>
             </Show>
-            <ExportButtonGroup data={() => rows()} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
+            <ExportButtonGroup data={exportRows} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
           </div>
         </div>
 
@@ -230,24 +348,42 @@ export default function LaporanBKD() {
         </Show>
 
         <Show when={rekap()}>
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <StatCard
-              title="Total SKS"
+              title="Total SKS Teori"
               value={ringkasan()?.totalSks || 0}
               color="brand"
               icon={<span class="text-2xl">📚</span>}
             />
             <StatCard
-              title="Total Pertemuan"
+              title="Pertemuan Teori"
               value={ringkasan()?.totalPertemuan || 0}
               color="green"
               icon={<span class="text-2xl">🗓️</span>}
             />
             <StatCard
-              title="Total Menit"
+              title="Menit Teori"
               value={ringkasan()?.totalMenit || 0}
               color="accent"
               icon={<span class="text-2xl">⏱️</span>}
+            />
+            <StatCard
+              title="Rombel Praktikum"
+              value={ringkasan()?.totalRombelPraktikum || 0}
+              color="brand"
+              icon={<span class="text-2xl">🧪</span>}
+            />
+            <StatCard
+              title="Pertemuan Praktikum"
+              value={ringkasan()?.totalPertemuanPraktikum || 0}
+              color="green"
+              icon={<span class="text-2xl">🔬</span>}
+            />
+            <StatCard
+              title="Menit Praktikum"
+              value={ringkasan()?.totalMenitPraktikum || 0}
+              color="accent"
+              icon={<span class="text-2xl">⏲️</span>}
             />
             <StatCard
               title="Total Kelas"
@@ -261,11 +397,17 @@ export default function LaporanBKD() {
               color="green"
               icon={<span class="text-2xl">🤝</span>}
             />
+            <StatCard
+              title="Grand Total"
+              value={`${ringkasan()?.grandPertemuan || 0} ptm / ${ringkasan()?.grandMenit || 0} mnt`}
+              color="accent"
+              icon={<span class="text-2xl">🎯</span>}
+            />
           </div>
 
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rekap Mengajar &amp; Presensi</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">A. Rekap Mengajar &amp; Presensi</h3>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-table border-collapse">
@@ -331,7 +473,192 @@ export default function LaporanBKD() {
 
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rekap Bimbingan per Tanggal</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">
+                C1. Rekap Mengajar Praktikum &amp; Presensi
+              </h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-table border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Mata Kuliah</th>
+                    <th class="py-3 px-5">Kelas</th>
+                    <th class="py-3 px-5">Group</th>
+                    <th class="py-3 px-5 text-center">Pertemuan</th>
+                    <th class="py-3 px-5 text-center">Menit</th>
+                    <th class="py-3 px-5 text-center">Presensi (H/S/I/A/T)</th>
+                    <th class="py-3 px-5 text-center">% Hadir</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={rowsPraktikum()}
+                    fallback={
+                      <tr>
+                        <td colspan="7" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                          Tidak ada data praktikum
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(r) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5">
+                          <div class="font-semibold text-secondary-800 dark:text-white">{r.mataKuliah.nama}</div>
+                          <div class="text-caption text-secondary-400 dark:text-secondary-300">{r.mataKuliah.kode}</div>
+                        </td>
+                        <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{r.namaKelas}</td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{r.namaGroup}</td>
+                        <td class="py-3 px-5 text-center">{r.jumlahPertemuan}</td>
+                        <td class="py-3 px-5 text-center">{r.totalMenit}</td>
+                        <td class="py-3 px-5 text-center whitespace-nowrap">
+                          <For each={PRESENSI_STATUS}>
+                            {(st) => (
+                              <span class="mx-1 inline-block">
+                                <span class="font-bold text-secondary-800 dark:text-white">{st.label}</span>:{' '}
+                                {r.presensi[st.key]}
+                              </span>
+                            )}
+                          </For>
+                        </td>
+                        <td class="py-3 px-5 text-center">
+                          <span
+                            class={
+                              'px-2 py-0.5 rounded-full text-caption font-bold ' +
+                              (r.presensi.persen >= 80 ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700')
+                            }
+                          >
+                            {r.presensi.persen}%
+                          </span>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">C2. Riwayat Pertemuan Praktikum</h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-table border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Mata Kuliah</th>
+                    <th class="py-3 px-5">Group</th>
+                    <th class="py-3 px-5 text-center">Sesi</th>
+                    <th class="py-3 px-5">Tanggal</th>
+                    <th class="py-3 px-5">Materi</th>
+                    <th class="py-3 px-5 text-center">Durasi</th>
+                    <th class="py-3 px-5 text-center">H/S/I/A/T</th>
+                    <th class="py-3 px-5 text-center">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={riwayatPraktikum()}
+                    fallback={
+                      <tr>
+                        <td colspan="8" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                          Tidak ada riwayat pertemuan praktikum
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(p) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5">
+                          <div class="font-semibold text-secondary-800 dark:text-white">{p.namaMk}</div>
+                          <div class="text-caption text-secondary-400 dark:text-secondary-300">{p.kode}</div>
+                        </td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.namaGroup}</td>
+                        <td class="py-3 px-5 text-center">{p.sesiKe}</td>
+                        <td class="py-3 px-5">{p.tanggal}</td>
+                        <td class="py-3 px-5 text-secondary-500 dark:text-secondary-300">{p.materi}</td>
+                        <td class="py-3 px-5 text-center">{p.durasiMenit}</td>
+                        <td class="py-3 px-5 text-center whitespace-nowrap">
+                          <span class="font-bold text-secondary-800 dark:text-white">H</span>:
+                          {p.presensiRingkasan.hadir}{' '}
+                          <span class="font-bold text-secondary-800 dark:text-white">S</span>:
+                          {p.presensiRingkasan.sakit}{' '}
+                          <span class="font-bold text-secondary-800 dark:text-white">I</span>:{p.presensiRingkasan.izin}{' '}
+                          <span class="font-bold text-secondary-800 dark:text-white">A</span>:{p.presensiRingkasan.alpa}{' '}
+                          <span class="font-bold text-secondary-800 dark:text-white">T</span>:
+                          {p.presensiRingkasan.telat}
+                        </td>
+                        <td class="py-3 px-5 text-center">{p.presensiRingkasan.total}</td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">
+                C3. Rekap Presensi Praktikum per Mahasiswa
+              </h3>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-table border-collapse">
+                <thead>
+                  <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800">
+                    <th class="py-3 px-5">Mata Kuliah</th>
+                    <th class="py-3 px-5">Group</th>
+                    <th class="py-3 px-5">NIM</th>
+                    <th class="py-3 px-5">Nama</th>
+                    <th class="py-3 px-5 text-center">H</th>
+                    <th class="py-3 px-5 text-center">S</th>
+                    <th class="py-3 px-5 text-center">I</th>
+                    <th class="py-3 px-5 text-center">A</th>
+                    <th class="py-3 px-5 text-center">T</th>
+                    <th class="py-3 px-5 text-center">Total Hadir</th>
+                    <th class="py-3 px-5 text-center">% Hadir</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For
+                    each={rekapMhsPraktikum()}
+                    fallback={
+                      <tr>
+                        <td colspan="11" class="text-center py-8 text-secondary-400 dark:text-secondary-300">
+                          Tidak ada data presensi praktikum
+                        </td>
+                      </tr>
+                    }
+                  >
+                    {(m) => (
+                      <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
+                        <td class="py-3 px-5">
+                          <div class="font-semibold text-secondary-800 dark:text-white">{m.namaMk}</div>
+                          <div class="text-caption text-secondary-400 dark:text-secondary-300">{m.kode}</div>
+                        </td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.namaGroup}</td>
+                        <td class="py-3 px-5">{m.nim}</td>
+                        <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{m.nama}</td>
+                        <td class="py-3 px-5 text-center">{m.hadir}</td>
+                        <td class="py-3 px-5 text-center">{m.sakit}</td>
+                        <td class="py-3 px-5 text-center">{m.izin}</td>
+                        <td class="py-3 px-5 text-center">{m.alpa}</td>
+                        <td class="py-3 px-5 text-center">{m.telat}</td>
+                        <td class="py-3 px-5 text-center">{m.totalKehadiran}</td>
+                        <td class="py-3 px-5 text-center">{m.persentaseHadir}%</td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">D. Rekap Bimbingan per Tanggal</h3>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-table border-collapse">
@@ -372,7 +699,7 @@ export default function LaporanBKD() {
 
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
-              <h3 class="text-base font-bold text-secondary-800 dark:text-white">Riwayat Bimbingan (Detail)</h3>
+              <h3 class="text-base font-bold text-secondary-800 dark:text-white">E. Riwayat Bimbingan (Detail)</h3>
             </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-table border-collapse">
