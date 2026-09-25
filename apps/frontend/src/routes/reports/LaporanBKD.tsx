@@ -72,6 +72,19 @@ export default function LaporanBKD() {
     }
   });
 
+  // Periode diurutkan dari terbaru -> terlama (id berbentuk YYYYT, mis. 20251 > 20241).
+  const periodeOptions = createMemo(() =>
+    [...(periodes()?.data || [])].sort((a, b) => b.id.localeCompare(a.id)).map((p) => ({ label: p.nama, value: p.id })),
+  );
+
+  // Default: pilih periode aktif; bila tidak ada, gunakan periode terbaru.
+  createEffect(() => {
+    if (selectedPeriode() || !periodes()?.data?.length) return;
+    const active = periodes()?.data?.find((p) => p.aktif);
+    const target = active ?? [...(periodes()?.data || [])].sort((a, b) => b.id.localeCompare(a.id))[0];
+    if (target) setSelectedPeriode(target.id);
+  });
+
   const rows = (): BkdRekap['mengajar'] => rekap()?.data.mengajar || [];
   const bimbingan = () => rekap()?.data.bimbingan || [];
   const ringkasan = () => rekap()?.data.ringkasan;
@@ -348,10 +361,7 @@ export default function LaporanBKD() {
               isLoading={periodes.loading}
               value={selectedPeriode()}
               onChange={(v) => setSelectedPeriode(String(v))}
-              options={[
-                { label: 'Pilih Periode', value: '' },
-                ...(periodes()?.data || []).map((p) => ({ label: p.nama, value: p.id })),
-              ]}
+              options={[{ label: 'Pilih Periode', value: '' }, ...periodeOptions()]}
             />
           </div>
           <div class="flex-1">
