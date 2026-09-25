@@ -2,6 +2,7 @@ import { createEffect, createMemo, createResource, createSignal, For, Show } fro
 import { StatCard } from '../../components/charts';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { type BkdRekap, bkdController } from '../../controllers/bkdController';
@@ -178,44 +179,46 @@ export default function LaporanBKD() {
 
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4">
           <div class="flex-1">
-            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
-              Periode
-            </label>
-            <select
-              class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+            <SearchableSelect
+              label="Periode"
+              placeholder="Pilih Periode"
+              isLoading={periodes.loading}
               value={selectedPeriode()}
-              onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
-            >
-              <option value="">Pilih Periode</option>
-              <For each={periodes()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
-            </select>
+              onChange={(v) => setSelectedPeriode(String(v))}
+              options={[
+                { label: 'Pilih Periode', value: '' },
+                ...(periodes()?.data || []).map((p) => ({ label: p.nama, value: p.id })),
+              ]}
+            />
           </div>
           <div class="flex-1">
-            <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
-              Dosen
-            </label>
             <Show
               when={!isDosenRole()}
               fallback={
-                <div class="px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white">
-                  Diri sendiri (sesuai login)
+                <div class="flex flex-col gap-1.5">
+                  <label class="block text-caption font-semibold uppercase tracking-wider text-secondary-600 dark:text-secondary-200">
+                    Dosen
+                  </label>
+                  <div class="px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white">
+                    Diri sendiri (sesuai login)
+                  </div>
                 </div>
               }
             >
-              <select
-                class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              <SearchableSelect
+                label="Dosen"
+                placeholder="Pilih Dosen"
+                isLoading={dosens.loading}
                 value={selectedDosen()}
-                onChange={(e) => setSelectedDosen(e.currentTarget.value)}
-              >
-                <option value="">Pilih Dosen</option>
-                <For each={dosens()?.data || []}>
-                  {(d: { id: number; nama: string; nip: string }) => (
-                    <option value={d.id}>
-                      {d.nama} ({d.nip})
-                    </option>
-                  )}
-                </For>
-              </select>
+                onChange={(v) => setSelectedDosen(String(v))}
+                options={[
+                  { label: 'Pilih Dosen', value: '' },
+                  ...(dosens()?.data || []).map((d) => ({
+                    label: `${d.nama} (${d.nip})`,
+                    value: d.id,
+                  })),
+                ]}
+              />
             </Show>
           </div>
         </div>

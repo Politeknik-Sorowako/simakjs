@@ -74,7 +74,7 @@ export interface BkdRingkasan {
 }
 
 export interface BkdRekap {
-  dosen: { id: number; nip: string; nama: string; nidn?: string | null; prodi: string };
+  dosen: { id: number; nip: string; nama: string; nidn?: string | null; nuptk?: string | null; prodi: string };
   periode: { id: string; nama: string };
   mengajar: BkdMengajar[];
   rekapPresensi: BkdRekapPresensiKelas[];

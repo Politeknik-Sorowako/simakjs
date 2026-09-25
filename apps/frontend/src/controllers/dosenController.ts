@@ -9,6 +9,9 @@ export interface Dosen {
   email: string;
   programStudiId: number | null;
   nidn?: string | null;
+  nuptk?: string | null;
+  pohonIlmu?: string | null;
+  cabangIlmu?: string | null;
   nik?: string | null;
   jenisKelamin?: 'L' | 'P' | null;
   tanggalLahir?: string | null;

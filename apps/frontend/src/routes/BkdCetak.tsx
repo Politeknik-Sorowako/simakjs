@@ -216,7 +216,7 @@ export default function BkdCetak() {
 <body>
   <h2>POLITEKNIK SOROWAKO</h2>
   <h2>${escapeHtml(heading)}</h2>
-  <p class="meta">Periode Akademik: ${escapeHtml(data.periode.nama)} · Dosen: ${escapeHtml(data.dosen.nama)} (NIP: ${escapeHtml(data.dosen.nip)})</p>
+  <p class="meta">Periode Akademik: ${escapeHtml(data.periode.nama)} · Dosen: ${escapeHtml(data.dosen.nama)} (NIP: ${escapeHtml(data.dosen.nip)} · NUPTK: ${escapeHtml(data.dosen.nuptk || data.dosen.nidn || '-')})</p>
   ${bodyHtml}
   <script>
     window.onload = function() { window.print(); };
@@ -298,7 +298,7 @@ export default function BkdCetak() {
                 </div>
                 <div class="text-right">
                   <p>
-                    NIDN: <span class="font-bold">{data().dosen.nidn || '-'}</span>
+                    NUPTK: <span class="font-bold">{data().dosen.nuptk || data().dosen.nidn || '-'}</span>
                   </p>
                   <p>
                     Program Studi: <span class="font-bold">{data().dosen.prodi || '-'}</span>
