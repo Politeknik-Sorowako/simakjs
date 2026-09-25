@@ -23,6 +23,7 @@ import {
   filterRombelBerBap,
   filterRombelBerpresensi,
 } from '../../utils/bkd-bulk-print';
+import { exportBkdRekapCSV, exportBkdRekapExcel } from '../../utils/bkd-export';
 import { hitungRekapPerTanggal, hitungRincianSesi } from '../../utils/bkd-helpers';
 import { ExportColumn } from '../../utils/export';
 
@@ -144,6 +145,34 @@ export default function LaporanBKD() {
       toast.showToast('PDF rekap presensi praktikum berhasil diunduh', 'success');
     } catch {
       toast.showToast('Gagal membuat PDF rekap presensi praktikum', 'error');
+    }
+  };
+
+  const handleRekapCsv = () => {
+    const data = rekap()?.data;
+    if (!data) {
+      toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
+      return;
+    }
+    try {
+      exportBkdRekapCSV(data);
+      toast.showToast('CSV rekap BKD berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal membuat CSV rekap BKD', 'error');
+    }
+  };
+
+  const handleRekapExcel = () => {
+    const data = rekap()?.data;
+    if (!data) {
+      toast.showToast('Pilih periode (dan dosen) terlebih dahulu', 'info');
+      return;
+    }
+    try {
+      exportBkdRekapExcel(data);
+      toast.showToast('Excel rekap BKD berhasil diunduh', 'success');
+    } catch {
+      toast.showToast('Gagal membuat Excel rekap BKD', 'error');
     }
   };
 
@@ -290,6 +319,22 @@ export default function LaporanBKD() {
               >
                 📊 Presensi Praktikum (PDF)
               </button>
+              <button
+                type="button"
+                onClick={handleRekapCsv}
+                disabled={rekap.loading}
+                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
+              >
+                📄 Rekap CSV
+              </button>
+              <button
+                type="button"
+                onClick={handleRekapExcel}
+                disabled={rekap.loading}
+                class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95 disabled:opacity-50"
+              >
+                📊 Rekap Excel
+              </button>
             </Show>
             <ExportButtonGroup data={exportRows} columns={columns} filename="BKD" title="Laporan BKD / Beban Dosen" />
           </div>
@@ -348,61 +393,98 @@ export default function LaporanBKD() {
         </Show>
 
         <Show when={rekap()}>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <StatCard
-              title="Total SKS Teori"
-              value={ringkasan()?.totalSks || 0}
-              color="brand"
-              icon={<span class="text-2xl">📚</span>}
-            />
-            <StatCard
-              title="Pertemuan Teori"
-              value={ringkasan()?.totalPertemuan || 0}
-              color="green"
-              icon={<span class="text-2xl">🗓️</span>}
-            />
-            <StatCard
-              title="Menit Teori"
-              value={ringkasan()?.totalMenit || 0}
-              color="accent"
-              icon={<span class="text-2xl">⏱️</span>}
-            />
-            <StatCard
-              title="Rombel Praktikum"
-              value={ringkasan()?.totalRombelPraktikum || 0}
-              color="brand"
-              icon={<span class="text-2xl">🧪</span>}
-            />
-            <StatCard
-              title="Pertemuan Praktikum"
-              value={ringkasan()?.totalPertemuanPraktikum || 0}
-              color="green"
-              icon={<span class="text-2xl">🔬</span>}
-            />
-            <StatCard
-              title="Menit Praktikum"
-              value={ringkasan()?.totalMenitPraktikum || 0}
-              color="accent"
-              icon={<span class="text-2xl">⏲️</span>}
-            />
-            <StatCard
-              title="Total Kelas"
-              value={ringkasan()?.totalMengajar || 0}
-              color="brand"
-              icon={<span class="text-2xl">🏫</span>}
-            />
-            <StatCard
-              title="Bimbingan"
-              value={ringkasan()?.totalBimbingan || 0}
-              color="green"
-              icon={<span class="text-2xl">🤝</span>}
-            />
-            <StatCard
-              title="Grand Total"
-              value={`${ringkasan()?.grandPertemuan || 0} ptm / ${ringkasan()?.grandMenit || 0} mnt`}
-              color="accent"
-              icon={<span class="text-2xl">🎯</span>}
-            />
+          <div class="flex flex-col gap-4">
+            <div>
+              <p class="mb-2 text-xs font-bold uppercase tracking-widest text-secondary-400 dark:text-secondary-300">
+                Perkuliahan Teori
+              </p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatCard
+                  title="Total SKS Teori"
+                  value={ringkasan()?.totalSksTeori ?? ringkasan()?.totalSks ?? 0}
+                  color="brand"
+                  icon={<span class="text-2xl">📚</span>}
+                />
+                <StatCard
+                  title="Pertemuan Teori"
+                  value={ringkasan()?.totalPertemuan || 0}
+                  color="green"
+                  icon={<span class="text-2xl">🗓️</span>}
+                />
+                <StatCard
+                  title="Menit Teori"
+                  value={ringkasan()?.totalMenit || 0}
+                  color="accent"
+                  icon={<span class="text-2xl">⏱️</span>}
+                />
+                <StatCard
+                  title="Total Kelas"
+                  value={ringkasan()?.totalMengajar || 0}
+                  color="brand"
+                  icon={<span class="text-2xl">🏫</span>}
+                />
+              </div>
+            </div>
+
+            <div>
+              <p class="mb-2 text-xs font-bold uppercase tracking-widest text-secondary-400 dark:text-secondary-300">
+                Praktikum Lab / Bengkel
+              </p>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <StatCard
+                  title="SKS Praktikum"
+                  value={ringkasan()?.totalSksPraktikum || 0}
+                  color="brand"
+                  icon={<span class="text-2xl">🧪</span>}
+                />
+                <StatCard
+                  title="Rombel Praktikum"
+                  value={ringkasan()?.totalRombelPraktikum || 0}
+                  color="green"
+                  icon={<span class="text-2xl">🔬</span>}
+                />
+                <StatCard
+                  title="Pertemuan Praktikum"
+                  value={ringkasan()?.totalPertemuanPraktikum || 0}
+                  color="accent"
+                  icon={<span class="text-2xl">🧫</span>}
+                />
+                <StatCard
+                  title="Menit Praktikum"
+                  value={ringkasan()?.totalMenitPraktikum || 0}
+                  color="brand"
+                  icon={<span class="text-2xl">⏲️</span>}
+                />
+              </div>
+            </div>
+
+            <div>
+              <p class="mb-2 text-xs font-bold uppercase tracking-widest text-secondary-400 dark:text-secondary-300">
+                Bimbingan &amp; Total Beban
+              </p>
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <StatCard
+                  title="Bimbingan"
+                  value={ringkasan()?.totalBimbingan || 0}
+                  color="green"
+                  icon={<span class="text-2xl">🤝</span>}
+                />
+                <StatCard
+                  title="Grand Total SKS"
+                  value={ringkasan()?.grandSks ?? ringkasan()?.totalSks ?? 0}
+                  color="brand"
+                  icon={<span class="text-2xl">🎓</span>}
+                />
+                <StatCard
+                  title="Grand Total"
+                  value={`${ringkasan()?.grandPertemuan ?? ringkasan()?.totalPertemuan ?? 0} ptm / ${
+                    ringkasan()?.grandMenit ?? ringkasan()?.totalMenit ?? 0
+                  } mnt`}
+                  color="accent"
+                  icon={<span class="text-2xl">🎯</span>}
+                />
+              </div>
+            </div>
           </div>
 
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
@@ -654,6 +736,10 @@ export default function LaporanBKD() {
                 </tbody>
               </table>
             </div>
+            <p class="px-5 py-3 text-xs text-secondary-400 dark:text-secondary-300">
+              Catatan: Sesi praktikum yang dihitung adalah sesi yang diampu dosen ini, baik sebagai instruktur rombel
+              maupun pengisi BAP praktikum; sesi dari rombel lain tidak diperhitungkan.
+            </p>
           </div>
 
           <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">

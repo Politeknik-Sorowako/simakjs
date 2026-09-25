@@ -263,7 +263,7 @@ export default function BkdCetak() {
         <div class="section">
           <h3>[PRAKTIKUM] [${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(
             mk.namaKelas,
-          )} · Group ${escapeHtml(mk.namaGroup)}</h3>
+          )} · Group ${escapeHtml(mk.namaGroup)}${mk.mataKuliah.sksPraktek != null ? ` · SKS Praktikum: ${escapeHtml(mk.mataKuliah.sksPraktek)}` : ''}</h3>
           <table>
             <thead>
               <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
@@ -321,7 +321,7 @@ export default function BkdCetak() {
             rk.namaKelas,
           )} · Group ${escapeHtml(rk.namaGroup)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(
             rk.totalMenit,
-          )} mnt)</h3>
+          )} mnt${rk.mataKuliah.sksPraktek != null ? `, SKS Praktikum: ${escapeHtml(rk.mataKuliah.sksPraktek)}` : ''})</h3>
           <h4>A. Rekap Presensi per Mahasiswa</h4>
           <table>
             <thead>
@@ -618,6 +618,7 @@ export default function BkdCetak() {
                       <th class="border-r border-secondary-200 p-2">Mata Kuliah</th>
                       <th class="border-r border-secondary-200 p-2">Kelas</th>
                       <th class="border-r border-secondary-200 p-2">Group</th>
+                      <th class="border-r border-secondary-200 p-2 text-center">SKS Prak</th>
                       <th class="border-r border-secondary-200 p-2 text-center">Pertemuan</th>
                       <th class="border-r border-secondary-200 p-2 text-center">Menit</th>
                       <th class="border-r border-secondary-200 p-2 text-center">H</th>
@@ -637,6 +638,9 @@ export default function BkdCetak() {
                           </td>
                           <td class="border-r border-secondary-200 p-2">{r.namaKelas}</td>
                           <td class="border-r border-secondary-200 p-2">{r.namaGroup}</td>
+                          <td class="border-r border-secondary-200 p-2 text-center">
+                            {r.mataKuliah.sksPraktek ?? '-'}
+                          </td>
                           <td class="border-r border-secondary-200 p-2 text-center">{r.jumlahPertemuan}</td>
                           <td class="border-r border-secondary-200 p-2 text-center">{r.totalMenit}</td>
                           <For each={PRESENSI_LABEL}>
@@ -650,13 +654,17 @@ export default function BkdCetak() {
                     </For>
                     <Show when={rowsPraktikum().length === 0}>
                       <tr>
-                        <td colspan="11" class="p-4 text-center text-secondary-400">
+                        <td colspan="12" class="p-4 text-center text-secondary-400">
                           Tidak ada data praktikum pada periode ini.
                         </td>
                       </tr>
                     </Show>
                   </tbody>
                 </table>
+                <p class="mt-2 text-xs text-secondary-500">
+                  Catatan: Sesi praktikum yang dihitung adalah sesi yang diampu dosen ini, baik sebagai instruktur
+                  rombel maupun pengisi BAP praktikum.
+                </p>
               </div>
 
               <div class="mt-6">

@@ -259,6 +259,7 @@ export class BkdService {
     const totalPertemuanPraktikum = praktikum.mengajarPraktikum.reduce((s, m) => s + m.jumlahPertemuan, 0);
     const totalMenitPraktikum = praktikum.mengajarPraktikum.reduce((s, m) => s + m.totalMenit, 0);
     const totalRombelPraktikum = praktikum.mengajarPraktikum.length;
+    const totalSksPraktikum = praktikum.mengajarPraktikum.reduce((s, m) => s + (m.mataKuliah.sksPraktek ?? 0), 0);
 
     return {
       dosen: {
@@ -277,6 +278,9 @@ export class BkdService {
       bimbingan,
       ringkasan: {
         totalSks,
+        totalSksTeori: totalSks,
+        totalSksPraktikum,
+        grandSks: totalSks + totalSksPraktikum,
         totalPertemuan,
         totalMenit,
         totalBimbingan: bimbingan.length,
@@ -297,10 +301,14 @@ export class BkdService {
    *   (penanggung jawab rombel) sehingga seluruh sesi rombel dikreditkan kepadanya.
    */
   static async getPraktikumRekap(dosenId: number, periodeId: string) {
+    // Rombel tempat dosen menjadi pengisi BAP, dibatasi pada periode yang sama agar
+    // BAP dari periode lampau tidak bocor ke rekap periode aktif.
     const bapRombelIds = await db
       .select({ rombelPraktikumId: bapPraktikum.rombelPraktikumId })
       .from(bapPraktikum)
-      .where(eq(bapPraktikum.instrukturId, dosenId));
+      .innerJoin(rombelPraktikum, eq(bapPraktikum.rombelPraktikumId, rombelPraktikum.id))
+      .innerJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+      .where(and(eq(bapPraktikum.instrukturId, dosenId), eq(kelasKuliah.periodeId, periodeId)));
     const bapRombelIdSet = new Set(bapRombelIds.map((r) => r.rombelPraktikumId));
 
     const rombelRows = await db
@@ -313,6 +321,7 @@ export class BkdService {
         kode: mataKuliah.kode,
         namaMk: mataKuliah.nama,
         sksTotal: mataKuliah.sksTotal,
+        sksPraktek: mataKuliah.sksPraktek,
       })
       .from(rombelPraktikum)
       .innerJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
@@ -422,7 +431,7 @@ export class BkdService {
       namaGroup: string;
       kelasId: number;
       namaKelas: string;
-      mataKuliah: { kode: string; nama: string; sks: number };
+      mataKuliah: { kode: string; nama: string; sks: number; sksPraktek: number | null };
       jumlahPertemuan: number;
       totalMenit: number;
       presensi: { hadir: number; sakit: number; izin: number; alpa: number; telat: number; persen: number };
@@ -442,7 +451,7 @@ export class BkdService {
       namaGroup: string;
       kelasId: number;
       namaKelas: string;
-      mataKuliah: { kode: string; nama: string; sks: number };
+      mataKuliah: { kode: string; nama: string; sks: number; sksPraktek: number | null };
       jumlahPertemuan: number;
       totalMenit: number;
       mahasiswa: {
@@ -500,7 +509,12 @@ export class BkdService {
         persentaseHadir: jumlahPertemuan > 0 ? Math.round(((m.hadir + m.sakit + m.izin) / jumlahPertemuan) * 100) : 0,
       }));
 
-      const mataKuliahInfo = { kode: r.kode || '-', nama: r.namaMk || '-', sks: r.sksTotal || 0 };
+      const mataKuliahInfo = {
+        kode: r.kode || '-',
+        nama: r.namaMk || '-',
+        sks: r.sksTotal || 0,
+        sksPraktek: r.sksPraktek ?? null,
+      };
       mengajarPraktikum.push({
         rombelId: r.rombelId,
         namaGroup: r.namaGroup,

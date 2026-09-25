@@ -4,6 +4,7 @@ export interface BkdMataKuliah {
   kode: string;
   nama: string;
   sks: number;
+  sksPraktek?: number | null;
 }
 
 export interface BkdPresensi {
@@ -138,6 +139,9 @@ export interface BkdRekapMahasiswaPraktikumRow {
 
 export interface BkdRingkasan {
   totalSks: number;
+  totalSksTeori?: number;
+  totalSksPraktikum?: number;
+  grandSks?: number;
   totalPertemuan: number;
   totalMenit: number;
   totalBimbingan: number;
