@@ -1,6 +1,5 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { type KetidakhadiranRow, kompensasiAdminController } from '../../controllers/kompensasiAdminController';
 import { presensiController } from '../../controllers/presensiController';
 import { prodiController } from '../../controllers/prodiController';
@@ -13,6 +12,7 @@ import { SearchableSelect, type SelectOption } from '../ui/SearchableSelect';
 import { SortableHeader } from '../ui/SortableHeader';
 import { StudentAvatar } from '../ui/StudentAvatar';
 import { Table } from '../ui/Table';
+import KonteksKompensasi from './KonteksKompensasi';
 import {
   EmptyState,
   ErrorState,
@@ -23,11 +23,13 @@ import {
   TableLoadingFallback,
   VerifBadge,
 } from './shared';
+import type { SharedKompensasiFilters } from './sharedKompensasiFilters';
 import { VerifyModal } from './VerifyModal';
 
 const PER_PAGE_DEFAULT = 20;
 
 const SUMBER_OPTIONS: SelectOption[] = [
+  { value: '', label: 'Semua Sumber' },
   { value: 'BAP', label: 'Perkuliahan (BAP)' },
   { value: 'APEL', label: 'Apel' },
   { value: 'PRAKTIKUM', label: 'Praktikum' },
@@ -40,19 +42,16 @@ const VERIF_OPTIONS: SelectOption[] = [
   { value: 'sudah', label: 'Sudah Diverifikasi' },
 ];
 
-export default function TabKetidakhadiran() {
+interface TabKetidakhadiranProps {
+  filters: SharedKompensasiFilters;
+}
+
+export default function TabKetidakhadiran(props: TabKetidakhadiranProps) {
   const toast = useToast();
-  const workspace = useWorkspace();
 
   const [page, setPage] = createSignal(1);
   const [limit, setLimit] = createSignal(PER_PAGE_DEFAULT);
-  const [search, setSearch] = createSignal('');
-  const [debouncedSearch, setDebouncedSearch] = createSignal('');
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(workspace.selectedProdiId() ?? undefined);
-  const [filterSumber, setFilterSumber] = createSignal<string>('');
   const [filterVerif, setFilterVerif] = createSignal<'all' | 'belum' | 'sudah'>('all');
-  const [tglDari, setTglDari] = createSignal('');
-  const [tglSampai, setTglSampai] = createSignal('');
   const [sortBy, setSortBy] = createSignal('tanggal');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
 
@@ -62,20 +61,19 @@ export default function TabKetidakhadiran() {
   const [previewUrl, setPreviewUrl] = createSignal<string | null>(null);
   const [previewLoading, setPreviewLoading] = createSignal(false);
 
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => {
-    clearTimeout(searchTimer);
     const url = previewUrl();
     if (url) URL.revokeObjectURL(url);
   });
 
+  // Reset halaman ke 1 setiap filter bersama berubah (search memakai nilai ter-debounce agar satu fetch).
   createEffect(() => {
-    const q = search();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      setDebouncedSearch(q);
-      setPage(1);
-    }, 350);
+    props.filters.debouncedSearch();
+    props.filters.prodiId();
+    props.filters.tglDari();
+    props.filters.tglSampai();
+    props.filters.sumber();
+    setPage(1);
   });
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -84,12 +82,12 @@ export default function TabKetidakhadiran() {
     () => ({
       page: page(),
       limit: limit(),
-      search: debouncedSearch(),
-      prodiId: filterProdi(),
-      sumber: filterSumber(),
+      search: props.filters.debouncedSearch(),
+      prodiId: props.filters.prodiId(),
+      sumber: props.filters.sumber(),
       statusVerif: filterVerif(),
-      tglDari: tglDari(),
-      tglSampai: tglSampai(),
+      tglDari: props.filters.tglDari(),
+      tglSampai: props.filters.tglSampai(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
     }),
@@ -144,13 +142,8 @@ export default function TabKetidakhadiran() {
   };
 
   const resetFilters = () => {
-    setSearch('');
-    setDebouncedSearch('');
-    setFilterProdi(workspace.selectedProdiId() ?? undefined);
-    setFilterSumber('');
+    props.filters.resetShared();
     setFilterVerif('all');
-    setTglDari('');
-    setTglSampai('');
     setSortBy('tanggal');
     setSortOrder('desc');
     setPage(1);
@@ -190,16 +183,16 @@ export default function TabKetidakhadiran() {
               type="text"
               placeholder="Cari NIM atau nama mahasiswa..."
               class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-secondary-400"
-              value={search()}
-              onInput={(e) => setSearch(e.currentTarget.value)}
+              value={props.filters.search()}
+              onInput={(e) => props.filters.setSearch(e.currentTarget.value)}
             />
           </FilterField>
           <FilterField label="Program Studi">
             <SearchableSelect
               options={prodiOptions()}
-              value={filterProdi()}
+              value={props.filters.prodiId()}
               onChange={(v) => {
-                setFilterProdi(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
+                props.filters.setProdiId(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
                 setPage(1);
               }}
               placeholder="Semua Prodi"
@@ -208,9 +201,9 @@ export default function TabKetidakhadiran() {
           <FilterField label="Sumber">
             <SearchableSelect
               options={SUMBER_OPTIONS}
-              value={filterSumber()}
+              value={props.filters.sumber()}
               onChange={(v) => {
-                setFilterSumber(String(v));
+                props.filters.setSumber(String(v));
                 setPage(1);
               }}
               placeholder="Semua Sumber"
@@ -228,12 +221,17 @@ export default function TabKetidakhadiran() {
           </FilterField>
           <FilterField label="Rentang Tanggal">
             <div class="flex items-center gap-2">
-              <Input type="date" value={tglDari()} onInput={(e) => setTglDari(e.currentTarget.value)} class="!py-2" />
+              <Input
+                type="date"
+                value={props.filters.tglDari()}
+                onInput={(e) => props.filters.setTglDari(e.currentTarget.value)}
+                class="!py-2"
+              />
               <span class="text-secondary-400">–</span>
               <Input
                 type="date"
-                value={tglSampai()}
-                onInput={(e) => setTglSampai(e.currentTarget.value)}
+                value={props.filters.tglSampai()}
+                onInput={(e) => props.filters.setTglSampai(e.currentTarget.value)}
                 class="!py-2"
               />
             </div>
@@ -309,31 +307,7 @@ export default function TabKetidakhadiran() {
                 <SumberBadge sumber={row.sumber} />
               </td>
               <td class="py-4 px-6 max-w-xs">
-                <div class="text-xs text-secondary-600 dark:text-secondary-200">
-                  <Show when={row.namaKelas}>
-                    <div class="font-semibold">
-                      {row.mataKuliahNama || 'MK'} · {row.namaKelas}
-                    </div>
-                    <Show when={row.dosenNama}>
-                      <div class="text-secondary-400">Dosen: {row.dosenNama}</div>
-                    </Show>
-                    <Show when={row.pertemuanKe != null}>
-                      <div class="text-secondary-400">Pertemuan/Sesi {row.pertemuanKe}</div>
-                    </Show>
-                  </Show>
-                  <Show when={row.kelompokNama}>
-                    <div class="font-semibold">Apel · {row.kelompokNama}</div>
-                    <Show when={row.shift}>
-                      <div class="text-secondary-400">Shift {row.shift}</div>
-                    </Show>
-                  </Show>
-                  <Show when={row.materi}>
-                    <div class="text-secondary-400 line-clamp-2">{row.materi}</div>
-                  </Show>
-                  <Show when={!row.namaKelas && !row.kelompokNama}>
-                    <div class="text-secondary-400">Input manual</div>
-                  </Show>
-                </div>
+                <KonteksKompensasi row={row} />
               </td>
               <td class="py-4 px-6 text-secondary-700 dark:text-secondary-100 font-semibold">{row.durasiMenit} mnt</td>
               <td class="py-4 px-6">

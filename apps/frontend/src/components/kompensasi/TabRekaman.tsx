@@ -1,6 +1,5 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { type KetidakhadiranRow, kompensasiAdminController } from '../../controllers/kompensasiAdminController';
 import {
   JENIS_KOMPEN_LABEL,
@@ -17,6 +16,7 @@ import { SearchableSelect, type SelectOption } from '../ui/SearchableSelect';
 import { SortableHeader } from '../ui/SortableHeader';
 import { StudentAvatar } from '../ui/StudentAvatar';
 import { Table } from '../ui/Table';
+import KonteksKompensasi from './KonteksKompensasi';
 import {
   EmptyState,
   ErrorState,
@@ -26,6 +26,7 @@ import {
   SumberBadge,
   TableLoadingFallback,
 } from './shared';
+import type { SharedKompensasiFilters } from './sharedKompensasiFilters';
 import { VerifyModal } from './VerifyModal';
 
 const PER_PAGE_DEFAULT = 20;
@@ -44,21 +45,15 @@ const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([v
 }));
 
 interface TabRekamanProps {
+  filters: SharedKompensasiFilters;
   canManage: boolean;
 }
 
 export default function TabRekaman(props: TabRekamanProps) {
   const toast = useToast();
-  const workspace = useWorkspace();
 
   const [page, setPage] = createSignal(1);
   const [limit, setLimit] = createSignal(PER_PAGE_DEFAULT);
-  const [search, setSearch] = createSignal('');
-  const [debouncedSearch, setDebouncedSearch] = createSignal('');
-  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(workspace.selectedProdiId() ?? undefined);
-  const [filterSumber, setFilterSumber] = createSignal('');
-  const [tglDari, setTglDari] = createSignal('');
-  const [tglSampai, setTglSampai] = createSignal('');
   const [sortBy, setSortBy] = createSignal('tanggal');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
 
@@ -76,16 +71,14 @@ export default function TabRekaman(props: TabRekamanProps) {
   >(null);
   const [submitting, setSubmitting] = createSignal(false);
 
-  let searchTimer: ReturnType<typeof setTimeout> | undefined;
-  onCleanup(() => clearTimeout(searchTimer));
-
+  // Reset halaman ke 1 setiap filter bersama berubah (search memakai nilai ter-debounce agar satu fetch).
   createEffect(() => {
-    const q = search();
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      setDebouncedSearch(q);
-      setPage(1);
-    }, 350);
+    props.filters.debouncedSearch();
+    props.filters.prodiId();
+    props.filters.tglDari();
+    props.filters.tglSampai();
+    props.filters.sumber();
+    setPage(1);
   });
 
   const [prodis] = createResource(() => prodiController.getAll(undefined, 1, 100));
@@ -94,11 +87,11 @@ export default function TabRekaman(props: TabRekamanProps) {
     () => ({
       page: page(),
       limit: limit(),
-      search: debouncedSearch(),
-      prodiId: filterProdi(),
-      sumber: filterSumber(),
-      tglDari: tglDari(),
-      tglSampai: tglSampai(),
+      search: props.filters.debouncedSearch(),
+      prodiId: props.filters.prodiId(),
+      sumber: props.filters.sumber(),
+      tglDari: props.filters.tglDari(),
+      tglSampai: props.filters.tglSampai(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
     }),
@@ -255,12 +248,7 @@ export default function TabRekaman(props: TabRekamanProps) {
   };
 
   const resetFilters = () => {
-    setSearch('');
-    setDebouncedSearch('');
-    setFilterProdi(workspace.selectedProdiId() ?? undefined);
-    setFilterSumber('');
-    setTglDari('');
-    setTglSampai('');
+    props.filters.resetShared();
     setSortBy('tanggal');
     setSortOrder('desc');
     setPage(1);
@@ -283,16 +271,16 @@ export default function TabRekaman(props: TabRekamanProps) {
               type="text"
               placeholder="Cari NIM atau nama mahasiswa..."
               class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-secondary-400"
-              value={search()}
-              onInput={(e) => setSearch(e.currentTarget.value)}
+              value={props.filters.search()}
+              onInput={(e) => props.filters.setSearch(e.currentTarget.value)}
             />
           </FilterField>
           <FilterField label="Program Studi">
             <SearchableSelect
               options={prodiOptions()}
-              value={filterProdi()}
+              value={props.filters.prodiId()}
               onChange={(v) => {
-                setFilterProdi(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
+                props.filters.setProdiId(typeof v === 'number' ? v : v === '' ? undefined : Number(v));
                 setPage(1);
               }}
               placeholder="Semua Prodi"
@@ -301,19 +289,29 @@ export default function TabRekaman(props: TabRekamanProps) {
           <FilterField label="Sumber">
             <SearchableSelect
               options={SUMBER_OPTIONS}
-              value={filterSumber()}
+              value={props.filters.sumber()}
               onChange={(v) => {
-                setFilterSumber(String(v));
+                props.filters.setSumber(String(v));
                 setPage(1);
               }}
               placeholder="Semua Sumber"
             />
           </FilterField>
-          <FilterField label="Tanggal Tidak Hadir (Dari)">
-            <Input type="date" value={tglDari()} onInput={(e) => setTglDari(e.currentTarget.value)} class="!py-2" />
+          <FilterField label="Rentang Tanggal (Dari)">
+            <Input
+              type="date"
+              value={props.filters.tglDari()}
+              onInput={(e) => props.filters.setTglDari(e.currentTarget.value)}
+              class="!py-2"
+            />
           </FilterField>
           <FilterField label="Sampai">
-            <Input type="date" value={tglSampai()} onInput={(e) => setTglSampai(e.currentTarget.value)} class="!py-2" />
+            <Input
+              type="date"
+              value={props.filters.tglSampai()}
+              onInput={(e) => props.filters.setTglSampai(e.currentTarget.value)}
+              class="!py-2"
+            />
           </FilterField>
         </div>
         <div class="flex items-center justify-between">
@@ -432,10 +430,13 @@ export default function TabRekaman(props: TabRekamanProps) {
                 <StatusBadge status={row.status} />
               </td>
               <td class="py-4 px-6 font-semibold text-secondary-700 dark:text-secondary-100">{row.durasiMenit} mnt</td>
-              <td class="py-4 px-6 max-w-[220px]">
-                <span class="text-xs text-secondary-500 dark:text-secondary-300 line-clamp-2">
-                  {row.keterangan || row.verificationNote || '-'}
-                </span>
+              <td class="py-4 px-6 max-w-[240px]">
+                <KonteksKompensasi row={row} />
+                <Show when={row.sumber !== 'MANUAL' && (row.keterangan || row.verificationNote)}>
+                  <div class="text-xs text-secondary-400 dark:text-secondary-500 line-clamp-2 mt-1">
+                    {row.keterangan || row.verificationNote}
+                  </div>
+                </Show>
               </td>
               <td class="py-4 px-6">
                 <div class="text-xs text-secondary-500 dark:text-secondary-300">

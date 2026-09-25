@@ -226,13 +226,12 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
       String(m.sakit),
       String(m.izin),
       String(m.alpa),
-      String(m.telat),
       String(m.totalKehadiran),
       `${m.persentaseHadir}%`,
     ]);
 
     autoTable(doc, {
-      head: [['No', 'NIM', 'Nama', 'H', 'S', 'I', 'A', 'T', 'Total Hadir', '% Hadir']],
+      head: [['No', 'NIM', 'Nama', 'H', 'S', 'I', 'A', 'Total Hadir', '% Hadir']],
       body: mhsRows,
       startY: startY + 12,
       styles: { fontSize: 8, cellPadding: 1.5 },
@@ -245,9 +244,8 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
         4: { cellWidth: 14, halign: 'center' },
         5: { cellWidth: 14, halign: 'center' },
         6: { cellWidth: 14, halign: 'center' },
-        7: { cellWidth: 14, halign: 'center' },
-        8: { cellWidth: 22, halign: 'center' },
-        9: { cellWidth: 18, halign: 'center' },
+        7: { cellWidth: 22, halign: 'center' },
+        8: { cellWidth: 18, halign: 'center' },
       },
       margin: { left: margin, right: margin },
     });
@@ -267,12 +265,11 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
       String(p.presensiRingkasan.sakit),
       String(p.presensiRingkasan.izin),
       String(p.presensiRingkasan.alpa),
-      String(p.presensiRingkasan.telat),
       String(p.presensiRingkasan.total),
     ]);
 
     autoTable(doc, {
-      head: [['No', 'Pertemuan', 'Tanggal', 'H', 'S', 'I', 'A', 'T', 'Total']],
+      head: [['No', 'Pertemuan', 'Tanggal', 'H', 'S', 'I', 'A', 'Total']],
       body: sesiRows,
       startY: afterMhs + 11,
       styles: { fontSize: 8, cellPadding: 1.5 },
@@ -286,8 +283,7 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
         4: { cellWidth: 14, halign: 'center' },
         5: { cellWidth: 14, halign: 'center' },
         6: { cellWidth: 14, halign: 'center' },
-        7: { cellWidth: 14, halign: 'center' },
-        8: { cellWidth: 16, halign: 'center' },
+        7: { cellWidth: 16, halign: 'center' },
       },
       margin: { left: margin, right: margin },
     });
@@ -402,13 +398,12 @@ export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
       String(m.sakit),
       String(m.izin),
       String(m.alpa),
-      String(m.telat),
       String(m.totalKehadiran),
       `${m.persentaseHadir}%`,
     ]);
 
     autoTable(doc, {
-      head: [['No', 'NIM', 'Nama', 'H', 'S', 'I', 'A', 'T', 'Total Hadir', '% Hadir']],
+      head: [['No', 'NIM', 'Nama', 'H', 'S', 'I', 'A', 'Total Hadir', '% Hadir']],
       body: mhsRows,
       startY: startY + 12,
       styles: { fontSize: 8, cellPadding: 1.5 },
@@ -421,9 +416,8 @@ export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
         4: { cellWidth: 14, halign: 'center' },
         5: { cellWidth: 14, halign: 'center' },
         6: { cellWidth: 14, halign: 'center' },
-        7: { cellWidth: 14, halign: 'center' },
-        8: { cellWidth: 22, halign: 'center' },
-        9: { cellWidth: 18, halign: 'center' },
+        7: { cellWidth: 22, halign: 'center' },
+        8: { cellWidth: 18, halign: 'center' },
       },
       margin: { left: margin, right: margin },
     });
@@ -443,12 +437,11 @@ export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
       String(p.presensiRingkasan.sakit),
       String(p.presensiRingkasan.izin),
       String(p.presensiRingkasan.alpa),
-      String(p.presensiRingkasan.telat),
       String(p.presensiRingkasan.total),
     ]);
 
     autoTable(doc, {
-      head: [['No', 'Sesi', 'Tanggal', 'H', 'S', 'I', 'A', 'T', 'Total']],
+      head: [['No', 'Sesi', 'Tanggal', 'H', 'S', 'I', 'A', 'Total']],
       body: sesiRows,
       startY: afterMhs + 11,
       styles: { fontSize: 8, cellPadding: 1.5 },
@@ -462,8 +455,7 @@ export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
         4: { cellWidth: 14, halign: 'center' },
         5: { cellWidth: 14, halign: 'center' },
         6: { cellWidth: 14, halign: 'center' },
-        7: { cellWidth: 14, halign: 'center' },
-        8: { cellWidth: 16, halign: 'center' },
+        7: { cellWidth: 16, halign: 'center' },
       },
       margin: { left: margin, right: margin },
     });

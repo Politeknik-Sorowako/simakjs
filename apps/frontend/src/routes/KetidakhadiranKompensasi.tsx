@@ -1,11 +1,13 @@
 import { useSearchParams } from '@solidjs/router';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import type { SharedKompensasiFilters } from '../components/kompensasi/sharedKompensasiFilters';
 import TabKetidakhadiran from '../components/kompensasi/TabKetidakhadiran';
 import TabPembayaran from '../components/kompensasi/TabPembayaran';
 import TabRekaman from '../components/kompensasi/TabRekaman';
 import TabRekap from '../components/kompensasi/TabRekap';
 import { MainLayout } from '../components/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 
 type TabKey = 'ketidakhadiran' | 'rekaman' | 'pembayaran' | 'rekap';
 
@@ -25,13 +27,67 @@ function normalizeTab(value: string | null | undefined): TabKey {
 
 export default function KetidakhadiranKompensasi() {
   const auth = useAuth();
+  const workspace = useWorkspace();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = createSignal<TabKey>(normalizeTab(searchParams.tab as string | undefined));
 
-  onMount(() => {
-    const initial = normalizeTab(searchParams.tab as string | undefined);
-    setSearchParams({ tab: initial }, { replace: true });
+  // Filter bersama antar-tab (sumber kebenaran tunggal, diteruskan ke tiap tab).
+  const [search, setSearch] = createSignal(searchParams.q ?? '');
+  const [debouncedSearch, setDebouncedSearch] = createSignal(searchParams.q ?? '');
+  const [prodiId, setProdiId] = createSignal<number | undefined>(
+    searchParams.prodi ? Number(searchParams.prodi) || undefined : (workspace.selectedProdiId() ?? undefined),
+  );
+  const [tglDari, setTglDari] = createSignal(searchParams.dari ?? '');
+  const [tglSampai, setTglSampai] = createSignal(searchParams.sampai ?? '');
+  const [sumber, setSumber] = createSignal(searchParams.sumber ?? '');
+
+  let searchTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(searchTimer));
+
+  createEffect(() => {
+    const q = search();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => setDebouncedSearch(q), 350);
   });
+
+  const resetShared = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    setProdiId(workspace.selectedProdiId() ?? undefined);
+    setTglDari('');
+    setTglSampai('');
+    setSumber('');
+  };
+
+  // Mirror filter bersama ke URL agar tahan refresh & bisa di-share/deep-link.
+  createEffect(() => {
+    setSearchParams(
+      {
+        tab: tab(),
+        q: debouncedSearch() || undefined,
+        prodi: prodiId()?.toString() ?? undefined,
+        dari: tglDari() || undefined,
+        sampai: tglSampai() || undefined,
+        sumber: sumber() || undefined,
+      },
+      { replace: true },
+    );
+  });
+
+  const filters: SharedKompensasiFilters = {
+    search,
+    setSearch,
+    debouncedSearch,
+    prodiId,
+    setProdiId,
+    tglDari,
+    setTglDari,
+    tglSampai,
+    setTglSampai,
+    sumber,
+    setSumber,
+    resetShared,
+  };
 
   const switchTab = (key: TabKey) => {
     setTab(key);
@@ -64,16 +120,16 @@ export default function KetidakhadiranKompensasi() {
         </div>
 
         <Show when={activeTab() === 'ketidakhadiran'}>
-          <TabKetidakhadiran />
+          <TabKetidakhadiran filters={filters} />
         </Show>
         <Show when={activeTab() === 'rekaman'}>
-          <TabRekaman canManage={canManage()} />
+          <TabRekaman filters={filters} canManage={canManage()} />
         </Show>
         <Show when={activeTab() === 'pembayaran'}>
-          <TabPembayaran canManage={canManage()} />
+          <TabPembayaran filters={filters} canManage={canManage()} />
         </Show>
         <Show when={activeTab() === 'rekap'}>
-          <TabRekap canManage={canManage()} />
+          <TabRekap filters={filters} canManage={canManage()} />
         </Show>
       </div>
     </MainLayout>
