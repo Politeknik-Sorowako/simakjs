@@ -44,6 +44,9 @@ describe('4. Dosen (/dosen)', () => {
             email: 'dosenuji@test.com',
             programStudiId: prodiId,
             nidn: '0001019001',
+            nuptk: '1234567890123456',
+            pohonIlmu: 'Ilmu Komputer',
+            cabangIlmu: 'Rekayasa Perangkat Lunak',
             nik: '9876543210123456',
             jenisKelamin: 'L',
             tanggalLahir: '1990-01-01',
@@ -55,6 +58,9 @@ describe('4. Dosen (/dosen)', () => {
       const body = await response.json();
       expect(body.id).toBeDefined();
       expect(body.nip).toBe('199001012020011001');
+      expect(body.nuptk).toBe('1234567890123456');
+      expect(body.pohonIlmu).toBe('Ilmu Komputer');
+      expect(body.cabangIlmu).toBe('Rekayasa Perangkat Lunak');
     });
 
     it('harus gagal menambahkan dosen jika payload tidak valid (Validation)', async () => {
@@ -154,6 +160,7 @@ describe('4. Dosen (/dosen)', () => {
           email: 'dosen1@test.com',
           programStudiId: prodiId,
           nidn: '101',
+          nuptk: '99887766',
           nik: '1234567890123451',
           jenisKelamin: 'L',
           tanggalLahir: '1980-01-01',
@@ -164,6 +171,7 @@ describe('4. Dosen (/dosen)', () => {
           email: 'dosen2@test.com',
           programStudiId: prodiId,
           nidn: '102',
+          nuptk: '11223344',
           nik: '1234567890123452',
           jenisKelamin: 'P',
           tanggalLahir: '1981-02-02',
@@ -225,6 +233,49 @@ describe('4. Dosen (/dosen)', () => {
       const body = await response.json();
       expect(body.data.length).toBe(1);
       expect(body.data[0].nip).toBe('111');
+    });
+
+    it('harus sukses mencari dosen berdasarkan keyword search nuptk', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/dosen?search=99887766', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data.length).toBe(1);
+      expect(body.data[0].nip).toBe('111');
+    });
+
+    it('harus sukses mengurutkan dosen berdasarkan nuptk dan nidn', async () => {
+      const resNuptk = await app.handle(
+        new Request('http://localhost/dosen?sortBy=nuptk&sortOrder=asc', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+      expect(resNuptk.status).toBe(200);
+      const bodyNuptk = await resNuptk.json();
+      expect(bodyNuptk.data[0].nuptk).toBe('11223344');
+
+      const resNidn = await app.handle(
+        new Request('http://localhost/dosen?sortBy=nidn&sortOrder=desc', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      );
+      expect(resNidn.status).toBe(200);
+      const bodyNidn = await resNidn.json();
+      const nonNullNidn = bodyNidn.data.filter((d: { nidn: string | null }) => d.nidn !== null);
+      expect(nonNullNidn[0].nidn).toBe('102');
+      expect(nonNullNidn[1].nidn).toBe('101');
     });
 
     it('harus gagal mengambil list dosen jika diakses oleh Guest (RBAC)', async () => {

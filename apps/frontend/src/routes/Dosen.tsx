@@ -366,11 +366,13 @@ export default function Dosen() {
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.nidn || '-'}</td>
                   <td class="px-6 py-4 font-mono text-secondary-500 dark:text-secondary-200">{item.nuptk || '-'}</td>
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">
-                    {item.pohonIlmu || '-'}
-                    <Show when={item.pohonIlmu && item.cabangIlmu}>
-                      <span class="text-secondary-300 dark:text-secondary-600"> · </span>
+                    <Show when={item.pohonIlmu || item.cabangIlmu} fallback="-">
+                      <span>{item.pohonIlmu}</span>
+                      <Show when={item.pohonIlmu && item.cabangIlmu}>
+                        <span class="text-secondary-300 dark:text-secondary-600"> · </span>
+                      </Show>
+                      <span>{item.cabangIlmu}</span>
                     </Show>
-                    {item.pohonIlmu ? item.cabangIlmu || '' : ''}
                   </td>
                   <td class="px-6 py-4 flex gap-2">
                     <Button variant="secondary" onClick={() => openEditModal(item)} class="!py-1 !px-2.5">

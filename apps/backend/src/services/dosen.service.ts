@@ -57,6 +57,7 @@ export class DosenService {
       nip: dosen.nip,
       nama: dosen.nama,
       email: dosen.email,
+      nidn: dosen.nidn,
       nuptk: dosen.nuptk,
       programStudiId: dosen.programStudiId,
     } as const;
