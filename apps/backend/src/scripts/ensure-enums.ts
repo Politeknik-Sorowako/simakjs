@@ -23,6 +23,7 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'ketidakhadiran_sumber', value: 'MANUAL' },
   { name: 'ketidakhadiran_sumber', value: 'PRAKTIKUM' },
   { name: 'ketidakhadiran_status', value: 'UNKNOWN' },
+  { name: 'ketidakhadiran_status', value: 'HADIR', before: 'SAKIT' },
   { name: 'ketidakhadiran_status', value: 'SAKIT' },
   { name: 'ketidakhadiran_status', value: 'IZIN' },
   { name: 'ketidakhadiran_status', value: 'ALPA' },
@@ -259,7 +260,7 @@ async function ensureEnums() {
     const statusType = await pool.query(`SELECT 1 FROM pg_type WHERE typname = 'ketidakhadiran_status'`);
     if (statusType.rows.length === 0) {
       await pool.query(
-        `CREATE TYPE "ketidakhadiran_status" AS ENUM ('UNKNOWN', 'SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'RUSAK');`,
+        `CREATE TYPE "ketidakhadiran_status" AS ENUM ('UNKNOWN', 'HADIR', 'SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'RUSAK');`,
       );
     }
     await pool.query(`

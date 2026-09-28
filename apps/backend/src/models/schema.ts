@@ -428,6 +428,7 @@ export const ketidakhadiranSumberEnum = pgEnum('ketidakhadiran_sumber', ['BAP', 
 
 export const ketidakhadiranStatusEnum = pgEnum('ketidakhadiran_status', [
   'UNKNOWN',
+  'HADIR',
   'SAKIT',
   'IZIN',
   'ALPA',
