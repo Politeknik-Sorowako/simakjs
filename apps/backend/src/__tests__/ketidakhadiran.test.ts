@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { app } from '../app';
 import {
   bap,
+  bapPraktikum,
   dosen,
   kelasKuliah,
   kelompokApel,
@@ -13,7 +14,9 @@ import {
   periodeAkademik,
   presensi,
   presensiApel,
+  presensiPraktikum,
   programStudi,
+  rombelPraktikum,
   sesiApel,
 } from '../models/schema';
 import { db } from '../utils/db';
@@ -141,7 +144,12 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
   }
 
   // Helper verifikasi via endpoint dengan token admin saat ini.
-  function verifyPresensi(sumber: 'BAP' | 'APEL', sumberId: number, statusKonfirmasi: string, durasiMenit: number) {
+  function verifyPresensi(
+    sumber: 'BAP' | 'APEL' | 'PRAKTIKUM',
+    sumberId: number,
+    statusKonfirmasi: string,
+    durasiMenit: number,
+  ) {
     return app.handle(
       new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
         method: 'POST',
@@ -177,6 +185,51 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
       .values({ sesiApelId: sesi.id, mahasiswaId: mhsId, status: status as never, menitTerlambat: durasi })
       .returning();
     return { presensiId: p.id };
+  }
+
+  // Helper seed presensi praktikum -> sinkron ke ketidakhadiran (sumber='PRAKTIKUM').
+  async function seedPraktikumPresensi(tanggal: string, status: string, durasi: number, keterangan?: string) {
+    const [rombel] = await db
+      .insert(rombelPraktikum)
+      .values({ kelasKuliahId: kelasId, namaGroup: 'Rombel A', instrukturId: dosenId })
+      .returning();
+
+    const [bapPrak] = await db
+      .insert(bapPraktikum)
+      .values({
+        rombelPraktikumId: rombel.id,
+        tanggal,
+        sesiKe: 1,
+        materi: 'Materi Praktikum',
+        durasiMenit: durasi,
+        instrukturId: dosenId,
+      })
+      .returning();
+
+    const [p] = await db
+      .insert(presensiPraktikum)
+      .values({
+        bapPraktikumId: bapPrak.id,
+        mahasiswaId: mhsId,
+        status: status as never,
+        durasiMangkir: durasi,
+        keterangan,
+      })
+      .returning();
+
+    const [abs] = await db
+      .insert(ketidakhadiranMahasiswa)
+      .values({
+        mahasiswaId: mhsId,
+        tanggal,
+        sumber: 'PRAKTIKUM',
+        sumberId: p.id,
+        status: status.toUpperCase() as never,
+        durasiMenit: durasi,
+        isVerified: status !== 'unknown',
+      })
+      .returning();
+    return { presensiId: p.id, absenceId: abs.id };
   }
 
   it('menolak akses verifikasi untuk non-admin', async () => {
@@ -762,5 +815,146 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
 
     const koreksi = await verifyPresensi('APEL', presensiId, 'ALPA', 120);
     expect(koreksi.status).toBe(200);
+  });
+
+  it('mengembalikan BAP terverifikasi ke UNKNOWN me-reset is_verified, jejak admin, dan sumber presensi', async () => {
+    const { presensiId } = await seedBapPresensi('2026-09-24', 'sakit', 120);
+
+    const res = await app.handle(
+      new Request('http://localhost/ketidakhadiran/verifikasi-unknown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+        body: JSON.stringify({ sumber: 'BAP', sumberId: presensiId, statusKonfirmasi: 'UNKNOWN' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('UNKNOWN');
+    expect(body.isVerified).toBe(false);
+    expect(body.verifiedBy).toBeNull();
+    expect(body.verifiedAt).toBeNull();
+    expect(body.durasiMenit).toBe(120);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.status).toBe('UNKNOWN');
+    expect(row.isVerified).toBe(false);
+    expect(row.verifiedBy).toBeNull();
+    expect(row.verifiedAt).toBeNull();
+
+    const [source] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
+    expect(source.status).toBe('unknown');
+    expect(source.resolvedBy).toBeNull();
+    expect(source.resolvedAt).toBeNull();
+    expect(source.durasiMangkir).toBe(120);
+    expect(source.keteranganAdmin).toContain('[dikembalikan] butuh konfirmasi');
+  });
+
+  it('mengembalikan APEL terverifikasi ke UNKNOWN me-reset is_verified dan verified_status sumber', async () => {
+    const { presensiId } = await seedApelPresensi('2026-09-25', 'alpa', 90);
+
+    const res = await verifyPresensi('APEL', presensiId, 'UNKNOWN', 0);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('UNKNOWN');
+    expect(body.isVerified).toBe(false);
+    expect(body.verifiedBy).toBeNull();
+    expect(body.durasiMenit).toBe(90);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.status).toBe('UNKNOWN');
+    expect(row.isVerified).toBe(false);
+    expect(row.verifiedBy).toBeNull();
+    expect(row.verifiedAt).toBeNull();
+
+    const [source] = await db.select().from(presensiApel).where(eq(presensiApel.id, presensiId));
+    expect(source.status).toBe('unknown');
+    expect(source.verifiedStatus).toBe('unknown');
+    expect(source.verifiedBy).toBeNull();
+    expect(source.verifiedAt).toBeNull();
+    expect(source.verificationNote).toContain('[dikembalikan] butuh konfirmasi');
+  });
+
+  it('mengembalikan PRAKTIKUM terverifikasi ke UNKNOWN me-reset is_verified dan sumber presensi praktikum', async () => {
+    const { presensiId } = await seedPraktikumPresensi('2026-09-26', 'alpa', 75);
+
+    const res = await verifyPresensi('PRAKTIKUM', presensiId, 'UNKNOWN', 0);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('UNKNOWN');
+    expect(body.isVerified).toBe(false);
+    expect(body.verifiedBy).toBeNull();
+    expect(body.durasiMenit).toBe(75);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'PRAKTIKUM'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.status).toBe('UNKNOWN');
+    expect(row.isVerified).toBe(false);
+    expect(row.verifiedBy).toBeNull();
+    expect(row.verifiedAt).toBeNull();
+
+    const [source] = await db.select().from(presensiPraktikum).where(eq(presensiPraktikum.id, presensiId));
+    expect(source.status).toBe('unknown');
+    expect(source.resolvedBy).toBeNull();
+    expect(source.resolvedAt).toBeNull();
+    expect(source.durasiMangkir).toBe(75);
+    expect(source.keteranganAdmin).toContain('[dikembalikan] butuh konfirmasi');
+  });
+
+  it('baris yang dikembalikan ke UNKNOWN masuk filter Belum Diverifikasi dan keluar dari Rekaman Kompensasi', async () => {
+    const { presensiId } = await seedBapPresensi('2026-09-27', 'alpa', 60);
+    // Baris kontrol yang tetap terverifikasi untuk memastikan rekaman tidak kosong.
+    const control = await seedBapPresensi('2026-09-27', 'unknown', 0);
+    expect((await verifyPresensi('BAP', control.presensiId, 'ALPA', 100)).status).toBe(200);
+
+    const revert = await verifyPresensi('BAP', presensiId, 'UNKNOWN', 0);
+    expect(revert.status).toBe(200);
+
+    // Riwayat: row yang di-revert muncul di filter "belum", bukan di "sudah".
+    const belumRes = await app.handle(
+      new Request(
+        'http://localhost/ketidakhadiran/riwayat-unified?statusVerif=belum&tglDari=2026-09-27&tglSampai=2026-09-27',
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      ),
+    );
+    expect(belumRes.status).toBe(200);
+    const belumBody = (await belumRes.json()) as { data: Array<{ sumberId: number | null }> };
+    expect(belumBody.data.some((r) => r.sumberId === presensiId)).toBe(true);
+
+    const sudahRes = await app.handle(
+      new Request(
+        'http://localhost/ketidakhadiran/riwayat-unified?statusVerif=sudah&tglDari=2026-09-27&tglSampai=2026-09-27',
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      ),
+    );
+    expect(sudahRes.status).toBe(200);
+    const sudahBody = (await sudahRes.json()) as { data: Array<{ sumberId: number | null }> };
+    expect(sudahBody.data.some((r) => r.sumberId === presensiId)).toBe(false);
+    expect(sudahBody.data.some((r) => r.sumberId === control.presensiId)).toBe(true);
+
+    // Rekaman Kompensasi: row yang di-revert tidak lagi menjadi beban.
+    const rekamanRes = await app.handle(
+      new Request('http://localhost/kompensasi/rekaman?tglDari=2026-09-27&tglSampai=2026-09-27', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(rekamanRes.status).toBe(200);
+    const rekamanBody = (await rekamanRes.json()) as { data: Array<{ sumberId: number | null }> };
+    expect(rekamanBody.data.some((r) => r.sumberId === presensiId)).toBe(false);
+    expect(rekamanBody.data.some((r) => r.sumberId === control.presensiId)).toBe(true);
   });
 });
