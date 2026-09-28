@@ -220,10 +220,10 @@ export class VerifikasiUnknownService {
       const lockKey = `kompen_${absence.mahasiswaId}_${absence.tanggal}`;
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
 
-      // HADIR = mahasiswa ternyata hadir -> bukan ketidakhadiran. Pertahankan baris
-      // terpusat dengan status UNKNOWN + is_verified=true + durasi 0 agar (a) tidak masuk
-      // rekap kompensasi (UNKNOWN bukan kelas mangkir/ringan) dan (b) tetap bisa dikoreksi
-      // lewat endpoint ini bila admin salah konfirmasi. Tandai sumber asal sebagai hadir.
+      // HADIR = mahasiswa ternyata hadir -> bukan ketidakhadiran. Simpan status
+      // 'HADIR' + is_verified=true + durasi 0 agar (a) tidak masuk rekap kompensasi
+      // (HADIR bukan kelas mangkir/ringan) dan (b) tetap bisa dikoreksi lewat endpoint
+      // ini bila admin salah konfirmasi. Tandai sumber asal sebagai hadir.
       if (input.statusKonfirmasi === 'HADIR') {
         const note = input.keterangan?.trim() || '';
         const terkonfirmasi = `[terkonfirmasi] hadir${note ? ` — ${note}` : ''}`;
@@ -282,7 +282,7 @@ export class VerifikasiUnknownService {
         await tx
           .update(ketidakhadiranMahasiswa)
           .set({
-            status: 'UNKNOWN',
+            status: 'HADIR',
             durasiMenit: 0,
             keterangan: absence.keterangan,
             isVerified: true,

@@ -389,7 +389,7 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     expect(body.error).toContain('maks 480 menit/hari');
   });
 
-  it('konfirmasi HADIR mempertahankan baris terpusat (is_verified, durasi 0) dan menandai sumber hadir', async () => {
+  it('konfirmasi HADIR BAP mencatat status HADIR (is_verified, durasi 0) dan menandai sumber hadir', async () => {
     const { presensiId } = await seedBapPresensi('2026-08-06', 'unknown', 0);
 
     const res = await app.handle(
@@ -408,9 +408,9 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
       .from(ketidakhadiranMahasiswa)
       .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
     expect(rows.length).toBe(1);
+    expect(rows[0].status).toBe('HADIR');
     expect(rows[0].isVerified).toBe(true);
     expect(rows[0].durasiMenit).toBe(0);
-    expect(rows[0].status).toBe('UNKNOWN');
 
     const [source] = await db.select().from(presensi).where(eq(presensi.id, presensiId));
     expect(source.status).toBe('hadir');
@@ -538,7 +538,7 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     expect(source.verifiedStatus).toBe('alpa');
   });
 
-  it('verifikasi UNKNOWN APEL dengan status HADIR mempertahankan baris & menandai hadir', async () => {
+  it('verifikasi UNKNOWN APEL dengan status HADIR mencatat status HADIR & menandai hadir', async () => {
     const { presensiId } = await seedApelPresensi('2026-09-05', 'unknown', 10);
 
     const res = await app.handle(
@@ -559,7 +559,7 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
       .from(ketidakhadiranMahasiswa)
       .where(and(eq(ketidakhadiranMahasiswa.sumber, 'APEL'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
     expect(rows.length).toBe(1);
-    expect(rows[0].status).toBe('UNKNOWN');
+    expect(rows[0].status).toBe('HADIR');
     expect(rows[0].isVerified).toBe(true);
     expect(rows[0].durasiMenit).toBe(0);
 
@@ -956,5 +956,98 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     const rekamanBody = (await rekamanRes.json()) as { data: Array<{ sumberId: number | null }> };
     expect(rekamanBody.data.some((r) => r.sumberId === presensiId)).toBe(false);
     expect(rekamanBody.data.some((r) => r.sumberId === control.presensiId)).toBe(true);
+  });
+
+  it('konfirmasi HADIR PRAKTIKUM mencatat status HADIR (is_verified, durasi 0) dan menandai sumber hadir', async () => {
+    const { presensiId } = await seedPraktikumPresensi('2026-09-28', 'unknown', 45);
+
+    const res = await verifyPresensi('PRAKTIKUM', presensiId, 'HADIR', 0);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe('HADIR');
+    expect(body.isVerified).toBe(true);
+    expect(body.durasiMenit).toBe(0);
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'PRAKTIKUM'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.status).toBe('HADIR');
+    expect(row.isVerified).toBe(true);
+    expect(row.durasiMenit).toBe(0);
+
+    const [source] = await db.select().from(presensiPraktikum).where(eq(presensiPraktikum.id, presensiId));
+    expect(source.status).toBe('hadir');
+    expect(source.durasiMangkir).toBe(0);
+    expect(source.keteranganAdmin).toContain('[terkonfirmasi] hadir');
+  });
+
+  it('baris HADIR muncul di riwayat terverifikasi (status HADIR, durasi 0) dan tidak membebani rekaman kompensasi', async () => {
+    const { presensiId } = await seedBapPresensi('2026-09-29', 'unknown', 0);
+    expect((await verifyPresensi('BAP', presensiId, 'HADIR', 0)).status).toBe(200);
+
+    const riwayatRes = await app.handle(
+      new Request(
+        'http://localhost/ketidakhadiran/riwayat-unified?statusVerif=sudah&tglDari=2026-09-29&tglSampai=2026-09-29',
+        {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        },
+      ),
+    );
+    expect(riwayatRes.status).toBe(200);
+    const riwayatBody = (await riwayatRes.json()) as {
+      data: Array<{ sumberId: number | null; status: string; durasiMenit: number }>;
+    };
+    const hadirRow = riwayatBody.data.find((r) => r.sumberId === presensiId);
+    expect(hadirRow).toBeDefined();
+    expect(hadirRow?.status).toBe('HADIR');
+    expect(hadirRow?.durasiMenit).toBe(0);
+
+    const rekamanRes = await app.handle(
+      new Request('http://localhost/kompensasi/rekaman?tglDari=2026-09-29&tglSampai=2026-09-29', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(rekamanRes.status).toBe(200);
+    const rekamanBody = (await rekamanRes.json()) as { data: Array<{ sumberId: number | null }> };
+    expect(rekamanBody.data.some((r) => r.sumberId === presensiId)).toBe(false);
+
+    const detailRes = await app.handle(
+      new Request(`http://localhost/presensi/kompensasi/mahasiswa/${mhsId}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(detailRes.status).toBe(200);
+    expect((await detailRes.json()).summary.totalKompensasi).toBe(0);
+  });
+
+  it('koreksi ulang dari status HADIR ke ALPA dan UNKNOWN tetap berhasil', async () => {
+    const { presensiId } = await seedBapPresensi('2026-09-30', 'unknown', 0);
+    expect((await verifyPresensi('BAP', presensiId, 'HADIR', 0)).status).toBe(200);
+
+    const keAlpa = await verifyPresensi('BAP', presensiId, 'ALPA', 90);
+    expect(keAlpa.status).toBe(200);
+    const alpaBody = await keAlpa.json();
+    expect(alpaBody.status).toBe('ALPA');
+    expect(alpaBody.isVerified).toBe(true);
+
+    expect((await verifyPresensi('BAP', presensiId, 'HADIR', 0)).status).toBe(200);
+
+    const keUnknown = await verifyPresensi('BAP', presensiId, 'UNKNOWN', 0);
+    expect(keUnknown.status).toBe(200);
+    const unknownBody = await keUnknown.json();
+    expect(unknownBody.status).toBe('UNKNOWN');
+    expect(unknownBody.isVerified).toBe(false);
+    expect(unknownBody.verifiedBy).toBeNull();
+
+    const [row] = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(and(eq(ketidakhadiranMahasiswa.sumber, 'BAP'), eq(ketidakhadiranMahasiswa.sumberId, presensiId)));
+    expect(row.status).toBe('UNKNOWN');
+    expect(row.isVerified).toBe(false);
   });
 });

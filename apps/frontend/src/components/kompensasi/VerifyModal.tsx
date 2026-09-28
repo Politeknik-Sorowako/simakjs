@@ -19,6 +19,9 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'UNKNOWN', label: 'Unknown — butuh konfirmasi' },
 ];
 
+const isRecognizedStatus = (s?: string | null) =>
+  s === 'SAKIT' || s === 'IZIN' || s === 'ALPA' || s === 'TERLAMBAT' || s === 'HADIR' || s === 'UNKNOWN';
+
 interface VerifyModalProps {
   row: KetidakhadiranRow | null;
   onClose: () => void;
@@ -36,12 +39,13 @@ export function VerifyModal(props: VerifyModalProps) {
     const r = props.row;
     if (!r) return;
     const s = r.status;
-    setStatus(s === 'SAKIT' || s === 'IZIN' || s === 'ALPA' || s === 'TERLAMBAT' || s === 'UNKNOWN' ? s : 'ALPA');
-    setDurasi(r.durasiMenit ?? 0);
+    setStatus(isRecognizedStatus(s) ? s! : 'ALPA');
+    setDurasi(s === 'HADIR' ? 0 : (r.durasiMenit ?? 0));
     setNote(r.keterangan || '');
   });
 
   const isUnknown = () => status() === 'UNKNOWN';
+  const isHadir = () => status() === 'HADIR';
 
   const [rekapHarian] = createResource(
     () => {
@@ -60,7 +64,7 @@ export function VerifyModal(props: VerifyModalProps) {
         sumber: row.sumber,
         sumberId: Number(row.sumberId),
         statusKonfirmasi: status() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN',
-        durasiMenit: isUnknown() ? undefined : durasi(),
+        durasiMenit: isHadir() ? 0 : isUnknown() ? undefined : durasi(),
         keterangan: note() || undefined,
       });
       toast.showToast('Ketidakhadiran berhasil diverifikasi', 'success');
@@ -114,14 +118,22 @@ export function VerifyModal(props: VerifyModalProps) {
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <FilterField label="Status Konfirmasi">
-                <SearchableSelect options={STATUS_OPTIONS} value={status()} onChange={(v) => setStatus(String(v))} />
+                <SearchableSelect
+                  options={STATUS_OPTIONS}
+                  value={status()}
+                  onChange={(v) => {
+                    const val = String(v);
+                    setStatus(val);
+                    if (val === 'HADIR') setDurasi(0);
+                  }}
+                />
               </FilterField>
               <FilterField label="Durasi (Menit)">
                 <Input
                   type="number"
                   min="0"
                   value={durasi()}
-                  disabled={isUnknown()}
+                  disabled={isUnknown() || isHadir()}
                   onInput={(e) => setDurasi(parseInt(e.currentTarget.value) || 0)}
                 />
               </FilterField>

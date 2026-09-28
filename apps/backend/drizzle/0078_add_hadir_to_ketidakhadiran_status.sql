@@ -1,0 +1,1 @@
+ALTER TYPE "public"."ketidakhadiran_status" ADD VALUE IF NOT EXISTS 'HADIR';
