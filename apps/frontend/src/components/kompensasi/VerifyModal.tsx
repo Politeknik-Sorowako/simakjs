@@ -36,7 +36,7 @@ export function VerifyModal(props: VerifyModalProps) {
     const r = props.row;
     if (!r) return;
     const s = r.status;
-    setStatus(s === 'SAKIT' || s === 'IZIN' || s === 'ALPA' || s === 'TERLAMBAT' ? s : 'ALPA');
+    setStatus(s === 'SAKIT' || s === 'IZIN' || s === 'ALPA' || s === 'TERLAMBAT' || s === 'UNKNOWN' ? s : 'ALPA');
     setDurasi(r.durasiMenit ?? 0);
     setNote(r.keterangan || '');
   });
