@@ -5,7 +5,6 @@ import { KhsService } from '../services/khs.service';
 import { KrsService } from '../services/krs.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
 import { SystemParameterService } from '../services/system-parameter.service';
-import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';

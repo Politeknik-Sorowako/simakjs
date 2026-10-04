@@ -577,19 +577,15 @@ export class ApelService {
     if (found.status !== 'unknown') throw new Error('Status presensi bukan unknown');
 
     // Kebijakan mahasiswa cuti: konfirmasi yang menciptakan beban kompensasi
-    // (sakit/izin/alpa/terlambat) tetap diblokir; hadir/cuti (nol-debt) diizinkan
-    // untuk merapikan antrean. Status cuti tidak sah untuk mahasiswa non-cuti.
+    // (sakit/izin/alpa/terlambat) tetap diblokir di jalur verifikasi apel ini.
     const statusKonfirmasi = data.verifiedStatus;
     const [mhs] = await db
       .select({ status: mahasiswa.status })
       .from(mahasiswa)
       .where(eq(mahasiswa.id, found.mahasiswaId));
     const isCuti = mhs ? isCutiGlobal(mhs.status) : false;
-    if (isCuti && ['sakit', 'izin', 'alpa'].includes(statusKonfirmasi)) {
-      throw new Error('Mahasiswa berstatus cuti tidak dapat dikonfirmasi alpa/sakit/izin.');
-    }
-    if (!isCuti && statusKonfirmasi === 'cuti') {
-      throw new Error('Status cuti hanya dapat digunakan untuk mahasiswa berstatus cuti.');
+    if (isCuti && ['sakit', 'izin', 'alpa', 'terlambat'].includes(statusKonfirmasi)) {
+      throw new Error('Mahasiswa berstatus cuti tidak dapat dikonfirmasi alpa/sakit/izin/terlambat.');
     }
 
     let verificationNote = data.verificationNote;
@@ -602,8 +598,8 @@ export class ApelService {
     const [updated] = await db
       .update(presensiApel)
       .set({
-        status: (data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa' | 'cuti') || found.status,
-        verifiedStatus: data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa' | 'cuti',
+        status: (data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa' | 'terlambat') || found.status,
+        verifiedStatus: data.verifiedStatus as 'hadir' | 'sakit' | 'izin' | 'alpa' | 'terlambat',
         verifiedBy: data.verifiedBy,
         verifiedAt: new Date(),
         verificationNote,

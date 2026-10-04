@@ -422,7 +422,6 @@ export const presensiStatusEnum = pgEnum('presensi_status', [
   'alpa',
   'terlambat',
   'unknown',
-  'cuti',
 ]);
 
 export const ketidakhadiranSumberEnum = pgEnum('ketidakhadiran_sumber', ['BAP', 'APEL', 'MANUAL', 'PRAKTIKUM']);

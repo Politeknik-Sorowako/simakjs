@@ -41,9 +41,6 @@ const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = [
   'CUTI',
 ];
 
-/** Status konfirmasi yang menghasilkan beban kompensasi terverifikasi. */
-const STATUS_KOMPENSASI = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT'];
-
 /** Status yang dihitung sebagai beban kompensasi terverifikasi pada cap harian. */
 const STATUS_TERHITUNG_CAP = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT'];
 
@@ -229,7 +226,7 @@ export class VerifikasiUnknownService {
         .from(mahasiswa)
         .where(eq(mahasiswa.id, absence.mahasiswaId));
       if (mhs && isCutiGlobal(mhs.status)) {
-        if (STATUS_KOMPENSASI.includes(input.statusKonfirmasi)) {
+        if (STATUS_TERHITUNG_CAP.includes(input.statusKonfirmasi)) {
           throw new Error('Mahasiswa berstatus cuti tidak dapat dikonfirmasi alpa/sakit/izin/terlambat.');
         }
       } else if (input.statusKonfirmasi === 'CUTI') {
@@ -322,9 +319,11 @@ export class VerifikasiUnknownService {
         return { ...absence, status: 'HADIR', isVerified: true, durasiMenit: 0, verifiedBy: adminUserId };
       }
 
-      // CUTI = mahasiswa cuti, bukan ketidakhadiran terkompensasi. Simpan status
-      // 'CUTI' + is_verified=true + durasi 0 (nol-debt) untuk merapikan antrean unknown
-      // legacy milik mahasiswa cuti, sekaligus menandai sumber asal sebagai cuti.
+      // CUTI = mahasiswa cuti, bukan ketidakhadiran terkompensasi. Baris terpusat diberi
+      // status 'CUTI' + is_verified=true + durasi 0 (nol-debt) untuk merapikan antrean
+      // unknown legacy milik mahasiswa cuti. Sumber asal di-set 'hadir' (bukan 'cuti')
+      // DENGAN durasi 0 → tetap non-debt dan mencegah re-save presensi memunculkan
+      // kembali beban; 'hadir' valid di seluruh schema input presensi/apel/praktikum.
       if (input.statusKonfirmasi === 'CUTI') {
         const note = input.keterangan?.trim() || '';
         const terkonfirmasi = `[terkonfirmasi] cuti${note ? ` — ${note}` : ''}`;
@@ -338,7 +337,7 @@ export class VerifikasiUnknownService {
           await tx
             .update(presensi)
             .set({
-              status: 'cuti' as 'cuti',
+              status: 'hadir' as 'hadir',
               durasiMangkir: 0,
               keteranganAdmin: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
               resolvedBy: adminUserId,
@@ -354,8 +353,8 @@ export class VerifikasiUnknownService {
           await tx
             .update(presensiApel)
             .set({
-              status: 'cuti' as 'cuti',
-              verifiedStatus: 'cuti' as 'cuti',
+              status: 'hadir' as 'hadir',
+              verifiedStatus: 'hadir' as 'hadir',
               menitTerlambat: 0,
               verificationNote: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
               verifiedBy: adminUserId,
@@ -371,7 +370,7 @@ export class VerifikasiUnknownService {
           await tx
             .update(presensiPraktikum)
             .set({
-              status: 'cuti' as 'cuti',
+              status: 'hadir' as 'hadir',
               durasiMangkir: 0,
               keteranganAdmin: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
               resolvedBy: adminUserId,
