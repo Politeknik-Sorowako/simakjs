@@ -111,17 +111,6 @@ export default function Krs() {
     }
   });
 
-  // Geser halaman aktif ke halaman terakhir yang valid bila hasil mengecil
-  // (mis. filter/search menyempitkan data), agar tabel tidak kosong karena
-  // halaman basi yang melebihi totalPages. Tidak mereset ke halaman 1 secara agresif.
-  createEffect(() => {
-    const totalPages = krsData()?.meta.totalPages;
-    const currentPage = mainPagination.page();
-    if (totalPages !== undefined && currentPage > Math.max(totalPages, 1)) {
-      mainPagination.setPage(Math.max(totalPages, 1));
-    }
-  });
-
   // Fetch pending students for batch approval
   const [pendingStudents, { refetch: refetchPending }] = createResource(
     () => ({
@@ -251,6 +240,17 @@ export default function Krs() {
       }
     },
   );
+
+  // Geser halaman aktif ke halaman terakhir yang valid bila hasil mengecil
+  // (mis. filter/search menyempitkan data), agar tabel tidak kosong karena
+  // halaman basi yang melebihi totalPages. Tidak mereset ke halaman 1 secara agresif.
+  createEffect(() => {
+    const totalPages = krsData()?.meta.totalPages;
+    const currentPage = mainPagination.page();
+    if (totalPages !== undefined && currentPage > Math.max(totalPages, 1)) {
+      mainPagination.setPage(Math.max(totalPages, 1));
+    }
+  });
 
   const sortedKrsData = () => {
     const items = krsData()?.data || [];
@@ -598,11 +598,13 @@ export default function Krs() {
     }
   });
 
-  // Reset seleksi KRS hanya saat pindah tab (kelola/massal). Seleksi lintas
-  // halaman/filter/periode dipertahankan agar baris tercentang tak hilang saat
-  // pengguna mengganti filter pencarian atau berganti halaman.
+  // Reset seleksi KRS saat pindah tab atau berganti universe data (periode/prodi
+  // workspace) demi mencegah penghapusan baris yang tak lagi terlihat. Seleksi
+  // lintas halaman/search/status/sort tetap dipertahankan.
   createEffect(() => {
     activeTab();
+    selectedPeriode();
+    workspace.activeProdiId();
     setSelectedKrsIds([]);
   });
 

@@ -426,17 +426,22 @@ export class KrsController {
       set.status = 400;
       return { error: 'mahasiswaId harus dikirim' };
     }
-    try {
-      // Mahasiswa hanya dapat melihat rencana studinya sendiri; staf non-global dibatasi scope prodi.
-      if (hasRole(user, ['mahasiswa'])) {
-        const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
-        if (!myMhsId || myMhsId !== mahasiswaId) {
-          set.status = 403;
-          return { error: 'Akses ditolak.' };
-        }
-      } else if (!canAccessAllProdi(user)) {
-        await ProdiScopeService.assertMahasiswaInScope(user, [mahasiswaId]);
+    // Mahasiswa hanya dapat melihat rencana studinya sendiri; staf non-global dibatasi scope prodi.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== mahasiswaId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
       }
+    } else if (!canAccessAllProdi(user)) {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [mahasiswaId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
+    }
+    try {
       const data = await KrsService.getRencanaStudi(mahasiswaId);
       if (!data) {
         set.status = 404;
@@ -446,8 +451,8 @@ export class KrsController {
       }
       return data;
     } catch (e: unknown) {
-      set.status = 403;
-      return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      set.status = 500;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat rencana studi.' };
     }
   }
 
@@ -464,17 +469,22 @@ export class KrsController {
       set.status = 400;
       return { error: 'mahasiswaId dan periodeId harus dikirim' };
     }
-    try {
-      // Guard scope yang sama dengan getRencanaStudi (validasiKrs mendelegasikan ke sana).
-      if (hasRole(user, ['mahasiswa'])) {
-        const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
-        if (!myMhsId || myMhsId !== mahasiswaId) {
-          set.status = 403;
-          return { error: 'Akses ditolak.' };
-        }
-      } else if (!canAccessAllProdi(user)) {
-        await ProdiScopeService.assertMahasiswaInScope(user, [mahasiswaId]);
+    // Guard scope yang sama dengan getRencanaStudi (validasiKrs mendelegasikan ke sana).
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== mahasiswaId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
       }
+    } else if (!canAccessAllProdi(user)) {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [mahasiswaId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
+    }
+    try {
       const data = await KrsService.validasiKrs(mahasiswaId, periodeId);
       if (!data) {
         set.status = 404;
@@ -482,8 +492,8 @@ export class KrsController {
       }
       return data;
     } catch (e: unknown) {
-      set.status = 403;
-      return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      set.status = 500;
+      return { error: e instanceof Error ? e.message : 'Gagal memvalidasi KRS.' };
     }
   }
 
