@@ -458,7 +458,12 @@ export const batalBatchKrsSchema = {
     description: 'Membatalkan sejumlah baris KRS yang dipilih (multi-select) oleh Admin/Prodi.',
   },
   body: t.Object({
-    ids: t.Array(t.Integer(), { minItems: 1, error: 'Pilih minimal satu baris KRS' }),
+    ids: t.Array(t.Integer(), {
+      minItems: 1,
+      maxItems: 1000,
+      uniqueItems: true,
+      error: 'Pilih minimal satu baris KRS',
+    }),
   }),
   response: {
     200: t.Object({

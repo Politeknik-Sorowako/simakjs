@@ -519,7 +519,13 @@ export class KrsService {
    * @returns jumlah yang dihapus dan jumlah yang dilewati (tidak ada / di luar scope).
    */
   static async deleteBatch(ids: number[], scopedProdiIds?: number[] | null) {
-    const targetIds = scopedProdiIds && scopedProdiIds.length === 0 ? [] : ids;
+    // Dedupe agar skippedCount tidak salah hitung saat request berisi ID duplikat.
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) {
+      return { deletedCount: 0, skippedCount: 0 };
+    }
+
+    const targetIds = scopedProdiIds && scopedProdiIds.length === 0 ? [] : uniqueIds;
     const conditions = [inArray(krs.id, targetIds)];
     if (scopedProdiIds && scopedProdiIds.length > 0) {
       conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
@@ -535,11 +541,11 @@ export class KrsService {
         : [];
 
     if (inScopeIds.length === 0) {
-      return { deletedCount: 0, skippedCount: ids.length };
+      return { deletedCount: 0, skippedCount: uniqueIds.length };
     }
     const toDelete = inScopeIds.map((r) => r.id);
     const deleted = await db.delete(krs).where(inArray(krs.id, toDelete)).returning({ id: krs.id });
-    return { deletedCount: deleted.length, skippedCount: ids.length - deleted.length };
+    return { deletedCount: deleted.length, skippedCount: uniqueIds.length - deleted.length };
   }
 
   static async getPendingStudents(periodeId: string, dosenPaId?: number) {

@@ -282,7 +282,6 @@ export class KrsController {
     return { message: 'KRS berhasil dihapus' };
   }
 
-  // Batalkan KRS seluruh mahasiswa berstatus cuti pada periode tertentu (Admin/Prodi).
   // Batalkan sejumlah baris KRS terpilih (Admin/Prodi), dibatasi scope prodi user.
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async batalBatch({ body, set, getCurrentUser }: AuthContext): Promise<any> {

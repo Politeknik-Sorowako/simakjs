@@ -1,4 +1,14 @@
-import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  type JSX,
+  onCleanup,
+  Show,
+  Suspense,
+} from 'solid-js';
 import { KrsMassalModal } from '../components/krs/KrsMassalModal';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -415,14 +425,60 @@ export default function Krs() {
     });
   };
 
+  const showKrsBatchSelect = () => auth.hasRole(['admin', 'prodi', 'super_admin']);
+
+  // Header dibangun reaktif agar kolom checkbox hanya ada untuk role yang berhak,
+  // menjaga jumlah <th> tetap sinkron dengan <td> body dan colspan.
+  const krsTableHeaders = createMemo((): (string | JSX.Element)[] => {
+    const headers: (string | JSX.Element)[] = [];
+    if (showKrsBatchSelect()) {
+      headers.push(
+        <input
+          ref={selectAllKrsRef}
+          type="checkbox"
+          aria-label="Pilih semua baris KRS di halaman"
+          checked={allPageKrsSelected()}
+          disabled={sortedKrsData().length === 0}
+          onChange={toggleSelectAllKrs}
+          class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+        />,
+      );
+    }
+    headers.push(
+      <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+        Mahasiswa
+      </SortableHeader>,
+      <SortableHeader field="kelasKuliah" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+        Kelas Kuliah
+      </SortableHeader>,
+      <SortableHeader field="periode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+        Periode
+      </SortableHeader>,
+      <SortableHeader field="status" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+        Status
+      </SortableHeader>,
+      'Aksi',
+    );
+    return headers;
+  });
+
   const handleBatalBatch = async () => {
     const ids = selectedKrsIds();
     if (ids.length === 0) return;
     if (!confirm(`Apakah Anda yakin ingin membatalkan ${ids.length} KRS terpilih?`)) return;
     try {
       const result = await krsController.batalBatch(ids);
-      const msg = `KRS berhasil dibatalkan (${result.deletedCount} baris)`;
-      toast.showToast(result.skippedCount > 0 ? `${msg}, ${result.skippedCount} dilewati.` : msg, 'success');
+      if (result.deletedCount === 0) {
+        toast.showToast(
+          result.skippedCount > 0
+            ? `Tidak ada KRS dibatalkan, ${result.skippedCount} dilewati.`
+            : 'Tidak ada KRS yang dibatalkan.',
+          'info',
+        );
+      } else {
+        const msg = `KRS berhasil dibatalkan (${result.deletedCount} baris)`;
+        toast.showToast(result.skippedCount > 0 ? `${msg}, ${result.skippedCount} dilewati.` : msg, 'success');
+      }
       setSelectedKrsIds([]);
       refetch();
     } catch (e: unknown) {
@@ -535,6 +591,22 @@ export default function Krs() {
     if (selectAllKrsRef) {
       selectAllKrsRef.indeterminate = somePageKrsSelected() && !allPageKrsSelected();
     }
+  });
+
+  // Reset seleksi KRS saat dataset/filter yang terlihat berubah agar tidak
+  // menghapus baris tak terlihat lintas halaman/periode/scope.
+  createEffect(() => {
+    selectedPeriode();
+    mainPagination.page();
+    mainPagination.limit();
+    debouncedMainSearch();
+    workspace.activeProdiId();
+    statusMhsFilter();
+    approvalFilter();
+    sortBy();
+    sortOrder();
+    activeTab();
+    setSelectedKrsIds([]);
   });
 
   return (
@@ -810,40 +882,13 @@ export default function Krs() {
           </Show>
 
           <Suspense fallback={<TableLoadingFallback />}>
-            <Table
-              headers={[
-                <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
-                  <input
-                    ref={selectAllKrsRef}
-                    type="checkbox"
-                    aria-label="Pilih semua baris KRS di halaman"
-                    checked={allPageKrsSelected()}
-                    disabled={sortedKrsData().length === 0}
-                    onChange={toggleSelectAllKrs}
-                    class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
-                  />
-                </Show>,
-                <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Mahasiswa
-                </SortableHeader>,
-                <SortableHeader field="kelasKuliah" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Kelas Kuliah
-                </SortableHeader>,
-                <SortableHeader field="periode" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Periode
-                </SortableHeader>,
-                <SortableHeader field="status" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Status
-                </SortableHeader>,
-                'Aksi',
-              ]}
-            >
+            <Table headers={krsTableHeaders()}>
               <For each={sortedKrsData()}>
                 {(item) => (
                   <tr
                     class={`transition-colors ${isKrsChecked(item.id) ? 'bg-brand-50/60 dark:bg-brand-900/20' : 'hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50'}`}
                   >
-                    <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
+                    <Show when={showKrsBatchSelect()}>
                       <td class="px-6 py-4">
                         <input
                           type="checkbox"
@@ -915,7 +960,7 @@ export default function Krs() {
               <Show when={sortedKrsData().length === 0}>
                 <tr>
                   <td
-                    colspan={auth.hasRole(['admin', 'prodi', 'super_admin']) ? 6 : 5}
+                    colspan={showKrsBatchSelect() ? 6 : 5}
                     class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200"
                   >
                     Tidak ada kontrak KRS ditemukan.

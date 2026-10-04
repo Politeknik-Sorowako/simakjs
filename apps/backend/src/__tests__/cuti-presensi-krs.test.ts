@@ -205,6 +205,17 @@ describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
     expect(res.status).toBe(422);
   });
 
+  it('POST /krs/batal-batch dengan ids duplikat ditolak (422)', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [krsCutiId, krsCutiId] }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
   it('Prodi hanya membatalkan KRS pada prodi yang di-scope; baris di luar scope dilewati', async () => {
     // Prodi kedua + mahasiswa + KRS.
     const [prodiLain] = await db
