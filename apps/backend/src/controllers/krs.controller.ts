@@ -4,6 +4,7 @@ import { CsvImportService } from '../services/csv-import.service';
 import { KhsService } from '../services/khs.service';
 import { KrsService } from '../services/krs.service';
 import { SystemParameterService } from '../services/system-parameter.service';
+import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
@@ -276,6 +277,32 @@ export class KrsController {
       return { error: 'Data tidak ditemukan' };
     }
     return { message: 'KRS berhasil dihapus' };
+  }
+
+  // Batalkan KRS seluruh mahasiswa berstatus cuti pada periode tertentu (Admin/Prodi).
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async batalCuti({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'prodi', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin dan Prodi yang dapat membatalkan KRS mahasiswa cuti.' };
+    }
+    const periodeId = body?.periodeId;
+    if (!periodeId) {
+      set.status = 400;
+      return { error: 'periodeId wajib disertakan.' };
+    }
+    try {
+      const deleted = await KrsService.deleteByCuti(periodeId);
+      return { message: 'KRS mahasiswa cuti berhasil dibatalkan', deletedCount: deleted };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal membatalkan KRS mahasiswa cuti.' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

@@ -5,6 +5,7 @@ import {
   approveBatchKrsSchema,
   approveKrsSchema,
   autoEnrollPaketSchema,
+  batalCutiKrsSchema,
   bulkKrsSchema,
   createKrsSchema,
   deleteKrsSchema,
@@ -27,6 +28,7 @@ export const krsRoutes = new Elysia({ prefix: '/krs' })
   .post('/approve', KrsController.approve, approveKrsSchema)
   .get('/pending-students', KrsController.getPendingStudents, getPendingStudentsSchema)
   .post('/approve-batch', KrsController.approveBatch, approveBatchKrsSchema)
+  .post('/batal-cuti', KrsController.batalCuti, batalCutiKrsSchema)
   .get('/rencana-studi', KrsController.getRencanaStudi, getRencanaStudiSchema)
   .get('/validasi', KrsController.validasiKrs, validasiKrsSchema)
   .get('/stats', KrsController.getStats, getKrsStatsSchema)

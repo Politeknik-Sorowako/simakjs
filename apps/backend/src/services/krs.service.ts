@@ -505,6 +505,25 @@ export class KrsService {
     return deletedKrs || null;
   }
 
+  /**
+   * Batalkan seluruh KRS mahasiswa berstatus cuti pada periode tertentu.
+   * Idempoten: hanya menghapus baris KRS yang ada.
+   */
+  static async deleteByCuti(periodeId: string) {
+    const targetIds = await db
+      .select({ id: krs.id })
+      .from(krs)
+      .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(and(eq(kelasKuliah.periodeId, periodeId), eq(mahasiswa.status, 'cuti')));
+    if (targetIds.length === 0) {
+      return 0;
+    }
+    const ids = targetIds.map((r) => r.id);
+    const deleted = await db.delete(krs).where(inArray(krs.id, ids)).returning({ id: krs.id });
+    return deleted.length;
+  }
+
   static async getPendingStudents(periodeId: string, dosenPaId?: number) {
     const conditions = [eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)];
     if (dosenPaId !== undefined) {

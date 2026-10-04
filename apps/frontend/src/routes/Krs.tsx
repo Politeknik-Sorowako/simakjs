@@ -373,6 +373,23 @@ export default function Krs() {
     }
   };
 
+  const handleBatalKrsCuti = async () => {
+    const periodeId = selectedPeriode();
+    if (!periodeId) {
+      toast.showToast('Silakan pilih periode terlebih dahulu.', 'error');
+      return;
+    }
+    if (!confirm('Batalkan seluruh KRS mahasiswa berstatus cuti pada periode ini?')) return;
+    try {
+      const result = await krsController.batalCuti(periodeId);
+      const count = (result as { deletedCount?: number }).deletedCount ?? 0;
+      toast.showToast(`KRS mahasiswa cuti berhasil dibatalkan (${count} baris)`, 'success');
+      refetch();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal membatalkan KRS mahasiswa cuti', 'error');
+    }
+  };
+
   const handleApproveBatch = async () => {
     const ids = selectedMhsIds();
     if (ids.length === 0) {
@@ -493,6 +510,11 @@ export default function Krs() {
             <Show when={role() !== 'mahasiswa'}>
               <Button variant="secondary" onClick={() => setShowMassalModal(true)}>
                 ⚡ Buat KRS Massal
+              </Button>
+            </Show>
+            <Show when={role() === 'admin' || role() === 'prodi' || role() === 'super_admin'}>
+              <Button variant="danger" onClick={handleBatalKrsCuti}>
+                ✕ Batalkan KRS Mahasiswa Cuti
               </Button>
             </Show>
             <Show when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}>

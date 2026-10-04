@@ -10,6 +10,7 @@ import {
   sesiApel,
   users,
 } from '../models/schema';
+import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { getNowDateString, getNowTimeString } from '../utils/timezone';
 import { SystemParameterService } from './system-parameter.service';
@@ -128,7 +129,22 @@ export class ApelService {
       );
 
     const existingIds = new Set(existing.map((e) => e.mahasiswaId));
-    const newIds = mahasiswaIds.filter((id) => !existingIds.has(id));
+    const candidateIds = mahasiswaIds.filter((id) => !existingIds.has(id));
+
+    // Kecualikan mahasiswa berstatus cuti dari keanggotaan apel.
+    let skippedCuti = 0;
+    let newIds = candidateIds;
+    if (candidateIds.length > 0) {
+      const mhsRows = await db
+        .select({ id: mahasiswa.id, status: mahasiswa.status })
+        .from(mahasiswa)
+        .where(inArray(mahasiswa.id, candidateIds));
+      const cutiIds = new Set(mhsRows.filter((m) => isCutiGlobal(m.status)).map((m) => m.id));
+      if (cutiIds.size > 0) {
+        skippedCuti = cutiIds.size;
+        newIds = candidateIds.filter((id) => !cutiIds.has(id));
+      }
+    }
 
     if (newIds.length > 0) {
       const values = newIds.map((mahasiswaId) => ({
@@ -138,7 +154,7 @@ export class ApelService {
       await db.insert(kelompokApelAnggota).values(values);
     }
 
-    return { added: newIds.length, skipped: mahasiswaIds.length - newIds.length };
+    return { added: newIds.length, skipped: mahasiswaIds.length - newIds.length, skippedCuti };
   }
 
   static async removeAnggota(kelompokId: number, mahasiswaId: number) {
@@ -182,12 +198,16 @@ export class ApelService {
     const [sesi] = await db.insert(sesiApel).values(sesiData).returning();
 
     const anggota = await db
-      .select({ mahasiswaId: kelompokApelAnggota.mahasiswaId })
+      .select({ mahasiswaId: kelompokApelAnggota.mahasiswaId, status: mahasiswa.status })
       .from(kelompokApelAnggota)
+      .leftJoin(mahasiswa, eq(kelompokApelAnggota.mahasiswaId, mahasiswa.id))
       .where(eq(kelompokApelAnggota.kelompokApelId, data.kelompokApelId));
 
-    if (anggota.length > 0) {
-      const presensiValues = anggota.map((a) => ({
+    // Mahasiswa cuti tidak diikutkan dalam sesi presensi apel.
+    const anggotaAktif = anggota.filter((a) => !isCutiGlobal(a.status));
+
+    if (anggotaAktif.length > 0) {
+      const presensiValues = anggotaAktif.map((a) => ({
         sesiApelId: sesi.id,
         mahasiswaId: a.mahasiswaId,
         status: 'hadir' as const,
@@ -195,7 +215,7 @@ export class ApelService {
       await db.insert(presensiApel).values(presensiValues);
     }
 
-    return { ...sesi, jumlahAnggota: anggota.length };
+    return { ...sesi, jumlahAnggota: anggotaAktif.length };
   }
 
   static async submitPresensi(
@@ -211,7 +231,26 @@ export class ApelService {
     if (!foundSesi) throw new Error('Sesi apel tidak ditemukan');
     if (foundSesi.isClosed) throw new Error('Sesi apel sudah ditutup');
 
-    for (const item of presensiList) {
+    // Kecualikan mahasiswa berstatus cuti dari presensi apel (row-by-row).
+    const allIds = [...new Set(presensiList.map((p) => p.mahasiswaId))];
+    const mhsRows =
+      allIds.length > 0
+        ? await db
+            .select({ id: mahasiswa.id, status: mahasiswa.status })
+            .from(mahasiswa)
+            .where(inArray(mahasiswa.id, allIds))
+        : [];
+    const cutiIds = new Set(mhsRows.filter((m) => isCutiGlobal(m.status)).map((m) => m.id));
+    let skippedCuti = 0;
+    const presensiListFiltered = presensiList.filter((item) => {
+      if (cutiIds.has(item.mahasiswaId)) {
+        skippedCuti++;
+        return false;
+      }
+      return true;
+    });
+
+    for (const item of presensiListFiltered) {
       const menit =
         item.status !== 'hadir'
           ? item.menitTerlambat !== undefined && item.menitTerlambat !== null
@@ -284,7 +323,7 @@ export class ApelService {
       }
     }
 
-    return { message: 'Presensi apel berhasil disimpan' };
+    return { message: 'Presensi apel berhasil disimpan', skippedCuti };
   }
 
   static async getSesiPresensi(sesiId: number) {
