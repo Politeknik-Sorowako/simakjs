@@ -9,6 +9,7 @@ import {
   krs,
   mahasiswa,
   mataKuliah,
+  pengajuanCuti,
   periodeAkademik,
   presensi,
   programStudi,
@@ -17,6 +18,8 @@ import {
 } from '../models/schema';
 import { KompensasiManualService } from '../services/kompensasi-manual.service';
 import { PresensiService } from '../services/presensi.service';
+import { VerifikasiUnknownService } from '../services/verifikasi-unknown.service';
+import { getCutiPeriodeIds } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -245,5 +248,127 @@ describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
     expect(scopedRemoved).toHaveLength(0);
     const outOfScopeKept = await db.select().from(krs).where(eq(krs.id, krsCutiLain.id));
     expect(outOfScopeKept).toHaveLength(1);
+  });
+
+  it('getCutiPeriodeIds hanya menghitung cuti final disetujui, bukan status pertengahan', async () => {
+    await db.insert(pengajuanCuti).values({
+      mahasiswaId: mhsCutiId,
+      periodeId,
+      alasan: 'Cuti sakit',
+      status: 'disetujui_pa', // mid-approval → tidak ikut dihitung
+    });
+
+    const periods = await getCutiPeriodeIds(mhsCutiId);
+    expect(periods.has(periodeId)).toBe(false);
+  });
+
+  it('getCutiPeriodeIds menghitung cuti final dan memperluas rentang semester', async () => {
+    await db.insert(pengajuanCuti).values({
+      mahasiswaId: mhsCutiId,
+      periodeId,
+      alasan: 'Cuti final multi-semester',
+      status: 'disetujui_prodi',
+      semesterMulaiCuti: '20251',
+      semesterBerakhirCuti: '20252',
+    });
+
+    const periods = await getCutiPeriodeIds(mhsCutiId);
+    expect(periods.has('20251')).toBe(true);
+    expect(periods.has('20252')).toBe(true);
+    expect(periods.has('20253')).toBe(false);
+  });
+
+  it('Konfirmasi CUTI pada mahasiswa cuti berhasil, nol-debt, dan tidak mengubah sisa kompensasi', async () => {
+    const [pres] = await db
+      .insert(presensi)
+      .values({ bapId, mahasiswaId: mhsCutiId, status: 'unknown', durasiMangkir: 100 })
+      .returning({ id: presensi.id });
+    const [absence] = await db
+      .insert(ketidakhadiranMahasiswa)
+      .values({
+        mahasiswaId: mhsCutiId,
+        tanggal: '2025-09-01',
+        sumber: 'BAP',
+        sumberId: pres.id,
+        status: 'UNKNOWN',
+        durasiMenit: 100,
+        isVerified: false,
+      })
+      .returning();
+
+    const [admin] = await db.select({ id: users.id }).from(users).limit(1);
+    await VerifikasiUnknownService.verify({
+      sumber: 'BAP',
+      sumberId: pres.id,
+      statusKonfirmasi: 'CUTI',
+      adminUserId: admin?.id ?? 1,
+    });
+
+    const [row] = await db
+      .select({
+        status: ketidakhadiranMahasiswa.status,
+        durasiMenit: ketidakhadiranMahasiswa.durasiMenit,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+      })
+      .from(ketidakhadiranMahasiswa)
+      .where(eq(ketidakhadiranMahasiswa.id, absence.id));
+    expect(row?.status).toBe('CUTI');
+    expect(row?.durasiMenit).toBe(0);
+    expect(row?.isVerified).toBe(true);
+
+    const detail = await PresensiService.getKompensasiDetail(mhsCutiId);
+    expect(detail.summary.sisaKompensasi).toBe(0);
+  });
+
+  it('Konfirmasi ALPA pada mahasiswa cuti ditolak (tidak boleh menciptakan beban kompensasi)', async () => {
+    const [pres] = await db
+      .insert(presensi)
+      .values({ bapId, mahasiswaId: mhsCutiId, status: 'unknown', durasiMangkir: 100 })
+      .returning({ id: presensi.id });
+    await db.insert(ketidakhadiranMahasiswa).values({
+      mahasiswaId: mhsCutiId,
+      tanggal: '2025-09-01',
+      sumber: 'BAP',
+      sumberId: pres.id,
+      status: 'UNKNOWN',
+      durasiMenit: 100,
+      isVerified: false,
+    });
+
+    const [admin] = await db.select({ id: users.id }).from(users).limit(1);
+    await expect(
+      VerifikasiUnknownService.verify({
+        sumber: 'BAP',
+        sumberId: pres.id,
+        statusKonfirmasi: 'ALPA',
+        adminUserId: admin?.id ?? 1,
+      }),
+    ).rejects.toThrow(/cuti/i);
+  });
+
+  it('Konfirmasi CUTI pada mahasiswa non-cuti ditolak', async () => {
+    const [pres] = await db
+      .insert(presensi)
+      .values({ bapId, mahasiswaId: mhsAktifId, status: 'unknown', durasiMangkir: 100 })
+      .returning({ id: presensi.id });
+    await db.insert(ketidakhadiranMahasiswa).values({
+      mahasiswaId: mhsAktifId,
+      tanggal: '2025-09-01',
+      sumber: 'BAP',
+      sumberId: pres.id,
+      status: 'UNKNOWN',
+      durasiMenit: 100,
+      isVerified: false,
+    });
+
+    const [admin] = await db.select({ id: users.id }).from(users).limit(1);
+    await expect(
+      VerifikasiUnknownService.verify({
+        sumber: 'BAP',
+        sumberId: pres.id,
+        statusKonfirmasi: 'CUTI',
+        adminUserId: admin?.id ?? 1,
+      }),
+    ).rejects.toThrow(/cuti/i);
   });
 });

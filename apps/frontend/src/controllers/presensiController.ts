@@ -431,7 +431,7 @@ export const presensiController = {
   async verifikasiUnknown(data: {
     sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
     sumberId: number;
-    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN';
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN' | 'CUTI';
     durasiMenit?: number;
     keterangan?: string;
   }): Promise<Record<string, unknown>> {

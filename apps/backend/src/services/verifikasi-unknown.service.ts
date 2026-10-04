@@ -21,7 +21,7 @@ const healedSources = new Set<string>();
 const SELF_HEAL_WARN_LIMIT = 10;
 
 export type KetidakhadiranSumber = 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
-export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN';
+export type KetidakhadiranStatusKonfirmasi = 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN' | 'CUTI';
 
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -31,7 +31,18 @@ interface HealedSource {
   durasiMenit: number;
 }
 
-const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT', 'HADIR', 'UNKNOWN'];
+const STATUS_KONFIRMASI: KetidakhadiranStatusKonfirmasi[] = [
+  'SAKIT',
+  'IZIN',
+  'ALPA',
+  'TERLAMBAT',
+  'HADIR',
+  'UNKNOWN',
+  'CUTI',
+];
+
+/** Status konfirmasi yang menghasilkan beban kompensasi terverifikasi. */
+const STATUS_KOMPENSASI = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT'];
 
 /** Status yang dihitung sebagai beban kompensasi terverifikasi pada cap harian. */
 const STATUS_TERHITUNG_CAP = ['SAKIT', 'IZIN', 'ALPA', 'TERLAMBAT'];
@@ -57,7 +68,7 @@ export class VerifikasiUnknownService {
    */
   static async verify(input: VerifyInput) {
     if (!STATUS_KONFIRMASI.includes(input.statusKonfirmasi)) {
-      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, HADIR, atau UNKNOWN');
+      throw new Error('Status konfirmasi harus SAKIT, IZIN, ALPA, TERLAMBAT, HADIR, UNKNOWN, atau CUTI');
     }
 
     const adminUserId = Number(input.adminUserId) > 0 ? input.adminUserId : null;
@@ -209,13 +220,20 @@ export class VerifikasiUnknownService {
         absence = await VerifikasiUnknownService._healMissingAbsence(tx, input, adminUserId);
       }
 
-      // Mahasiswa cuti dikecualikan dari kompensasi; jangan verifikasi/ubah ketidakhadirannya.
+      // Kebijakan mahasiswa cuti: tidak boleh menghasilkan beban kompensasi. Konfirmasi
+      // yang menciptakan ketidakhadiran (SAKIT/IZIN/ALPA/TERLAMBAT) tetap diblokir, tetapi
+      // HADIR / CUTI / UNKNOWN (semua nol-debt) diizinkan untuk merapikan antrean legacy.
+      // Sebaliknya, status CUTI tidak sah untuk mahasiswa non-cuti.
       const [mhs] = await tx
         .select({ status: mahasiswa.status })
         .from(mahasiswa)
         .where(eq(mahasiswa.id, absence.mahasiswaId));
       if (mhs && isCutiGlobal(mhs.status)) {
-        throw new Error('Mahasiswa berstatus cuti tidak dapat diverifikasi ketidakhadirannya.');
+        if (STATUS_KOMPENSASI.includes(input.statusKonfirmasi)) {
+          throw new Error('Mahasiswa berstatus cuti tidak dapat dikonfirmasi alpa/sakit/izin/terlambat.');
+        }
+      } else if (input.statusKonfirmasi === 'CUTI') {
+        throw new Error('Status CUTI hanya dapat digunakan untuk mahasiswa berstatus cuti.');
       }
 
       if (absence.sumber === 'MANUAL') {
@@ -302,6 +320,79 @@ export class VerifikasiUnknownService {
           .where(eq(ketidakhadiranMahasiswa.id, absence.id));
 
         return { ...absence, status: 'HADIR', isVerified: true, durasiMenit: 0, verifiedBy: adminUserId };
+      }
+
+      // CUTI = mahasiswa cuti, bukan ketidakhadiran terkompensasi. Simpan status
+      // 'CUTI' + is_verified=true + durasi 0 (nol-debt) untuk merapikan antrean unknown
+      // legacy milik mahasiswa cuti, sekaligus menandai sumber asal sebagai cuti.
+      if (input.statusKonfirmasi === 'CUTI') {
+        const note = input.keterangan?.trim() || '';
+        const terkonfirmasi = `[terkonfirmasi] cuti${note ? ` — ${note}` : ''}`;
+
+        if (absence.sumber === 'BAP' && absence.sumberId != null) {
+          const [bapRow] = await tx
+            .select({ keteranganAdmin: presensi.keteranganAdmin })
+            .from(presensi)
+            .where(eq(presensi.id, absence.sumberId));
+          const prev = bapRow?.keteranganAdmin || '';
+          await tx
+            .update(presensi)
+            .set({
+              status: 'cuti' as 'cuti',
+              durasiMangkir: 0,
+              keteranganAdmin: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
+              resolvedBy: adminUserId,
+              resolvedAt: new Date(),
+            })
+            .where(eq(presensi.id, absence.sumberId));
+        } else if (absence.sumber === 'APEL' && absence.sumberId != null) {
+          const [apelRow] = await tx
+            .select({ verificationNote: presensiApel.verificationNote })
+            .from(presensiApel)
+            .where(eq(presensiApel.id, absence.sumberId));
+          const prev = apelRow?.verificationNote || '';
+          await tx
+            .update(presensiApel)
+            .set({
+              status: 'cuti' as 'cuti',
+              verifiedStatus: 'cuti' as 'cuti',
+              menitTerlambat: 0,
+              verificationNote: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
+              verifiedBy: adminUserId,
+              verifiedAt: new Date(),
+            })
+            .where(eq(presensiApel.id, absence.sumberId));
+        } else if (absence.sumber === 'PRAKTIKUM' && absence.sumberId != null) {
+          const [prakRow] = await tx
+            .select({ keteranganAdmin: presensiPraktikum.keteranganAdmin })
+            .from(presensiPraktikum)
+            .where(eq(presensiPraktikum.id, absence.sumberId));
+          const prev = prakRow?.keteranganAdmin || '';
+          await tx
+            .update(presensiPraktikum)
+            .set({
+              status: 'cuti' as 'cuti',
+              durasiMangkir: 0,
+              keteranganAdmin: prev ? `${prev} | ${terkonfirmasi}` : terkonfirmasi,
+              resolvedBy: adminUserId,
+              resolvedAt: new Date(),
+            })
+            .where(eq(presensiPraktikum.id, absence.sumberId));
+        }
+
+        await tx
+          .update(ketidakhadiranMahasiswa)
+          .set({
+            status: 'CUTI',
+            durasiMenit: 0,
+            keterangan: absence.keterangan,
+            isVerified: true,
+            verifiedBy: adminUserId,
+            verifiedAt: new Date(),
+          })
+          .where(eq(ketidakhadiranMahasiswa.id, absence.id));
+
+        return { ...absence, status: 'CUTI', isVerified: true, durasiMenit: 0, verifiedBy: adminUserId };
       }
 
       // UNKNOWN = admin/prodi mengembalikan baris ke status belum terverifikasi

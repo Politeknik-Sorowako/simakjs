@@ -563,7 +563,12 @@ export class PresensiService {
       .orderBy(desc(ketidakhadiranMahasiswa.tanggal), desc(ketidakhadiranMahasiswa.id));
 
     // Kecualikan presensi/ketidakhadiran yang jatuh dalam periode cuti yang disetujui
-    // (per-periode). Sumber tanpa keterkaitan periode (APEL/MANUAL) tidak dikecualikan.
+    // final (per-periode). Hanya BAP/PRAKTIKUM yang punya relasi ke periode (via
+    // kelasKuliah/rombel); APEL dan MANUAL tidak memiliki kolom periode (sesi_apel,
+    // kelompok_apel, kompensasi_manual tanpa periode_id) dan periode_akademik tidak
+    // menyimpan rentang tanggal, sehingga sengaja TIDAK dikecualikan di detail ini.
+    // Mahasiswa cuti aktif tetap ter-exclude sepenuhnya dari laporan global
+    // (getLaporanKompensasi/stats) melalui filter status mahasiswa.
     const cutiPeriodeIds = await getCutiPeriodeIds(mahasiswaId);
     const activePresensi =
       cutiPeriodeIds.size > 0
