@@ -55,6 +55,12 @@ export default function Krs() {
   const [selectedMhsIds, setSelectedMhsIds] = createSignal<number[]>([]);
   let selectAllMassalRef: HTMLInputElement | undefined;
 
+  // Filter & multi-select untuk pembatalan massal KRS (tab Kelola).
+  const [statusMhsFilter, setStatusMhsFilter] = createSignal<'aktif' | 'cuti' | ''>('');
+  const [approvalFilter, setApprovalFilter] = createSignal<'pending' | 'approved' | ''>('');
+  const [selectedKrsIds, setSelectedKrsIds] = createSignal<number[]>([]);
+  let selectAllKrsRef: HTMLInputElement | undefined;
+
   // Mahasiswa picker pagination & sorting
   const pickerPagination = usePagination(20);
   const [pickerSortBy, setPickerSortBy] = createSignal('nim');
@@ -198,9 +204,22 @@ export default function Krs() {
       programStudiId: workspace.activeProdiId() || undefined,
       sortBy: serverSortBy(),
       sortOrder: sortOrder(),
+      statusMahasiswa: statusMhsFilter() || undefined,
+      isApproved: approvalFilter() === '' ? undefined : approvalFilter() === 'approved',
       mhsLoaded: role() === 'mahasiswa' ? !!mahasiswaProfile() : true,
     }),
-    async ({ search, page, limit, periodeId, programStudiId, sortBy, sortOrder: order, mhsLoaded }) => {
+    async ({
+      search,
+      page,
+      limit,
+      periodeId,
+      programStudiId,
+      sortBy,
+      sortOrder: order,
+      statusMahasiswa,
+      isApproved,
+      mhsLoaded,
+    }) => {
       if (!mhsLoaded) return { data: [], meta: { total: 0, page: 1, limit: 10, totalPages: 1 } };
       try {
         return await krsController.getAll(search, page, limit, undefined, {
@@ -208,6 +227,8 @@ export default function Krs() {
           programStudiId,
           sortBy,
           sortOrder: order,
+          statusMahasiswa,
+          isApproved,
         });
       } catch (e: unknown) {
         toast.showToast((e as Error).message || 'Gagal memuat data KRS', 'error');
@@ -373,20 +394,39 @@ export default function Krs() {
     }
   };
 
-  const handleBatalKrsCuti = async () => {
-    const periodeId = selectedPeriode();
-    if (!periodeId) {
-      toast.showToast('Silakan pilih periode terlebih dahulu.', 'error');
-      return;
-    }
-    if (!confirm('Batalkan seluruh KRS mahasiswa berstatus cuti pada periode ini?')) return;
+  // --- Multi-select pembatalan KRS (tab Kelola) ---
+  const isKrsChecked = (id: number) => selectedKrsIds().includes(id);
+  const pageKrsIds = () => sortedKrsData().map((k) => k.id);
+  const allPageKrsSelected = () => {
+    const ids = pageKrsIds();
+    return ids.length > 0 && ids.every((id) => selectedKrsIds().includes(id));
+  };
+  const somePageKrsSelected = () => {
+    const ids = pageKrsIds();
+    return ids.some((id) => selectedKrsIds().includes(id));
+  };
+  const toggleKrsRow = (id: number) =>
+    setSelectedKrsIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSelectAllKrs = () => {
+    const ids = pageKrsIds();
+    setSelectedKrsIds((prev) => {
+      if (ids.every((id) => prev.includes(id))) return prev.filter((x) => !ids.includes(x));
+      return [...new Set([...prev, ...ids])];
+    });
+  };
+
+  const handleBatalBatch = async () => {
+    const ids = selectedKrsIds();
+    if (ids.length === 0) return;
+    if (!confirm(`Apakah Anda yakin ingin membatalkan ${ids.length} KRS terpilih?`)) return;
     try {
-      const result = await krsController.batalCuti(periodeId);
-      const count = result.deletedCount ?? 0;
-      toast.showToast(`KRS mahasiswa cuti berhasil dibatalkan (${count} baris)`, 'success');
+      const result = await krsController.batalBatch(ids);
+      const msg = `KRS berhasil dibatalkan (${result.deletedCount} baris)`;
+      toast.showToast(result.skippedCount > 0 ? `${msg}, ${result.skippedCount} dilewati.` : msg, 'success');
+      setSelectedKrsIds([]);
       refetch();
     } catch (e: unknown) {
-      toast.showToast(e instanceof Error ? e.message : 'Gagal membatalkan KRS mahasiswa cuti', 'error');
+      toast.showToast(e instanceof Error ? e.message : 'Gagal membatalkan KRS terpilih', 'error');
     }
   };
 
@@ -491,6 +531,12 @@ export default function Krs() {
     }
   });
 
+  createEffect(() => {
+    if (selectAllKrsRef) {
+      selectAllKrsRef.indeterminate = somePageKrsSelected() && !allPageKrsSelected();
+    }
+  });
+
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
@@ -513,9 +559,14 @@ export default function Krs() {
               </Button>
             </Show>
             <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
-              <Button variant="danger" onClick={handleBatalKrsCuti}>
-                ✕ Batalkan KRS Mahasiswa Cuti
-              </Button>
+              <Show when={selectedKrsIds().length > 0}>
+                <Button variant="danger" onClick={handleBatalBatch} class="!px-3">
+                  Batalkan Terpilih ({selectedKrsIds().length})
+                </Button>
+                <Button variant="secondary" onClick={() => setSelectedKrsIds([])} class="!px-3">
+                  Batal Pilih
+                </Button>
+              </Show>
             </Show>
             <Show when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}>
               <Button variant="primary" onClick={openAddModal}>
@@ -726,11 +777,52 @@ export default function Krs() {
                 }}
               />
             </div>
+            <div class="flex items-center gap-2">
+              <select
+                aria-label="Filter status mahasiswa"
+                value={statusMhsFilter()}
+                onChange={(e) => {
+                  setStatusMhsFilter(e.currentTarget.value as 'aktif' | 'cuti' | '');
+                  setSelectedKrsIds([]);
+                  mainPagination.resetPage();
+                }}
+                class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Semua Status Mhs</option>
+                <option value="aktif">Aktif</option>
+                <option value="cuti">Cuti</option>
+              </select>
+              <select
+                aria-label="Filter status approval"
+                value={approvalFilter()}
+                onChange={(e) => {
+                  setApprovalFilter(e.currentTarget.value as 'pending' | 'approved' | '');
+                  setSelectedKrsIds([]);
+                  mainPagination.resetPage();
+                }}
+                class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              >
+                <option value="">Semua Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Disetujui</option>
+              </select>
+            </div>
           </Show>
 
           <Suspense fallback={<TableLoadingFallback />}>
             <Table
               headers={[
+                <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
+                  <input
+                    ref={selectAllKrsRef}
+                    type="checkbox"
+                    aria-label="Pilih semua baris KRS di halaman"
+                    checked={allPageKrsSelected()}
+                    disabled={sortedKrsData().length === 0}
+                    onChange={toggleSelectAllKrs}
+                    class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                  />
+                </Show>,
                 <SortableHeader field="mahasiswa" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                   Mahasiswa
                 </SortableHeader>,
@@ -748,7 +840,20 @@ export default function Krs() {
             >
               <For each={sortedKrsData()}>
                 {(item) => (
-                  <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                  <tr
+                    class={`transition-colors ${isKrsChecked(item.id) ? 'bg-brand-50/60 dark:bg-brand-900/20' : 'hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50'}`}
+                  >
+                    <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
+                      <td class="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          aria-label={`Pilih KRS ${item.mahasiswa?.nama ?? item.id}`}
+                          checked={isKrsChecked(item.id)}
+                          onChange={() => toggleKrsRow(item.id)}
+                          class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                        />
+                      </td>
+                    </Show>
                     <td class="px-6 py-4">
                       <div class="font-medium text-secondary-800 dark:text-white">{item.mahasiswa?.nama}</div>
                       <div class="text-xs text-secondary-400 font-mono dark:text-secondary-200">
@@ -809,7 +914,10 @@ export default function Krs() {
               </For>
               <Show when={sortedKrsData().length === 0}>
                 <tr>
-                  <td colspan="5" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                  <td
+                    colspan={auth.hasRole(['admin', 'prodi', 'super_admin']) ? 6 : 5}
+                    class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200"
+                  >
                     Tidak ada kontrak KRS ditemukan.
                   </td>
                 </tr>

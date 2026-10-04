@@ -63,6 +63,7 @@ export const krsController = {
       isApproved?: boolean;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
+      statusMahasiswa?: string;
     },
   ): Promise<PaginatedResponse<Krs>> {
     const params = new URLSearchParams();
@@ -75,6 +76,7 @@ export const krsController = {
     if (filters?.isApproved !== undefined) params.append('isApproved', String(filters.isApproved));
     if (filters?.sortBy) params.append('sortBy', filters.sortBy);
     if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
+    if (filters?.statusMahasiswa) params.append('statusMahasiswa', filters.statusMahasiswa);
     const queryString = params.toString() ? `?${params.toString()}` : '';
     return fetchApi<PaginatedResponse<Krs>>(`/krs${queryString}`);
   },
@@ -144,10 +146,10 @@ export const krsController = {
     });
   },
 
-  async batalCuti(periodeId: string): Promise<{ message: string; deletedCount: number }> {
-    return fetchApi<{ message: string; deletedCount: number }>('/krs/batal-cuti', {
+  async batalBatch(ids: number[]): Promise<{ message: string; deletedCount: number; skippedCount: number }> {
+    return fetchApi<{ message: string; deletedCount: number; skippedCount: number }>('/krs/batal-batch', {
       method: 'POST',
-      body: JSON.stringify({ periodeId }),
+      body: JSON.stringify({ ids }),
     });
   },
 

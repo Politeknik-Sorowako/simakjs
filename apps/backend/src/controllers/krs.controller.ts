@@ -16,6 +16,7 @@ type KrsQuery = PaginationQuery & {
   isApproved?: string;
   sortBy?: string;
   sortOrder?: string;
+  statusMahasiswa?: string;
 };
 
 export class KrsController {
@@ -52,6 +53,7 @@ export class KrsController {
     else if (query?.isApproved === 'false') isApproved = false;
     const sortBy = query?.sortBy || undefined;
     const sortOrder: 'asc' | 'desc' = query?.sortOrder === 'desc' ? 'desc' : 'asc';
+    const statusMahasiswa = query?.statusMahasiswa || undefined;
 
     let filterMhsId: number | undefined = undefined;
     let dosenPaId: number | undefined = undefined;
@@ -80,6 +82,7 @@ export class KrsController {
       isApproved,
       sortBy,
       sortOrder,
+      statusMahasiswa,
     });
   }
 
@@ -280,8 +283,9 @@ export class KrsController {
   }
 
   // Batalkan KRS seluruh mahasiswa berstatus cuti pada periode tertentu (Admin/Prodi).
+  // Batalkan sejumlah baris KRS terpilih (Admin/Prodi), dibatasi scope prodi user.
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async batalCuti({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+  static async batalBatch({ body, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {
       set.status = 401;
@@ -289,21 +293,21 @@ export class KrsController {
     }
     if (!hasRole(user, ['admin', 'prodi', 'super_admin'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin dan Prodi yang dapat membatalkan KRS mahasiswa cuti.' };
+      return { error: 'Akses ditolak. Hanya Admin dan Prodi yang dapat membatalkan KRS.' };
     }
-    const periodeId = body?.periodeId;
-    if (!periodeId) {
+    const ids = body?.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
       set.status = 400;
-      return { error: 'periodeId wajib disertakan.' };
+      return { error: 'Pilih minimal satu baris KRS untuk dibatalkan.' };
     }
     try {
       // Batasi penghapusan sesuai scope prodi user. `null` = akses global (admin/super_admin).
       const scopedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
-      const deleted = await KrsService.deleteByCuti(periodeId, scopedProdiIds);
-      return { message: 'KRS mahasiswa cuti berhasil dibatalkan', deletedCount: deleted };
+      const { deletedCount, skippedCount } = await KrsService.deleteBatch(ids, scopedProdiIds);
+      return { message: 'KRS terpilih berhasil dibatalkan', deletedCount, skippedCount };
     } catch (e: unknown) {
       set.status = 400;
-      return { error: e instanceof Error ? e.message : 'Gagal membatalkan KRS mahasiswa cuti.' };
+      return { error: e instanceof Error ? e.message : 'Gagal membatalkan KRS terpilih.' };
     }
   }
 
