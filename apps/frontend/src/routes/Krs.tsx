@@ -382,11 +382,11 @@ export default function Krs() {
     if (!confirm('Batalkan seluruh KRS mahasiswa berstatus cuti pada periode ini?')) return;
     try {
       const result = await krsController.batalCuti(periodeId);
-      const count = (result as { deletedCount?: number }).deletedCount ?? 0;
+      const count = result.deletedCount ?? 0;
       toast.showToast(`KRS mahasiswa cuti berhasil dibatalkan (${count} baris)`, 'success');
       refetch();
     } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal membatalkan KRS mahasiswa cuti', 'error');
+      toast.showToast(e instanceof Error ? e.message : 'Gagal membatalkan KRS mahasiswa cuti', 'error');
     }
   };
 
@@ -512,7 +512,7 @@ export default function Krs() {
                 ⚡ Buat KRS Massal
               </Button>
             </Show>
-            <Show when={role() === 'admin' || role() === 'prodi' || role() === 'super_admin'}>
+            <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
               <Button variant="danger" onClick={handleBatalKrsCuti}>
                 ✕ Batalkan KRS Mahasiswa Cuti
               </Button>
@@ -798,7 +798,7 @@ export default function Krs() {
                           Setujui
                         </Button>
                       </Show>
-                      <Show when={role() === 'admin' || role() === 'prodi' || role() === 'super_admin'}>
+                      <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
                         <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
                           Batal
                         </Button>

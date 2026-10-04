@@ -3,6 +3,7 @@ import { kelasKuliah, mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { KhsService } from '../services/khs.service';
 import { KrsService } from '../services/krs.service';
+import { ProdiScopeService } from '../services/prodi-scope.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
@@ -297,7 +298,9 @@ export class KrsController {
       return { error: 'periodeId wajib disertakan.' };
     }
     try {
-      const deleted = await KrsService.deleteByCuti(periodeId);
+      // Batasi penghapusan sesuai scope prodi user. `null` = akses global (admin/super_admin).
+      const scopedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+      const deleted = await KrsService.deleteByCuti(periodeId, scopedProdiIds);
       return { message: 'KRS mahasiswa cuti berhasil dibatalkan', deletedCount: deleted };
     } catch (e: unknown) {
       set.status = 400;

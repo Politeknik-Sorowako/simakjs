@@ -12,6 +12,7 @@ import {
   sesiApel,
   users,
 } from '../models/schema';
+import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
@@ -206,6 +207,15 @@ export class VerifikasiUnknownService {
 
       if (!absence) {
         absence = await VerifikasiUnknownService._healMissingAbsence(tx, input, adminUserId);
+      }
+
+      // Mahasiswa cuti dikecualikan dari kompensasi; jangan verifikasi/ubah ketidakhadirannya.
+      const [mhs] = await tx
+        .select({ status: mahasiswa.status })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, absence.mahasiswaId));
+      if (mhs && isCutiGlobal(mhs.status)) {
+        throw new Error('Mahasiswa berstatus cuti tidak dapat diverifikasi ketidakhadirannya.');
       }
 
       if (absence.sumber === 'MANUAL') {

@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { ketidakhadiranMahasiswa, kompensasiManual, mahasiswa, users } from '../models/schema';
 import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
@@ -290,6 +290,16 @@ export class KompensasiManualService {
         .where(sql`${kompensasiManual.id} IN (${sql.join(ids, sql`, `)})`);
       if (rows.length === 0) {
         return 0;
+      }
+
+      // Mahasiswa cuti tidak boleh diberi/mengubah kompensasi manual.
+      const mhsIds = [...new Set(rows.map((r) => r.mahasiswaId))];
+      const cutiRows = await tx
+        .select({ id: mahasiswa.id })
+        .from(mahasiswa)
+        .where(and(inArray(mahasiswa.id, mhsIds), eq(mahasiswa.status, 'cuti')));
+      if (cutiRows.length > 0) {
+        throw new Error('Terdapat mahasiswa berstatus cuti pada data terpilih. Kompensasi manual tidak dapat diubah.');
       }
 
       const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');

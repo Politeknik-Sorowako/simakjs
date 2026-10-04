@@ -457,7 +457,7 @@ export const batalCutiKrsSchema = {
     description: 'Membatalkan seluruh KRS mahasiswa berstatus cuti pada periode tertentu.',
   },
   body: t.Object({
-    periodeId: t.String(),
+    periodeId: t.String({ minLength: 1, error: 'periodeId wajib diisi' }),
   }),
   response: {
     200: t.Object({

@@ -576,6 +576,15 @@ export class ApelService {
     if (!found) throw new Error('Presensi apel tidak ditemukan');
     if (found.status !== 'unknown') throw new Error('Status presensi bukan unknown');
 
+    // Mahasiswa cuti tidak boleh dihasilkan/diverifikasi ketidakhadirannya.
+    const [mhs] = await db
+      .select({ status: mahasiswa.status })
+      .from(mahasiswa)
+      .where(eq(mahasiswa.id, found.mahasiswaId));
+    if (mhs && isCutiGlobal(mhs.status)) {
+      throw new Error('Presensi mahasiswa berstatus cuti tidak dapat diverifikasi.');
+    }
+
     let verificationNote = data.verificationNote;
     if (found.verifiedStatus) {
       const prev = found.verificationNote ? `, catatan sebelumnya: "${found.verificationNote}"` : '';

@@ -12,6 +12,7 @@ import {
   periodeAkademik,
   presensi,
   programStudi,
+  userProdiScopes,
   users,
 } from '../models/schema';
 import { KompensasiManualService } from '../services/kompensasi-manual.service';
@@ -188,5 +189,61 @@ describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
     // KRS mahasiswa aktif tetap ada.
     const aktifRows = await db.select().from(krs).where(eq(krs.id, krsAktifId));
     expect(aktifRows).toHaveLength(1);
+  });
+
+  it('Prodi hanya membatalkan KRS cuti pada prodi yang di-scope (tidak bocor lintas prodi)', async () => {
+    // Prodi kedua + mahasiswa cuti + KRS pada periode yang sama.
+    const [prodiLain] = await db
+      .insert(programStudi)
+      .values({ kode: 'SI', nama: 'Sistem Informasi', jenjang: 'D4' })
+      .returning();
+    const [mhsCutiLain] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '25099',
+        nama: 'Mhs Cuti Prodi Lain',
+        email: 'mhscutilain@test.com',
+        programStudiId: prodiLain.id,
+        status: 'cuti',
+        namaIbuKandung: 'Ibu Lain',
+        nik: '1234567890123499',
+        jenisKelamin: 'L',
+        tanggalLahir: '2003-02-01',
+      })
+      .returning();
+    const [mkLain] = await db
+      .insert(mataKuliah)
+      .values({ programStudiId: prodiLain.id, kode: `MK_L_${Date.now()}`, nama: 'Basis Data', sksTotal: 3 })
+      .returning();
+    const [kelasLain] = await db
+      .insert(kelasKuliah)
+      .values({ mataKuliahId: mkLain.id, periodeId, namaKelas: 'B' })
+      .returning();
+    const [krsCutiLain] = await db
+      .insert(krs)
+      .values({ mahasiswaId: mhsCutiLain.id, kelasKuliahId: kelasLain.id })
+      .returning();
+
+    // Prodi user hanya di-scope ke prodiId (prodi pertama).
+    const prodiToken = await getAuthToken('prodi@test.com', 'prodi');
+    const [prodiUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'prodi@test.com'));
+    await db.insert(userProdiScopes).values({ userId: prodiUser.id, programStudiId: prodiId });
+
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-cuti', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${prodiToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ periodeId }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    // Hanya KRS cuti pada prodi yang di-scope yang terhapus.
+    expect(json.deletedCount).toBe(1);
+
+    const scopedRemoved = await db.select().from(krs).where(eq(krs.id, krsCutiId));
+    expect(scopedRemoved).toHaveLength(0);
+    const outOfScopeKept = await db.select().from(krs).where(eq(krs.id, krsCutiLain.id));
+    expect(outOfScopeKept).toHaveLength(1);
   });
 });
