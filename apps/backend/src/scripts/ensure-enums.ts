@@ -29,6 +29,7 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'ketidakhadiran_status', value: 'ALPA' },
   { name: 'ketidakhadiran_status', value: 'TERLAMBAT' },
   { name: 'ketidakhadiran_status', value: 'RUSAK' },
+  { name: 'ketidakhadiran_status', value: 'CUTI' },
 ];
 
 async function ensureEnums() {

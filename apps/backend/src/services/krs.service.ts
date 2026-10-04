@@ -505,6 +505,36 @@ export class KrsService {
     return deletedKrs || null;
   }
 
+  /**
+   * Batalkan seluruh KRS mahasiswa berstatus cuti pada periode tertentu.
+   * Idempoten: hanya menghapus baris KRS yang ada.
+   *
+   * @param scopedProdiIds `null` = akses global (tanpa batasan prodi), array = hanya
+   * prodi yang diizinkan. Array kosong berarti tidak punya akses prodi mana pun
+   * sehingga tidak ada yang dihapus (fail-closed).
+   */
+  static async deleteByCuti(periodeId: string, scopedProdiIds?: number[] | null) {
+    if (scopedProdiIds && scopedProdiIds.length === 0) {
+      return 0;
+    }
+    const conditions = [eq(kelasKuliah.periodeId, periodeId), eq(mahasiswa.status, 'cuti')];
+    if (scopedProdiIds) {
+      conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
+    }
+    const targetIds = await db
+      .select({ id: krs.id })
+      .from(krs)
+      .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .where(and(...conditions));
+    if (targetIds.length === 0) {
+      return 0;
+    }
+    const ids = targetIds.map((r) => r.id);
+    const deleted = await db.delete(krs).where(inArray(krs.id, ids)).returning({ id: krs.id });
+    return deleted.length;
+  }
+
   static async getPendingStudents(periodeId: string, dosenPaId?: number) {
     const conditions = [eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)];
     if (dosenPaId !== undefined) {

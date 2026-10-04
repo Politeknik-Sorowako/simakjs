@@ -373,6 +373,23 @@ export default function Krs() {
     }
   };
 
+  const handleBatalKrsCuti = async () => {
+    const periodeId = selectedPeriode();
+    if (!periodeId) {
+      toast.showToast('Silakan pilih periode terlebih dahulu.', 'error');
+      return;
+    }
+    if (!confirm('Batalkan seluruh KRS mahasiswa berstatus cuti pada periode ini?')) return;
+    try {
+      const result = await krsController.batalCuti(periodeId);
+      const count = result.deletedCount ?? 0;
+      toast.showToast(`KRS mahasiswa cuti berhasil dibatalkan (${count} baris)`, 'success');
+      refetch();
+    } catch (e: unknown) {
+      toast.showToast(e instanceof Error ? e.message : 'Gagal membatalkan KRS mahasiswa cuti', 'error');
+    }
+  };
+
   const handleApproveBatch = async () => {
     const ids = selectedMhsIds();
     if (ids.length === 0) {
@@ -493,6 +510,11 @@ export default function Krs() {
             <Show when={role() !== 'mahasiswa'}>
               <Button variant="secondary" onClick={() => setShowMassalModal(true)}>
                 ⚡ Buat KRS Massal
+              </Button>
+            </Show>
+            <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
+              <Button variant="danger" onClick={handleBatalKrsCuti}>
+                ✕ Batalkan KRS Mahasiswa Cuti
               </Button>
             </Show>
             <Show when={!(role() === 'mahasiswa' && !canMahasiswaFillKrs())}>
@@ -776,7 +798,7 @@ export default function Krs() {
                           Setujui
                         </Button>
                       </Show>
-                      <Show when={role() === 'admin' || role() === 'prodi' || role() === 'super_admin'}>
+                      <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
                         <Button variant="danger" onClick={() => handleDelete(item.id)} class="!py-1 !px-2.5 text-xs">
                           Batal
                         </Button>

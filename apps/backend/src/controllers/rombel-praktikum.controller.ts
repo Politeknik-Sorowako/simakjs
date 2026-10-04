@@ -180,8 +180,12 @@ export class RombelPraktikumController {
           return { error: 'Instruktur hanya dapat menetapkan status Hadir, Telat, atau Unknown.' };
         }
       }
-      await RombelPraktikumService.savePresensiBulk(body.bapPraktikumId, body.presensiList || [], user!.id);
-      return { success: true };
+      const result = await RombelPraktikumService.savePresensiBulk(
+        body.bapPraktikumId,
+        body.presensiList || [],
+        user!.id,
+      );
+      return { success: true, skippedCuti: result.skippedCuti };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Unknown error' };

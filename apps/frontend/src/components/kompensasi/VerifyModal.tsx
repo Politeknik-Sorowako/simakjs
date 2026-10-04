@@ -16,11 +16,18 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'IZIN', label: 'Izin' },
   { value: 'ALPA', label: 'Alpa' },
   { value: 'TERLAMBAT', label: 'Terlambat' },
+  { value: 'CUTI', label: 'Cuti' },
   { value: 'UNKNOWN', label: 'Unknown — butuh konfirmasi' },
 ];
 
 const isRecognizedStatus = (s?: string | null) =>
-  s === 'SAKIT' || s === 'IZIN' || s === 'ALPA' || s === 'TERLAMBAT' || s === 'HADIR' || s === 'UNKNOWN';
+  s === 'SAKIT' ||
+  s === 'IZIN' ||
+  s === 'ALPA' ||
+  s === 'TERLAMBAT' ||
+  s === 'HADIR' ||
+  s === 'CUTI' ||
+  s === 'UNKNOWN';
 
 interface VerifyModalProps {
   row: KetidakhadiranRow | null;
@@ -46,6 +53,7 @@ export function VerifyModal(props: VerifyModalProps) {
 
   const isUnknown = () => status() === 'UNKNOWN';
   const isHadir = () => status() === 'HADIR';
+  const isCuti = () => status() === 'CUTI';
 
   const [rekapHarian] = createResource(
     () => {
@@ -63,8 +71,8 @@ export function VerifyModal(props: VerifyModalProps) {
       await presensiController.verifikasiUnknown({
         sumber: row.sumber,
         sumberId: Number(row.sumberId),
-        statusKonfirmasi: status() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN',
-        durasiMenit: isHadir() ? 0 : isUnknown() ? undefined : durasi(),
+        statusKonfirmasi: status() as 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN' | 'CUTI',
+        durasiMenit: isHadir() || isCuti() ? 0 : isUnknown() ? undefined : durasi(),
         keterangan: note() || undefined,
       });
       toast.showToast('Ketidakhadiran berhasil diverifikasi', 'success');
@@ -133,7 +141,7 @@ export function VerifyModal(props: VerifyModalProps) {
                   type="number"
                   min="0"
                   value={durasi()}
-                  disabled={isUnknown() || isHadir()}
+                  disabled={isUnknown() || isHadir() || isCuti()}
                   onInput={(e) => setDurasi(parseInt(e.currentTarget.value) || 0)}
                 />
               </FilterField>
@@ -157,8 +165,9 @@ export function VerifyModal(props: VerifyModalProps) {
               />
             </div>
             <p class="text-xs text-secondary-400 dark:text-secondary-300">
-              Pilih <b>Hadir</b> untuk menganulir (durasi 0), <b>Unknown</b> untuk mengembalikan ke antrean konfirmasi,
-              atau pilih status lain untuk mengkonfirmasi ketidakhadiran.
+              Pilih <b>Hadir</b> atau <b>Cuti</b> untuk menganulir (durasi 0), <b>Unknown</b> untuk mengembalikan ke
+              antrean konfirmasi, atau pilih status lain untuk mengkonfirmasi ketidakhadiran. <b>Cuti</b> hanya berlaku
+              untuk mahasiswa berstatus cuti.
             </p>
             <div class="flex justify-end gap-2">
               <Button onClick={props.onClose} variant="secondary">

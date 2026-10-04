@@ -449,3 +449,20 @@ export const approveBatchKrsSchema = {
     }),
   },
 };
+
+export const batalCutiKrsSchema = {
+  detail: {
+    tags: ['KRS'],
+    summary: 'Batalkan KRS Mahasiswa Cuti',
+    description: 'Membatalkan seluruh KRS mahasiswa berstatus cuti pada periode tertentu.',
+  },
+  body: t.Object({
+    periodeId: t.String({ minLength: 1, error: 'periodeId wajib diisi' }),
+  }),
+  response: {
+    200: t.Object({
+      message: t.String({ default: 'KRS mahasiswa cuti berhasil dibatalkan' }),
+      deletedCount: t.Integer({ default: 0 }),
+    }),
+  },
+};

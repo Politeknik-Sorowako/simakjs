@@ -167,7 +167,11 @@ export const apelController = {
   submitPresensi: (
     sesiId: number,
     presensiList: Array<{ mahasiswaId: number; status: string; menitTerlambat?: number; keterangan?: string | null }>,
-  ) => fetchApi(`/apel/sesi/${sesiId}/presensi`, { method: 'POST', body: JSON.stringify({ presensiList }) }),
+  ): Promise<{ message: string; skippedCuti?: number }> =>
+    fetchApi<{ message: string; skippedCuti?: number }>(`/apel/sesi/${sesiId}/presensi`, {
+      method: 'POST',
+      body: JSON.stringify({ presensiList }),
+    }),
 
   getSesiPresensi: (sesiId: number) => fetchApi<SesiPresensiResponse>(`/apel/sesi/${sesiId}/presensi`),
 
@@ -225,7 +229,7 @@ export const apelController = {
   verifikasiUnknown: (data: {
     sumber: 'BAP' | 'APEL' | 'MANUAL';
     sumberId: number;
-    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR';
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'CUTI';
     durasiMenit?: number;
     keterangan?: string;
   }) =>

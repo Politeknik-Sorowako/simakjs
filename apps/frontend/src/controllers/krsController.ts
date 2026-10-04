@@ -144,6 +144,13 @@ export const krsController = {
     });
   },
 
+  async batalCuti(periodeId: string): Promise<{ message: string; deletedCount: number }> {
+    return fetchApi<{ message: string; deletedCount: number }>('/krs/batal-cuti', {
+      method: 'POST',
+      body: JSON.stringify({ periodeId }),
+    });
+  },
+
   async getRencanaStudi(mahasiswaId: number): Promise<{
     kurikulum: { id: number; kode: string; nama: string };
     currentSemester: number;

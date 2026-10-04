@@ -22,6 +22,7 @@ export const saveBulkPresensiSchema = {
   response: {
     200: t.Object({
       message: t.String({ default: 'Presensi berhasil disimpan' }),
+      skippedCuti: t.Optional(t.Integer({ default: 0 })),
     }),
   },
 };

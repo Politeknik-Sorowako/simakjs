@@ -434,6 +434,7 @@ export const ketidakhadiranStatusEnum = pgEnum('ketidakhadiran_status', [
   'ALPA',
   'TERLAMBAT',
   'RUSAK',
+  'CUTI',
 ]);
 
 export const cpmk = pgTable(

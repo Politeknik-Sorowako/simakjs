@@ -630,12 +630,15 @@ export default function BapPresensi() {
         keterangan: val.keterangan ? val.keterangan.trim() : null,
       }));
 
-      await rombelPraktikumController.savePresensiBulk({
+      const result = await rombelPraktikumController.savePresensiBulk({
         bapPraktikumId: bapPrak.id,
         presensiList,
       });
 
       toast.showToast('Presensi praktikum berhasil disimpan', 'success');
+      if (result.skippedCuti && result.skippedCuti > 0) {
+        toast.showToast(`${result.skippedCuti} mahasiswa berstatus cuti dilewati.`, 'info');
+      }
       setShowPresensiPrakModal(false);
       refetchBapPraktikum();
     } catch (err: unknown) {
@@ -968,10 +971,13 @@ export default function BapPresensi() {
     }));
 
     try {
-      await presensiController.saveBulkPresensi({ bapId, presensiList });
+      const result = await presensiController.saveBulkPresensi({ bapId, presensiList });
       toast.showToast('Presensi berhasil disimpan', 'success');
+      if (result.skippedCuti && result.skippedCuti > 0) {
+        toast.showToast(`${result.skippedCuti} mahasiswa berstatus cuti dilewati.`, 'info');
+      }
     } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal menyimpan presensi', 'error');
+      toast.showToast(e instanceof Error ? e.message : 'Gagal menyimpan presensi', 'error');
     }
   };
 

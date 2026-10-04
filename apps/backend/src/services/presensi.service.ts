@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { and, asc, count, desc, eq, ilike, inArray, isNotNull, ne, or, type SQL, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import {
   bap,
   bapPraktikum,
@@ -19,9 +20,11 @@ import {
   presensiApel,
   presensiPraktikum,
   programStudi,
+  rombelPraktikum,
   sesiApel,
   users,
 } from '../models/schema';
+import { getCutiPeriodeIds, isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import type { UserPayload } from '../utils/types';
@@ -153,6 +156,23 @@ export class PresensiService {
       throw new Error('BAP tidak ditemukan');
     }
 
+    // Mahasiswa berstatus cuti dikecualikan: tidak dicatat dalam presensi sehingga
+    // tidak masuk perhitungan kompensasi. Keluarkan dari daftar sebelum diproses.
+    let skippedCuti = 0;
+    let presensiListFiltered = presensiList;
+    if (presensiList.length > 0) {
+      const ids = [...new Set(presensiList.map((p) => p.mahasiswaId))];
+      const mhsRows = await db
+        .select({ id: mahasiswa.id, status: mahasiswa.status })
+        .from(mahasiswa)
+        .where(inArray(mahasiswa.id, ids));
+      const cutiIds = new Set(mhsRows.filter((m) => isCutiGlobal(m.status)).map((m) => m.id));
+      if (cutiIds.size > 0) {
+        skippedCuti = cutiIds.size;
+        presensiListFiltered = presensiList.filter((p) => !cutiIds.has(p.mahasiswaId));
+      }
+    }
+
     // Track previously-unknown records so resolved entries remain visible for audit.
     let previousUnknownIds = new Set<number>();
     if (adminUserId) {
@@ -163,7 +183,7 @@ export class PresensiService {
       previousUnknownIds = new Set(previousUnknown.map((r) => r.mahasiswaId));
     }
 
-    const itemsToInsert = presensiList.map((item) => {
+    const itemsToInsert = presensiListFiltered.map((item) => {
       let durMangkir = item.durasiMangkir || 0;
       const status = item.status;
 
@@ -242,7 +262,10 @@ export class PresensiService {
       }
     });
 
-    return { message: 'Presensi berhasil disimpan' };
+    return {
+      message: 'Presensi berhasil disimpan',
+      skippedCuti,
+    };
   }
 
   static async getPresensiByBap(bapId: number) {
@@ -470,6 +493,10 @@ export class PresensiService {
       throw new Error('Mahasiswa tidak ditemukan');
     }
 
+    const kelasTeori = alias(kelasKuliah, 'kelas_teori');
+    const rombelAlias = alias(rombelPraktikum, 'rombel_praktikum');
+    const kelasPraktikum = alias(kelasKuliah, 'kelas_praktikum');
+
     const allPresensi = await db
       .select({
         id: ketidakhadiranMahasiswa.id,
@@ -496,6 +523,10 @@ export class PresensiService {
           WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${bapPraktikum.materi}
           ELSE NULL END`,
         bapTanggal: ketidakhadiranMahasiswa.tanggal,
+        periodeId: sql<string | null>`CASE
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN ${kelasTeori.periodeId}
+          WHEN ${ketidakhadiranMahasiswa.sumber} = 'PRAKTIKUM' THEN ${kelasPraktikum.periodeId}
+          ELSE NULL END`,
         sumber: sql<
           'perkuliahan' | 'apel' | 'manual'
         >`CASE WHEN ${ketidakhadiranMahasiswa.sumber} = 'BAP' THEN 'perkuliahan' WHEN ${ketidakhadiranMahasiswa.sumber} = 'APEL' THEN 'apel' ELSE 'manual' END`,
@@ -506,6 +537,7 @@ export class PresensiService {
         and(eq(ketidakhadiranMahasiswa.sumberId, presensi.id), eq(ketidakhadiranMahasiswa.sumber, 'BAP')),
       )
       .leftJoin(bap, eq(presensi.bapId, bap.id))
+      .leftJoin(kelasTeori, eq(bap.kelasKuliahId, kelasTeori.id))
       .leftJoin(
         presensiApel,
         and(eq(ketidakhadiranMahasiswa.sumberId, presensiApel.id), eq(ketidakhadiranMahasiswa.sumber, 'APEL')),
@@ -519,6 +551,8 @@ export class PresensiService {
         ),
       )
       .leftJoin(bapPraktikum, eq(presensiPraktikum.bapPraktikumId, bapPraktikum.id))
+      .leftJoin(rombelAlias, eq(bapPraktikum.rombelPraktikumId, rombelAlias.id))
+      .leftJoin(kelasPraktikum, eq(rombelAlias.kelasKuliahId, kelasPraktikum.id))
       .where(
         and(
           eq(ketidakhadiranMahasiswa.mahasiswaId, mahasiswaId),
@@ -528,6 +562,19 @@ export class PresensiService {
       )
       .orderBy(desc(ketidakhadiranMahasiswa.tanggal), desc(ketidakhadiranMahasiswa.id));
 
+    // Kecualikan presensi/ketidakhadiran yang jatuh dalam periode cuti yang disetujui
+    // final (per-periode). Hanya BAP/PRAKTIKUM yang punya relasi ke periode (via
+    // kelasKuliah/rombel); APEL dan MANUAL tidak memiliki kolom periode (sesi_apel,
+    // kelompok_apel, kompensasi_manual tanpa periode_id) dan periode_akademik tidak
+    // menyimpan rentang tanggal, sehingga sengaja TIDAK dikecualikan di detail ini.
+    // Mahasiswa cuti aktif tetap ter-exclude sepenuhnya dari laporan global
+    // (getLaporanKompensasi/stats) melalui filter status mahasiswa.
+    const cutiPeriodeIds = await getCutiPeriodeIds(mahasiswaId);
+    const activePresensi =
+      cutiPeriodeIds.size > 0
+        ? allPresensi.filter((p) => !(p.periodeId && cutiPeriodeIds.has(p.periodeId)))
+        : allPresensi;
+
     const pengaliMangkir = await SystemParameterService.getNumber('PENGALI_DENDA_MANGKIR');
     const pengaliIzinSakit = await SystemParameterService.getNumber('PENGALI_DENDA_IZIN_SAKIT');
     const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');
@@ -535,7 +582,7 @@ export class PresensiService {
     // Raw minutes per item (BEFORE multiplier), split by multiplier class to mirror the
     // daily DURASI_HARIAN_MENIT (480) cap applied in getLaporanKompensasi.
     const rawByDay = new Map<string, { mangkir: number; ringan: number }>();
-    const rawPerItem = allPresensi.map((p) => {
+    const rawPerItem = activePresensi.map((p) => {
       let rawMangkir = 0;
       let rawRingan = 0;
       if (p.sumber === 'manual') {
@@ -694,7 +741,10 @@ export class PresensiService {
     const totalDibayarSql = sql<number>`COALESCE(bayar_mangkir.total_dibayar, 0)`;
     const sisaKompensasiSql = sql<number>`COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0) - COALESCE(bayar_mangkir.total_dibayar, 0)`;
 
-    const conditions: SQL<unknown>[] = [sql`(${totalKompensasiSql} > 0 OR ${totalDibayarSql} > 0)`];
+    const conditions: SQL<unknown>[] = [
+      sql`(${totalKompensasiSql} > 0 OR ${totalDibayarSql} > 0)`,
+      ne(mahasiswa.status, 'cuti'),
+    ];
     if (search) {
       const orCondition = or(ilike(mahasiswa.nama, `%${search}%`), ilike(mahasiswa.nim, `%${search}%`));
       if (orCondition) conditions.push(orCondition);
@@ -849,7 +899,12 @@ export class PresensiService {
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
       .leftJoin(presensiAggSubquery, eq(sql`presensi_mangkir.mahasiswa_id`, mahasiswa.id))
       .leftJoin(rusakPoinSubquery, eq(sql`rusak_poin.mahasiswa_id`, mahasiswa.id))
-      .where(sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0)) > 0`);
+      .where(
+        and(
+          sql`(COALESCE(presensi_mangkir.poin, 0) + COALESCE(rusak_poin.poin_rusak, 0)) > 0`,
+          ne(mahasiswa.status, 'cuti'),
+        ),
+      );
 
     const paymentsAgg = await db
       .select({
