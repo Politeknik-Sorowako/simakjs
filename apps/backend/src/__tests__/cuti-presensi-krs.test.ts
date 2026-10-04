@@ -175,27 +175,49 @@ describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
     expect(resAktif.status).toBe(403);
   });
 
-  it('Admin dapat membatalkan KRS mahasiswa cuti massal via POST /krs/batal-cuti', async () => {
+  it('Admin dapat membatalkan KRS terpilih massal via POST /krs/batal-batch', async () => {
     const res = await app.handle(
-      new Request('http://localhost/krs/batal-cuti', {
+      new Request('http://localhost/krs/batal-batch', {
         method: 'POST',
         headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ periodeId }),
+        body: JSON.stringify({ ids: [krsCutiId, krsAktifId] }),
       }),
     );
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.deletedCount).toBe(1);
+    expect(json.deletedCount).toBe(2);
+    expect(json.skippedCount).toBe(0);
 
     const cutiRows = await db.select().from(krs).where(eq(krs.id, krsCutiId));
     expect(cutiRows).toHaveLength(0);
-    // KRS mahasiswa aktif tetap ada.
     const aktifRows = await db.select().from(krs).where(eq(krs.id, krsAktifId));
-    expect(aktifRows).toHaveLength(1);
+    expect(aktifRows).toHaveLength(0);
   });
 
-  it('Prodi hanya membatalkan KRS cuti pada prodi yang di-scope (tidak bocor lintas prodi)', async () => {
-    // Prodi kedua + mahasiswa cuti + KRS pada periode yang sama.
+  it('POST /krs/batal-batch dengan ids kosong ditolak (422)', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [] }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it('POST /krs/batal-batch dengan ids duplikat ditolak (422)', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [krsCutiId, krsCutiId] }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it('Prodi hanya membatalkan KRS pada prodi yang di-scope; baris di luar scope dilewati', async () => {
+    // Prodi kedua + mahasiswa + KRS.
     const [prodiLain] = await db
       .insert(programStudi)
       .values({ kode: 'SI', nama: 'Sistem Informasi', jenjang: 'D4' })
@@ -204,7 +226,7 @@ describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
       .insert(mahasiswa)
       .values({
         nim: '25099',
-        nama: 'Mhs Cuti Prodi Lain',
+        nama: 'Mhs Prodi Lain',
         email: 'mhscutilain@test.com',
         programStudiId: prodiLain.id,
         status: 'cuti',
@@ -233,21 +255,35 @@ describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
     await db.insert(userProdiScopes).values({ userId: prodiUser.id, programStudiId: prodiId });
 
     const res = await app.handle(
-      new Request('http://localhost/krs/batal-cuti', {
+      new Request('http://localhost/krs/batal-batch', {
         method: 'POST',
         headers: { authorization: `Bearer ${prodiToken}`, 'content-type': 'application/json' },
-        body: JSON.stringify({ periodeId }),
+        body: JSON.stringify({ ids: [krsCutiId, krsCutiLain.id] }),
       }),
     );
     expect(res.status).toBe(200);
     const json = await res.json();
-    // Hanya KRS cuti pada prodi yang di-scope yang terhapus.
+    // Hanya KRS pada prodi yang di-scope yang terhapus; yang lain dilewati.
     expect(json.deletedCount).toBe(1);
+    expect(json.skippedCount).toBe(1);
 
     const scopedRemoved = await db.select().from(krs).where(eq(krs.id, krsCutiId));
     expect(scopedRemoved).toHaveLength(0);
     const outOfScopeKept = await db.select().from(krs).where(eq(krs.id, krsCutiLain.id));
     expect(outOfScopeKept).toHaveLength(1);
+  });
+
+  it('Filter statusMahasiswa=cuti hanya mengembalikan KRS mahasiswa cuti', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/krs?periodeId=${periodeId}&statusMahasiswa=cuti`, {
+        headers: { authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    const rows = json.data as Array<{ mahasiswaId: number }>;
+    expect(rows.length).toBe(1);
+    expect(rows[0].mahasiswaId).toBe(mhsCutiId);
   });
 
   it('getCutiPeriodeIds hanya menghitung cuti final disetujui, bukan status pertengahan', async () => {

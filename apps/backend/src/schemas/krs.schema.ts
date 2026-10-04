@@ -105,6 +105,7 @@ export const getKrsSchema = {
     isApproved: t.Optional(t.String()),
     sortBy: t.Optional(t.String()),
     sortOrder: t.Optional(t.String()),
+    statusMahasiswa: t.Optional(t.String()),
   }),
   response: {
     200: t.Object({
@@ -450,19 +451,25 @@ export const approveBatchKrsSchema = {
   },
 };
 
-export const batalCutiKrsSchema = {
+export const batalBatchKrsSchema = {
   detail: {
     tags: ['KRS'],
-    summary: 'Batalkan KRS Mahasiswa Cuti',
-    description: 'Membatalkan seluruh KRS mahasiswa berstatus cuti pada periode tertentu.',
+    summary: 'Batalkan KRS Terpilih',
+    description: 'Membatalkan sejumlah baris KRS yang dipilih (multi-select) oleh Admin/Prodi.',
   },
   body: t.Object({
-    periodeId: t.String({ minLength: 1, error: 'periodeId wajib diisi' }),
+    ids: t.Array(t.Integer(), {
+      minItems: 1,
+      maxItems: 1000,
+      uniqueItems: true,
+      error: 'Pilih minimal satu baris KRS',
+    }),
   }),
   response: {
     200: t.Object({
-      message: t.String({ default: 'KRS mahasiswa cuti berhasil dibatalkan' }),
+      message: t.String({ default: 'KRS terpilih berhasil dibatalkan' }),
       deletedCount: t.Integer({ default: 0 }),
+      skippedCount: t.Integer({ default: 0 }),
     }),
   },
 };
