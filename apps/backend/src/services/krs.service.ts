@@ -277,6 +277,7 @@ export class KrsService {
     options?: {
       periodeId?: string;
       programStudiId?: number;
+      programStudiIds?: number[];
       isApproved?: boolean;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
@@ -310,6 +311,9 @@ export class KrsService {
     }
     if (options?.programStudiId !== undefined) {
       searchConditions.push(eq(mahasiswa.programStudiId, options.programStudiId));
+    }
+    if (options?.programStudiIds && options.programStudiIds.length > 0) {
+      searchConditions.push(inArray(mahasiswa.programStudiId, options.programStudiIds));
     }
     if (options?.isApproved !== undefined) {
       searchConditions.push(eq(krs.isApproved, options.isApproved));
@@ -548,10 +552,13 @@ export class KrsService {
     return { deletedCount: deleted.length, skippedCount: uniqueIds.length - deleted.length };
   }
 
-  static async getPendingStudents(periodeId: string, dosenPaId?: number) {
+  static async getPendingStudents(periodeId: string, dosenPaId?: number, scopedProdiIds?: number[]) {
     const conditions = [eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)];
     if (dosenPaId !== undefined) {
       conditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
+    }
+    if (scopedProdiIds !== undefined && scopedProdiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
     }
 
     return await db
@@ -708,28 +715,38 @@ export class KrsService {
     };
   }
 
-  static async getStats(periodeId?: string) {
+  static async getStats(periodeId?: string, scopedProdiIds?: number[]) {
     const conditions: SQL<unknown>[] = [];
     if (periodeId) conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    if (scopedProdiIds !== undefined && scopedProdiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereApproved =
+      conditions.length > 0 ? and(eq(krs.isApproved, true), ...conditions) : eq(krs.isApproved, true);
+    const wherePending =
+      conditions.length > 0 ? and(eq(krs.isApproved, false), ...conditions) : eq(krs.isApproved, false);
 
     const [total] = await db
       .select({ count: count() })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
       .where(whereClause);
 
     const [approved] = await db
       .select({ count: count() })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .where(and(eq(krs.isApproved, true), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
+      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .where(whereApproved);
 
     const [pending] = await db
       .select({ count: count() })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .where(and(eq(krs.isApproved, false), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
+      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .where(wherePending);
 
     const { programStudi: ps } = await import('../models/schema');
 
