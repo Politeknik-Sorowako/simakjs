@@ -111,12 +111,6 @@ export default function Krs() {
     }
   });
 
-  // Reset ke halaman 1 saat filter periode berubah.
-  createEffect(() => {
-    selectedPeriode();
-    mainPagination.resetPage();
-  });
-
   // Fetch pending students for batch approval
   const [pendingStudents, { refetch: refetchPending }] = createResource(
     () => ({
@@ -246,6 +240,17 @@ export default function Krs() {
       }
     },
   );
+
+  // Geser halaman aktif ke halaman terakhir yang valid bila hasil mengecil
+  // (mis. filter/search menyempitkan data), agar tabel tidak kosong karena
+  // halaman basi yang melebihi totalPages. Tidak mereset ke halaman 1 secara agresif.
+  createEffect(() => {
+    const totalPages = krsData()?.meta.totalPages;
+    const currentPage = mainPagination.page();
+    if (totalPages !== undefined && currentPage > Math.max(totalPages, 1)) {
+      mainPagination.setPage(Math.max(totalPages, 1));
+    }
+  });
 
   const sortedKrsData = () => {
     const items = krsData()?.data || [];
@@ -593,19 +598,13 @@ export default function Krs() {
     }
   });
 
-  // Reset seleksi KRS saat dataset/filter yang terlihat berubah agar tidak
-  // menghapus baris tak terlihat lintas halaman/periode/scope.
+  // Reset seleksi KRS saat pindah tab atau berganti universe data (periode/prodi
+  // workspace) demi mencegah penghapusan baris yang tak lagi terlihat. Seleksi
+  // lintas halaman/search/status/sort tetap dipertahankan.
   createEffect(() => {
-    selectedPeriode();
-    mainPagination.page();
-    mainPagination.limit();
-    debouncedMainSearch();
-    workspace.activeProdiId();
-    statusMhsFilter();
-    approvalFilter();
-    sortBy();
-    sortOrder();
     activeTab();
+    selectedPeriode();
+    workspace.activeProdiId();
     setSelectedKrsIds([]);
   });
 
@@ -844,7 +843,6 @@ export default function Krs() {
                   clearTimeout(searchDebounceTimer);
                   searchDebounceTimer = setTimeout(() => {
                     setDebouncedMainSearch(value);
-                    mainPagination.resetPage();
                   }, 400);
                 }}
               />
@@ -855,8 +853,6 @@ export default function Krs() {
                 value={statusMhsFilter()}
                 onChange={(e) => {
                   setStatusMhsFilter(e.currentTarget.value as 'aktif' | 'cuti' | '');
-                  setSelectedKrsIds([]);
-                  mainPagination.resetPage();
                 }}
                 class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
@@ -869,8 +865,6 @@ export default function Krs() {
                 value={approvalFilter()}
                 onChange={(e) => {
                   setApprovalFilter(e.currentTarget.value as 'pending' | 'approved' | '');
-                  setSelectedKrsIds([]);
-                  mainPagination.resetPage();
                 }}
                 class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
