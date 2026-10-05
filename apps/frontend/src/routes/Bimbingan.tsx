@@ -1011,12 +1011,12 @@ export default function Bimbingan() {
                 }
               >
                 <div
-                  class={`grid gap-6 h-[600px] transition-all duration-300 ${
+                  class={`grid gap-6 h-auto lg:h-[600px] transition-all duration-300 ${
                     isRightPanelOpen() ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
                   }`}
                 >
                   {/* Panel Riwayat & Pengelolaan Sesi Bimbingan */}
-                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[70vh] lg:h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
                     <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800 dark:border-secondary-700">
                       <div class="flex flex-col">
                         <h3 class="font-bold text-secondary-800 text-base dark:text-white">
@@ -1160,7 +1160,7 @@ export default function Bimbingan() {
 
                   {/* Form Approval, Resume Akademik, & Timeline Sesi */}
                   <Show when={isRightPanelOpen()}>
-                    <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
+                    <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-[70vh] lg:h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
                       {/* Resume Akademik */}
                       <div class="flex flex-col gap-3">
                         <div class="flex items-center justify-between border-b pb-2">
@@ -1274,7 +1274,7 @@ export default function Bimbingan() {
                             placeholder="Ringkasan bimbingan untuk satu semester..."
                             value={ringkasanText()}
                             onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 resize-none dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 resize-y min-h-[72px] max-h-[320px] dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
                           />
                         </div>
 
