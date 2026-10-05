@@ -419,6 +419,27 @@ export const unlockKelasYudisiumSchema = {
   },
 };
 
+export const importNilaiLegacySchema = {
+  detail: {
+    tags: ['Yudisium & Komponen Nilai'],
+    summary: 'Impor Nilai Legacy (Huruf Mutu)',
+    description:
+      'Mengimpor nilai legacy via CSV dengan kolom: NIM,KodeMatakuliah,Nilai (huruf mutu). Wajib multipart/form-data berisi file, periodeId, dan opsional namaKelas.',
+  },
+  response: {
+    200: t.Object({
+      successCount: t.Integer({ default: 10 }),
+      skippedCount: t.Integer({ default: 0 }),
+      errors: t.Array(
+        t.Object({
+          line: t.Integer({ default: 2 }),
+          error: t.String({ default: 'Mahasiswa dengan NIM "22401001" tidak ditemukan.' }),
+        }),
+      ),
+    }),
+  },
+};
+
 export const saveNilaiAkhirYudisiumSchema = {
   detail: {
     tags: ['Yudisium & Komponen Nilai'],

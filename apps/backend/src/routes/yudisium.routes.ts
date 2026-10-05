@@ -8,6 +8,7 @@ import {
   getSubKomponenYudisiumSchema,
   getYudisiumSchema,
   getYudisiumStatsSchema,
+  importNilaiLegacySchema,
   lockKelasYudisiumSchema,
   saveKomponenYudisiumSchema,
   saveNilaiAkhirYudisiumSchema,
@@ -36,5 +37,6 @@ export const yudisiumRoutes = new Elysia({ prefix: '/yudisium' })
   .post('/kelas/nilai', YudisiumController.saveNilaiMahasiswa, saveNilaiMahasiswaYudisiumSchema)
   .post('/kelas/nilai-sub', YudisiumController.saveNilaiSub, saveNilaiSubYudisiumSchema)
   .post('/kelas/nilai-akhir', YudisiumController.saveNilaiAkhir, saveNilaiAkhirYudisiumSchema)
+  .post('/import-nilai-legacy', YudisiumController.importNilaiLegacy, importNilaiLegacySchema)
   .post('/kelas/:kelasKuliahId/lock', YudisiumController.lockKelas, lockKelasYudisiumSchema)
   .post('/kelas/:kelasKuliahId/unlock', YudisiumController.unlockKelas, unlockKelasYudisiumSchema);
