@@ -19,6 +19,7 @@ import {
   rombelPraktikumMahasiswa,
   users,
 } from '../models/schema';
+import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 
 export class RombelPraktikumService {
@@ -369,16 +370,32 @@ export class RombelPraktikumService {
       throw new Error('BAP praktikum tidak ditemukan');
     }
 
+    // Kecualikan mahasiswa berstatus cuti dari presensi praktikum.
+    let skippedCuti = 0;
+    let presensiListFiltered = presensiList;
+    if (presensiList.length > 0) {
+      const ids = [...new Set(presensiList.map((p) => p.mahasiswaId))];
+      const mhsRows = await db
+        .select({ id: mahasiswa.id, status: mahasiswa.status })
+        .from(mahasiswa)
+        .where(inArray(mahasiswa.id, ids));
+      const cutiIds = new Set(mhsRows.filter((m) => isCutiGlobal(m.status)).map((m) => m.id));
+      if (cutiIds.size > 0) {
+        skippedCuti = cutiIds.size;
+        presensiListFiltered = presensiList.filter((p) => !cutiIds.has(p.mahasiswaId));
+      }
+    }
+
     let inserted: Array<{ id: number; mahasiswaId: number; status: string; durasiMangkir: number }> = [];
 
     await db.transaction(async (tx) => {
       await tx.delete(presensiPraktikum).where(eq(presensiPraktikum.bapPraktikumId, bapPraktikumId));
 
-      if (presensiList.length > 0) {
+      if (presensiListFiltered.length > 0) {
         inserted = await tx
           .insert(presensiPraktikum)
           .values(
-            presensiList.map((p) => ({
+            presensiListFiltered.map((p) => ({
               bapPraktikumId,
               mahasiswaId: p.mahasiswaId,
               status: p.status as 'hadir' | 'sakit' | 'izin' | 'telat' | 'alpa' | 'unknown',
@@ -429,7 +446,7 @@ export class RombelPraktikumService {
       }
     });
 
-    return true;
+    return { skippedCuti };
   }
 
   static async getPresensiByBap(bapPraktikumId: number) {

@@ -3,9 +3,10 @@ import { kelasKuliah, mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { KhsService } from '../services/khs.service';
 import { KrsService } from '../services/krs.service';
+import { ProdiScopeService } from '../services/prodi-scope.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
-import { hasRole } from '../utils/role';
+import { canAccessAllProdi, hasRole } from '../utils/role';
 import { AuthContext, PaginationQuery } from '../utils/types';
 
 type KrsQuery = PaginationQuery & {
@@ -15,6 +16,7 @@ type KrsQuery = PaginationQuery & {
   isApproved?: string;
   sortBy?: string;
   sortOrder?: string;
+  statusMahasiswa?: string;
 };
 
 export class KrsController {
@@ -51,9 +53,11 @@ export class KrsController {
     else if (query?.isApproved === 'false') isApproved = false;
     const sortBy = query?.sortBy || undefined;
     const sortOrder: 'asc' | 'desc' = query?.sortOrder === 'desc' ? 'desc' : 'asc';
+    const statusMahasiswa = query?.statusMahasiswa || undefined;
 
     let filterMhsId: number | undefined = undefined;
     let dosenPaId: number | undefined = undefined;
+    let programStudiIds: number[] | undefined = undefined;
 
     if (hasRole(user, ['mahasiswa'])) {
       const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
@@ -71,14 +75,36 @@ export class KrsController {
       if (dsnId) {
         dosenPaId = dsnId;
       }
+    } else if (!hasRole(user, ['dosen']) && !canAccessAllProdi(user)) {
+      // Batasi listing KRS sesuai scope prodi user (prodi/kaprodi & staf non-global).
+      // Jalur mahasiswa & dosen (roster kelas) ditangani di atas dan dikecualikan.
+      const scoped = await ProdiScopeService.getUserAccessibleProdiIds(user);
+      if (scoped === null) {
+        programStudiIds = undefined;
+      } else if (scoped.length === 0) {
+        return {
+          data: [],
+          meta: { total: 0, page, limit, totalPages: 0 },
+        };
+      } else if (programStudiId !== undefined && !scoped.includes(programStudiId)) {
+        // Klien meminta prodi di luar scope → kembalikan list kosong (fail-closed).
+        return {
+          data: [],
+          meta: { total: 0, page, limit, totalPages: 0 },
+        };
+      } else {
+        programStudiIds = programStudiId !== undefined ? [programStudiId] : scoped;
+      }
     }
 
     return await KrsService.getAll(page, limit, search, filterMhsId, dosenPaId, kelasKuliahId, {
       periodeId,
       programStudiId,
+      programStudiIds,
       isApproved,
       sortBy,
       sortOrder,
+      statusMahasiswa,
     });
   }
 
@@ -103,6 +129,13 @@ export class KrsController {
       if (!myMhsId || myMhsId !== data.mahasiswaId) {
         set.status = 403;
         return { error: 'Akses ditolak.' };
+      }
+    } else if (!canAccessAllProdi(user)) {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [data.mahasiswaId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
       }
     }
     return data;
@@ -217,7 +250,23 @@ export class KrsController {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }
-    return await KrsService.getStats(query?.periodeId);
+    try {
+      let scopedProdiIds: number[] | undefined = undefined;
+      if (!canAccessAllProdi(user)) {
+        const scoped = await ProdiScopeService.getUserAccessibleProdiIds(user);
+        if (scoped === null) {
+          scopedProdiIds = undefined;
+        } else if (scoped.length === 0) {
+          return { total: 0, approved: 0, pending: 0, perProdi: [] };
+        } else {
+          scopedProdiIds = scoped;
+        }
+      }
+      return await KrsService.getStats(query?.periodeId, scopedProdiIds);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -278,6 +327,34 @@ export class KrsController {
     return { message: 'KRS berhasil dihapus' };
   }
 
+  // Batalkan sejumlah baris KRS terpilih (Admin/Prodi), dibatasi scope prodi user.
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async batalBatch({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'prodi', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin dan Prodi yang dapat membatalkan KRS.' };
+    }
+    const ids = body?.ids;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      set.status = 400;
+      return { error: 'Pilih minimal satu baris KRS untuk dibatalkan.' };
+    }
+    try {
+      // Batasi penghapusan sesuai scope prodi user. `null` = akses global (admin/super_admin).
+      const scopedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+      const { deletedCount, skippedCount } = await KrsService.deleteBatch(ids, scopedProdiIds);
+      return { message: 'KRS terpilih berhasil dibatalkan', deletedCount, skippedCount };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal membatalkan KRS terpilih.' };
+    }
+  }
+
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async getPendingStudents({ query, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
@@ -296,11 +373,21 @@ export class KrsController {
     }
     try {
       let dosenPaId: number | undefined = undefined;
+      let scopedProdiIds: number[] | undefined = undefined;
       if (hasRole(user, ['dosen'])) {
         const dsnId = await KrsController.getDosenIdByEmail(user.email);
         if (dsnId) dosenPaId = dsnId;
+      } else if (!canAccessAllProdi(user)) {
+        const scoped = await ProdiScopeService.getUserAccessibleProdiIds(user);
+        if (scoped === null) {
+          scopedProdiIds = undefined;
+        } else if (scoped.length === 0) {
+          return [];
+        } else {
+          scopedProdiIds = scoped;
+        }
       }
-      return await KrsService.getPendingStudents(periodeId, dosenPaId);
+      return await KrsService.getPendingStudents(periodeId, dosenPaId, scopedProdiIds);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memproses permintaan' };
@@ -328,34 +415,86 @@ export class KrsController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async getRencanaStudi({ query, set }: AuthContext): Promise<any> {
+  static async getRencanaStudi({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
     const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
     if (!mahasiswaId) {
       set.status = 400;
       return { error: 'mahasiswaId harus dikirim' };
     }
-    const data = await KrsService.getRencanaStudi(mahasiswaId);
-    if (!data) {
-      set.status = 404;
-      return { error: 'Tidak ada rencana studi untuk mahasiswa ini (pastikan angkatan sudah di-binding ke kurikulum)' };
+    // Mahasiswa hanya dapat melihat rencana studinya sendiri; staf non-global dibatasi scope prodi.
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== mahasiswaId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+    } else if (!canAccessAllProdi(user)) {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [mahasiswaId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
     }
-    return data;
+    try {
+      const data = await KrsService.getRencanaStudi(mahasiswaId);
+      if (!data) {
+        set.status = 404;
+        return {
+          error: 'Tidak ada rencana studi untuk mahasiswa ini (pastikan angkatan sudah di-binding ke kurikulum)',
+        };
+      }
+      return data;
+    } catch (e: unknown) {
+      set.status = 500;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat rencana studi.' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async validasiKrs({ query, set }: AuthContext): Promise<any> {
+  static async validasiKrs({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
     const mahasiswaId = query?.mahasiswaId ? parseInt(query.mahasiswaId) : undefined;
     const periodeId = query?.periodeId;
     if (!mahasiswaId || !periodeId) {
       set.status = 400;
       return { error: 'mahasiswaId dan periodeId harus dikirim' };
     }
-    const data = await KrsService.validasiKrs(mahasiswaId, periodeId);
-    if (!data) {
-      set.status = 404;
-      return { error: 'Data tidak ditemukan' };
+    // Guard scope yang sama dengan getRencanaStudi (validasiKrs mendelegasikan ke sana).
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await KrsController.getMahasiswaIdByEmail(user.email);
+      if (!myMhsId || myMhsId !== mahasiswaId) {
+        set.status = 403;
+        return { error: 'Akses ditolak.' };
+      }
+    } else if (!canAccessAllProdi(user)) {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [mahasiswaId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
     }
-    return data;
+    try {
+      const data = await KrsService.validasiKrs(mahasiswaId, periodeId);
+      if (!data) {
+        set.status = 404;
+        return { error: 'Data tidak ditemukan' };
+      }
+      return data;
+    } catch (e: unknown) {
+      set.status = 500;
+      return { error: e instanceof Error ? e.message : 'Gagal memvalidasi KRS.' };
+    }
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

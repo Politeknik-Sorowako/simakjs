@@ -1,5 +1,6 @@
-import { and, asc, count, desc, eq, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
 import { ketidakhadiranMahasiswa, kompensasiManual, mahasiswa, users } from '../models/schema';
+import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { SystemParameterService } from './system-parameter.service';
 
@@ -82,9 +83,15 @@ export class KompensasiManualService {
       const lockKey = `kompen_${data.mahasiswaId}_${data.tanggal}`;
       await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`);
 
-      const [mhs] = await tx.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.id, data.mahasiswaId));
+      const [mhs] = await tx
+        .select({ id: mahasiswa.id, status: mahasiswa.status })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, data.mahasiswaId));
       if (!mhs) {
         throw new Error('Mahasiswa tidak ditemukan');
+      }
+      if (isCutiGlobal(mhs.status)) {
+        throw new Error('Mahasiswa berstatus cuti tidak dapat diberi kompensasi manual.');
       }
       if (!JENIS_KOMPEN.includes(data.jenisKompen)) {
         throw new Error('Jenis kompensasi tidak valid');
@@ -168,6 +175,14 @@ export class KompensasiManualService {
 
       const mahasiswaId = data.mahasiswaId ?? existing.mahasiswaId;
       const tanggal = data.tanggal ?? existing.tanggal;
+
+      const [mhsRow] = await tx
+        .select({ status: mahasiswa.status })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, mahasiswaId));
+      if (mhsRow && isCutiGlobal(mhsRow.status)) {
+        throw new Error('Mahasiswa berstatus cuti tidak dapat diberi kompensasi manual.');
+      }
 
       const lockKeys = new Set([
         `kompen_${existing.mahasiswaId}_${existing.tanggal}`,
@@ -275,6 +290,16 @@ export class KompensasiManualService {
         .where(sql`${kompensasiManual.id} IN (${sql.join(ids, sql`, `)})`);
       if (rows.length === 0) {
         return 0;
+      }
+
+      // Mahasiswa cuti tidak boleh diberi/mengubah kompensasi manual.
+      const mhsIds = [...new Set(rows.map((r) => r.mahasiswaId))];
+      const cutiRows = await tx
+        .select({ id: mahasiswa.id })
+        .from(mahasiswa)
+        .where(and(inArray(mahasiswa.id, mhsIds), eq(mahasiswa.status, 'cuti')));
+      if (cutiRows.length > 0) {
+        throw new Error('Terdapat mahasiswa berstatus cuti pada data terpilih. Kompensasi manual tidak dapat diubah.');
       }
 
       const maksHarian = await SystemParameterService.getNumber('DURASI_HARIAN_MENIT');

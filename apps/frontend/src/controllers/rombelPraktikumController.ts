@@ -181,8 +181,8 @@ export const rombelPraktikumController = {
       durasiMangkir?: number | null;
       keterangan?: string | null;
     }[];
-  }): Promise<{ success: boolean }> {
-    return fetchApi<{ success: boolean }>('/rombel-praktikum/presensi', {
+  }): Promise<{ success: boolean; skippedCuti?: number }> {
+    return fetchApi<{ success: boolean; skippedCuti?: number }>('/rombel-praktikum/presensi', {
       method: 'POST',
       body: JSON.stringify(payload),
     });

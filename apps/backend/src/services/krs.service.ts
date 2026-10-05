@@ -277,9 +277,11 @@ export class KrsService {
     options?: {
       periodeId?: string;
       programStudiId?: number;
+      programStudiIds?: number[];
       isApproved?: boolean;
       sortBy?: string;
       sortOrder?: 'asc' | 'desc';
+      statusMahasiswa?: string;
     },
   ) {
     const offset = (page - 1) * limit;
@@ -310,8 +312,14 @@ export class KrsService {
     if (options?.programStudiId !== undefined) {
       searchConditions.push(eq(mahasiswa.programStudiId, options.programStudiId));
     }
+    if (options?.programStudiIds && options.programStudiIds.length > 0) {
+      searchConditions.push(inArray(mahasiswa.programStudiId, options.programStudiIds));
+    }
     if (options?.isApproved !== undefined) {
       searchConditions.push(eq(krs.isApproved, options.isApproved));
+    }
+    if (options?.statusMahasiswa) {
+      searchConditions.push(eq(mahasiswa.status, options.statusMahasiswa));
     }
 
     const whereClause = searchConditions.length > 0 ? and(...searchConditions) : undefined;
@@ -505,10 +513,52 @@ export class KrsService {
     return deletedKrs || null;
   }
 
-  static async getPendingStudents(periodeId: string, dosenPaId?: number) {
+  /**
+   * Batalkan sejumlah baris KRS yang dipilih (multi-select), dibatasi scope prodi user.
+   * Idempoten: hanya menghapus baris KRS yang ada dan yang berada dalam scope.
+   *
+   * @param scopedProdiIds `null` = akses global (tanpa batasan prodi), array = hanya
+   * prodi yang diizinkan. Array kosong berarti tidak punya akses prodi mana pun
+   * sehingga tidak ada yang dihapus (fail-closed).
+   * @returns jumlah yang dihapus dan jumlah yang dilewati (tidak ada / di luar scope).
+   */
+  static async deleteBatch(ids: number[], scopedProdiIds?: number[] | null) {
+    // Dedupe agar skippedCount tidak salah hitung saat request berisi ID duplikat.
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) {
+      return { deletedCount: 0, skippedCount: 0 };
+    }
+
+    const targetIds = scopedProdiIds && scopedProdiIds.length === 0 ? [] : uniqueIds;
+    const conditions = [inArray(krs.id, targetIds)];
+    if (scopedProdiIds && scopedProdiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
+    }
+
+    const inScopeIds =
+      targetIds.length > 0
+        ? await db
+            .select({ id: krs.id })
+            .from(krs)
+            .innerJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+            .where(and(...conditions))
+        : [];
+
+    if (inScopeIds.length === 0) {
+      return { deletedCount: 0, skippedCount: uniqueIds.length };
+    }
+    const toDelete = inScopeIds.map((r) => r.id);
+    const deleted = await db.delete(krs).where(inArray(krs.id, toDelete)).returning({ id: krs.id });
+    return { deletedCount: deleted.length, skippedCount: uniqueIds.length - deleted.length };
+  }
+
+  static async getPendingStudents(periodeId: string, dosenPaId?: number, scopedProdiIds?: number[]) {
     const conditions = [eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, false)];
     if (dosenPaId !== undefined) {
       conditions.push(eq(mahasiswa.dosenPaId, dosenPaId));
+    }
+    if (scopedProdiIds !== undefined && scopedProdiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
     }
 
     return await db
@@ -665,28 +715,38 @@ export class KrsService {
     };
   }
 
-  static async getStats(periodeId?: string) {
+  static async getStats(periodeId?: string, scopedProdiIds?: number[]) {
     const conditions: SQL<unknown>[] = [];
     if (periodeId) conditions.push(eq(kelasKuliah.periodeId, periodeId));
+    if (scopedProdiIds !== undefined && scopedProdiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, scopedProdiIds));
+    }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const whereApproved =
+      conditions.length > 0 ? and(eq(krs.isApproved, true), ...conditions) : eq(krs.isApproved, true);
+    const wherePending =
+      conditions.length > 0 ? and(eq(krs.isApproved, false), ...conditions) : eq(krs.isApproved, false);
 
     const [total] = await db
       .select({ count: count() })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
+      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
       .where(whereClause);
 
     const [approved] = await db
       .select({ count: count() })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .where(and(eq(krs.isApproved, true), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
+      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .where(whereApproved);
 
     const [pending] = await db
       .select({ count: count() })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
-      .where(and(eq(krs.isApproved, false), ...(periodeId ? [eq(kelasKuliah.periodeId, periodeId)] : [])));
+      .leftJoin(mahasiswa, eq(krs.mahasiswaId, mahasiswa.id))
+      .where(wherePending);
 
     const { programStudi: ps } = await import('../models/schema');
 

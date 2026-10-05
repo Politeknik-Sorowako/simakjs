@@ -51,6 +51,7 @@ export default function ApelKelola() {
   // Auto-save & unsaved guard state
   const [saveStatus, setSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
+  const [skippedCutiCount, setSkippedCutiCount] = createSignal(0);
   let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
 
   // Hanya admin/super_admin yang boleh menetapkan sakit/izin/alpa secara manual.
@@ -212,6 +213,7 @@ export default function ApelKelola() {
       setPresensiData(data.presensi);
       setHasUnsavedChanges(false);
       setSaveStatus('idle');
+      setSkippedCutiCount(0);
       return data;
     },
   );
@@ -384,9 +386,10 @@ export default function ApelKelola() {
     if (!selectedSesi() || !sesi || sesi.isClosed) return;
     setSaveStatus('saving');
     try {
-      await apelController.submitPresensi(selectedSesi()!, buildPresensiPayload());
+      const res = await apelController.submitPresensi(selectedSesi()!, buildPresensiPayload());
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
+      setSkippedCutiCount(res.skippedCuti ?? 0);
     } catch (e: unknown) {
       setSaveStatus('error');
       toast.showToast(e instanceof Error ? e.message : 'Gagal menyimpan presensi', 'error');
@@ -455,10 +458,14 @@ export default function ApelKelola() {
     if (!selectedSesi()) return;
     try {
       setIsSubmitting(true);
-      await apelController.submitPresensi(selectedSesi()!, buildPresensiPayload());
+      const res = await apelController.submitPresensi(selectedSesi()!, buildPresensiPayload());
       setHasUnsavedChanges(false);
       setSaveStatus('saved');
+      setSkippedCutiCount(res.skippedCuti ?? 0);
       toast.showToast('Presensi berhasil disimpan', 'success');
+      if (res.skippedCuti && res.skippedCuti > 0) {
+        toast.showToast(`${res.skippedCuti} mahasiswa berstatus cuti dilewati.`, 'info');
+      }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal menyimpan presensi';
       setSaveStatus('error');
@@ -932,6 +939,17 @@ export default function ApelKelola() {
                         </span>
                       </span>
                     </Show>
+                    <Show when={skippedCutiCount() > 0}>
+                      <span
+                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-fine font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                        role="status"
+                        aria-live="polite"
+                        title="Mahasiswa cuti dikecualikan dari presensi"
+                      >
+                        <span aria-hidden="true">⏭</span>
+                        <span>Cuti dilewati: {skippedCutiCount()}</span>
+                      </span>
+                    </Show>
                     <IconActionButton
                       label="Simpan"
                       variant="green"
@@ -1063,6 +1081,14 @@ export default function ApelKelola() {
                     Total: {rekapPresensi().total}
                   </span>
                 </div>
+                <Show when={skippedCutiCount() > 0}>
+                  <div class="px-4 py-2 border-b dark:border-gray-700 bg-amber-50 dark:bg-amber-900/20 text-sm text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                    <span aria-hidden="true">⏭</span>
+                    <span>
+                      {skippedCutiCount()} mahasiswa berstatus cuti dikecualikan dari sesi ini — tidak tercatat.
+                    </span>
+                  </div>
+                </Show>
 
                 <div class="overflow-x-auto">
                   <table class="w-full">

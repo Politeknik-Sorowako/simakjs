@@ -83,6 +83,7 @@ const STATUS_VARIANT: Record<string, 'danger' | 'warning' | 'success' | 'info' |
   RUSAK: 'danger',
   UNKNOWN: 'default',
   HADIR: 'success',
+  CUTI: 'warning',
 };
 
 export function StatusBadge(props: { status: string }) {

@@ -389,8 +389,8 @@ export const presensiController = {
   async saveBulkPresensi(data: {
     bapId: number;
     presensiList: Array<{ mahasiswaId: number; status: string; durasiMangkir?: number }>;
-  }): Promise<{ message: string }> {
-    return fetchApi<{ message: string }>('/presensi/bulk', {
+  }): Promise<{ message: string; skippedCuti?: number }> {
+    return fetchApi<{ message: string; skippedCuti?: number }>('/presensi/bulk', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -431,7 +431,7 @@ export const presensiController = {
   async verifikasiUnknown(data: {
     sumber: 'BAP' | 'APEL' | 'MANUAL' | 'PRAKTIKUM';
     sumberId: number;
-    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN';
+    statusKonfirmasi: 'SAKIT' | 'IZIN' | 'ALPA' | 'TERLAMBAT' | 'HADIR' | 'UNKNOWN' | 'CUTI';
     durasiMenit?: number;
     keterangan?: string;
   }): Promise<Record<string, unknown>> {

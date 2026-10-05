@@ -14,6 +14,7 @@ import {
   programStudi,
   users,
 } from '../models/schema';
+import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
 import { JENIS_FULL_DAY, JENIS_KOMPEN, type JenisKompen } from './kompensasi-manual.service';
 import { PelanggaranService } from './pelanggaran.service';
@@ -1210,9 +1211,17 @@ export class CsvImportService {
       }
 
       try {
-        const [mhs] = await db.select({ id: mahasiswa.id }).from(mahasiswa).where(eq(mahasiswa.nim, nimVal)).limit(1);
+        const [mhs] = await db
+          .select({ id: mahasiswa.id, status: mahasiswa.status })
+          .from(mahasiswa)
+          .where(eq(mahasiswa.nim, nimVal))
+          .limit(1);
         if (!mhs) {
           result.errors.push({ line: lineNum, error: `Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.` });
+          continue;
+        }
+        if (isCutiGlobal(mhs.status)) {
+          result.skippedCount++;
           continue;
         }
 

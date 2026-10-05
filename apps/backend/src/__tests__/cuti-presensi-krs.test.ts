@@ -1,0 +1,410 @@
+import { beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
+import { app } from '../app';
+import {
+  bap,
+  dosen,
+  kelasKuliah,
+  ketidakhadiranMahasiswa,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  pengajuanCuti,
+  periodeAkademik,
+  presensi,
+  programStudi,
+  userProdiScopes,
+  users,
+} from '../models/schema';
+import { KompensasiManualService } from '../services/kompensasi-manual.service';
+import { PresensiService } from '../services/presensi.service';
+import { VerifikasiUnknownService } from '../services/verifikasi-unknown.service';
+import { getCutiPeriodeIds } from '../utils/cuti-guard';
+import { db } from '../utils/db';
+import { clearDatabase, getAuthToken } from './test-helper';
+
+describe('Mahasiswa Cuti: Presensi, Kompensasi & KRS', () => {
+  let adminToken: string;
+  let mhsCutiToken: string;
+  let mhsAktifToken: string;
+  let prodiId: number;
+  let periodeId = '20251';
+  let mhsCutiId: number;
+  let mhsAktifId: number;
+  let kelasId: number;
+  let bapId: number;
+  let krsCutiId: number;
+  let krsAktifId: number;
+  let dosenId: number;
+
+  beforeEach(async () => {
+    await clearDatabase();
+
+    adminToken = await getAuthToken('admin@test.com', 'admin');
+    mhsCutiToken = await getAuthToken('mhscuti@test.com', 'mahasiswa');
+    mhsAktifToken = await getAuthToken('mhsaktif@test.com', 'mahasiswa');
+
+    const [prodi] = await db
+      .insert(programStudi)
+      .values({ kode: 'TI', nama: 'Teknik Informatika', jenjang: 'D4' })
+      .returning();
+    prodiId = prodi.id;
+
+    const [dsn] = await db
+      .insert(dosen)
+      .values({
+        nip: '19990001',
+        nama: 'Dosen Pengampu',
+        email: 'dosen@test.com',
+        programStudiId: prodiId,
+        jenisKelamin: 'L',
+        nik: '1234567890123499',
+        tanggalLahir: '1980-01-01',
+      })
+      .returning();
+    dosenId = dsn.id;
+
+    await db.insert(periodeAkademik).values({ id: periodeId, nama: 'Ganjil 2025/2026', aktif: true });
+
+    const [mhsCuti] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '25001',
+        nama: 'Mhs Cuti',
+        email: 'mhscuti@test.com',
+        programStudiId: prodiId,
+        status: 'cuti',
+        namaIbuKandung: 'Ibu Cuti',
+        nik: '1234567890123401',
+        jenisKelamin: 'L',
+        tanggalLahir: '2003-01-01',
+      })
+      .returning();
+    mhsCutiId = mhsCuti.id;
+
+    const [mhsAktif] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '25002',
+        nama: 'Mhs Aktif',
+        email: 'mhsaktif@test.com',
+        programStudiId: prodiId,
+        status: 'aktif',
+        namaIbuKandung: 'Ibu Aktif',
+        nik: '1234567890123402',
+        jenisKelamin: 'P',
+        tanggalLahir: '2003-01-02',
+      })
+      .returning();
+    mhsAktifId = mhsAktif.id;
+
+    const [mk] = await db
+      .insert(mataKuliah)
+      .values({ programStudiId: prodiId, kode: `MK_${Date.now()}`, nama: 'Algoritma', sksTotal: 3 })
+      .returning();
+    const [kelas] = await db.insert(kelasKuliah).values({ mataKuliahId: mk.id, periodeId, namaKelas: 'A' }).returning();
+    kelasId = kelas.id;
+
+    const [bapRow] = await db
+      .insert(bap)
+      .values({
+        kelasKuliahId: kelas.id,
+        tanggal: '2025-09-01',
+        pertemuanKe: 1,
+        tema: 'Kontrak',
+        materi: 'Pengantar',
+        durasiMenit: 100,
+        dosenId,
+      })
+      .returning();
+    bapId = bapRow.id;
+
+    const [krsCuti] = await db.insert(krs).values({ mahasiswaId: mhsCutiId, kelasKuliahId: kelasId }).returning();
+    krsCutiId = krsCuti.id;
+    const [krsAktif] = await db.insert(krs).values({ mahasiswaId: mhsAktifId, kelasKuliahId: kelasId }).returning();
+    krsAktifId = krsAktif.id;
+  });
+
+  it('PresensiService.saveBulkPresensi melewatkan mahasiswa cuti dan tidak menulis presensi/ketidakhadiran', async () => {
+    const result = await PresensiService.saveBulkPresensi(bapId, [
+      { mahasiswaId: mhsCutiId, status: 'alpa' },
+      { mahasiswaId: mhsAktifId, status: 'alpa' },
+    ]);
+
+    expect(result.skippedCuti).toBe(1);
+
+    const presensiRows = await db.select().from(presensi).where(eq(presensi.bapId, bapId));
+    expect(presensiRows).toHaveLength(1);
+    expect(presensiRows[0].mahasiswaId).toBe(mhsAktifId);
+
+    const cutiAbsence = await db
+      .select()
+      .from(ketidakhadiranMahasiswa)
+      .where(eq(ketidakhadiranMahasiswa.mahasiswaId, mhsCutiId));
+    expect(cutiAbsence).toHaveLength(0);
+  });
+
+  it('KompensasiManualService.createKompensasi menolak mahasiswa cuti', async () => {
+    const [user] = await db.select({ id: users.id }).from(users).limit(1);
+    await expect(
+      KompensasiManualService.createKompensasi({
+        mahasiswaId: mhsCutiId,
+        tanggal: '2025-09-01',
+        jenisKompen: 'alpa',
+        durasiMenit: 100,
+        createdBy: user?.id ?? 1,
+      }),
+    ).rejects.toThrow(/cuti/i);
+  });
+
+  it('Mahasiswa (aktif maupun cuti) tidak dapat membatalkan KRS mandiri (403)', async () => {
+    const resCuti = await app.handle(
+      new Request(`http://localhost/krs/${krsCutiId}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${mhsCutiToken}` },
+      }),
+    );
+    expect(resCuti.status).toBe(403);
+
+    const resAktif = await app.handle(
+      new Request(`http://localhost/krs/${krsAktifId}`, {
+        method: 'DELETE',
+        headers: { authorization: `Bearer ${mhsAktifToken}` },
+      }),
+    );
+    expect(resAktif.status).toBe(403);
+  });
+
+  it('Admin dapat membatalkan KRS terpilih massal via POST /krs/batal-batch', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [krsCutiId, krsAktifId] }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.deletedCount).toBe(2);
+    expect(json.skippedCount).toBe(0);
+
+    const cutiRows = await db.select().from(krs).where(eq(krs.id, krsCutiId));
+    expect(cutiRows).toHaveLength(0);
+    const aktifRows = await db.select().from(krs).where(eq(krs.id, krsAktifId));
+    expect(aktifRows).toHaveLength(0);
+  });
+
+  it('POST /krs/batal-batch dengan ids kosong ditolak (422)', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [] }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it('POST /krs/batal-batch dengan ids duplikat ditolak (422)', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [krsCutiId, krsCutiId] }),
+      }),
+    );
+    expect(res.status).toBe(422);
+  });
+
+  it('Prodi hanya membatalkan KRS pada prodi yang di-scope; baris di luar scope dilewati', async () => {
+    // Prodi kedua + mahasiswa + KRS.
+    const [prodiLain] = await db
+      .insert(programStudi)
+      .values({ kode: 'SI', nama: 'Sistem Informasi', jenjang: 'D4' })
+      .returning();
+    const [mhsCutiLain] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '25099',
+        nama: 'Mhs Prodi Lain',
+        email: 'mhscutilain@test.com',
+        programStudiId: prodiLain.id,
+        status: 'cuti',
+        namaIbuKandung: 'Ibu Lain',
+        nik: '1234567890123499',
+        jenisKelamin: 'L',
+        tanggalLahir: '2003-02-01',
+      })
+      .returning();
+    const [mkLain] = await db
+      .insert(mataKuliah)
+      .values({ programStudiId: prodiLain.id, kode: `MK_L_${Date.now()}`, nama: 'Basis Data', sksTotal: 3 })
+      .returning();
+    const [kelasLain] = await db
+      .insert(kelasKuliah)
+      .values({ mataKuliahId: mkLain.id, periodeId, namaKelas: 'B' })
+      .returning();
+    const [krsCutiLain] = await db
+      .insert(krs)
+      .values({ mahasiswaId: mhsCutiLain.id, kelasKuliahId: kelasLain.id })
+      .returning();
+
+    // Prodi user hanya di-scope ke prodiId (prodi pertama).
+    const prodiToken = await getAuthToken('prodi@test.com', 'prodi');
+    const [prodiUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'prodi@test.com'));
+    await db.insert(userProdiScopes).values({ userId: prodiUser.id, programStudiId: prodiId });
+
+    const res = await app.handle(
+      new Request('http://localhost/krs/batal-batch', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${prodiToken}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ ids: [krsCutiId, krsCutiLain.id] }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    // Hanya KRS pada prodi yang di-scope yang terhapus; yang lain dilewati.
+    expect(json.deletedCount).toBe(1);
+    expect(json.skippedCount).toBe(1);
+
+    const scopedRemoved = await db.select().from(krs).where(eq(krs.id, krsCutiId));
+    expect(scopedRemoved).toHaveLength(0);
+    const outOfScopeKept = await db.select().from(krs).where(eq(krs.id, krsCutiLain.id));
+    expect(outOfScopeKept).toHaveLength(1);
+  });
+
+  it('Filter statusMahasiswa=cuti hanya mengembalikan KRS mahasiswa cuti', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/krs?periodeId=${periodeId}&statusMahasiswa=cuti`, {
+        headers: { authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    const rows = json.data as Array<{ mahasiswaId: number }>;
+    expect(rows.length).toBe(1);
+    expect(rows[0].mahasiswaId).toBe(mhsCutiId);
+  });
+
+  it('getCutiPeriodeIds hanya menghitung cuti final disetujui, bukan status pertengahan', async () => {
+    await db.insert(pengajuanCuti).values({
+      mahasiswaId: mhsCutiId,
+      periodeId,
+      alasan: 'Cuti sakit',
+      status: 'disetujui_pa', // mid-approval → tidak ikut dihitung
+    });
+
+    const periods = await getCutiPeriodeIds(mhsCutiId);
+    expect(periods.has(periodeId)).toBe(false);
+  });
+
+  it('getCutiPeriodeIds menghitung cuti final dan memperluas rentang semester', async () => {
+    await db.insert(pengajuanCuti).values({
+      mahasiswaId: mhsCutiId,
+      periodeId,
+      alasan: 'Cuti final multi-semester',
+      status: 'disetujui_prodi',
+      semesterMulaiCuti: '20251',
+      semesterBerakhirCuti: '20252',
+    });
+
+    const periods = await getCutiPeriodeIds(mhsCutiId);
+    expect(periods.has('20251')).toBe(true);
+    expect(periods.has('20252')).toBe(true);
+    expect(periods.has('20253')).toBe(false);
+  });
+
+  it('Konfirmasi CUTI pada mahasiswa cuti berhasil, nol-debt, dan tidak mengubah sisa kompensasi', async () => {
+    const [pres] = await db
+      .insert(presensi)
+      .values({ bapId, mahasiswaId: mhsCutiId, status: 'unknown', durasiMangkir: 100 })
+      .returning({ id: presensi.id });
+    const [absence] = await db
+      .insert(ketidakhadiranMahasiswa)
+      .values({
+        mahasiswaId: mhsCutiId,
+        tanggal: '2025-09-01',
+        sumber: 'BAP',
+        sumberId: pres.id,
+        status: 'UNKNOWN',
+        durasiMenit: 100,
+        isVerified: false,
+      })
+      .returning();
+
+    const [admin] = await db.select({ id: users.id }).from(users).limit(1);
+    await VerifikasiUnknownService.verify({
+      sumber: 'BAP',
+      sumberId: pres.id,
+      statusKonfirmasi: 'CUTI',
+      adminUserId: admin?.id ?? 1,
+    });
+
+    const [row] = await db
+      .select({
+        status: ketidakhadiranMahasiswa.status,
+        durasiMenit: ketidakhadiranMahasiswa.durasiMenit,
+        isVerified: ketidakhadiranMahasiswa.isVerified,
+      })
+      .from(ketidakhadiranMahasiswa)
+      .where(eq(ketidakhadiranMahasiswa.id, absence.id));
+    expect(row?.status).toBe('CUTI');
+    expect(row?.durasiMenit).toBe(0);
+    expect(row?.isVerified).toBe(true);
+
+    const detail = await PresensiService.getKompensasiDetail(mhsCutiId);
+    expect(detail.summary.sisaKompensasi).toBe(0);
+  });
+
+  it('Konfirmasi ALPA pada mahasiswa cuti ditolak (tidak boleh menciptakan beban kompensasi)', async () => {
+    const [pres] = await db
+      .insert(presensi)
+      .values({ bapId, mahasiswaId: mhsCutiId, status: 'unknown', durasiMangkir: 100 })
+      .returning({ id: presensi.id });
+    await db.insert(ketidakhadiranMahasiswa).values({
+      mahasiswaId: mhsCutiId,
+      tanggal: '2025-09-01',
+      sumber: 'BAP',
+      sumberId: pres.id,
+      status: 'UNKNOWN',
+      durasiMenit: 100,
+      isVerified: false,
+    });
+
+    const [admin] = await db.select({ id: users.id }).from(users).limit(1);
+    await expect(
+      VerifikasiUnknownService.verify({
+        sumber: 'BAP',
+        sumberId: pres.id,
+        statusKonfirmasi: 'ALPA',
+        adminUserId: admin?.id ?? 1,
+      }),
+    ).rejects.toThrow(/cuti/i);
+  });
+
+  it('Konfirmasi CUTI pada mahasiswa non-cuti ditolak', async () => {
+    const [pres] = await db
+      .insert(presensi)
+      .values({ bapId, mahasiswaId: mhsAktifId, status: 'unknown', durasiMangkir: 100 })
+      .returning({ id: presensi.id });
+    await db.insert(ketidakhadiranMahasiswa).values({
+      mahasiswaId: mhsAktifId,
+      tanggal: '2025-09-01',
+      sumber: 'BAP',
+      sumberId: pres.id,
+      status: 'UNKNOWN',
+      durasiMenit: 100,
+      isVerified: false,
+    });
+
+    const [admin] = await db.select({ id: users.id }).from(users).limit(1);
+    await expect(
+      VerifikasiUnknownService.verify({
+        sumber: 'BAP',
+        sumberId: pres.id,
+        statusKonfirmasi: 'CUTI',
+        adminUserId: admin?.id ?? 1,
+      }),
+    ).rejects.toThrow(/cuti/i);
+  });
+});
