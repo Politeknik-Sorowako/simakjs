@@ -11,6 +11,7 @@ import {
   mataKuliah,
   pasalPelanggaran,
   pelanggaran,
+  periodeAkademik,
   programStudi,
   users,
 } from '../models/schema';
@@ -19,6 +20,7 @@ import { db } from '../utils/db';
 import { JENIS_FULL_DAY, JENIS_KOMPEN, type JenisKompen } from './kompensasi-manual.service';
 import { PelanggaranService } from './pelanggaran.service';
 import { SystemParameterService } from './system-parameter.service';
+import { YudisiumService } from './yudisium.service';
 
 export interface ImportResult {
   successCount: number;
@@ -1471,6 +1473,423 @@ export class CsvImportService {
         result.errors.push({
           line: lineNum,
           error: `Gagal menyimpan pembayaran kompensasi NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Impor nilai legacy yang hanya berisi huruf mutu (NIM,KodeMatakuliah,Nilai).
+   * Membutuhkan master mahasiswa, mata kuliah, dan periode akademik sudah tersedia.
+   * Kelas legacy akan dibuat otomatis per (mata kuliah, periode) bila belum ada.
+   * Duplikat (NIM,KodeMatakuliah) dalam satu file: entri terakhir menang.
+   */
+  static async importNilaiLegacy(
+    csvText: string,
+    periodeId: string,
+    options: { namaKelas?: string } = {},
+  ): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const nimIdx = headers.indexOf('nim');
+    let kodeIdx = headers.indexOf('kodematakuliah');
+    if (kodeIdx === -1) kodeIdx = headers.indexOf('kode_mata_kuliah');
+    if (kodeIdx === -1) kodeIdx = headers.indexOf('kode');
+    const nilaiIdx = headers.indexOf('nilai');
+
+    if (nimIdx === -1 || kodeIdx === -1 || nilaiIdx === -1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom header: NIM,KodeMatakuliah,Nilai' }],
+      };
+    }
+
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
+
+    const periodeVal = periodeId.trim();
+    const [periode] = await db
+      .select({ id: periodeAkademik.id })
+      .from(periodeAkademik)
+      .where(eq(periodeAkademik.id, periodeVal))
+      .limit(1);
+    if (!periode) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: `Periode akademik "${periodeVal}" tidak ditemukan.` }],
+      };
+    }
+
+    const namaKelas = (options.namaKelas ?? 'LEGACY').trim() || 'LEGACY';
+
+    // Pre-pass: validasi kolom + dedupe (NIM|Kode), entri terakhir menang.
+    const deduped = new Map<string, { line: number; nim: string; kode: string; huruf: string }>();
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) {
+        result.errors.push({ line: lineNum, error: 'Jumlah kolom tidak sesuai header.' });
+        continue;
+      }
+      const nimVal = (row[nimIdx] ?? '').trim();
+      const kodeVal = (row[kodeIdx] ?? '').trim();
+      const hurufVal = (row[nilaiIdx] ?? '').trim().toUpperCase();
+      if (!nimVal || !kodeVal || !hurufVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM, KodeMatakuliah, dan Nilai wajib diisi.' });
+        continue;
+      }
+      deduped.set(`${nimVal}|${kodeVal}`, { line: lineNum, nim: nimVal, kode: kodeVal, huruf: hurufVal });
+    }
+
+    const mhsCache = new Map<string, { id: number; programStudiId: number | null } | null>();
+    const kelasCache = new Map<string, { id: number; isLocked: boolean } | null>();
+
+    for (const entry of deduped.values()) {
+      const { line: lineNum, nim: nimVal, kode: kodeVal, huruf: hurufVal } = entry;
+      try {
+        let mhs = mhsCache.get(nimVal);
+        if (mhs === undefined) {
+          const [found] = await db
+            .select({ id: mahasiswa.id, programStudiId: mahasiswa.programStudiId })
+            .from(mahasiswa)
+            .where(eq(mahasiswa.nim, nimVal))
+            .limit(1);
+          mhs = found ?? null;
+          mhsCache.set(nimVal, mhs);
+        }
+        if (!mhs) {
+          throw new Error(`Mahasiswa dengan NIM "${nimVal}" tidak ditemukan.`);
+        }
+
+        // Resolusi mata kuliah: utamakan prodi mahasiswa, fallback kode unik global.
+        let mkId: number | null = null;
+        if (mhs.programStudiId !== null) {
+          const [mkByProdi] = await db
+            .select({ id: mataKuliah.id })
+            .from(mataKuliah)
+            .where(and(eq(mataKuliah.kode, kodeVal), eq(mataKuliah.programStudiId, mhs.programStudiId)))
+            .limit(1);
+          if (mkByProdi) mkId = mkByProdi.id;
+        }
+        if (mkId === null) {
+          const mkCandidates = await db
+            .select({ id: mataKuliah.id })
+            .from(mataKuliah)
+            .where(eq(mataKuliah.kode, kodeVal))
+            .limit(2);
+          if (mkCandidates.length === 1) {
+            mkId = mkCandidates[0].id;
+          } else if (mkCandidates.length > 1) {
+            throw new Error(`Mata kuliah "${kodeVal}" ambigu antar-program studi.`);
+          }
+        }
+        if (mkId === null) {
+          throw new Error(`Mata kuliah dengan kode "${kodeVal}" tidak ditemukan.`);
+        }
+
+        const kelasKey = `${mkId}|${namaKelas}`;
+        let kelas = kelasCache.get(kelasKey);
+        if (kelas === undefined) {
+          const [found] = await db
+            .select({ id: kelasKuliah.id, isLocked: kelasKuliah.isLocked })
+            .from(kelasKuliah)
+            .where(
+              and(
+                eq(kelasKuliah.mataKuliahId, mkId),
+                eq(kelasKuliah.periodeId, periodeVal),
+                eq(kelasKuliah.namaKelas, namaKelas),
+              ),
+            )
+            .limit(1);
+          if (found) {
+            kelas = found;
+          } else {
+            const [created] = await db
+              .insert(kelasKuliah)
+              .values({ mataKuliahId: mkId, periodeId: periodeVal, namaKelas })
+              .returning({ id: kelasKuliah.id, isLocked: kelasKuliah.isLocked });
+            kelas = created ?? null;
+          }
+          kelasCache.set(kelasKey, kelas);
+        }
+        if (!kelas) {
+          throw new Error(`Kelas "${namaKelas}" untuk MK "${kodeVal}" tidak dapat disiapkan.`);
+        }
+        if (kelas.isLocked) {
+          throw new Error(`Kelas "${namaKelas}" untuk MK "${kodeVal}" telah dikunci.`);
+        }
+
+        const [existingKrs] = await db
+          .select({ id: krs.id })
+          .from(krs)
+          .where(and(eq(krs.mahasiswaId, mhs.id), eq(krs.kelasKuliahId, kelas.id)))
+          .limit(1);
+
+        let krsId = existingKrs?.id ?? null;
+        if (krsId === null) {
+          const [created] = await db
+            .insert(krs)
+            .values({ mahasiswaId: mhs.id, kelasKuliahId: kelas.id, isApproved: true, useInGpa: true })
+            .returning({ id: krs.id });
+          krsId = created?.id ?? null;
+        }
+        if (krsId === null) {
+          throw new Error('Gagal menyiapkan KRS untuk nilai legacy.');
+        }
+
+        await YudisiumService.saveNilaiHurufLegacy(krsId, kelas.id, hurufVal);
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Normalisasi tanggal lahir legacy (banyak format) -> 'YYYY-MM-DD' atau null.
+   * Tidak memakai toISOString agar tidak bergeser hari karena timezone.
+   */
+  private static parseTanggalLahirLegacy(raw: string): string | null {
+    const value = String(raw ?? '').trim();
+    if (!value) return null;
+
+    const toIso = (year: number, month: number, day: number): string | null => {
+      if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+      return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    };
+
+    // Format murni angka dengan pemisah - atau /
+    const numeric = value.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
+    if (numeric) {
+      const a = parseInt(numeric[1], 10);
+      const b = parseInt(numeric[2], 10);
+      let year = parseInt(numeric[3], 10);
+      if (year < 100) year += year < 50 ? 2000 : 1900;
+      // Heuristik: salah satu >12 menandakan posisi hari; default MM-DD-YY.
+      const month = a > 12 ? b : a;
+      const day = a > 12 ? a : b;
+      return toIso(year, month, day);
+    }
+
+    // Format "1 Januari 2000"
+    const bulanMap: Record<string, number> = {
+      januari: 1,
+      februari: 2,
+      maret: 3,
+      april: 4,
+      mei: 5,
+      juni: 6,
+      juli: 7,
+      agustus: 8,
+      september: 9,
+      oktober: 10,
+      november: 11,
+      desember: 12,
+    };
+    const words = value.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{2,4})$/);
+    if (words) {
+      const day = parseInt(words[1], 10);
+      const month = bulanMap[words[2].toLowerCase()];
+      let year = parseInt(words[3], 10);
+      if (year < 100) year += year < 50 ? 2000 : 1900;
+      if (month) return toIso(year, month, day);
+    }
+
+    return null;
+  }
+
+  /**
+   * Impor mahasiswa legacy dari PRIBADI.csv (kolom nama_prodi/jenjang_prodi).
+   * `prodiMapByName` memetakan "nama prodi|jenjang" (lowercase) ke kode program studi.
+   */
+  static async importMahasiswaLegacy(csvText: string, prodiMapByName: Record<string, string>): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const nimIdx = headers.indexOf('nim');
+    const namaIdx = headers.indexOf('nama');
+    const prodiIdx = headers.indexOf('nama_prodi');
+    const jenjangIdx = headers.indexOf('jenjang_prodi');
+    const sexIdx = headers.indexOf('sex');
+    const tglLahirIdx = headers.indexOf('tgl_lahir');
+    const statusIdx = headers.indexOf('sta_mhs');
+    const angkatanIdx = headers.indexOf('no_ang');
+
+    if (nimIdx === -1 || namaIdx === -1 || prodiIdx === -1 || jenjangIdx === -1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom: NIM, Nama, nama_prodi, jenjang_prodi' }],
+      };
+    }
+
+    const prodis = await db.select({ id: programStudi.id, kode: programStudi.kode }).from(programStudi);
+    const kodeToId = new Map(prodis.map((p) => [p.kode.toLowerCase(), p.id]));
+
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
+
+      const nimVal = (row[nimIdx] ?? '').trim();
+      const namaVal = (row[namaIdx] ?? '').trim();
+      const prodiName = (row[prodiIdx] ?? '').trim();
+      const jenjangVal = (row[jenjangIdx] ?? '').trim();
+      if (!nimVal || !namaVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom NIM dan Nama wajib diisi.' });
+        continue;
+      }
+
+      const mapKey = `${prodiName.toLowerCase()}|${jenjangVal.toLowerCase()}`;
+      const prodiKode = prodiMapByName[mapKey] ?? prodiMapByName[prodiName.toLowerCase()];
+      const programStudiId = prodiKode ? kodeToId.get(prodiKode.toLowerCase()) : undefined;
+      if (!programStudiId) {
+        result.errors.push({ line: lineNum, error: `Program studi "${prodiName} (${jenjangVal})" tidak terpetakan.` });
+        continue;
+      }
+
+      const sexRaw = (row[sexIdx] ?? '').trim().toLowerCase();
+      const jenisKelamin = sexRaw.startsWith('perempuan') ? 'P' : 'L';
+      const statusRaw = (row[statusIdx] ?? '').trim().toLowerCase();
+      const status = statusRaw === 'lulus' ? 'lulus' : statusRaw === 'cuti' ? 'cuti' : 'aktif';
+      const angkatanRaw = angkatanIdx !== -1 ? (row[angkatanIdx] ?? '').trim() : '';
+      const angkatan = /^\d{4}$/.test(angkatanRaw) ? angkatanRaw : null;
+      const tanggalLahir = tglLahirIdx !== -1 ? this.parseTanggalLahirLegacy(row[tglLahirIdx] ?? '') : null;
+
+      try {
+        const [existing] = await db
+          .select({ id: mahasiswa.id })
+          .from(mahasiswa)
+          .where(eq(mahasiswa.nim, nimVal))
+          .limit(1);
+
+        if (existing) {
+          await db
+            .update(mahasiswa)
+            .set({ nama: namaVal, programStudiId, jenisKelamin, status, angkatan, tanggalLahir })
+            .where(eq(mahasiswa.id, existing.id));
+          result.successCount++;
+          continue;
+        }
+
+        const email = `${nimVal}@student.politekniksorowako.ac.id`;
+        await db.insert(mahasiswa).values({
+          nim: nimVal,
+          nama: namaVal,
+          email,
+          programStudiId,
+          jenisKelamin,
+          status,
+          angkatan,
+          tanggalLahir,
+        });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan NIM "${nimVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Impor mata kuliah legacy dari KODEMATAKULIAH.csv untuk satu program studi.
+   * Kolom: KodeMatakuliah, Matakuliah, Sks.
+   */
+  static async importMataKuliahLegacy(csvText: string, programStudiId: number): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    if (rows.length <= 1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV file is empty or only has headers' }],
+      };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().trim());
+    const kodeIdx = headers.indexOf('kodematakuliah');
+    const namaIdx = headers.indexOf('matakuliah');
+    const sksIdx = headers.indexOf('sks');
+
+    if (kodeIdx === -1 || namaIdx === -1 || sksIdx === -1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom: KodeMatakuliah, Matakuliah, Sks' }],
+      };
+    }
+
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      if (row.length < headers.length) continue;
+
+      const kodeVal = (row[kodeIdx] ?? '').trim();
+      const namaVal = (row[namaIdx] ?? '').trim();
+      const sksVal = parseInt((row[sksIdx] ?? '').trim(), 10);
+      if (!kodeVal || !namaVal) {
+        result.errors.push({ line: lineNum, error: 'Kolom KodeMatakuliah dan Matakuliah wajib diisi.' });
+        continue;
+      }
+      if (!Number.isFinite(sksVal) || sksVal <= 0) {
+        result.errors.push({ line: lineNum, error: `SKS tidak valid untuk kode "${kodeVal}".` });
+        continue;
+      }
+
+      try {
+        const [existing] = await db
+          .select({ id: mataKuliah.id })
+          .from(mataKuliah)
+          .where(and(eq(mataKuliah.kode, kodeVal), eq(mataKuliah.programStudiId, programStudiId)))
+          .limit(1);
+
+        if (existing) {
+          await db.update(mataKuliah).set({ nama: namaVal, sksTotal: sksVal }).where(eq(mataKuliah.id, existing.id));
+          result.successCount++;
+          continue;
+        }
+
+        await db.insert(mataKuliah).values({
+          programStudiId,
+          kode: kodeVal,
+          nama: namaVal,
+          sksTotal: sksVal,
+        });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan MK "${kodeVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
         });
       }
     }

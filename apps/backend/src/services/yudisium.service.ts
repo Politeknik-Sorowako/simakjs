@@ -932,6 +932,59 @@ export class YudisiumService {
     });
   }
 
+  /**
+   * Menyimpan nilai akhir dari huruf mutu legacy (tanpa nilai angka asal).
+   * Huruf dipetakan ke bobot indeks & rentang konversi global; `nilaiAngka` diisi
+   * midpoint rentang agar IPS/IPK (Σ indeks×sks / Σ sks) tetap konsisten.
+   * TIDAK menghapus nilai komponen/sub di bawahnya (hierarki non-destruktif).
+   */
+  static async saveNilaiHurufLegacy(krsId: number, kelasKuliahId: number, hurufRaw: string) {
+    const huruf = String(hurufRaw ?? '')
+      .trim()
+      .toUpperCase();
+    if (!huruf) {
+      throw new Error('Huruf mutu tidak boleh kosong.');
+    }
+
+    const foundKelas = await db.query.kelasKuliah.findFirst({
+      where: eq(kelasKuliah.id, kelasKuliahId),
+    });
+    if (!foundKelas) {
+      throw new Error('Kelas kuliah tidak ditemukan.');
+    }
+    if (foundKelas.isLocked) {
+      throw new Error('Nilai kelas ini telah dikunci dan tidak dapat diubah.');
+    }
+
+    const allRules = await db.select().from(konversiNilai);
+    const activeRules = allRules.filter((r) => r.programStudiId === null) as KonversiRule[];
+    const rule = activeRules.find((r) => String(r.nilaiHuruf).trim().toUpperCase() === huruf);
+    if (!rule) {
+      throw new Error(`Huruf mutu "${huruf}" tidak ditemukan pada aturan konversi nilai global (/khs).`);
+    }
+
+    const min = parseFloat(String(rule.nilaiMin));
+    const max = parseFloat(String(rule.nilaiMax));
+    const midpoint = Number.isFinite(min) && Number.isFinite(max) ? parseFloat(((min + max) / 2).toFixed(2)) : 0;
+    const indeks = parseFloat(String(rule.bobotIndeks));
+
+    const [updatedKrs] = await db
+      .update(krs)
+      .set({
+        nilaiAngka: String(midpoint),
+        nilaiHuruf: huruf,
+        nilaiIndeks: String(indeks),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(krs.id, krsId), eq(krs.kelasKuliahId, kelasKuliahId)))
+      .returning();
+
+    if (!updatedKrs) {
+      throw new Error('KRS mahasiswa tidak ditemukan pada kelas ini.');
+    }
+    return updatedKrs;
+  }
+
   static async lockKelas(kelasKuliahId: number) {
     return await db.transaction(async (tx) => {
       const [updated] = await tx
