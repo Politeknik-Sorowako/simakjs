@@ -1108,6 +1108,18 @@ export const accountActivations = pgTable('account_activations', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const emailVerificationCodes = pgTable('email_verification_codes', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  email: varchar('email', { length: 255 }).notNull(),
+  codeHash: varchar('code_hash', { length: 255 }).notNull(),
+  context: varchar('context', { length: 50 }).notNull(), // 'activation' | 'password_reset'
+  attempts: integer('attempts').default(0).notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
+  resendAfter: timestamp('resend_after').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const kurikulum = pgTable('kurikulum', {
   id: serial('id').primaryKey(),
   kode: varchar('kode', { length: 50 }).notNull().unique(),
