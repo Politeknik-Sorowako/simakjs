@@ -199,7 +199,11 @@ export class EmailOtpService {
     }
 
     const inputHash = await hashOtp(cleanCode);
-    if (inputHash !== record.codeHash) {
+    const hashA = Buffer.from(inputHash, 'hex');
+    const hashB = Buffer.from(record.codeHash, 'hex');
+    const isMatch = hashA.length === hashB.length && crypto.timingSafeEqual(hashA, hashB);
+
+    if (!isMatch) {
       const newAttempts = record.attempts + 1;
       if (newAttempts >= MAX_ATTEMPTS) {
         await db.delete(emailVerificationCodes).where(eq(emailVerificationCodes.id, record.id));
