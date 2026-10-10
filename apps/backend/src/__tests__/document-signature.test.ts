@@ -104,6 +104,33 @@ describe('Document Signature (TTE Fase 1)', () => {
     expect(body2.verifyUuid).toBe(body1.verifyUuid);
   });
 
+  it('idempoten lintas pemanggil: admin lalu mahasiswa menghasilkan verifyUuid stabil', async () => {
+    const { mhsId, periodeId } = await seedKhs();
+    const adminToken = await getAuthToken('admin-idem-cross@test.com', 'admin');
+
+    const res1 = await app.handle(
+      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    const body1 = (await res1.json()) as { verifyUuid: string; docHash: string };
+
+    // Pemanggil berbeda (mahasiswa pemilik KHS) tidak boleh mengubah snapshot,
+    // sehingga tidak mencabut QR yang sudah tercetak.
+    const mhsToken = await getAuthToken('student-sign@test.com', 'mahasiswa');
+    const res2 = await app.handle(
+      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(res2.status).toBe(200);
+    const body2 = (await res2.json()) as { verifyUuid: string; docHash: string };
+    expect(body2.verifyUuid).toBe(body1.verifyUuid);
+    expect(body2.docHash).toBe(body1.docHash);
+  });
+
   it('verifikasi publik VALID dengan identitas ter-mask tanpa auth', async () => {
     const { mhsId, periodeId } = await seedKhs();
     const adminToken = await getAuthToken('admin-sign2@test.com', 'admin');

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
 import QRCode from 'qrcode';
 import { documentSignatures, programStudi, userProdiScopes, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
@@ -24,8 +24,6 @@ export type DocType = 'KHS' | 'TRANSKRIP';
 export interface SignKhsInput {
   mhsId: number;
   periodeId: string;
-  /** User yang memicu penandatanganan (mahasiswa/staff) — hanya untuk jejak audit. */
-  requestedByUserId: number | null;
 }
 
 export interface SignResult {
@@ -59,11 +57,6 @@ interface ResolvedSigner {
   jabatan: string | null;
 }
 
-interface SnapshotExtra {
-  repository: string;
-  requestedByUserId: number | null;
-}
-
 /**
  * Service TTE Fase 1 (QR Signed-Hash). Semua method statis.
  *
@@ -93,7 +86,7 @@ export class DocumentSignatureService {
 
   /** Menandatangani KHS secara idempoten + menghasilkan QR data URL. */
   static async signKhs(input: SignKhsInput): Promise<SignResult> {
-    const { mhsId, periodeId, requestedByUserId } = input;
+    const { mhsId, periodeId } = input;
     const refId = `khs:${mhsId}:${periodeId}`;
 
     const mhs = await MahasiswaService.getById(mhsId);
@@ -117,7 +110,10 @@ export class DocumentSignatureService {
 
     const signer = await DocumentSignatureService.resolveSigner(mhs.programStudiId);
 
-    const extra: SnapshotExtra = { repository: TENANT_SIMAK, requestedByUserId };
+    // Catatan: `requestedByUserId` SENGAJA tidak dimasukkan ke payload yang
+    // di-hash. Nilai itu berubah tiap pemanggil, sehingga memasukkannya akan
+    // mengubah docHash saat dokumen dipicu pengguna berbeda dan mencabut tanda
+    // tangan yang sudah dicetak. Jejak pemanggil tetap tercatat oleh audit plugin.
     const payload: Record<string, unknown> = {
       tenant: TENANT_SIMAK,
       docType: 'KHS',
@@ -137,7 +133,7 @@ export class DocumentSignatureService {
       nilaiSikap: nilaiSikap?.narasi ?? null,
       mataKuliah,
       signer: { nama: signer.nama, jabatan: signer.jabatan },
-      audit: extra,
+      audit: { repository: TENANT_SIMAK },
     };
 
     const { activeKid, keys } = getSigningKeyConfig();
@@ -268,13 +264,16 @@ export class DocumentSignatureService {
         .where(eq(userProdiScopes.programStudiId, programStudiId));
       const scopedUserIds = new Set(scopedRows.map((s) => s.userId));
 
-      const candidates = candidateIds.length > 0 ? candidateIds : [];
-      if (candidates.length === 0) return fallback;
+      if (candidateIds.length === 0) return fallback;
 
+      // `orderBy` menjaga pilihan penandatangan deterministik saat ada beberapa
+      // Kaprodi — jika tidak, signer bisa berubah antar request dan membuat
+      // docHash/QR tidak stabil.
       const kaprodiUsers = await db
         .select({ id: users.id, nama: users.nama, isGlobalScope: users.isGlobalScope, prodiIds: users.prodiIds })
         .from(users)
-        .where(and(inArray(users.id, candidates), eq(users.isActive, true)));
+        .where(and(inArray(users.id, candidateIds), eq(users.isActive, true)))
+        .orderBy(asc(users.id));
 
       for (const u of kaprodiUsers) {
         const inProdiIds = Array.isArray(u.prodiIds) && u.prodiIds.includes(programStudiId);
@@ -283,11 +282,8 @@ export class DocumentSignatureService {
           return { userId: u.id, nama: u.nama, jabatan: prodi ? `Kaprodi ${prodi.nama}` : 'Kaprodi' };
         }
       }
-      // Tidak ada kaprodi ter-scope; pakai kaprodi mana pun yang aktif bila ada.
-      if (kaprodiUsers.length > 0) {
-        const first = kaprodiUsers[0];
-        return { userId: first.id, nama: first.nama, jabatan: prodi ? `Kaprodi ${prodi.nama}` : 'Kaprodi' };
-      }
+      // Tidak ada Kaprodi yang ter-scope pada prodi ini: JANGAN memakai Kaprodi
+      // prodi lain (menyesatkan pada dokumen resmi) — pakai label institusi.
     } catch {
       // Abaikan kegagalan lookup; fallback ke label institusi.
     }

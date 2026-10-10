@@ -1,6 +1,7 @@
 import { DocumentSignatureService } from '../services/document-signature.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
+import { getVerifyBaseUrl } from '../utils/document-signing';
 import { hasRole } from '../utils/role';
 import { type AuthContext } from '../utils/types';
 
@@ -43,7 +44,7 @@ export class DocumentSignatureController {
     }
 
     try {
-      return await DocumentSignatureService.signKhs({ mhsId, periodeId, requestedByUserId: user.id });
+      return await DocumentSignatureService.signKhs({ mhsId, periodeId });
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal menandatangani KHS.' };
@@ -81,7 +82,7 @@ export class DocumentSignatureController {
       if (!row) return null;
       return {
         verifyUuid: row.verifyUuid,
-        verifyUrl: `${process.env.VERIFY_BASE_URL || 'https://verify.politekniksorowako.ac.id'}/v/${row.verifyUuid}`,
+        verifyUrl: `${getVerifyBaseUrl()}/v/${row.verifyUuid}`,
         docHash: row.docHash,
         kid: row.kid,
         signedAt: row.signedAt.toISOString(),
