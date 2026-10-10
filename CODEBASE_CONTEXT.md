@@ -20,6 +20,7 @@ Sistem ini mencakup siklus akademik end-to-end:
 - **Evaluasi Sistem & Feedback Pengguna**
 - **Audit Log & Riwayat Aktivitas Sistem**
 - **Integrasi PDDIKTI Neo Feeder**
+- **Tanda Tangan Elektronik (TTE) & Verifikasi Dokumen** (QR Signed-Hash internal Fase 1 untuk KHS + halaman publik verifikasi QR)
 
 ---
 
@@ -51,9 +52,9 @@ simakjs/
 │   │   ├── src/
 │   │   │   ├── app.ts               # Inisialisasi Elysia app, plugin, CORS, & Swagger
 │   │   │   ├── index.ts             # Entry point runner Bun
-│   │   │   ├── controllers/         # Handler HTTP request (53 file controller)
-│   │   │   ├── services/            # Logika bisnis & query Drizzle (55 file service)
-│   │   │   ├── routes/              # Definisi endpoint Elysia (54 file route)
+│   │   │   ├── controllers/         # Handler HTTP request (57 file controller)
+│   │   │   ├── services/            # Logika bisnis & query Drizzle (63 file service)
+│   │   │   ├── routes/              # Definisi endpoint Elysia (58 file route)
 │   │   │   ├── models/
 │   │   │   │   └── schema.ts        # Skema Drizzle ORM (tabel, enum, relasi DB)
 │   │   │   ├── middlewares/         # Auth & context middlewares
@@ -71,7 +72,7 @@ simakjs/
 │       │   ├── App.tsx              # Router utama & provider wrapper
 │       │   ├── index.css            # Custom CSS tokens & utilities
 │       │   ├── components/          # Komponen UI (Layout, Sidebar, Modal, UI primitives, Pagination)
-│       │   ├── controllers/         # Signal/resource wrappers memanggil Eden API (45 file)
+│       │   ├── controllers/         # Signal/resource wrappers memanggil Eden API (48 file)
 │       │   ├── routes/              # Halaman UI / Views per fitur
 │       │   ├── contexts/            # Reactivity contexts (Auth, Theme, Toast, Workspace)
 │       │   ├── hooks/               # Custom hooks SolidJS (e.g. usePagination)
@@ -152,6 +153,7 @@ Seluruh entitas database dikelola melalui Drizzle ORM pada file [schema.ts](file
    - `tagihan`, `transaksiPembayaran`, `skemaTarif`: Modul Keuangan & Pembayaran UKT/SPP.
    - `pengajuanCuti`: Pengajuan izin cuti akademik mahasiswa.
    - `systemFeedbacks`: Umpan balik dan evaluasi pengguna terhadap kinerja sistem (`/evaluasi-sistem`).
+   - `documentSignatures`: TTE Fase 1 — tanda tangan QR signed-hash dokumen cetak (KHS, dst.). Multi-tenant; menyimpan `docHash` (SHA-256 kanonik snapshot payload), `signature` (HMAC-SHA256 dari `<kid>:<docHash>`), `kid`, `verifyUuid` unik, identitas penandatangan, `payloadSnapshot` (jsonb), dan `revokedAt`.
 
 ---
 
@@ -201,6 +203,14 @@ Seluruh entitas database dikelola melalui Drizzle ORM pada file [schema.ts](file
 ### I. Pengiriman Email (Resend) & Sender `EMAIL_FROM`
 - Seluruh email transaksional (aktivasi akun, reset password) dikirim via **Resend** (`resend` v6.16.0) dengan sender terpusat `getEmailFrom()` di `apps/backend/src/utils/email.ts`.
 - Sender default `SIMAK <postman@politekniksorowako.ac.id>` (domain kampus terverifikasi di dashboard Resend); dapat di-override via env `EMAIL_FROM`. Wajib diset eksplisit di setiap env deploy (staging/prod). DILARANG hardcode `from` pada pemanggilan email.
+
+### J. Tanda Tangan Elektronik (TTE) Fase 1 — QR Signed-Hash Internal
+- Dokumen cetak (prioritas KHS) ditandatangani digital memakai skema hash-tertanda internal: `docHash = sha256Hex(canonicalJson(payloadSnapshot))` dan `signature = HMAC-SHA256(secretAktif, "<kid>:<docHash>")`. Seluruh logika terpusat di `apps/backend/src/services/document-signature.service.ts` + `apps/backend/src/utils/document-signing.ts`.
+- **Idempoten**: penandatanganan ulang dokumen yang sama (`tenant + docType + refId`) mengembalikan signature yang sudah ada. Field volatil (mis. `requestedByUserId`) sengaja **tidak** di-hash agar QR tercetak stabil lintas pemanggil.
+- **Verifikasi publik** `GET /document-signatures/verify/:uuid` (tanpa sesi, terdaftar di `PUBLIC_NO_SESSION_PATHS` di `app.ts`) me-recompute HMAC dan mengembalikan `VALID` / `REVOKED`(HTTP 410) / `TAMPERED` / `NOT_FOUND`(HTTP 404); PII pada respons publik di-mask (`maskNama`→`A***a`, `maskNim`→`***1234`).
+- **Penandatangan KHS**: staff `admin/super_admin/prodi/kaprodi`; server me-resolusi signer otoritatif (Kaprodi prodi mahasiswa, fallback label pimpinan). Mahasiswa boleh mencetak KHS sendiri. Endpoint terproteksi: `POST /document-signatures/khs/:mhsId/:periodeId/sign`, `GET /document-signatures/khs/:mhsId/:periodeId`, `POST /document-signatures/:uuid/revoke`.
+- **Kunci & domain**: satu kunci kampus HMAC-SHA256 ber-versi via `kid` (env `SIGN_HMAC_KEYS` JSON, `SIGN_ACTIVE_KID`, default `k1`). Domain verifikasi final `https://verify.politekniksorowako.ac.id` (env `VERIFY_BASE_URL`); QR mengarah ke `/v/:uuid`; halaman publik frontend `/verifikasi/:uuid` & `/v/:uuid`.
+- Dirancang agar mudah diekstrak menjadi `sign-service` bersama SIMAK+ERP (pola Strangler) pada fase berikutnya. Migrasi `0079_document_signatures.sql`; dependensi `qrcode` (backend & frontend).
 
 ---
 
