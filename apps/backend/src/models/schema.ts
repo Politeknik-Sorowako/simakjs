@@ -2993,6 +2993,33 @@ export const userProdiScopes = pgTable(
   (table) => [unique('user_prodi_scopes_user_prodi_unique').on(table.userId, table.programStudiId)],
 );
 
+// TTE Fase 1 (QR Signed-Hash): menyimpan jejak tanda tangan dokumen cetak
+// (mis. KHS). `docHash` = SHA-256 kanonik snapshot; `signature` = HMAC-SHA256
+// dari `<kid>:<docHash>` dengan kunci kampus aktif; `verifyUuid` dipakai QR
+// untuk verifikasi publik. Bersifat multi-tenant agar dapat dipakai ERP kelak.
+export const documentSignatures = pgTable(
+  'document_signatures',
+  {
+    id: serial('id').primaryKey(),
+    tenant: varchar('tenant', { length: 32 }).notNull().default('simak'),
+    docType: varchar('doc_type', { length: 32 }).notNull(),
+    refId: varchar('ref_id', { length: 128 }).notNull(),
+    docHash: varchar('doc_hash', { length: 64 }).notNull(),
+    signature: text('signature').notNull(),
+    kid: varchar('kid', { length: 32 }).notNull(),
+    verifyUuid: uuid('verify_uuid').notNull().unique().defaultRandom(),
+    signerUserId: integer('signer_user_id').references(() => users.id, { onDelete: 'set null' }),
+    signerNama: varchar('signer_nama', { length: 255 }).notNull(),
+    signerJabatan: varchar('signer_jabatan', { length: 100 }),
+    payloadSnapshot: jsonb('payload_snapshot').$type<Record<string, unknown>>().notNull(),
+    signedAt: timestamp('signed_at').defaultNow().notNull(),
+    revokedAt: timestamp('revoked_at'),
+    revokedBy: integer('revoked_by').references(() => users.id, { onDelete: 'set null' }),
+    revokeReason: text('revoke_reason'),
+  },
+  (table) => [index('document_signatures_ref_idx').on(table.tenant, table.docType, table.refId)],
+);
+
 export const roleGroupsRelations = relations(roleGroups, ({ many }) => ({
   permissions: many(roleGroupPermissions),
 }));
