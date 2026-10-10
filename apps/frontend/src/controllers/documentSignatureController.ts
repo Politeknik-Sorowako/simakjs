@@ -1,4 +1,4 @@
-import { fetchApi } from '../utils/api';
+import { API_URL, fetchApi } from '../utils/api';
 
 export interface SignatureInfo {
   status: 'VALID' | 'REVOKED' | 'TAMPERED' | 'NOT_FOUND';
@@ -23,12 +23,25 @@ export interface SignKhsResult {
   signedAt: string;
   signerNama: string;
   signerJabatan: string | null;
-  qrDataUrl: string;
+  /** QR hanya disertakan endpoint sign; `getByRef` tidak mengembalikannya. */
+  qrDataUrl?: string;
 }
 
 export const documentSignatureController = {
-  verifyPublic: (uuid: string) =>
-    fetchApi<SignatureInfo>(`/document-signatures/verify/${uuid}`, { requireAuth: false }),
+  /**
+   * Verifikasi publik. Endpoint mengembalikan HTTP 404 (NOT_FOUND) dan 410
+   * (REVOKED) dengan status di body. `fetchApi` melempar pada respons non-2xx
+   * sehingga status REVOKED tidak akan terbaca — baca body secara langsung.
+   */
+  verifyPublic: async (uuid: string): Promise<SignatureInfo> => {
+    const res = await fetch(`${API_URL}/document-signatures/verify/${uuid}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    const data = (await res.json().catch(() => null)) as SignatureInfo | null;
+    if (data && typeof data.status === 'string') return data;
+    return { status: 'NOT_FOUND' };
+  },
   signKhs: (mhsId: number, periodeId: string) =>
     fetchApi<SignKhsResult>(`/document-signatures/khs/${mhsId}/${periodeId}/sign`, { method: 'POST' }),
   getByRef: (mhsId: number, periodeId: string) =>

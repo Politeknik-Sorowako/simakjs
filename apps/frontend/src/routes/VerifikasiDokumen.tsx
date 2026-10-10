@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from '@solidjs/router';
 import { createResource, createSignal, For, type JSX, Match, Show, Switch } from 'solid-js';
 import { Button } from '../components/ui/Button';
-import { documentSignatureController } from '../controllers/documentSignatureController';
+import { documentSignatureController, type SignatureInfo } from '../controllers/documentSignatureController';
 
 function extractKode(raw: string): string {
   const m = raw.trim().match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
@@ -14,11 +14,9 @@ export default function VerifikasiDokumen() {
   const [input, setInput] = createSignal('');
   const [currentUuid, setCurrentUuid] = createSignal(params.uuid);
 
-  const [result] = createResource(currentUuid, async (uuid) => {
+  const [result] = createResource(currentUuid, async (uuid): Promise<SignatureInfo | null> => {
     if (!uuid) return null;
-    return documentSignatureController.verifyPublic(uuid).catch(() => ({
-      status: 'NOT_FOUND' as const,
-    }));
+    return documentSignatureController.verifyPublic(uuid).catch((): SignatureInfo => ({ status: 'NOT_FOUND' }));
   });
 
   const submit = () => {
@@ -75,7 +73,7 @@ export default function VerifikasiDokumen() {
             </div>
           }
         >
-          <Match when={result()?.status === 'VALID'}>
+          <Match when={result()?.status === 'VALID' ? result() : undefined}>
             {(res) => (
               <ResultCard
                 type="success"
