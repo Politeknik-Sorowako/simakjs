@@ -88,6 +88,7 @@ const ProfilLulusan = lazy(() => import('./routes/ProfilLulusan'));
 const ProgramStudi = lazy(() => import('./routes/ProgramStudi'));
 const ProtocolHandler = lazy(() => import('./routes/ProtocolHandler'));
 const RombelEnroll = lazy(() => import('./routes/RombelEnroll'));
+const VerifikasiDokumen = lazy(() => import('./routes/VerifikasiDokumen'));
 const Rps = lazy(() => import('./routes/Rps'));
 const LaporanAkademik = lazy(() => import('./routes/reports/LaporanAkademik'));
 const LaporanBKD = lazy(() => import('./routes/reports/LaporanBKD'));
@@ -166,6 +167,8 @@ function AppContent() {
           <Route path="/auth/google/callback" component={GoogleCallback} />
           <Route path="/protocol" component={ProtocolHandler} />
           <Route path="/rombel/enroll/:token" component={RombelEnroll} />
+          <Route path="/verifikasi/:uuid" component={VerifikasiDokumen} />
+          <Route path="/v/:uuid" component={VerifikasiDokumen} />
 
           {/* Protected Routes */}
           <Route
