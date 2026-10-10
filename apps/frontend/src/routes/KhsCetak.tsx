@@ -1,6 +1,7 @@
 import { useParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
+import { documentSignatureController, type SignKhsResult } from '../controllers/documentSignatureController';
 import { type KhsResponse, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
@@ -38,6 +39,25 @@ export default function KhsCetak() {
         };
       } catch {
         return null;
+      }
+    },
+  );
+
+  const [signature] = createResource(
+    () => {
+      const mhsId = Number(params.mhsId);
+      const periodeId = params.periodeId || '';
+      if (!mhsId || !periodeId) return null;
+      return { mhsId, periodeId };
+    },
+    async (target): Promise<SignKhsResult | null> => {
+      if (!target) return null;
+      try {
+        // Idempoten: server mengembalikan tanda tangan yang sama bila snapshot tidak berubah.
+        return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
+      } catch {
+        // fallback ke tanda tangan yang sudah ada (mis. mahasiswa tanpa izin tulis).
+        return documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
       }
     },
   );
@@ -195,9 +215,14 @@ export default function KhsCetak() {
               <div class="mt-12 grid grid-cols-2 gap-4 text-xs text-secondary-700">
                 <div class="text-center">
                   <p>Mengetahui,</p>
-                  <p>Kaprodi / Pimpinan</p>
+                  <p>{signature()?.signerJabatan ? signature()?.signerJabatan : 'Kaprodi / Pimpinan'}</p>
                   <div class="h-16" />
-                  <p class="font-bold underline">.........................................................</p>
+                  <p class="font-bold underline">
+                    {signature()?.signerNama ?? '.........................................................'}
+                  </p>
+                  <Show when={signature()?.signerJabatan}>
+                    <p class="mt-1 text-secondary-500">{signature()?.signerJabatan}</p>
+                  </Show>
                 </div>
                 <div class="text-center">
                   <p>Mahasiswa</p>
@@ -205,6 +230,23 @@ export default function KhsCetak() {
                   <p class="font-bold underline">{data().nama || '...........................'}</p>
                 </div>
               </div>
+
+              <Show when={signature()}>
+                {(sig) => (
+                  <div class="mt-6 flex flex-col items-center border-t border-secondary-200 pt-4 text-center text-xs text-secondary-500">
+                    <Show when={sig().qrDataUrl}>
+                      <img src={sig().qrDataUrl} width="128" height="128" alt="QR verifikasi dokumen" class="mb-2" />
+                    </Show>
+                    <p class="font-semibold text-secondary-700">Dokumen ditandatangani digital (QR Signed-Hash)</p>
+                    <p>
+                      Ditandatangani: {sig().signerNama}
+                      {sig().signerJabatan ? ` • ${sig().signerJabatan}` : ''}
+                    </p>
+                    <p>Verifikasi: {sig().verifyUrl}</p>
+                    <p class="font-mono">Hash: {sig().docHash}</p>
+                  </div>
+                )}
+              </Show>
             </div>
           )}
         </Show>
