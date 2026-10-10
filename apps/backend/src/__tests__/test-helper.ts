@@ -21,6 +21,7 @@ import {
   cpmk,
   cpmkCpl,
   documentRequirements,
+  documentSignatures,
   dosen,
   dosenPengajarKelas,
   feedbackComments,
@@ -196,6 +197,7 @@ export async function clearDatabase() {
   await db.delete(userRoles);
   await db.delete(passwordResets);
   await db.delete(systemSettings);
+  await db.delete(documentSignatures);
   await db.delete(users);
 }
 

@@ -44,6 +44,9 @@ services:
       GOOGLE_ALLOWED_DOMAINS: ${GOOGLE_ALLOWED_DOMAINS:-politekniksorowako.ac.id}
       RESEND_API_KEY: ${RESEND_API_KEY}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY}
+      SIGN_HMAC_KEYS: ${SIGN_HMAC_KEYS}
+      SIGN_ACTIVE_KID: ${SIGN_ACTIVE_KID:-k1}
+      VERIFY_BASE_URL: ${VERIFY_BASE_URL:-https://verify.politekniksorowako.ac.id}
     volumes:
       - ./apps/backend:/app/apps/backend
       - /app/apps/backend/node_modules
