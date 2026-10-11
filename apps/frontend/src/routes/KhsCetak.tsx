@@ -1,4 +1,5 @@
 import { useParams } from '@solidjs/router';
+import QRCode from 'qrcode';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
 import { documentSignatureController, type SignKhsResult } from '../controllers/documentSignatureController';
@@ -12,6 +13,20 @@ interface PrintData {
   prodi: string;
   periodeId: string;
   khs: KhsResponse;
+}
+
+/**
+ * Endpoint `getByRef` hanya mengembalikan metadata tanda tangan (tanpa QR),
+ * sedangkan `signKhs` menyertakan `qrDataUrl`. Regenerasi QR di klien dari
+ * `verifyUrl` agar cetakan berikutnya tetap menampilkan QR verifikasi.
+ */
+async function ensureQrDataUrl(sig: SignKhsResult): Promise<SignKhsResult> {
+  if (sig.qrDataUrl || !sig.verifyUrl) return sig;
+  try {
+    return { ...sig, qrDataUrl: await QRCode.toDataURL(sig.verifyUrl, { margin: 1, width: 240 }) };
+  } catch {
+    return sig;
+  }
 }
 
 export default function KhsCetak() {
@@ -58,7 +73,7 @@ export default function KhsCetak() {
       if (!target) return null;
       // Baca dulu tanda tangan yang sudah ada (idempoten; tanpa menerbitkan baru).
       const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
-      if (existing) return existing;
+      if (existing) return ensureQrDataUrl(existing);
       // Penerbitan baru hanya oleh Kaprodi/super_admin — selain itu cetak tanpa QR
       // (banner info di bawah memberi tahu pemirsa bahwa dokumen belum ditandatangani).
       if (!canSign()) return null;
