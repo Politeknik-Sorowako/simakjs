@@ -236,16 +236,15 @@ export default function KhsCetak() {
                 <div class="text-center">
                   <p>Mengetahui,</p>
                   <p>{signature()?.signerJabatan ? signature()?.signerJabatan : 'Kaprodi / Pimpinan'}</p>
-                  <Show when={signature()?.qrDataUrl}>
+                  <Show when={signature()?.qrDataUrl} fallback={<div class="h-16" />}>
                     <img
                       src={signature()?.qrDataUrl}
                       width="128"
                       height="128"
                       alt="QR verifikasi dokumen"
-                      class="mx-auto my-2"
+                      class="mx-auto mt-2 mb-1"
                     />
                   </Show>
-                  <div class="h-16" />
                   <p class="font-bold underline">
                     {signature()?.signerNama ?? '.........................................................'}
                   </p>
