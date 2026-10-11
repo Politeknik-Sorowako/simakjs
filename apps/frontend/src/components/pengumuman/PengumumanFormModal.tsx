@@ -5,6 +5,7 @@ import {
   pengumumanController,
   TargetOptions,
 } from '../../controllers/pengumumanController';
+import { getAbsoluteStorageUrl } from '../../utils/api';
 import { MultiSearchableOption, MultiSearchableSelect } from '../ui/MultiSearchableSelect';
 import { RichMarkdownEditor } from '../ui/RichMarkdownEditor';
 
@@ -38,6 +39,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
   const [thumbnailUrl, setThumbnailUrl] = createSignal<string | null>(null);
   const [publishMode, setPublishMode] = createSignal<'now' | 'scheduled'>('now');
   const [scheduledPublishAt, setScheduledPublishAt] = createSignal('');
+  const [expiresMode, setExpiresMode] = createSignal<'forever' | 'scheduled'>('forever');
+  const [expiresAt, setExpiresAt] = createSignal('');
   const [lampiran, setLampiran] = createSignal<LampiranItem[]>([]);
 
   // Thumbnail upload states
@@ -76,6 +79,13 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
           setPublishMode('now');
           setScheduledPublishAt('');
         }
+        if (props.initialData.expiresAt) {
+          setExpiresMode('scheduled');
+          setExpiresAt(toLocalDateTimeInput(props.initialData.expiresAt));
+        } else {
+          setExpiresMode('forever');
+          setExpiresAt('');
+        }
       } else {
         setCurrentId(undefined);
         setJudul('');
@@ -90,6 +100,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         setThumbnailUrl(null);
         setPublishMode('now');
         setScheduledPublishAt('');
+        setExpiresMode('forever');
+        setExpiresAt('');
         setLampiran([]);
       }
       setAutoSaveStatus('idle');
@@ -121,6 +133,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
           targetRombelIds: targetRombelIds(),
           isPinned: isPinned(),
           thumbnailUrl: thumbnailUrl(),
+          expiresAt: expiresMode() === 'scheduled' && expiresAt() ? new Date(expiresAt()).toISOString() : null,
           lampiran: lampiran(),
         });
         if (!currentId()) {
@@ -202,6 +215,11 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
       return;
     }
 
+    if (expiresMode() === 'scheduled' && !expiresAt()) {
+      alert('Tentukan batas waktu berakhir pengumuman');
+      return;
+    }
+
     setIsSubmitting(true);
     clearTimeout(autoSaveTimeout);
     try {
@@ -219,6 +237,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         thumbnailUrl: thumbnailUrl(),
         publishMode: publishMode(),
         scheduledPublishAt: publishMode() === 'scheduled' ? new Date(scheduledPublishAt()).toISOString() : null,
+        expiresAt: expiresMode() === 'scheduled' && expiresAt() ? new Date(expiresAt()).toISOString() : null,
         lampiran: lampiran(),
       });
       props.onSuccess();
@@ -385,7 +404,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
               >
                 <div class="flex items-center gap-4 bg-white dark:bg-secondary-900 p-2.5 rounded-xl border border-secondary-200 dark:border-secondary-700">
                   <img
-                    src={thumbnailUrl()!}
+                    src={getAbsoluteStorageUrl(thumbnailUrl()!)}
                     alt="Thumbnail Preview"
                     class="w-24 h-16 object-cover rounded-lg border border-secondary-200 dark:border-secondary-800"
                   />
@@ -686,6 +705,73 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
               </Show>
             </div>
 
+            {/* Expiration / Auto Take-Down Option */}
+            <div class="p-4 rounded-2xl bg-secondary-50 dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-800 space-y-3">
+              <div class="text-xs font-bold uppercase tracking-wider text-secondary-700 dark:text-secondary-300">
+                ⏱️ Batas Waktu Pengumuman Live
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-3">
+                <label class="flex items-center gap-2 cursor-pointer p-3 bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-xl flex-1 text-xs">
+                  <input
+                    type="radio"
+                    name="expiresMode"
+                    value="forever"
+                    checked={expiresMode() === 'forever'}
+                    onChange={() => {
+                      setExpiresMode('forever');
+                      setExpiresAt('');
+                      triggerAutoSave();
+                    }}
+                    class="text-[#0066cc]"
+                  />
+                  <div>
+                    <div class="font-bold text-secondary-900 dark:text-white">Tayang Seterusnya (Takedown Manual)</div>
+                    <div class="text-secondary-500 text-[11px]">
+                      Tetap live sampai Anda menekan tombol Tarik Pengumuman
+                    </div>
+                  </div>
+                </label>
+
+                <label class="flex items-center gap-2 cursor-pointer p-3 bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-xl flex-1 text-xs">
+                  <input
+                    type="radio"
+                    name="expiresMode"
+                    value="scheduled"
+                    checked={expiresMode() === 'scheduled'}
+                    onChange={() => {
+                      setExpiresMode('scheduled');
+                      triggerAutoSave();
+                    }}
+                    class="text-[#0066cc]"
+                  />
+                  <div>
+                    <div class="font-bold text-secondary-900 dark:text-white">Sampai Batas Waktu Tertentu</div>
+                    <div class="text-secondary-500 text-[11px]">
+                      Otomatis hilang dari feed publik setelah batas waktu tercapai
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <Show when={expiresMode() === 'scheduled'}>
+                <div class="pt-2">
+                  <label class="block text-xs font-medium text-secondary-600 dark:text-secondary-400 mb-1">
+                    Pilih Batas Akhir Tayang (Kadaluarsa):
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt()}
+                    onInput={(e) => {
+                      setExpiresAt(e.currentTarget.value);
+                      triggerAutoSave();
+                    }}
+                    class="px-3 py-2 rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-xs text-secondary-900 dark:text-white focus:outline-hidden"
+                  />
+                </div>
+              </Show>
+            </div>
+
             {/* Modal Actions */}
             <div class="border-t border-secondary-200 dark:border-secondary-800 pt-4 flex items-center justify-between gap-3">
               <button
@@ -703,6 +789,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                     targetRombelIds: targetRombelIds(),
                     isPinned: isPinned(),
                     thumbnailUrl: thumbnailUrl(),
+                    expiresAt:
+                      expiresMode() === 'scheduled' && expiresAt() ? new Date(expiresAt()).toISOString() : null,
                     lampiran: lampiran(),
                   });
                   props.onSuccess();

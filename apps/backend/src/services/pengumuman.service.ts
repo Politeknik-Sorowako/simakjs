@@ -993,6 +993,12 @@ export class PengumumanService {
           targetScopeType: payload.targetScopeType ?? existing.targetScopeType,
           isPinned: payload.isPinned ?? existing.isPinned,
           thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : existing.thumbnailUrl,
+          expiresAt:
+            payload.expiresAt !== undefined
+              ? payload.expiresAt
+                ? new Date(payload.expiresAt)
+                : null
+              : existing.expiresAt,
           lastAutoSavedAt: now,
           updatedAt: now,
         })
@@ -1012,6 +1018,7 @@ export class PengumumanService {
           targetScopeType: payload.targetScopeType ?? 'umum',
           isPinned: payload.isPinned ?? false,
           thumbnailUrl: payload.thumbnailUrl ?? null,
+          expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
           lastAutoSavedAt: now,
         })
         .returning({ id: pengumuman.id });

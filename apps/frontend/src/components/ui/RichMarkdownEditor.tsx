@@ -84,6 +84,22 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
     }
   };
 
+  const handleImageSelected = async (e: Event & { currentTarget: HTMLInputElement }) => {
+    const file = e.currentTarget.files?.[0];
+    if (!file) return;
+    try {
+      if (props.onUploadAttachment) {
+        const res = await props.onUploadAttachment(file);
+        if (res) {
+          const fullUrl = getAbsoluteStorageUrl(res.fileUrl);
+          insertText(`\n![${res.fileName}](${fullUrl})\n`);
+        }
+      }
+    } finally {
+      e.currentTarget.value = '';
+    }
+  };
+
   const wrapClass = () =>
     'w-full bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3 py-2.5 text-caption text-secondary-900 dark:text-white placeholder:text-secondary-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all';
 
@@ -175,6 +191,19 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
           🔗
         </button>
         <label
+          class={`${TOOLBAR_BTN} cursor-pointer inline-flex items-center gap-1 text-[#0066cc] dark:text-[#2997ff]`}
+          title="Sisipkan Gambar Inline Langsung ke Teks"
+        >
+          <input
+            type="file"
+            accept="image/*"
+            class="hidden"
+            disabled={props.disabled || props.uploadingAttachment}
+            onChange={handleImageSelected}
+          />
+          {props.uploadingAttachment ? '⏳' : '🖼️ Gambar'}
+        </label>
+        <label
           class={`${TOOLBAR_BTN} cursor-pointer inline-flex items-center gap-1`}
           title={
             props.maxAttachmentMb
@@ -184,12 +213,12 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
         >
           <input
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            accept=".pdf,.docx,.xlsx,.pptx,.zip,.jpg,.jpeg,.png,.webp"
             class="hidden"
             disabled={props.disabled || props.uploadingAttachment}
             onChange={handleFileSelected}
           />
-          {props.uploadingAttachment ? '⏳' : '📎 File'}
+          {props.uploadingAttachment ? '⏳' : '📎 Berkas'}
         </label>
       </div>
 

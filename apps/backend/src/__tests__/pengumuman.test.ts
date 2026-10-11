@@ -208,4 +208,28 @@ describe('Pengumuman Service & API Lifecycle', () => {
       /Status tidak valid/,
     );
   });
+
+  it('8. pengumuman yang melewati expiresAt otomatis tidak muncul di feed audiens', async () => {
+    const pastExpiry = new Date(Date.now() - 60 * 1000).toISOString(); // 1 menit yang lalu
+    const published = await PengumumanService.publish(adminUser, {
+      judul: 'Pengumuman Sudah Kadaluarsa',
+      konten: 'Isi pengumuman yang sudah expired.',
+      targetRole: 'semua',
+      targetProdiType: 'semua',
+      targetScopeType: 'umum',
+      publishMode: 'now',
+      expiresAt: pastExpiry,
+    });
+
+    const feed = await PengumumanService.getFeed(adminUser, { limit: 50 });
+    const foundInFeed = feed.data.some((p) => p.id === published.id);
+    expect(foundInFeed).toBe(false);
+
+    // Namun tetap ada di manage list untuk admin
+    const manageList = await PengumumanService.getManageList(adminUser, { limit: 50 });
+    const foundInManage = manageList.data.some((p) => p.id === published.id);
+    expect(foundInManage).toBe(true);
+
+    await db.delete(pengumuman).where(eq(pengumuman.id, published.id));
+  });
 });

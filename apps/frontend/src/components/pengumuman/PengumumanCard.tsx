@@ -34,7 +34,18 @@ export function PengumumanCard(props: PengumumanCardProps) {
     }
   };
 
+  const isExpired = () => {
+    return p().expiresAt && new Date(p().expiresAt!) < new Date();
+  };
+
   const statusBadge = () => {
+    if (isExpired() && (p().status === 'published' || p().status === 'scheduled')) {
+      return (
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+          Kadaluarsa
+        </span>
+      );
+    }
     const s = p().status;
     switch (s) {
       case 'published':
@@ -103,8 +114,18 @@ export function PengumumanCard(props: PengumumanCardProps) {
     return (
       <div class="min-w-[300px] sm:min-w-[340px] max-w-[360px] snap-start bg-white dark:bg-secondary-900 border border-amber-300 dark:border-amber-600/60 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between shrink-0 bg-gradient-to-br from-amber-50/30 to-transparent">
         <div>
-          {/* Thumbnail preview if any */}
-          <Show when={p().thumbnailUrl}>
+          {/* Thumbnail preview or fallback placeholder banner */}
+          <Show
+            when={p().thumbnailUrl}
+            fallback={
+              <div
+                onClick={() => props.onClick?.()}
+                class="w-full h-32 rounded-xl overflow-hidden mb-3 bg-gradient-to-br from-amber-100/60 via-amber-50 to-amber-200/40 dark:from-amber-950/40 dark:via-secondary-800 dark:to-secondary-850 border border-amber-200/60 dark:border-amber-800/40 flex items-center justify-center cursor-pointer group"
+              >
+                <span class="text-2xl opacity-60 group-hover:scale-110 transition-transform">📌</span>
+              </div>
+            }
+          >
             <div
               onClick={() => props.onClick?.()}
               class="w-full h-32 rounded-xl overflow-hidden mb-3 bg-secondary-100 dark:bg-secondary-800 cursor-pointer"
@@ -119,7 +140,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
 
           {/* Badges */}
           <div class="flex items-center gap-1.5 flex-wrap mb-2">
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
               📌 Pinned
             </span>
             {targetBadge()}
@@ -133,14 +154,14 @@ export function PengumumanCard(props: PengumumanCardProps) {
           {/* Title */}
           <h4
             onClick={() => props.onClick?.()}
-            class="text-sm font-bold text-secondary-900 dark:text-white line-clamp-2 hover:text-[#0066cc] dark:hover:text-[#2997ff] transition-colors cursor-pointer mb-1.5"
+            class="text-base sm:text-lg font-bold text-secondary-900 dark:text-white line-clamp-2 hover:text-[#0066cc] dark:hover:text-[#2997ff] transition-colors cursor-pointer mb-1.5 leading-snug"
             title={p().judul}
           >
             {p().judul}
           </h4>
 
           {/* Preview text */}
-          <div class="text-xs text-secondary-600 dark:text-secondary-300 line-clamp-2 mb-3">
+          <div class="text-xs sm:text-sm text-secondary-600 dark:text-secondary-300 line-clamp-2 mb-3 leading-relaxed">
             {p().ringkasan ||
               p()
                 .konten.slice(0, 100)
@@ -149,7 +170,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
         </div>
 
         {/* Footer Meta & Action */}
-        <div class="border-t border-amber-200/60 dark:border-amber-800/40 pt-2.5 flex items-center justify-between text-[11px] text-secondary-500">
+        <div class="border-t border-amber-200/60 dark:border-amber-800/40 pt-2.5 flex items-center justify-between text-xs text-secondary-500">
           <span>{formatDate(p().publishedAt || p().createdAt)}</span>
           <button
             type="button"
@@ -163,7 +184,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
     );
   }
 
-  // Regular Grid Card (with 2-columns compatibility)
+  // Regular Grid Card
   return (
     <div
       class={`bg-white dark:bg-secondary-900 border rounded-2xl p-5 shadow-xs transition-all hover:shadow-md flex flex-col justify-between ${
@@ -173,11 +194,26 @@ export function PengumumanCard(props: PengumumanCardProps) {
       }`}
     >
       <div>
-        {/* Thumbnail Image Banner */}
-        <Show when={p().thumbnailUrl}>
+        {/* Thumbnail Image Banner or Elegant Gradient Placeholder */}
+        <Show
+          when={p().thumbnailUrl}
+          fallback={
+            <div
+              onClick={() => props.onClick?.()}
+              class="w-full h-44 sm:h-48 rounded-xl overflow-hidden mb-4 bg-gradient-to-br from-secondary-100 via-secondary-50 to-secondary-200 dark:from-secondary-800 dark:via-secondary-850 dark:to-secondary-900 border border-secondary-200/60 dark:border-secondary-700/60 flex items-center justify-center cursor-pointer group"
+            >
+              <div class="flex flex-col items-center gap-1.5 opacity-40 group-hover:opacity-70 group-hover:scale-105 transition-all">
+                <span class="text-3xl">📢</span>
+                <span class="text-[11px] font-semibold text-secondary-500 dark:text-secondary-400">
+                  Pengumuman SIMAK
+                </span>
+              </div>
+            </div>
+          }
+        >
           <div
             onClick={() => props.onClick?.()}
-            class="w-full h-40 rounded-xl overflow-hidden mb-4 bg-secondary-100 dark:bg-secondary-800 cursor-pointer"
+            class="w-full h-44 sm:h-48 rounded-xl overflow-hidden mb-4 bg-secondary-100 dark:bg-secondary-800 cursor-pointer"
           >
             <img
               src={getAbsoluteStorageUrl(p().thumbnailUrl!)}
@@ -201,7 +237,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
             {targetBadge()}
 
             <Show when={!props.isManageMode && p().isRead === false}>
-              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500 text-white animate-pulse">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white animate-pulse">
                 BARU
               </span>
             </Show>
@@ -214,10 +250,17 @@ export function PengumumanCard(props: PengumumanCardProps) {
             >
               <span class="text-sky-600 dark:text-sky-400 font-medium">Tayang: {formatDate(p().publishedAt)}</span>
             </Show>
+            <Show when={p().expiresAt}>
+              <span
+                class={`font-medium ${isExpired() ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}
+              >
+                • Berakhir: {formatDate(p().expiresAt)}
+              </span>
+            </Show>
             <A
               href={`/pengumuman/${p().id}`}
               onClick={(e) => e.stopPropagation()}
-              class="hover:text-[#0066cc] dark:hover:text-[#2997ff] text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 p-0.5 px-1 rounded text-xs transition-colors"
+              class="hover:text-[#0066cc] dark:hover:text-[#2997ff] text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 p-0.5 px-1.5 rounded text-xs transition-colors"
               title="Buka pada halaman penuh"
             >
               ↗
@@ -225,10 +268,10 @@ export function PengumumanCard(props: PengumumanCardProps) {
           </div>
         </div>
 
-        {/* Judul */}
+        {/* Judul - Larger font conforming to DESIGN.md */}
         <h3
           onClick={() => props.onClick?.()}
-          class={`text-base font-bold text-secondary-900 dark:text-white tracking-tight mb-2 hover:text-[#0066cc] dark:hover:text-[#2997ff] transition-colors ${
+          class={`text-lg sm:text-xl font-bold text-secondary-900 dark:text-white tracking-tight mb-2 leading-snug hover:text-[#0066cc] dark:hover:text-[#2997ff] transition-colors ${
             props.onClick ? 'cursor-pointer' : ''
           }`}
         >
@@ -236,7 +279,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
         </h3>
 
         {/* Author & Context info */}
-        <div class="flex items-center gap-2 text-xs text-secondary-500 dark:text-secondary-400 mb-3">
+        <div class="flex items-center gap-2 text-xs text-secondary-500 dark:text-secondary-400 mb-3 flex-wrap">
           <span>
             Oleh: <strong class="text-secondary-700 dark:text-secondary-200">{p().authorNama || 'Pengelola'}</strong>
           </span>
@@ -250,9 +293,9 @@ export function PengumumanCard(props: PengumumanCardProps) {
           </Show>
         </div>
 
-        {/* Content Preview / Viewer */}
+        {/* Content Preview / Viewer - Enhanced line height & scale */}
         <div class="mb-4">
-          <MarkdownViewer content={p().konten} class="line-clamp-3 text-sm" />
+          <MarkdownViewer content={p().konten} class="line-clamp-3 text-sm sm:text-base leading-relaxed" />
         </div>
 
         {/* Lampiran List (if any) */}
