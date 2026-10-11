@@ -1,6 +1,7 @@
 import { useParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { useAuth } from '../contexts/AuthContext';
+import { documentSignatureController, type SignKhsResult } from '../controllers/documentSignatureController';
 import { type KhsResponse, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
@@ -42,6 +43,28 @@ export default function KhsCetak() {
     },
   );
 
+  const [signature] = createResource(
+    () => {
+      const mhsId = Number(params.mhsId);
+      const periodeId = params.periodeId || '';
+      if (!mhsId || !periodeId) return null;
+      return { mhsId, periodeId };
+    },
+    async (target): Promise<SignKhsResult | null> => {
+      if (!target) return null;
+      try {
+        // Idempoten: server mengembalikan tanda tangan yang sama bila snapshot tidak berubah.
+        return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
+      } catch (signError) {
+        // Fallback ke tanda tangan yang sudah ada (mis. tanpa izin tulis).
+        const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
+        if (existing) return existing;
+        // Tidak ada tanda tangan tersedia → lempar agar banner error tampil.
+        throw signError;
+      }
+    },
+  );
+
   createEffect(() => {
     if (printData() && !hasPrinted()) {
       setHasPrinted(true);
@@ -61,6 +84,23 @@ export default function KhsCetak() {
 
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">
+      <Show when={signature.error}>
+        <div
+          role="alert"
+          class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 print:hidden"
+        >
+          <p class="font-semibold">Tanda tangan digital gagal dimuat</p>
+          <p class="mt-1 text-red-600">
+            <Show
+              when={auth.hasRole(['admin', 'super_admin'])}
+              fallback="Coba muat ulang halaman; bila masalah berlanjut, hubungi administrator. Dokumen cetak TANPA QR verifikasi."
+            >
+              {signature.error instanceof Error ? signature.error.message : 'Terjadi kesalahan tidak dikenal.'} —
+              Dokumen cetak TANPA QR verifikasi.
+            </Show>
+          </p>
+        </div>
+      </Show>
       <div class="mb-4 flex justify-end print:hidden">
         <button
           type="button"
@@ -195,9 +235,14 @@ export default function KhsCetak() {
               <div class="mt-12 grid grid-cols-2 gap-4 text-xs text-secondary-700">
                 <div class="text-center">
                   <p>Mengetahui,</p>
-                  <p>Kaprodi / Pimpinan</p>
+                  <p>{signature()?.signerJabatan ? signature()?.signerJabatan : 'Kaprodi / Pimpinan'}</p>
                   <div class="h-16" />
-                  <p class="font-bold underline">.........................................................</p>
+                  <p class="font-bold underline">
+                    {signature()?.signerNama ?? '.........................................................'}
+                  </p>
+                  <Show when={signature()?.signerJabatan}>
+                    <p class="mt-1 text-secondary-500">{signature()?.signerJabatan}</p>
+                  </Show>
                 </div>
                 <div class="text-center">
                   <p>Mahasiswa</p>
@@ -205,6 +250,23 @@ export default function KhsCetak() {
                   <p class="font-bold underline">{data().nama || '...........................'}</p>
                 </div>
               </div>
+
+              <Show when={signature()}>
+                {(sig) => (
+                  <div class="mt-6 flex flex-col items-center border-t border-secondary-200 pt-4 text-center text-xs text-secondary-500">
+                    <Show when={sig().qrDataUrl}>
+                      <img src={sig().qrDataUrl} width="128" height="128" alt="QR verifikasi dokumen" class="mb-2" />
+                    </Show>
+                    <p class="font-semibold text-secondary-700">Dokumen ditandatangani digital (QR Signed-Hash)</p>
+                    <p>
+                      Ditandatangani: {sig().signerNama}
+                      {sig().signerJabatan ? ` • ${sig().signerJabatan}` : ''}
+                    </p>
+                    <p>Verifikasi: {sig().verifyUrl}</p>
+                    <p class="font-mono">Hash: {sig().docHash}</p>
+                  </div>
+                )}
+              </Show>
             </div>
           )}
         </Show>

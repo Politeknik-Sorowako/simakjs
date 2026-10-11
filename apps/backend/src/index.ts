@@ -1,4 +1,5 @@
 import { app } from './app';
+import { getSigningKeyConfig } from './utils/document-signing';
 
 export { app };
 
@@ -14,6 +15,16 @@ process.on('unhandledRejection', (reason) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
+  // TTE (QR Signed-Hash): gagal cepat bila kunci signing tidak diset/invalid —
+  // tanpa kunci, endpoint tanda tangan dokumen error 400 secara diam-diam.
+  // Dilewati pada NODE_ENV=test agar suite test tidak membutuhkan kunci.
+  try {
+    getSigningKeyConfig();
+  } catch (e: unknown) {
+    console.error('[FATAL] TTE signing keys invalid:', e instanceof Error ? e.message : 'Unknown error');
+    process.exit(1);
+  }
+
   const server = app.listen(PORT);
   console.log(`Server is running at http://localhost:${PORT}`);
   if (process.env.NODE_ENV !== 'production') {

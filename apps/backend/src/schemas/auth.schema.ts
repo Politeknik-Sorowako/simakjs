@@ -61,12 +61,13 @@ export const validateResetTokenSchema = {
 export const resetPasswordSchema = {
   detail: {
     tags: ['Autentikasi'],
-    summary: 'Reset Password dengan Token',
-    description:
-      'Mengatur ulang password menggunakan token reset. Password minimal 8 karakter dengan huruf kapital dan angka.',
+    summary: 'Reset Password dengan Token atau Kode OTP',
+    description: 'Mengatur ulang password menggunakan token reset atau kode 2FA OTP 6-digit email.',
   },
   body: t.Object({
-    token: t.String({ description: 'Token dari email reset password' }),
+    token: t.Optional(t.String({ description: 'Token dari email reset password' })),
+    email: t.Optional(t.String({ format: 'email', description: 'Alamat email pengguna' })),
+    otp: t.Optional(t.String({ minLength: 6, maxLength: 6, description: 'Kode OTP 6-digit dari email' })),
     password: t.String({
       minLength: 8,
       description: 'Password baru (min. 8 karakter, harus ada huruf kapital dan angka)',
@@ -197,10 +198,12 @@ export const activateAccountSchema = {
   detail: {
     tags: ['Autentikasi'],
     summary: 'Aktivasi Akun Pengguna',
-    description: 'Memverifikasi token aktivasi dari email untuk mengaktifkan akun pengguna.',
+    description: 'Memverifikasi token aktivasi dari email atau kode 2FA OTP 6-digit untuk mengaktifkan akun pengguna.',
   },
   body: t.Object({
-    token: t.String({ description: 'Token aktivasi dari link email' }),
+    token: t.Optional(t.String({ description: 'Token aktivasi dari link email' })),
+    email: t.Optional(t.String({ format: 'email', description: 'Alamat email pengguna' })),
+    otp: t.Optional(t.String({ minLength: 6, maxLength: 6, description: 'Kode OTP 6-digit dari email' })),
   }),
 };
 
@@ -237,6 +240,58 @@ export const twoFactorDisableSchema = {
   body: t.Object({
     password: t.String({ description: 'Kata sandi saat ini' }),
     code: t.String({ minLength: 6, maxLength: 6, description: 'Kode 6-digit dari aplikasi authenticator' }),
+  }),
+};
+
+export const activateAccountWithOtpSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Aktivasi Akun Pengguna dengan OTP 6-Digit',
+    description: 'Memverifikasi kode OTP 6-digit yang dikirim ke email untuk mengaktifkan akun.',
+  },
+  body: t.Object({
+    email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+    otp: t.String({ minLength: 6, maxLength: 6, description: 'Kode OTP 6-digit dari email' }),
+  }),
+};
+
+export const resendActivationOtpSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Kirim Ulang Kode OTP Aktivasi',
+    description: 'Mengirim ulang kode OTP 6-digit aktivasi ke email pengguna.',
+  },
+  body: t.Object({
+    email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+    turnstileToken: t.Optional(t.String({ description: 'Token Cloudflare Turnstile' })),
+  }),
+};
+
+export const requestPasswordResetOtpSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Minta Kode OTP Reset Password',
+    description: 'Mengirimkan kode OTP 6-digit reset password ke email pengguna.',
+  },
+  body: t.Object({
+    email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+    turnstileToken: t.Optional(t.String({ description: 'Token Cloudflare Turnstile' })),
+  }),
+};
+
+export const resetPasswordWithOtpSchema = {
+  detail: {
+    tags: ['Autentikasi'],
+    summary: 'Reset Password dengan Kode OTP 6-Digit',
+    description: 'Mengatur ulang password menggunakan email, kode OTP 6-digit, dan password baru.',
+  },
+  body: t.Object({
+    email: t.String({ format: 'email', description: 'Alamat email pengguna' }),
+    otp: t.String({ minLength: 6, maxLength: 6, description: 'Kode OTP 6-digit dari email' }),
+    password: t.String({
+      minLength: 8,
+      description: 'Password baru (min. 8 karakter, harus ada huruf kapital dan angka)',
+    }),
   }),
 };
 
