@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { mahasiswa } from '../models/schema';
+import { CsvImportService } from '../services/csv-import.service';
 import { YudisiumService } from '../services/yudisium.service';
 import { db } from '../utils/db';
 import { guardKelasScope } from '../utils/dosen-scope';
@@ -397,6 +398,42 @@ export class YudisiumController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal membuka kunci nilai kelas.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async importNilaiLegacy({ request, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'prodi', 'kaprodi'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Kaprodi.' };
+    }
+
+    try {
+      const formData = await request.formData();
+      const file = formData.get('file') as File | null;
+      const periodeId = String(formData.get('periodeId') ?? '').trim();
+      const namaKelas = String(formData.get('namaKelas') ?? '').trim() || undefined;
+
+      if (!file) {
+        set.status = 400;
+        return { error: 'File CSV tidak ditemukan.' };
+      }
+      if (!periodeId) {
+        set.status = 400;
+        return { error: 'Parameter periodeId wajib diisi.' };
+      }
+
+      const text = await file.text();
+      const result = await CsvImportService.importNilaiLegacy(text, periodeId, { namaKelas });
+      return result;
+    } catch (e: unknown) {
+      set.status = 500;
+      return { error: e instanceof Error ? e.message : 'Gagal mengimpor nilai legacy.' };
     }
   }
 }

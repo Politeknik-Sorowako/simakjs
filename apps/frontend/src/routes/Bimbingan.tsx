@@ -1011,12 +1011,12 @@ export default function Bimbingan() {
                 }
               >
                 <div
-                  class={`grid gap-6 h-[600px] transition-all duration-300 ${
+                  class={`grid gap-6 h-auto lg:h-[600px] transition-all duration-300 ${
                     isRightPanelOpen() ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
                   }`}
                 >
                   {/* Panel Riwayat & Pengelolaan Sesi Bimbingan */}
-                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[70vh] lg:h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
                     <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800 dark:border-secondary-700">
                       <div class="flex flex-col">
                         <h3 class="font-bold text-secondary-800 text-base dark:text-white">
@@ -1160,7 +1160,7 @@ export default function Bimbingan() {
 
                   {/* Form Approval, Resume Akademik, & Timeline Sesi */}
                   <Show when={isRightPanelOpen()}>
-                    <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
+                    <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-[70vh] lg:h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
                       {/* Resume Akademik */}
                       <div class="flex flex-col gap-3">
                         <div class="flex items-center justify-between border-b pb-2">
@@ -1274,7 +1274,7 @@ export default function Bimbingan() {
                             placeholder="Ringkasan bimbingan untuk satu semester..."
                             value={ringkasanText()}
                             onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 resize-none dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 resize-y min-h-[72px] max-h-[320px] dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
                           />
                         </div>
 
@@ -1291,100 +1291,104 @@ export default function Bimbingan() {
 
                 {/* --- MODAL TAMBAH / EDIT SESI BIMBINGAN --- */}
                 <Show when={showSesiModal()}>
-                  <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
-                      <h3 class="font-bold text-secondary-800 text-base dark:text-white">
-                        {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
-                      </h3>
+                  <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain">
+                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100vh-2rem)] overflow-hidden dark:bg-secondary-900">
+                      <div class="shrink-0 px-6 pt-5 pb-3 border-b border-secondary-100 dark:border-secondary-800">
+                        <h3 class="font-bold text-secondary-800 text-base dark:text-white">
+                          {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
+                        </h3>
+                      </div>
 
-                      <form onSubmit={handleSaveSesi} class="flex flex-col gap-4">
-                        <div class="flex flex-col gap-1">
-                          <label class="text-caption font-bold text-secondary-600">Pertemuan Ke</label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={pertemuanKeInput()}
-                            onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
-                            class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                            required
-                          />
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                          <label class="text-caption font-bold text-secondary-600">Tanggal Pertemuan</label>
-                          <input
-                            type="date"
-                            value={tanggalInput()}
-                            onChange={(e) => setTanggalInput(e.currentTarget.value)}
-                            class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
-                            required
-                          />
-                        </div>
-
-                        <div class="flex flex-col gap-1">
-                          <div class="flex items-center justify-between">
-                            <label class="text-caption font-bold text-secondary-600 dark:text-secondary-300">
-                              Jenis / Kategori Bimbingan
-                            </label>
-                            <Show when={auth.hasRole(['admin', 'super_admin', 'prodi', 'dosen'])}>
-                              <button
-                                type="button"
-                                onClick={() => setShowKategoriModal(true)}
-                                class="text-fine font-bold text-brand-600 hover:underline dark:text-brand-400"
-                              >
-                                + Kelola Kategori
-                              </button>
-                            </Show>
+                      <form onSubmit={handleSaveSesi} class="flex flex-col min-h-0 flex-1">
+                        <div class="flex-1 min-h-0 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+                          <div class="flex flex-col gap-1">
+                            <label class="text-caption font-bold text-secondary-600">Pertemuan Ke</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={pertemuanKeInput()}
+                              onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                              required
+                            />
                           </div>
-                          <select
-                            value={kategoriInput() || ''}
-                            onChange={(e) =>
-                              setKategoriInput(e.currentTarget.value ? Number(e.currentTarget.value) : null)
-                            }
-                            class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
-                          >
-                            <option value="">-- Pilih Jenis Bimbingan (Opsional) --</option>
-                            <For each={kategoriList()?.data || []}>
-                              {(kat) => <option value={kat.id}>{kat.nama}</option>}
-                            </For>
-                          </select>
-                        </div>
-                        <RichMarkdownEditor
-                          label="Topik Bimbingan"
-                          rows={3}
-                          placeholder="Tulis topik bimbingan akademis/non-akademis..."
-                          value={permasalahanInput()}
-                          onInput={setPermasalahanInput}
-                          onUploadAttachment={handleUploadAttachment}
-                          uploadingAttachment={uploadingAttachment()}
-                          maxAttachmentMb={maxAttachmentMb()}
-                        />
 
-                        <RichMarkdownEditor
-                          label="Solusi / Rekomendasi"
-                          rows={3}
-                          placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
-                          value={solusiInput()}
-                          onInput={setSolusiInput}
-                          onUploadAttachment={handleUploadAttachment}
-                          uploadingAttachment={uploadingAttachment()}
-                          maxAttachmentMb={maxAttachmentMb()}
-                        />
-
-                        <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">
-                          <div class="flex flex-col">
-                            <span class="text-caption font-bold text-brand-800">Lapor Beban Kerja Dosen (BKD)</span>
-                            <span class="text-fine text-brand-600">Sertakan sesi ini ke laporan BKD resmi</span>
+                          <div class="flex flex-col gap-1">
+                            <label class="text-caption font-bold text-secondary-600">Tanggal Pertemuan</label>
+                            <input
+                              type="date"
+                              value={tanggalInput()}
+                              onChange={(e) => setTanggalInput(e.currentTarget.value)}
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                              required
+                            />
                           </div>
-                          <input
-                            type="checkbox"
-                            checked={statusBkdInput()}
-                            onChange={(e) => setStatusBkdInput(e.currentTarget.checked)}
-                            class="w-4 h-4 text-brand-600 border-brand-300 rounded focus:ring-brand-500"
+
+                          <div class="flex flex-col gap-1">
+                            <div class="flex items-center justify-between">
+                              <label class="text-caption font-bold text-secondary-600 dark:text-secondary-300">
+                                Jenis / Kategori Bimbingan
+                              </label>
+                              <Show when={auth.hasRole(['admin', 'super_admin', 'prodi', 'dosen'])}>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowKategoriModal(true)}
+                                  class="text-fine font-bold text-brand-600 hover:underline dark:text-brand-400"
+                                >
+                                  + Kelola Kategori
+                                </button>
+                              </Show>
+                            </div>
+                            <select
+                              value={kategoriInput() || ''}
+                              onChange={(e) =>
+                                setKategoriInput(e.currentTarget.value ? Number(e.currentTarget.value) : null)
+                              }
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                            >
+                              <option value="">-- Pilih Jenis Bimbingan (Opsional) --</option>
+                              <For each={kategoriList()?.data || []}>
+                                {(kat) => <option value={kat.id}>{kat.nama}</option>}
+                              </For>
+                            </select>
+                          </div>
+                          <RichMarkdownEditor
+                            label="Topik Bimbingan"
+                            rows={2}
+                            placeholder="Tulis topik bimbingan akademis/non-akademis..."
+                            value={permasalahanInput()}
+                            onInput={setPermasalahanInput}
+                            onUploadAttachment={handleUploadAttachment}
+                            uploadingAttachment={uploadingAttachment()}
+                            maxAttachmentMb={maxAttachmentMb()}
                           />
+
+                          <RichMarkdownEditor
+                            label="Solusi / Rekomendasi"
+                            rows={2}
+                            placeholder="Tulis solusi atau tindakan yang direkomendasikan..."
+                            value={solusiInput()}
+                            onInput={setSolusiInput}
+                            onUploadAttachment={handleUploadAttachment}
+                            uploadingAttachment={uploadingAttachment()}
+                            maxAttachmentMb={maxAttachmentMb()}
+                          />
+
+                          <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">
+                            <div class="flex flex-col">
+                              <span class="text-caption font-bold text-brand-800">Lapor Beban Kerja Dosen (BKD)</span>
+                              <span class="text-fine text-brand-600">Sertakan sesi ini ke laporan BKD resmi</span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={statusBkdInput()}
+                              onChange={(e) => setStatusBkdInput(e.currentTarget.checked)}
+                              class="w-4 h-4 text-brand-600 border-brand-300 rounded focus:ring-brand-500"
+                            />
+                          </div>
                         </div>
 
-                        <div class="flex justify-end gap-2 mt-2">
+                        <div class="shrink-0 border-t border-secondary-100 bg-white px-6 py-3 flex justify-end gap-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-secondary-800 dark:bg-secondary-900">
                           <button
                             type="button"
                             onClick={() => setShowSesiModal(false)}
@@ -1394,7 +1398,7 @@ export default function Bimbingan() {
                           </button>
                           <button
                             type="submit"
-                            class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
+                            class="px-4 py-2 min-h-[44px] bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
                           >
                             Simpan Sesi
                           </button>

@@ -10,8 +10,8 @@ import { authController } from '../controllers/authController';
 
 const resetSchema = z
   .object({
-    password: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
-    confirmPassword: z.string().min(6, { message: 'Password minimal harus 6 karakter' }),
+    password: z.string().min(8, { message: 'Password minimal harus 8 karakter' }),
+    confirmPassword: z.string().min(8, { message: 'Password minimal harus 8 karakter' }),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Konfirmasi password tidak cocok',
@@ -24,8 +24,10 @@ export default function ResetPassword() {
   const auth = useAuth();
   const [searchParams] = useSearchParams();
 
+  const [useOtp, setUseOtp] = createSignal(true);
+  const [email, setEmail] = createSignal('');
+  const [otp, setOtp] = createSignal('');
   const [token, setToken] = createSignal('');
-  const [username, setUsername] = createSignal('');
   const [password, setPassword] = createSignal('');
   const [confirmPassword, setConfirmPassword] = createSignal('');
   const [showPassword, setShowPassword] = createSignal(false);
@@ -37,27 +39,23 @@ export default function ResetPassword() {
     const t = searchParams.token;
     if (t) {
       setToken(t);
+      setUseOtp(false);
     }
   });
 
-  // Fetch username/email when token is present
   createEffect(() => {
     const t = token();
-    if (t) {
+    if (t && !useOtp()) {
       authController
         .validateResetToken(t)
         .then((data) => {
           if (data.email) {
-            setUsername(data.email);
+            setEmail(data.email);
           }
         })
-        .catch((err) => {
-          // We do not show error here since it might be a user typing an invalid token.
-          // Or if it was loaded from URL, we could show error, but we'll let submit handle validation.
-          setUsername('');
+        .catch(() => {
+          setEmail('');
         });
-    } else {
-      setUsername('');
     }
   });
 
@@ -65,11 +63,26 @@ export default function ResetPassword() {
     e.preventDefault();
     setErrorMsg('');
 
-    if (!token()) {
-      const err = 'Token reset password tidak ditemukan';
-      setErrorMsg(err);
-      toast.showToast(err, 'error');
-      return;
+    if (useOtp()) {
+      if (!email() || !email().includes('@')) {
+        const err = 'Alamat email wajib diisi.';
+        setErrorMsg(err);
+        toast.showToast(err, 'error');
+        return;
+      }
+      if (!otp() || otp().trim().length !== 6) {
+        const err = 'Kode 2FA OTP 6-digit wajib diisi.';
+        setErrorMsg(err);
+        toast.showToast(err, 'error');
+        return;
+      }
+    } else {
+      if (!token()) {
+        const err = 'Token reset password tidak ditemukan';
+        setErrorMsg(err);
+        toast.showToast(err, 'error');
+        return;
+      }
     }
 
     const result = resetSchema.safeParse({ password: password(), confirmPassword: confirmPassword() });
@@ -83,7 +96,11 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      await authController.resetPassword(token(), password());
+      if (useOtp()) {
+        await authController.resetPasswordWithOtp(email().trim(), otp().trim(), password());
+      } else {
+        await authController.resetPassword(token(), password());
+      }
       toast.showToast('Kata sandi berhasil diubah! Silakan login.', 'success');
       navigate('/login', { replace: true });
     } catch (e: unknown) {
@@ -97,7 +114,6 @@ export default function ResetPassword() {
 
   return (
     <div class="relative min-h-screen flex items-center justify-center bg-gradient-to-tr from-secondary-100 via-secondary-50 to-brand-50 dark:from-secondary-950 dark:via-primary-950 dark:to-secondary-950 overflow-hidden px-4 transition-colors duration-200">
-      {/* Floating Theme Toggle in Top Right */}
       <div class="absolute top-4 right-4 z-50">
         <button
           onClick={() => {
@@ -129,14 +145,15 @@ export default function ResetPassword() {
         </button>
       </div>
 
-      <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-500/10 dark:bg-brand-500/20 rounded-full blur-[128px] pointer-events-none" />
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-accent-500/10 dark:bg-accent-500/20 rounded-full blur-[128px] pointer-events-none" />
-
       <div class="w-full max-w-md bg-white dark:bg-secondary-900/60 dark:backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-secondary-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
           <h2 class="text-2xl font-bold tracking-tight text-secondary-800 dark:text-white">Atur Ulang Kata Sandi</h2>
-          <p class="text-sm text-secondary-500 dark:text-secondary-400">Masukkan kata sandi baru untuk akun Anda.</p>
+          <p class="text-sm text-secondary-500 dark:text-secondary-400">
+            {useOtp()
+              ? 'Masukkan alamat email, kode 2FA OTP 6-digit, dan kata sandi baru Anda.'
+              : 'Masukkan kata sandi baru untuk akun Anda.'}
+          </p>
         </div>
 
         <Show when={errorMsg()}>
@@ -146,25 +163,39 @@ export default function ResetPassword() {
         </Show>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">
-          <Show when={username()}>
+          <Show when={useOtp()}>
+            <Input
+              type="email"
+              label="Alamat Email"
+              placeholder="misal: nama@politekniksorowako.ac.id"
+              required
+              value={email()}
+              onInput={(e) => setEmail(e.currentTarget.value)}
+              disabled={loading()}
+            />
             <Input
               type="text"
-              label="Username (Email)"
-              value={username()}
-              disabled={true}
-              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 focus:!ring-0 !text-secondary-800 dark:!text-white"
+              label="Kode 2FA OTP 6-Digit Email"
+              placeholder="misal: 123456"
+              maxlength={6}
+              required
+              value={otp()}
+              onInput={(e) => setOtp(e.currentTarget.value.replace(/\D/g, ''))}
+              disabled={loading()}
+              class="tracking-widest font-mono text-center text-lg font-bold"
             />
           </Show>
 
-          <Input
-            type="text"
-            label="Token Reset Password"
-            required
-            value={token()}
-            onInput={(e) => setToken(e.currentTarget.value)}
-            disabled={loading() || !!searchParams.token}
-            class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-brand-700/30"
-          />
+          <Show when={!useOtp()}>
+            <Input
+              type="text"
+              label="Token Reset Password"
+              required
+              value={token()}
+              onInput={(e) => setToken(e.currentTarget.value)}
+              disabled={loading() || !!searchParams.token}
+            />
+          </Show>
 
           <div class="relative">
             <Input
@@ -174,7 +205,7 @@ export default function ResetPassword() {
               value={password()}
               onInput={(e) => setPassword(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-brand-700/30 !pr-12"
+              class="!pr-12"
             />
             <button
               type="button"
@@ -182,31 +213,7 @@ export default function ResetPassword() {
               class="absolute right-3 top-[38px] text-secondary-400 dark:text-secondary-500 hover:text-secondary-600 dark:hover:text-secondary-300 transition-colors focus:outline-none"
               tabindex={-1}
             >
-              {showPassword() ? (
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                  />
-                </svg>
-              ) : (
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
-              )}
+              {showPassword() ? '🙈' : '👁️'}
             </button>
           </div>
 
@@ -218,7 +225,7 @@ export default function ResetPassword() {
               value={confirmPassword()}
               onInput={(e) => setConfirmPassword(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-brand-700/30 !pr-12"
+              class="!pr-12"
             />
             <button
               type="button"
@@ -226,31 +233,7 @@ export default function ResetPassword() {
               class="absolute right-3 top-[38px] text-secondary-400 dark:text-secondary-500 hover:text-secondary-600 dark:hover:text-secondary-300 transition-colors focus:outline-none"
               tabindex={-1}
             >
-              {showConfirmPassword() ? (
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
-                  />
-                </svg>
-              ) : (
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
-                </svg>
-              )}
+              {showConfirmPassword() ? '🙈' : '👁️'}
             </button>
           </div>
 
@@ -259,10 +242,17 @@ export default function ResetPassword() {
           </Button>
         </form>
 
-        <div class="text-center">
+        <div class="flex justify-between items-center text-xs">
+          <button
+            type="button"
+            onClick={() => setUseOtp(!useOtp())}
+            class="text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300 underline"
+          >
+            {useOtp() ? 'Gunakan Link Reset' : 'Gunakan Kode OTP Email'}
+          </button>
           <A
             href="/login"
-            class="text-xs text-brand-800 dark:text-brand-400 hover:text-brand-900 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
+            class="text-brand-800 dark:text-brand-400 hover:text-brand-900 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
           >
             Kembali ke Halaman Masuk
           </A>

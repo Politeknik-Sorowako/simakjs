@@ -77,6 +77,12 @@ export const authController = {
     );
   },
 
+  async activateAccountWithOtp(email: string, otp: string): Promise<{ message: string; email: string }> {
+    return unwrap<{ message: string; email: string }>(
+      eden.auth.activate.post({ email, otp }) as unknown as GenericEden<{ message: string; email: string }>,
+    );
+  },
+
   async resendActivation(email: string, turnstileToken?: string): Promise<{ message: string }> {
     return unwrap<{ message: string }>(
       eden.auth['resend-activation'].post({
@@ -129,6 +135,12 @@ export const authController = {
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
     return unwrap<{ message: string }>(
       eden.auth['reset-password'].post({ token, password }) as unknown as GenericEden<{ message: string }>,
+    );
+  },
+
+  async resetPasswordWithOtp(email: string, otp: string, password: string): Promise<{ message: string }> {
+    return unwrap<{ message: string }>(
+      eden.auth['reset-password'].post({ email, otp, password }) as unknown as GenericEden<{ message: string }>,
     );
   },
 

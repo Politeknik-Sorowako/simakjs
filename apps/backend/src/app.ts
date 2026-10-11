@@ -25,6 +25,7 @@ import { cplMataKuliahRoutes } from './routes/cpl-mata-kuliah.routes';
 import { cpmkRoutes } from './routes/cpmk.routes';
 import { cpmkCplMappingRoutes } from './routes/cpmk-cpl-mapping.routes';
 import { cutiRoutes } from './routes/cuti.routes';
+import { documentSignaturePublicRoutes, documentSignatureRoutes } from './routes/document-signature.routes';
 import { dosenRoutes } from './routes/dosen.routes';
 import { dosenPengajarRoutes } from './routes/dosen-pengajar.routes';
 import { e2eRoutes } from './routes/e2e.routes';
@@ -89,6 +90,7 @@ const PUBLIC_NO_SESSION_PATHS = [
   '/health',
   '/rombel/enroll',
   '/rombel-praktikum/public',
+  '/document-signatures/verify',
 ];
 
 function isPublicNoSessionPath(path: string): boolean {
@@ -446,6 +448,8 @@ export const app = new Elysia()
   .use(prodiScopeRoutes)
   .use(rombelPraktikumPublicRoutes)
   .use(rombelPraktikumRoutes)
+  .use(documentSignaturePublicRoutes)
+  .use(documentSignatureRoutes)
   .use(mahasiswaKeluarRoutes)
   .use(auditRoutes);
 

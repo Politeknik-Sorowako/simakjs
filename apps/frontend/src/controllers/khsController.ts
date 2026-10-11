@@ -227,7 +227,24 @@ export interface RincianKomponenMahasiswa {
   komponen: RincianKomponenItem[];
 }
 
+export interface LegacyImportResult {
+  successCount: number;
+  skippedCount: number;
+  errors: { line: number; error: string }[];
+}
+
 export const khsController = {
+  async importNilaiLegacy(file: File, periodeId: string, namaKelas?: string): Promise<LegacyImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('periodeId', periodeId);
+    if (namaKelas) formData.append('namaKelas', namaKelas);
+    return fetchApi<LegacyImportResult>('/yudisium/import-nilai-legacy', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
   async getByMhsIdAndPeriode(mhsId: number, periodeId: string): Promise<KhsResponse> {
     return fetchApi<KhsResponse>(`/khs/mahasiswa/${mhsId}/periode/${periodeId}`);
   },

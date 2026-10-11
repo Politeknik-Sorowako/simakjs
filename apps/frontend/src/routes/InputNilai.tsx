@@ -3,6 +3,7 @@ import { createEffect, createMemo, createResource, createSignal, For, onCleanup,
 import logoImg from '../assets/logo.png';
 import KomposisiBobotPanel from '../components/input-nilai/KomposisiBobotPanel';
 import SubNilaiPopup from '../components/input-nilai/SubNilaiPopup';
+import LegacyNilaiImportModal from '../components/LegacyNilaiImportModal';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { DropdownMenu } from '../components/ui/DropdownMenu';
@@ -55,6 +56,7 @@ export default function InputNilai() {
   const [inputSubGrades, setInputSubGrades] = createSignal<Record<string, string>>({});
   const [expandedKomponenId, setExpandedKomponenId] = createSignal<number | null>(null);
   const [showImportModal, setShowImportModal] = createSignal(false);
+  const [showLegacyImport, setShowLegacyImport] = createSignal(false);
   const [importTemplate, setImportTemplate] = createSignal<ImportTemplate>('komponen');
   const [focusKomponenId, setFocusKomponenId] = createSignal<number | null>(null);
   const [dirtyKeys, setDirtyKeys] = createSignal<Set<string>>(new Set());
@@ -2436,6 +2438,11 @@ export default function InputNilai() {
               >
                 Impor
               </Button>
+              <Show when={role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'}>
+                <Button variant="secondary" size="sm" onClick={() => setShowLegacyImport(true)}>
+                  Impor Nilai Legacy
+                </Button>
+              </Show>
               <Button
                 variant="secondary"
                 size="sm"
@@ -2631,6 +2638,12 @@ export default function InputNilai() {
           </div>
         }
         onImport={handleImportNilais}
+        onSuccess={() => refetchStudentsGrades()}
+      />
+
+      <LegacyNilaiImportModal
+        show={showLegacyImport()}
+        onClose={() => setShowLegacyImport(false)}
         onSuccess={() => refetchStudentsGrades()}
       />
 

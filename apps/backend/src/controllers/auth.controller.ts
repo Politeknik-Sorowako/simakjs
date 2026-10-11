@@ -3,6 +3,8 @@ import { Resend } from 'resend';
 import { users } from '../models/schema';
 import { AccountActivationService } from '../services/account-activation.service';
 import { AuthService } from '../services/auth.service';
+import { EmailOtpService } from '../services/email-otp.service';
+
 import { SsoService } from '../services/sso.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { TwoFactorService } from '../services/two-factor.service';
@@ -387,16 +389,33 @@ export class AuthController {
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async activateAccount({ body, set, request }: AuthContext): Promise<any> {
     try {
-      const token = (body as { token?: string })?.token;
-      if (!token) {
-        set.status = 400;
-        return { error: 'Token aktivasi wajib diisi.' };
-      }
+      const email = (body as { email?: string; otp?: string; token?: string })?.email;
+      const otp = (body as { email?: string; otp?: string; token?: string })?.otp;
+      const token = (body as { email?: string; otp?: string; token?: string })?.token;
 
-      const actResult = checkRateLimit(activateRateLimit, 'activate', request, '', ACTIVATE_MAX_ATTEMPTS);
+      const actResult = checkRateLimit(activateRateLimit, 'activate', request, email || '', ACTIVATE_MAX_ATTEMPTS);
       if (actResult.limited) {
         set.status = 429;
         return { error: 'Terlalu banyak permintaan aktivasi. Silakan coba lagi.', retryAfter: actResult.retryAfter };
+      }
+
+      // If OTP pattern
+      if (email && otp) {
+        const verifyRes = await EmailOtpService.verifyOtp(email, otp, 'activation');
+        if (!verifyRes.valid) {
+          set.status = 400;
+          return { error: verifyRes.message };
+        }
+
+        // Set user active
+        await db.update(users).set({ isActive: true }).where(eq(users.email, email.toLowerCase().trim()));
+        set.status = 200;
+        return { message: 'Akun Anda berhasil diaktifkan. Silakan login.', email };
+      }
+
+      if (!token) {
+        set.status = 400;
+        return { error: 'Email & kode OTP 6-digit wajib diisi.' };
       }
 
       const result = await AccountActivationService.verifyActivationToken(token);
@@ -432,13 +451,141 @@ export class AuthController {
         return { error: turnstile.error };
       }
 
+      const otpResult = await EmailOtpService.generateAndSendOtp(email, 'activation');
+      if (!otpResult.success) {
+        set.status = 400;
+        return { error: otpResult.message, cooldownRemaining: otpResult.cooldownRemaining };
+      }
+
+      // Also trigger legacy activation token as fallback
       await AccountActivationService.resendActivationToken(email);
-      // Respons generik menutup oracle enumerasi akun (pola forgot-password).
+
       set.status = 200;
-      return { message: 'Jika email terdaftar dan belum aktif, tautan aktivasi telah dikirim.' };
+      return { message: otpResult.message };
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal mengirim ulang email aktivasi.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async forgotPassword({ body, set, request }: AuthContext): Promise<any> {
+    try {
+      const email = (body as { email?: string })?.email;
+      if (!email) {
+        set.status = 400;
+        return { error: 'Email wajib diisi' };
+      }
+
+      const forgotResult = checkRateLimit(forgotRateLimit, 'forgot', request, email, FORGOT_MAX_ATTEMPTS);
+      if (forgotResult.limited) {
+        set.status = 429;
+        return {
+          error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.',
+          retryAfter: forgotResult.retryAfter,
+        };
+      }
+
+      const turnstile = await verifyTurnstile(
+        (body as { turnstileToken?: string })?.turnstileToken,
+        getClientIp(request),
+      );
+      if (!turnstile.ok) {
+        set.status = 400;
+        return { error: turnstile.error };
+      }
+
+      const otpResult = await EmailOtpService.generateAndSendOtp(email, 'password_reset');
+      if (!otpResult.success) {
+        set.status = 400;
+        return { error: otpResult.message, cooldownRemaining: otpResult.cooldownRemaining };
+      }
+
+      // Trigger legacy token reset link as fallback
+      await AuthService.createPasswordResetForEmail(email.toLowerCase().trim());
+
+      return { message: otpResult.message };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memproses permintaan reset password' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async resetPassword({ body, set, request }: AuthContext): Promise<any> {
+    try {
+      const email = (body as { email?: string; otp?: string; token?: string; password?: string })?.email;
+      const otp = (body as { email?: string; otp?: string; token?: string; password?: string })?.otp;
+      const token = (body as { email?: string; otp?: string; token?: string; password?: string })?.token;
+      const password = (body as { email?: string; otp?: string; token?: string; password?: string })?.password;
+
+      if (!password) {
+        set.status = 400;
+        return { error: 'Password baru wajib diisi' };
+      }
+
+      const resetResult = checkRateLimit(resetRateLimit, 'reset', request, email || '', RESET_MAX_ATTEMPTS);
+      if (resetResult.limited) {
+        set.status = 429;
+        return { error: 'Terlalu banyak permintaan. Silakan coba lagi.', retryAfter: resetResult.retryAfter };
+      }
+
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        set.status = 400;
+        return { error: passwordError };
+      }
+
+      // If OTP mode
+      if (email && otp) {
+        const verifyRes = await EmailOtpService.verifyOtp(email, otp, 'password_reset');
+        if (!verifyRes.valid) {
+          set.status = 400;
+          return { error: verifyRes.message };
+        }
+
+        const user = await AuthService.findByEmail(email.toLowerCase().trim());
+        if (!user) {
+          set.status = 404;
+          return { error: 'Pengguna tidak ditemukan' };
+        }
+
+        const hashedPassword = await AuthService.hashPassword(password);
+        await AuthService.updatePassword(user.id, hashedPassword);
+        return { message: 'Password Anda berhasil diubah. Silakan login kembali.' };
+      }
+
+      if (!token) {
+        set.status = 400;
+        return { error: 'Token atau kode OTP 6-digit wajib diisi' };
+      }
+
+      const resetRecord = await AuthService.getPasswordReset(token);
+      if (!resetRecord) {
+        set.status = 400;
+        return { error: 'Token reset password tidak valid atau kedaluwarsa' };
+      }
+
+      if (resetRecord.expiresAt < new Date()) {
+        await AuthService.deletePasswordReset(resetRecord.id);
+        set.status = 400;
+        return { error: 'Token reset password telah kedaluwarsa' };
+      }
+
+      const user = await AuthService.findByEmail(resetRecord.email);
+      if (!user) {
+        set.status = 404;
+        return { error: 'Pengguna tidak ditemukan' };
+      }
+
+      const hashedPassword = await AuthService.hashPassword(password);
+      await AuthService.updatePassword(user.id, hashedPassword);
+      await AuthService.deletePasswordReset(resetRecord.id);
+
+      return { message: 'Password Anda berhasil diubah. Silakan login kembali.' };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal menyetel ulang password' };
     }
   }
 
@@ -655,131 +802,6 @@ export class AuthController {
     } catch (err: unknown) {
       set.status = 500;
       return { error: 'Gagal memverifikasi 2FA.' };
-    }
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async forgotPassword({ body, set, request }: AuthContext): Promise<any> {
-    try {
-      const email = (body as { email?: string })?.email;
-      if (!email) {
-        set.status = 400;
-        return { error: 'Email wajib diisi' };
-      }
-
-      const forgotResult = checkRateLimit(forgotRateLimit, 'forgot', request, email, FORGOT_MAX_ATTEMPTS);
-      if (forgotResult.limited) {
-        set.status = 429;
-        return {
-          error: 'Terlalu banyak permintaan. Silakan coba lagi dalam 15 menit.',
-          retryAfter: forgotResult.retryAfter,
-        };
-      }
-
-      const turnstile = await verifyTurnstile(
-        (body as { turnstileToken?: string })?.turnstileToken,
-        getClientIp(request),
-      );
-      if (!turnstile.ok) {
-        set.status = 400;
-        return { error: turnstile.error };
-      }
-
-      const emailLower = email.toLowerCase().trim();
-
-      const token = await AuthService.createPasswordResetForEmail(emailLower);
-      if (token) {
-        const resendApiKey = process.env.RESEND_API_KEY;
-        if (resendApiKey) {
-          const resetLink = `${getFrontendBaseUrl()}/reset-password?token=${token}`;
-
-          try {
-            const resend = new Resend(resendApiKey);
-            const { error: sendError } = await resend.emails.send({
-              from: getEmailFrom(),
-              to: [emailLower],
-              subject: 'Reset Kata Sandi - SIMAK Vokasi',
-              html: `
-                <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-                  <h2 style="color: #1e3a8a; margin-bottom: 16px;">SIMAK Vokasi</h2>
-                  <p>Halo,</p>
-                  <p>Kami menerima permintaan untuk mereset kata sandi akun SIMAK Vokasi Anda.</p>
-                  <p>Silakan klik tombol di bawah ini untuk mengatur ulang kata sandi Anda. Tautan ini akan kedaluwarsa dalam 1 jam.</p>
-                  <div style="margin: 24px 0;">
-                    <a href="${escapeHtml(resetLink)}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Atur Ulang Kata Sandi</a>
-                  </div>
-                  <p style="color: #64748b; font-size: 12px;">Jika Anda tidak meminta ini, abaikan email ini.</p>
-                </div>
-              `,
-            });
-
-            if (sendError) {
-              console.error('Gagal mengirim email reset:', sendError.message);
-            }
-          } catch (sendErr) {
-            console.error('Gagal mengirim email reset:', sendErr);
-          }
-        }
-      }
-
-      return {
-        message: 'Jika email terdaftar, link reset password telah dikirim.',
-      };
-    } catch (error: unknown) {
-      set.status = 500;
-      return { error: 'Gagal memproses permintaan reset password' };
-    }
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async resetPassword({ body, set, request }: AuthContext): Promise<any> {
-    try {
-      const token = (body as { token?: string; password?: string })?.token;
-      const password = (body as { token?: string; password?: string })?.password;
-
-      if (!token || !password) {
-        set.status = 400;
-        return { error: 'Token dan password baru wajib diisi' };
-      }
-
-      const resetResult = checkRateLimit(resetRateLimit, 'reset', request, '', RESET_MAX_ATTEMPTS);
-      if (resetResult.limited) {
-        set.status = 429;
-        return { error: 'Terlalu banyak permintaan. Silakan coba lagi.', retryAfter: resetResult.retryAfter };
-      }
-
-      const passwordError = validatePassword(password);
-      if (passwordError) {
-        set.status = 400;
-        return { error: passwordError };
-      }
-
-      const resetRecord = await AuthService.getPasswordReset(token);
-      if (!resetRecord) {
-        set.status = 400;
-        return { error: 'Token reset password tidak valid atau kedaluwarsa' };
-      }
-
-      if (resetRecord.expiresAt < new Date()) {
-        await AuthService.deletePasswordReset(resetRecord.id);
-        set.status = 400;
-        return { error: 'Token reset password telah kedaluwarsa' };
-      }
-
-      const user = await AuthService.findByEmail(resetRecord.email);
-      if (!user) {
-        set.status = 404;
-        return { error: 'Pengguna tidak ditemukan' };
-      }
-
-      const hashedPassword = await AuthService.hashPassword(password);
-      await AuthService.updatePassword(user.id, hashedPassword);
-      await AuthService.deletePasswordReset(resetRecord.id);
-
-      return { message: 'Password Anda berhasil diubah. Silakan login kembali.' };
-    } catch (error: unknown) {
-      set.status = 500;
-      return { error: 'Gagal menyetel ulang password' };
     }
   }
 

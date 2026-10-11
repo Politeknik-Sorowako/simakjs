@@ -104,6 +104,37 @@ if [ -z "$JWT_SECRET" ]; then
 fi
 ok "JWT_SECRET configured"
 
+# TTE (QR Signed-Hash): kunci signing wajib valid sebelum deploy — tanpa kunci,
+# cetak KHS gagal diam-diam (endpoint /document-signatures/* error 400).
+# PENTING: .env di-source dengan `set -a`, sehingga shell menghapus tanda kutip.
+# Agar JSON tidak rusak, nilai WAJIB dibungkus single quote di .env:
+#   SIGN_HMAC_KEYS='{"k1":"<hex>"}'
+# Bila ditulis apa adanya ({"k1":...}), hasil source menjadi {k1:...} (invalid JSON)
+# dan backend gagal boot. Validasi bentuk di bawah mencegah hal itu.
+SIGN_KID="${SIGN_ACTIVE_KID:-k1}"
+if [ -z "$SIGN_HMAC_KEYS" ]; then
+  fail "SIGN_HMAC_KEYS not set in .env (TTE QR signing)"
+  exit 1
+fi
+if printf '%s' "$SIGN_HMAC_KEYS" | grep -Fq "ganti_dengan_hex_secret"; then
+  fail "SIGN_HMAC_KEYS still contains .env.example placeholder — generate with: openssl rand -hex 32"
+  exit 1
+fi
+if ! printf '%s' "$SIGN_HMAC_KEYS" | grep -Eq '^\{[[:space:]]*"[^"]+"[[:space:]]*:'; then
+  fail "SIGN_HMAC_KEYS invalid sebagai JSON setelah sourcing .env."
+  fail "Tulis dengan single quote membungkus JSON: SIGN_HMAC_KEYS='{\"k1\":\"<hex>\"}'"
+  exit 1
+fi
+if ! printf '%s' "$SIGN_HMAC_KEYS" | grep -Fq "$SIGN_KID"; then
+  fail "SIGN_HMAC_KEYS does not contain active kid \"$SIGN_KID\" (SIGN_ACTIVE_KID)"
+  exit 1
+fi
+ok "SIGN_HMAC_KEYS configured (kid: $SIGN_KID)"
+
+if [ -z "$VERIFY_BASE_URL" ]; then
+  warn "VERIFY_BASE_URL not set in .env; QR will use default https://verify.politekniksorowako.ac.id (staging: https://staging-simak.politekniksorowako.ac.id)"
+fi
+
 # Step 3: Backup database before deploy
 log "Step 3: Backing up staging database..."
 mkdir -p "$STAGING_BACKUP_DIR"

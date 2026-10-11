@@ -395,6 +395,11 @@ export async function auditBeforeHandle(ctx: AuditHookContext): Promise<void> {
   if (path.includes('/audit-logs')) {
     return;
   }
+  // Verifikasi publik TTE: POST yang bersifat baca (dipanggil tiap scan QR) —
+  // jangan banjiri audit log.
+  if (path.includes('/document-signatures/verify')) {
+    return;
+  }
   // Resolve entity before the mutation (so DELETE still has the row).
   const info = await resolveEntity(module, rawEntityId);
   entityCache.set(request, info);
@@ -415,6 +420,11 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
   const { path, module } = getPathMeta(request);
 
   if (path.includes('/audit-logs')) {
+    return;
+  }
+
+  // Verifikasi publik TTE (POST baca) — tidak dicatat agar audit log tidak banjir.
+  if (path.includes('/document-signatures/verify')) {
     return;
   }
 
