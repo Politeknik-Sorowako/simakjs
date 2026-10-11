@@ -1,6 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { BarChart, LineChart, PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
+import { DashboardPengumumanWidget } from '../components/pengumuman/DashboardPengumumanWidget';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bimbinganController } from '../controllers/bimbinganController';
@@ -804,6 +805,9 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
+
+        {/* Pengumuman Terbaru Widget */}
+        <DashboardPengumumanWidget />
 
         {/* Role-based Dashboard Content */}
         <Show when={auth.hasRole(['admin', 'super_admin'])}>
