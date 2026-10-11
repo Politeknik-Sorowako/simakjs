@@ -78,8 +78,9 @@ export class PengumumanController {
 
       return await PengumumanService.getDetail(id, user);
     } catch (err: unknown) {
-      set.status = 404;
-      return { error: err instanceof Error ? err.message : 'Pengumuman tidak ditemukan' };
+      const msg = err instanceof Error ? err.message : 'Pengumuman tidak ditemukan';
+      set.status = msg.includes('akses') || msg.includes('ditujukan') ? 403 : 404;
+      return { error: msg };
     }
   }
 

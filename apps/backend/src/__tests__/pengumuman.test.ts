@@ -148,4 +148,62 @@ describe('Pengumuman Service & API Lifecycle', () => {
     expect(foundInManage?.status).toBe('withdrawn');
     expect(foundInManage?.withdrawnReason).toBe('Revisi tanggal kegiatan mendadak');
   });
+
+  it('5. pengumuman scheduled otomatis tayang di feed saat waktu publishedAt telah lewat', async () => {
+    const pastDate = new Date(Date.now() - 5 * 60 * 1000); // 5 menit yang lalu
+    const [pRow] = await db
+      .insert(pengumuman)
+      .values({
+        judul: 'Pengumuman Jadwal Masa Lalu',
+        konten: 'Isi pengumuman yang dijadwalkan dan sudah lewat waktunya.',
+        authorId: adminUser.id,
+        authorRole: 'super_admin',
+        status: 'scheduled',
+        targetRole: 'semua',
+        targetProdiType: 'semua',
+        targetScopeType: 'umum',
+        publishedAt: pastDate,
+      })
+      .returning({ id: pengumuman.id });
+
+    try {
+      const feed = await PengumumanService.getFeed(adminUser, { search: 'Jadwal Masa Lalu' });
+      const item = feed.data.find((p) => p.id === pRow.id);
+      expect(item).toBeDefined();
+      expect(item?.judul).toBe('Pengumuman Jadwal Masa Lalu');
+    } finally {
+      await db.delete(pengumuman).where(eq(pengumuman.id, pRow.id));
+    }
+  });
+
+  it('6. getDetail membatasi akses pengumuman draft / bukan hak pembaca', async () => {
+    // 1. Buat draf oleh admin
+    const draft = await PengumumanService.saveDraft(adminUser, {
+      judul: 'Draf Rahasia Internal',
+      konten: 'Hanya boleh dilihat pembuat.',
+    });
+
+    const otherUser: UserPayload = {
+      id: 999999,
+      email: 'mahasiswa-luar@simak.ac.id',
+      nama: 'Mahasiswa Luar',
+      role: 'mahasiswa',
+      roles: ['mahasiswa'],
+    };
+
+    // User lain yang mengakses draf harus ditolak
+    await expect(PengumumanService.getDetail(draft.id!, otherUser)).rejects.toThrow();
+
+    // Pembuat (admin) tetap boleh mengakses
+    const detailOwner = await PengumumanService.getDetail(draft.id!, adminUser);
+    expect(detailOwner.id).toBe(draft.id);
+
+    await db.delete(pengumuman).where(eq(pengumuman.id, draft.id!));
+  });
+
+  it('7. getManageList menolak query status yang tidak valid', async () => {
+    await expect(PengumumanService.getManageList(adminUser, { status: 'invalid_status_xyz' })).rejects.toThrow(
+      /Status tidak valid/,
+    );
+  });
 });

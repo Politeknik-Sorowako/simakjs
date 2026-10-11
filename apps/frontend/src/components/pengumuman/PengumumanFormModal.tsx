@@ -15,6 +15,14 @@ interface PengumumanFormModalProps {
   targetOptions: TargetOptions;
 }
 
+function toLocalDateTimeInput(isoString?: string | null): string {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function PengumumanFormModal(props: PengumumanFormModalProps) {
   const [currentId, setCurrentId] = createSignal<number | undefined>(undefined);
   const [judul, setJudul] = createSignal('');
@@ -38,6 +46,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedTime, setLastSavedTime] = createSignal<string>('');
   const [isSubmitting, setIsSubmitting] = createSignal(false);
+  let isAutoSaving = false;
 
   let autoSaveTimeout: ReturnType<typeof setTimeout> | undefined;
   let fileUploadInput: HTMLInputElement | undefined;
@@ -59,7 +68,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         setLampiran(props.initialData.lampiran || []);
         if (props.initialData.status === 'scheduled' && props.initialData.publishedAt) {
           setPublishMode('scheduled');
-          setScheduledPublishAt(props.initialData.publishedAt.slice(0, 16));
+          setScheduledPublishAt(toLocalDateTimeInput(props.initialData.publishedAt));
         } else {
           setPublishMode('now');
           setScheduledPublishAt('');
@@ -86,13 +95,15 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
 
   // Debounced auto-save function
   const triggerAutoSave = () => {
-    if (!props.isOpen || isSubmitting()) return;
+    if (!props.isOpen || isSubmitting() || isAutoSaving) return;
     if (!judul().trim() && !konten().trim()) return;
 
     clearTimeout(autoSaveTimeout);
     setAutoSaveStatus('saving');
 
     autoSaveTimeout = setTimeout(async () => {
+      if (isAutoSaving) return;
+      isAutoSaving = true;
       try {
         const res = await pengumumanController.saveDraft({
           id: currentId(),
@@ -116,6 +127,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         );
       } catch {
         setAutoSaveStatus('error');
+      } finally {
+        isAutoSaving = false;
       }
     }, 2500); // 2.5 second debounce
   };

@@ -10,6 +10,7 @@ export interface MarkdownViewerProps {
 export function stripMarkdown(markdown?: string | null): string {
   if (!markdown) return '';
   return markdown
+    .replace(/```[\s\S]*?```/g, '')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/^\s*[-*]\s+/gm, '')
     .replace(/^\s*\d+\.\s+/gm, '')
@@ -17,6 +18,7 @@ export function stripMarkdown(markdown?: string | null): string {
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/(^|[^*])\*([^*]+)\*/g, '$1$2')
     .replace(/(^|[^_])_([^_]+)_/g, '$1$2')
+    .replace(/`([^`]+)`/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\n+/g, ' ')
     .replace(/\s+/g, ' ')

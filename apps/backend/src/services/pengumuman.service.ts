@@ -1,7 +1,6 @@
 import { and, desc, eq, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import {
   dosen,
-  dosenPengajarKelas,
   kelasKuliah,
   krs,
   mahasiswa,
@@ -18,7 +17,7 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
-import { getDosenAllowedKelasIds, getDosenIdByEmail, isPrivilegedScope } from '../utils/dosen-scope';
+import { getDosenAllowedKelasIds, getDosenIdByEmail } from '../utils/dosen-scope';
 import { hasRole } from '../utils/role';
 import type { UserPayload } from '../utils/types';
 import { ProdiScopeService } from './prodi-scope.service';
@@ -95,14 +94,16 @@ export class PengumumanService {
         .select({
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
+          namaMataKuliah: mataKuliah.nama,
         })
         .from(kelasKuliah)
+        .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
         .limit(200);
 
       kelasList = kRows.map((k) => ({
         id: k.id,
         namaKelas: k.namaKelas,
-        mataKuliah: k.namaKelas,
+        mataKuliah: k.namaMataKuliah || k.namaKelas,
       }));
 
       const rRows = await db
@@ -125,6 +126,7 @@ export class PengumumanService {
           .select({
             id: kelasKuliah.id,
             namaKelas: kelasKuliah.namaKelas,
+            namaMataKuliah: mataKuliah.nama,
           })
           .from(kelasKuliah)
           .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
@@ -134,7 +136,7 @@ export class PengumumanService {
         kelasList = kRows.map((k) => ({
           id: k.id,
           namaKelas: k.namaKelas,
-          mataKuliah: k.namaKelas,
+          mataKuliah: k.namaMataKuliah || k.namaKelas,
         }));
 
         const rRows = await db
@@ -163,14 +165,16 @@ export class PengumumanService {
             .select({
               id: kelasKuliah.id,
               namaKelas: kelasKuliah.namaKelas,
+              namaMataKuliah: mataKuliah.nama,
             })
             .from(kelasKuliah)
+            .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
             .where(inArray(kelasKuliah.id, allowedKelasIds));
 
           kelasList = kRows.map((k) => ({
             id: k.id,
             namaKelas: k.namaKelas,
-            mataKuliah: k.namaKelas,
+            mataKuliah: k.namaMataKuliah || k.namaKelas,
           }));
 
           const rRows = await db
@@ -274,7 +278,7 @@ export class PengumumanService {
     if (isAdmin) allowedRoles.push('admin');
 
     const conditions = [
-      eq(pengumuman.status, 'published'),
+      inArray(pengumuman.status, ['published', 'scheduled']),
       lte(pengumuman.publishedAt, now),
       or(isNull(pengumuman.expiresAt), sql`${pengumuman.expiresAt} >= ${now}`),
       inArray(pengumuman.targetRole, allowedRoles),
@@ -304,7 +308,8 @@ export class PengumumanService {
       .from(pengumuman)
       .leftJoin(users, eq(pengumuman.authorId, users.id))
       .where(and(...conditions))
-      .orderBy(desc(pengumuman.isPinned), desc(pengumuman.publishedAt));
+      .orderBy(desc(pengumuman.isPinned), desc(pengumuman.publishedAt))
+      .limit(200);
 
     const candidateIds = baseCandidates.map((c) => c.id);
     if (candidateIds.length === 0) {
@@ -443,7 +448,11 @@ export class PengumumanService {
     }
 
     if (query.status && query.status !== 'all') {
-      conditions.push(eq(pengumuman.status, query.status as (typeof pengumuman.status.enumValues)[number]));
+      const validStatuses = pengumuman.status.enumValues;
+      if (!validStatuses.includes(query.status as (typeof validStatuses)[number])) {
+        throw new Error(`Status tidak valid. Pilihan valid: ${validStatuses.join(', ')} atau 'all'`);
+      }
+      conditions.push(eq(pengumuman.status, query.status as (typeof validStatuses)[number]));
     }
 
     if (query.search?.trim()) {
@@ -543,7 +552,117 @@ export class PengumumanService {
   }
 
   /**
-   * Detail pengumuman + mencatat status dibaca untuk user saat ini
+   * Helper: Validasi apakah author berhak menargetkan prodi, kelas, atau rombel yang dikirim
+   */
+  private static async validateTargetScopes(
+    user: UserPayload,
+    payload: {
+      targetProdiType?: 'semua' | 'spesifik';
+      targetProdiIds?: number[];
+      targetScopeType?: 'umum' | 'kelas' | 'rombel';
+      targetKelasIds?: number[];
+      targetRombelIds?: number[];
+    },
+  ) {
+    const isSuperOrAdmin = hasRole(user, ['super_admin', 'admin']);
+    if (isSuperOrAdmin) return;
+
+    const isProdi = hasRole(user, ['prodi', 'kaprodi']);
+    const isDosen = hasRole(user, ['dosen', 'instruktur']);
+
+    // 1. Validasi Prodi Target
+    if (payload.targetProdiType === 'spesifik' && payload.targetProdiIds && payload.targetProdiIds.length > 0) {
+      if (isProdi) {
+        const allowedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+        if (allowedProdiIds !== null) {
+          const unauthorized = payload.targetProdiIds.filter((pId) => !allowedProdiIds.includes(pId));
+          if (unauthorized.length > 0) {
+            throw new Error('Akses ditolak. Anda tidak berhak menargetkan program studi di luar wewenang Anda.');
+          }
+        }
+      } else if (isDosen) {
+        const dosenId = await getDosenIdByEmail(user.email);
+        if (dosenId) {
+          const [dsn] = await db
+            .select({ prodiId: dosen.programStudiId })
+            .from(dosen)
+            .where(eq(dosen.id, dosenId))
+            .limit(1);
+          if (dsn?.prodiId && payload.targetProdiIds.some((pId) => pId !== dsn.prodiId)) {
+            throw new Error('Akses ditolak. Dosen hanya dapat menargetkan program studi tempatnya bernaung.');
+          }
+        }
+      }
+    }
+
+    // 2. Validasi Kelas Target
+    if (payload.targetScopeType === 'kelas' && payload.targetKelasIds && payload.targetKelasIds.length > 0) {
+      if (isDosen) {
+        const dosenId = await getDosenIdByEmail(user.email);
+        if (!dosenId) throw new Error('Profil dosen tidak ditemukan');
+        const allowedKelasIds = await getDosenAllowedKelasIds(dosenId);
+        const unauthorized = payload.targetKelasIds.filter((kId) => !allowedKelasIds.includes(kId));
+        if (unauthorized.length > 0) {
+          throw new Error('Akses ditolak. Anda hanya dapat menargetkan kelas yang Anda ampu.');
+        }
+      } else if (isProdi) {
+        const allowedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+        if (allowedProdiIds !== null) {
+          const kelasRows = await db
+            .select({ id: kelasKuliah.id, prodiId: mataKuliah.programStudiId })
+            .from(kelasKuliah)
+            .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+            .where(inArray(kelasKuliah.id, payload.targetKelasIds));
+          const unauthorized = kelasRows.filter((k) => !allowedProdiIds.includes(k.prodiId));
+          if (unauthorized.length > 0) {
+            throw new Error('Akses ditolak. Kelas yang ditargetkan berada di luar program studi Anda.');
+          }
+        }
+      }
+    }
+
+    // 3. Validasi Rombel Target
+    if (payload.targetScopeType === 'rombel' && payload.targetRombelIds && payload.targetRombelIds.length > 0) {
+      if (isDosen) {
+        const dosenId = await getDosenIdByEmail(user.email);
+        if (!dosenId) throw new Error('Profil dosen tidak ditemukan');
+        const allowedKelasIds = await getDosenAllowedKelasIds(dosenId);
+        const rombelRows = await db
+          .select({
+            id: rombelPraktikum.id,
+            kelasKuliahId: rombelPraktikum.kelasKuliahId,
+            instrukturId: rombelPraktikum.instrukturId,
+          })
+          .from(rombelPraktikum)
+          .where(inArray(rombelPraktikum.id, payload.targetRombelIds));
+
+        for (const r of rombelRows) {
+          const isInstruktur = r.instrukturId === dosenId;
+          const isPengajarKelas = allowedKelasIds.includes(r.kelasKuliahId);
+          if (!isInstruktur && !isPengajarKelas) {
+            throw new Error('Akses ditolak. Anda hanya dapat menargetkan rombel praktikum yang Anda ampu.');
+          }
+        }
+      } else if (isProdi) {
+        const allowedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+        if (allowedProdiIds !== null) {
+          const rombelRows = await db
+            .select({ id: rombelPraktikum.id, prodiId: mataKuliah.programStudiId })
+            .from(rombelPraktikum)
+            .innerJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+            .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+            .where(inArray(rombelPraktikum.id, payload.targetRombelIds));
+          const unauthorized = rombelRows.filter((r) => !allowedProdiIds.includes(r.prodiId));
+          if (unauthorized.length > 0) {
+            throw new Error('Akses ditolak. Rombel praktikum yang ditargetkan berada di luar program studi Anda.');
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Detail pengumuman + otorisasi pembaca + mencatat status dibaca untuk user saat ini
    */
   static async getDetail(id: number, user: UserPayload) {
     const [row] = await db
@@ -575,6 +694,144 @@ export class PengumumanService {
       .limit(1);
 
     if (!row) throw new Error('Pengumuman tidak ditemukan');
+
+    const isAdmin = hasRole(user, ['super_admin', 'admin']);
+    const isAuthor = row.authorId === user.id;
+
+    // Jika bukan author atau admin, lakukan verifikasi hak akses visibilitas
+    if (!isAdmin && !isAuthor) {
+      const now = new Date();
+      const isPubliclyAvailable =
+        (row.status === 'published' ||
+          (row.status === 'scheduled' && row.publishedAt && new Date(row.publishedAt) <= now)) &&
+        (!row.expiresAt || new Date(row.expiresAt) >= now);
+
+      if (!isPubliclyAvailable) {
+        throw new Error('Pengumuman tidak ditemukan atau belum dipublikasikan');
+      }
+
+      const userRoles = user.roles || [user.role];
+      const isMahasiswa = userRoles.includes('mahasiswa');
+      const isDosen = userRoles.some((r) => ['dosen', 'instruktur', 'kaprodi'].includes(r));
+
+      // Verifikasi target role
+      if (row.targetRole !== 'semua') {
+        if (row.targetRole === 'mahasiswa' && !isMahasiswa) {
+          throw new Error('Anda tidak memiliki akses ke pengumuman ini');
+        }
+        if (row.targetRole === 'dosen' && !isDosen) {
+          throw new Error('Anda tidak memiliki akses ke pengumuman ini');
+        }
+        if (row.targetRole === 'admin' && !isAdmin) {
+          throw new Error('Anda tidak memiliki akses ke pengumuman ini');
+        }
+      }
+
+      // Verifikasi target prodi
+      if (row.targetProdiType === 'spesifik') {
+        const targetProdiRows = await db
+          .select({ prodiId: pengumumanTargetProdi.programStudiId })
+          .from(pengumumanTargetProdi)
+          .where(eq(pengumumanTargetProdi.pengumumanId, id));
+        const allowedProdiIds = targetProdiRows.map((p) => p.prodiId);
+
+        let userProdiId: number | null = null;
+        if (isMahasiswa) {
+          const [mhs] = await db
+            .select({ prodiId: mahasiswa.programStudiId })
+            .from(mahasiswa)
+            .where(ilike(mahasiswa.email, user.email.trim()))
+            .limit(1);
+          userProdiId = mhs?.prodiId ?? null;
+        } else if (isDosen) {
+          const [dsn] = await db
+            .select({ prodiId: dosen.programStudiId })
+            .from(dosen)
+            .where(ilike(dosen.email, user.email.trim()))
+            .limit(1);
+          userProdiId = dsn?.prodiId ?? null;
+        }
+
+        if (userProdiId && !allowedProdiIds.includes(userProdiId)) {
+          throw new Error('Pengumuman ini ditujukan untuk program studi lain');
+        }
+      }
+
+      // Verifikasi target scope kelas/rombel
+      if (row.targetScopeType === 'kelas') {
+        const targetKelasRows = await db
+          .select({ kelasId: pengumumanTargetKelas.kelasKuliahId })
+          .from(pengumumanTargetKelas)
+          .where(eq(pengumumanTargetKelas.pengumumanId, id));
+        const targetKelasIds = targetKelasRows.map((k) => k.kelasId);
+
+        let userKelasIds: number[] = [];
+        if (isMahasiswa) {
+          const [mhs] = await db
+            .select({ id: mahasiswa.id })
+            .from(mahasiswa)
+            .where(ilike(mahasiswa.email, user.email.trim()))
+            .limit(1);
+          if (mhs) {
+            const krsRows = await db
+              .select({ kelasKuliahId: krs.kelasKuliahId })
+              .from(krs)
+              .where(and(eq(krs.mahasiswaId, mhs.id), eq(krs.isApproved, true)));
+            userKelasIds = krsRows.map((k) => k.kelasKuliahId);
+          }
+        } else if (isDosen) {
+          const dsnId = await getDosenIdByEmail(user.email);
+          if (dsnId) userKelasIds = await getDosenAllowedKelasIds(dsnId);
+        }
+
+        const match = userKelasIds.some((kId) => targetKelasIds.includes(kId));
+        if (!match) {
+          throw new Error('Pengumuman ini ditujukan untuk kelas kuliah spesifik di luar kelas Anda');
+        }
+      } else if (row.targetScopeType === 'rombel') {
+        const targetRombelRows = await db
+          .select({ rombelId: pengumumanTargetRombel.rombelPraktikumId })
+          .from(pengumumanTargetRombel)
+          .where(eq(pengumumanTargetRombel.pengumumanId, id));
+        const targetRombelIds = targetRombelRows.map((r) => r.rombelId);
+
+        let userRombelIds: number[] = [];
+        if (isMahasiswa) {
+          const [mhs] = await db
+            .select({ id: mahasiswa.id })
+            .from(mahasiswa)
+            .where(ilike(mahasiswa.email, user.email.trim()))
+            .limit(1);
+          if (mhs) {
+            const rRows = await db
+              .select({ rombelId: rombelPraktikumMahasiswa.rombelPraktikumId })
+              .from(rombelPraktikumMahasiswa)
+              .where(eq(rombelPraktikumMahasiswa.mahasiswaId, mhs.id));
+            userRombelIds = rRows.map((r) => r.rombelId);
+          }
+        } else if (isDosen) {
+          const dsnId = await getDosenIdByEmail(user.email);
+          if (dsnId) {
+            const allowedKelasIds = await getDosenAllowedKelasIds(dsnId);
+            const rRows = await db
+              .select({ id: rombelPraktikum.id })
+              .from(rombelPraktikum)
+              .where(
+                or(
+                  allowedKelasIds.length > 0 ? inArray(rombelPraktikum.kelasKuliahId, allowedKelasIds) : sql`false`,
+                  eq(rombelPraktikum.instrukturId, dsnId),
+                ),
+              );
+            userRombelIds = rRows.map((r) => r.id);
+          }
+        }
+
+        const match = userRombelIds.some((rId) => targetRombelIds.includes(rId));
+        if (!match) {
+          throw new Error('Pengumuman ini ditujukan untuk rombel praktikum spesifik di luar rombel Anda');
+        }
+      }
+    }
 
     const lampiran = await db.select().from(pengumumanLampiran).where(eq(pengumumanLampiran.pengumumanId, id));
 
@@ -630,6 +887,9 @@ export class PengumumanService {
     if (!isAllowedAuthor) {
       throw new Error('Hanya Admin, Program Studi, atau Dosen yang dapat membuat pengumuman');
     }
+
+    // Validasi target prodi/kelas/rombel terhadap scope pengguna
+    await this.validateTargetScopes(user, payload);
 
     const now = new Date();
     const judul = payload.judul?.trim() || 'Draf Tanpa Judul';
@@ -749,6 +1009,9 @@ export class PengumumanService {
     if (!isAllowedAuthor) {
       throw new Error('Hanya Admin, Program Studi, atau Dosen yang dapat mempublikasikan pengumuman');
     }
+
+    // Validasi target prodi/kelas/rombel terhadap scope pengguna
+    await this.validateTargetScopes(user, payload);
 
     const now = new Date();
     let publishedAt = now;
