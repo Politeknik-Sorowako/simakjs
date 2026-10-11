@@ -338,17 +338,7 @@ export const app = new Elysia()
     set.headers['Cache-Control'] = 'private, max-age=3600';
     return file;
   })
-  .get('/storage/pengumuman/:filename', async ({ params, set, headers, cookie, jwt }) => {
-    const authHeader = headers['authorization'];
-    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
-    const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
-    const token = headerToken || cookieToken;
-
-    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
-      set.status = 401;
-      return { error: 'Unauthorized: Silakan login terlebih dahulu' };
-    }
-
+  .get('/storage/pengumuman/:filename', async ({ params, set }) => {
     const raw = String(params.filename || '');
     const filename = basename(raw);
     if (filename !== raw || !/\.(pdf|docx|xlsx|pptx|zip|png|jpg|jpeg|webp)$/i.test(filename)) {
@@ -361,7 +351,23 @@ export const app = new Elysia()
       return { error: 'Berkas tidak ditemukan' };
     }
     set.headers['Content-Type'] = file.type || 'application/octet-stream';
-    set.headers['Cache-Control'] = 'private, max-age=3600';
+    set.headers['Cache-Control'] = 'public, max-age=86400';
+    return file;
+  })
+  .get('/api/storage/pengumuman/:filename', async ({ params, set }) => {
+    const raw = String(params.filename || '');
+    const filename = basename(raw);
+    if (filename !== raw || !/\.(pdf|docx|xlsx|pptx|zip|png|jpg|jpeg|webp)$/i.test(filename)) {
+      set.status = 404;
+      return { error: 'Berkas tidak ditemukan' };
+    }
+    const file = Bun.file(join(process.cwd(), 'storage', 'pengumuman', filename));
+    if (!(await file.exists())) {
+      set.status = 404;
+      return { error: 'Berkas tidak ditemukan' };
+    }
+    set.headers['Content-Type'] = file.type || 'application/octet-stream';
+    set.headers['Cache-Control'] = 'public, max-age=86400';
     return file;
   })
   .use(authMiddleware)

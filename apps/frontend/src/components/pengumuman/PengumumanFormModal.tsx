@@ -403,11 +403,21 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                 }
               >
                 <div class="flex items-center gap-4 bg-white dark:bg-secondary-900 p-2.5 rounded-xl border border-secondary-200 dark:border-secondary-700">
-                  <img
-                    src={getAbsoluteStorageUrl(thumbnailUrl()!)}
-                    alt="Thumbnail Preview"
-                    class="w-24 h-16 object-cover rounded-lg border border-secondary-200 dark:border-secondary-800"
-                  />
+                  <div class="w-24 h-16 rounded-lg border border-secondary-200 dark:border-secondary-800 overflow-hidden relative bg-secondary-100 dark:bg-secondary-800 shrink-0">
+                    <img
+                      src={getAbsoluteStorageUrl(thumbnailUrl()!)}
+                      alt="Thumbnail Preview"
+                      class="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        const fallbackEl = e.currentTarget.parentElement?.querySelector('.img-preview-fallback');
+                        if (fallbackEl) (fallbackEl as HTMLElement).style.display = 'flex';
+                      }}
+                    />
+                    <div class="img-preview-fallback hidden w-full h-full absolute inset-0 items-center justify-center text-xs text-secondary-400 bg-secondary-100 dark:bg-secondary-850">
+                      <span>🖼️ Error</span>
+                    </div>
+                  </div>
                   <div class="flex-1 min-w-0">
                     <div class="text-xs font-medium text-secondary-800 dark:text-secondary-200 truncate">
                       {thumbnailUrl()}

@@ -124,6 +124,9 @@ export function PengumumanDetailModal(props: PengumumanDetailModalProps) {
                   src={getAbsoluteStorageUrl(p()!.thumbnailUrl!)}
                   alt={p()?.judul}
                   class="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.parentElement?.classList.add('hidden');
+                  }}
                 />
               </div>
             </Show>

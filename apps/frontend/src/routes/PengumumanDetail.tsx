@@ -204,6 +204,9 @@ export default function PengumumanDetail() {
                     src={getAbsoluteStorageUrl(item().thumbnailUrl!)}
                     alt={item().judul}
                     class="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.parentElement?.classList.add('hidden');
+                    }}
                   />
                 </div>
               </Show>
