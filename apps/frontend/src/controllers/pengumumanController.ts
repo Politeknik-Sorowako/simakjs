@@ -23,6 +23,7 @@ export interface PengumumanItem {
   targetProdiType: 'semua' | 'spesifik';
   targetScopeType: 'umum' | 'kelas' | 'rombel';
   isPinned: boolean;
+  thumbnailUrl?: string | null;
   publishedAt?: string | null;
   withdrawnAt?: string | null;
   withdrawnReason?: string | null;
@@ -43,8 +44,8 @@ export interface PengumumanItem {
 
 export interface TargetOptions {
   prodi: { id: number; kode: string; nama: string }[];
-  kelas: { id: number; namaKelas: string; mataKuliah: string }[];
-  rombel: { id: number; namaGroup: string; kelas: string }[];
+  kelas: { id: number; namaKelas: string; mataKuliah: string; dosenPengajar?: string }[];
+  rombel: { id: number; namaGroup: string; kelas: string; instruktur?: string }[];
 }
 
 export interface PaginatedPengumuman {

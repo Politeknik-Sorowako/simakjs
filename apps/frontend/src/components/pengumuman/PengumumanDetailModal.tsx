@@ -66,6 +66,17 @@ export function PengumumanDetailModal(props: PengumumanDetailModalProps) {
               </span>
             </div>
 
+            {/* Thumbnail Banner */}
+            <Show when={p()?.thumbnailUrl}>
+              <div class="w-full max-h-72 rounded-2xl overflow-hidden bg-secondary-100 dark:bg-secondary-800">
+                <img
+                  src={getAbsoluteStorageUrl(p()!.thumbnailUrl!)}
+                  alt={p()?.judul}
+                  class="w-full h-full object-cover"
+                />
+              </div>
+            </Show>
+
             {/* Markdown Content */}
             <MarkdownViewer content={p()?.konten || ''} />
 
