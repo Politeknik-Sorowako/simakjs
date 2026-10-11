@@ -52,6 +52,7 @@ describe('Pengumuman Service & API Lifecycle', () => {
       targetRole: 'semua',
       targetProdiType: 'semua',
       targetScopeType: 'umum',
+      thumbnailUrl: 'https://minio.simak.ac.id/attachments/sample-thumb.png',
       lampiran: [
         {
           tipe: 'link',
@@ -68,6 +69,7 @@ describe('Pengumuman Service & API Lifecycle', () => {
     const detail = await PengumumanService.getDetail(testPengumumanId!, adminUser);
     expect(detail.status).toBe('draft');
     expect(detail.judul).toBe('Draf Pengumuman Libur Akademik');
+    expect(detail.thumbnailUrl).toBe('https://minio.simak.ac.id/attachments/sample-thumb.png');
     expect(detail.lampiran.length).toBe(1);
 
     // Pengumuman draft tidak boleh tampil di feed pembaca

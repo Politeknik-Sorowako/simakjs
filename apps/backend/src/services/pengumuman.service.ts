@@ -1,6 +1,7 @@
 import { and, desc, eq, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
 import {
   dosen,
+  dosenPengajarKelas,
   kelasKuliah,
   krs,
   mahasiswa,
@@ -42,6 +43,7 @@ export interface SaveDraftPayload {
   targetKelasIds?: number[];
   targetRombelIds?: number[];
   isPinned?: boolean;
+  thumbnailUrl?: string | null;
   publishedAt?: string | null;
   expiresAt?: string | null;
   lampiran?: LampiranPayload[];
@@ -59,6 +61,7 @@ export interface PublishPayload {
   targetKelasIds?: number[];
   targetRombelIds?: number[];
   isPinned?: boolean;
+  thumbnailUrl?: string | null;
   publishMode: 'now' | 'scheduled';
   scheduledPublishAt?: string | null;
   expiresAt?: string | null;
@@ -86,8 +89,8 @@ export class PengumumanService {
       }
     }
 
-    let kelasList: { id: number; namaKelas: string; mataKuliah: string }[] = [];
-    let rombelList: { id: number; namaGroup: string; kelas: string }[] = [];
+    let kelasList: { id: number; namaKelas: string; mataKuliah: string; dosenPengajar?: string }[] = [];
+    let rombelList: { id: number; namaGroup: string; kelas: string; instruktur?: string }[] = [];
 
     if (isSuperOrAdmin) {
       const kRows = await db
@@ -100,24 +103,49 @@ export class PengumumanService {
         .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
         .limit(200);
 
+      const kIds = kRows.map((k) => k.id);
+      const dpRows =
+        kIds.length > 0
+          ? await db
+              .select({
+                kelasKuliahId: dosenPengajarKelas.kelasKuliahId,
+                namaDosen: dosen.nama,
+              })
+              .from(dosenPengajarKelas)
+              .innerJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+              .where(inArray(dosenPengajarKelas.kelasKuliahId, kIds))
+          : [];
+
+      const dosenMap = new Map<number, string[]>();
+      for (const dp of dpRows) {
+        if (!dosenMap.has(dp.kelasKuliahId)) dosenMap.set(dp.kelasKuliahId, []);
+        if (dp.namaDosen) dosenMap.get(dp.kelasKuliahId)!.push(dp.namaDosen);
+      }
+
       kelasList = kRows.map((k) => ({
         id: k.id,
         namaKelas: k.namaKelas,
         mataKuliah: k.namaMataKuliah || k.namaKelas,
+        dosenPengajar: (dosenMap.get(k.id) || []).join(', ') || undefined,
       }));
 
       const rRows = await db
         .select({
           id: rombelPraktikum.id,
           namaGroup: rombelPraktikum.namaGroup,
+          namaKelas: kelasKuliah.namaKelas,
+          namaInstruktur: dosen.nama,
         })
         .from(rombelPraktikum)
+        .leftJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+        .leftJoin(dosen, eq(rombelPraktikum.instrukturId, dosen.id))
         .limit(200);
 
       rombelList = rRows.map((r) => ({
         id: r.id,
         namaGroup: r.namaGroup,
-        kelas: r.namaGroup,
+        kelas: r.namaKelas || r.namaGroup,
+        instruktur: r.namaInstruktur || undefined,
       }));
     } else if (isProdi) {
       const prodiFilterIds = prodiList.map((p) => p.id);
@@ -133,27 +161,51 @@ export class PengumumanService {
           .where(inArray(mataKuliah.programStudiId, prodiFilterIds))
           .limit(200);
 
+        const kIds = kRows.map((k) => k.id);
+        const dpRows =
+          kIds.length > 0
+            ? await db
+                .select({
+                  kelasKuliahId: dosenPengajarKelas.kelasKuliahId,
+                  namaDosen: dosen.nama,
+                })
+                .from(dosenPengajarKelas)
+                .innerJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+                .where(inArray(dosenPengajarKelas.kelasKuliahId, kIds))
+            : [];
+
+        const dosenMap = new Map<number, string[]>();
+        for (const dp of dpRows) {
+          if (!dosenMap.has(dp.kelasKuliahId)) dosenMap.set(dp.kelasKuliahId, []);
+          if (dp.namaDosen) dosenMap.get(dp.kelasKuliahId)!.push(dp.namaDosen);
+        }
+
         kelasList = kRows.map((k) => ({
           id: k.id,
           namaKelas: k.namaKelas,
           mataKuliah: k.namaMataKuliah || k.namaKelas,
+          dosenPengajar: (dosenMap.get(k.id) || []).join(', ') || undefined,
         }));
 
         const rRows = await db
           .select({
             id: rombelPraktikum.id,
             namaGroup: rombelPraktikum.namaGroup,
+            namaKelas: kelasKuliah.namaKelas,
+            namaInstruktur: dosen.nama,
           })
           .from(rombelPraktikum)
           .innerJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
           .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+          .leftJoin(dosen, eq(rombelPraktikum.instrukturId, dosen.id))
           .where(inArray(mataKuliah.programStudiId, prodiFilterIds))
           .limit(200);
 
         rombelList = rRows.map((r) => ({
           id: r.id,
           namaGroup: r.namaGroup,
-          kelas: r.namaGroup,
+          kelas: r.namaKelas || r.namaGroup,
+          instruktur: r.namaInstruktur || undefined,
         }));
       }
     } else if (isDosen) {
@@ -171,18 +223,38 @@ export class PengumumanService {
             .leftJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
             .where(inArray(kelasKuliah.id, allowedKelasIds));
 
+          const dpRows = await db
+            .select({
+              kelasKuliahId: dosenPengajarKelas.kelasKuliahId,
+              namaDosen: dosen.nama,
+            })
+            .from(dosenPengajarKelas)
+            .innerJoin(dosen, eq(dosenPengajarKelas.dosenId, dosen.id))
+            .where(inArray(dosenPengajarKelas.kelasKuliahId, allowedKelasIds));
+
+          const dosenMap = new Map<number, string[]>();
+          for (const dp of dpRows) {
+            if (!dosenMap.has(dp.kelasKuliahId)) dosenMap.set(dp.kelasKuliahId, []);
+            if (dp.namaDosen) dosenMap.get(dp.kelasKuliahId)!.push(dp.namaDosen);
+          }
+
           kelasList = kRows.map((k) => ({
             id: k.id,
             namaKelas: k.namaKelas,
             mataKuliah: k.namaMataKuliah || k.namaKelas,
+            dosenPengajar: (dosenMap.get(k.id) || []).join(', ') || undefined,
           }));
 
           const rRows = await db
             .select({
               id: rombelPraktikum.id,
               namaGroup: rombelPraktikum.namaGroup,
+              namaKelas: kelasKuliah.namaKelas,
+              namaInstruktur: dosen.nama,
             })
             .from(rombelPraktikum)
+            .leftJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+            .leftJoin(dosen, eq(rombelPraktikum.instrukturId, dosen.id))
             .where(
               or(inArray(rombelPraktikum.kelasKuliahId, allowedKelasIds), eq(rombelPraktikum.instrukturId, dosenId)),
             );
@@ -190,7 +262,8 @@ export class PengumumanService {
           rombelList = rRows.map((r) => ({
             id: r.id,
             namaGroup: r.namaGroup,
-            kelas: r.namaGroup,
+            kelas: r.namaKelas || r.namaGroup,
+            instruktur: r.namaInstruktur || undefined,
           }));
         }
       }
@@ -301,6 +374,7 @@ export class PengumumanService {
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
+        thumbnailUrl: pengumuman.thumbnailUrl,
         publishedAt: pengumuman.publishedAt,
         createdAt: pengumuman.createdAt,
         authorNama: users.nama,
@@ -477,6 +551,7 @@ export class PengumumanService {
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
+        thumbnailUrl: pengumuman.thumbnailUrl,
         publishedAt: pengumuman.publishedAt,
         withdrawnAt: pengumuman.withdrawnAt,
         withdrawnReason: pengumuman.withdrawnReason,
@@ -678,6 +753,7 @@ export class PengumumanService {
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
+        thumbnailUrl: pengumuman.thumbnailUrl,
         publishedAt: pengumuman.publishedAt,
         withdrawnAt: pengumuman.withdrawnAt,
         withdrawnReason: pengumuman.withdrawnReason,
@@ -916,6 +992,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType ?? existing.targetProdiType,
           targetScopeType: payload.targetScopeType ?? existing.targetScopeType,
           isPinned: payload.isPinned ?? existing.isPinned,
+          thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : existing.thumbnailUrl,
           lastAutoSavedAt: now,
           updatedAt: now,
         })
@@ -934,6 +1011,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType ?? 'semua',
           targetScopeType: payload.targetScopeType ?? 'umum',
           isPinned: payload.isPinned ?? false,
+          thumbnailUrl: payload.thumbnailUrl ?? null,
           lastAutoSavedAt: now,
         })
         .returning({ id: pengumuman.id });
@@ -1048,6 +1126,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType,
           targetScopeType: payload.targetScopeType,
           isPinned: payload.isPinned ?? false,
+          thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : existing.thumbnailUrl,
           publishedAt,
           withdrawnAt: null,
           withdrawnReason: null,
@@ -1069,6 +1148,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType,
           targetScopeType: payload.targetScopeType,
           isPinned: payload.isPinned ?? false,
+          thumbnailUrl: payload.thumbnailUrl ?? null,
           publishedAt,
           expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
         })

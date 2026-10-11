@@ -3091,6 +3091,7 @@ export const pengumuman = pgTable(
     targetProdiType: pengumumanTargetProdiTypeEnum('target_prodi_type').default('semua').notNull(),
     targetScopeType: pengumumanTargetScopeTypeEnum('target_scope_type').default('umum').notNull(),
     isPinned: boolean('is_pinned').default(false).notNull(),
+    thumbnailUrl: varchar('thumbnail_url', { length: 500 }),
     publishedAt: timestamp('published_at'),
     withdrawnAt: timestamp('withdrawn_at'),
     withdrawnReason: text('withdrawn_reason'),
