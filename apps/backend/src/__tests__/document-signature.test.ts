@@ -195,6 +195,25 @@ describe('Document Signature (TTE Fase 1)', () => {
     expect(v.status).toBe('NOT_FOUND');
   });
 
+  it('body tanpa uuid ditolak 422', async () => {
+    const verifyRes = await app.handle(
+      new Request('http://localhost/document-signatures/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ turnstileToken: 'test-token' }),
+      }),
+    );
+    expect(verifyRes.status).toBe(422);
+  });
+
+  it('endpoint GET lama tidak lagi tersedia', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/document-signatures/verify/00000000-0000-4000-8000-000000000000'),
+    );
+    // Route GET dihapus → Elysia mengembalikan 404 (bukan 200).
+    expect(res.status).toBe(404);
+  });
+
   it('mahasiswa hanya dapat memverifikasi UUID (akses publik), bukan revoke', async () => {
     const { mhsId, periodeId } = await seedKhs();
     const adminToken = await getAuthToken('admin-sign4@test.com', 'admin');

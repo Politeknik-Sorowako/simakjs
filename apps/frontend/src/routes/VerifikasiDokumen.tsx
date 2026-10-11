@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from '@solidjs/router';
-import { createMemo, createResource, createSignal, For, type JSX, Match, Show, Switch } from 'solid-js';
+import { createEffect, createSignal, For, type JSX, Match, Show, Switch } from 'solid-js';
 import { Button } from '../components/ui/Button';
 import { TurnstileWidget } from '../components/ui/TurnstileWidget';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,26 +17,55 @@ export default function VerifikasiDokumen() {
   const navigate = useNavigate();
   const auth = useAuth();
   const [input, setInput] = createSignal('');
-  const [currentUuid, setCurrentUuid] = createSignal(params.uuid);
+  const [currentUuid, setCurrentUuid] = createSignal(params.uuid ?? '');
+  const [result, setResult] = createSignal<SignatureInfo | null>(null);
+  const [loading, setLoading] = createSignal(false);
   const [formError, setFormError] = createSignal('');
   const [turnstileToken, setTurnstileToken] = createSignal('');
   const [turnstileReset, setTurnstileReset] = createSignal(0);
+  const [attemptedUuid, setAttemptedUuid] = createSignal('');
 
-  // Hasil hanya di-fetch setelah captcha selesai (bila dikonfigurasi) —
-  // mencegah pemanggilan mesin tanpa token Turnstile (anti-enumerasi brute-force).
-  const fetchKey = createMemo(() => {
-    const uuid = currentUuid();
-    if (!uuid) return null;
-    if (TURNSTILE_SITE_KEY && !turnstileToken()) return null;
-    return { uuid, token: turnstileToken() };
-  });
+  // Token Turnstile sekali pakai → reset widget setelah setiap request agar
+  // verifikasi berikutnya (kode berbeda) memperoleh token baru (pola forgot-password).
+  const resetCaptcha = () => {
+    if (!TURNSTILE_SITE_KEY) return;
+    setTurnstileToken('');
+    setTurnstileReset((c) => c + 1);
+  };
 
-  const [result] = createResource(fetchKey, async (key): Promise<SignatureInfo | null> => {
-    if (!key) return null;
-    return documentSignatureController
-      .verifyPublic(key.uuid, key.token)
-      .catch((): SignatureInfo => ({ status: 'NOT_FOUND' }));
-  });
+  const runVerify = async (code: string, token: string) => {
+    if (!code || loading()) return;
+    setLoading(true);
+    setFormError('');
+    try {
+      const res = await documentSignatureController
+        .verifyPublic(code, token)
+        .catch((): SignatureInfo => ({ status: 'NOT_FOUND' }));
+      // Kegagalan antibot / rate limit (bukan hasil verifikasi dokumen) → tampilkan pesannya.
+      if (res.error) {
+        setFormError(res.error);
+        setResult(null);
+        return;
+      }
+      setResult(res);
+    } finally {
+      setLoading(false);
+      resetCaptcha();
+    }
+  };
+
+  // Verifikasi dijalankan saat target UUID jelas dan captcha (bila dikonfigurasi)
+  // sudah selesai — mencegah pemanggilan mesin tanpa token Turnstile.
+  const maybeVerify = () => {
+    const code = currentUuid();
+    const token = turnstileToken();
+    if (!code || loading()) return;
+    if (TURNSTILE_SITE_KEY && !token) return;
+    if (attemptedUuid() === code) return;
+    setAttemptedUuid(code);
+    void runVerify(code, token);
+  };
+  createEffect(maybeVerify);
 
   const submit = () => {
     const code = extractKode(input());
@@ -47,10 +76,11 @@ export default function VerifikasiDokumen() {
     }
     setFormError('');
     setCurrentUuid(code);
-    navigate(`/verifikasi/${code}`, { replace: true });
-    // Reset captcha untuk verifikasi berikutnya (pola forgot-password).
-    setTurnstileToken('');
-    setTurnstileReset((c) => c + 1);
+    // Paksa verifikasi ulang walau kode sama dengan yang terakhir diuji.
+    setAttemptedUuid('');
+    // Navigasi ke route yang sama (prefix saat ini) agar tidak remount & mengulang captcha.
+    const base = window.location.pathname.startsWith('/v/') ? '/v' : '/verifikasi';
+    navigate(`${base}/${code}`, { replace: true });
   };
 
   return (
@@ -119,39 +149,42 @@ export default function VerifikasiDokumen() {
         </form>
 
         <Show
-          when={fetchKey()}
+          when={!loading() && result()}
           fallback={
-            <div class="flex flex-col items-center justify-center py-8 text-center text-secondary-500 dark:text-secondary-300">
-              <svg
-                class="mb-2 h-6 w-6 text-secondary-400"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                />
-              </svg>
-              <p class="text-sm">
-                {currentUuid()
-                  ? 'Selesaikan verifikasi keamanan untuk memeriksa keaslian dokumen.'
-                  : 'Masukkan kode atau tautan verifikasi dari dokumen untuk memulai pemeriksaan.'}
-              </p>
-            </div>
-          }
-        >
-          <Switch
-            fallback={
+            <Show
+              when={loading()}
+              fallback={
+                <div class="flex flex-col items-center justify-center py-8 text-center text-secondary-500 dark:text-secondary-300">
+                  <svg
+                    class="mb-2 h-6 w-6 text-secondary-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
+                  </svg>
+                  <p class="text-sm">
+                    {currentUuid()
+                      ? 'Selesaikan verifikasi keamanan untuk memeriksa keaslian dokumen.'
+                      : 'Masukkan kode atau tautan verifikasi dari dokumen untuk memulai pemeriksaan.'}
+                  </p>
+                </div>
+              }
+            >
               <div class="flex flex-col items-center justify-center py-10 text-secondary-500 dark:text-secondary-300">
                 <div class="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
                 <p class="text-sm">Memeriksa keaslian dokumen…</p>
               </div>
-            }
-          >
+            </Show>
+          }
+        >
+          <Switch fallback={null}>
             <Match when={result()?.status === 'VALID' ? result() : undefined}>
               {(res) => (
                 <ResultCard

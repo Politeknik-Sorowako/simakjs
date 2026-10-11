@@ -28,7 +28,7 @@ function checkVerifyRateLimit(request: Request): { limited: boolean; retryAfter?
     return { limited: false };
   }
   record.count++;
-  if (record.count >= VERIFY_MAX_ATTEMPTS) {
+  if (record.count > VERIFY_MAX_ATTEMPTS) {
     return { limited: true, retryAfter: Math.max(1, Math.ceil((record.resetTime - now) / 1000)) };
   }
   return { limited: false };
