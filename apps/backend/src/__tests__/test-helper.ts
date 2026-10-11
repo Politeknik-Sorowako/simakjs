@@ -24,6 +24,7 @@ import {
   documentSignatures,
   dosen,
   dosenPengajarKelas,
+  emailVerificationCodes,
   feedbackComments,
   feedbackLikes,
   kategoriBimbingan,
@@ -198,6 +199,7 @@ export async function clearDatabase() {
   await db.delete(passwordResets);
   await db.delete(systemSettings);
   await db.delete(documentSignatures);
+  await db.delete(emailVerificationCodes);
   await db.delete(users);
 }
 
