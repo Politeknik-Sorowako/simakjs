@@ -48,6 +48,7 @@ import { obeReportRoutes } from './routes/obe-report.routes';
 import { pasalPelanggaranRoutes } from './routes/pasal-pelanggaran.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
+import { pengumumanRoutes } from './routes/pengumuman.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
 import { prodiRoutes } from './routes/prodi.routes';
@@ -108,9 +109,10 @@ function extractToken(
 
 // Direktori penyimpanan berkas surat izin/sakit (dibuat aman di awal startup).
 mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursive: true });
-// Direktori lampiran bimbingan & dokumen SK prodi.
+// Direktori lampiran bimbingan & dokumen SK prodi & pengumuman.
 mkdirSync(join(process.cwd(), 'storage', 'bimbingan-attachments'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'sk-prodi'), { recursive: true });
+mkdirSync(join(process.cwd(), 'storage', 'pengumuman'), { recursive: true });
 
 export const app = new Elysia()
   .use(
@@ -336,6 +338,32 @@ export const app = new Elysia()
     set.headers['Cache-Control'] = 'private, max-age=3600';
     return file;
   })
+  .get('/storage/pengumuman/:filename', async ({ params, set, headers, cookie, jwt }) => {
+    const authHeader = headers['authorization'];
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+    const cookieToken = (cookie?.access_token?.value as string | undefined) ?? null;
+    const token = headerToken || cookieToken;
+
+    if (!token || !(await isSessionClaimsValid(await jwt.verify(token)))) {
+      set.status = 401;
+      return { error: 'Unauthorized: Silakan login terlebih dahulu' };
+    }
+
+    const raw = String(params.filename || '');
+    const filename = basename(raw);
+    if (filename !== raw || !/\.(pdf|docx|xlsx|pptx|zip|png|jpg|jpeg|webp)$/i.test(filename)) {
+      set.status = 404;
+      return { error: 'Berkas tidak ditemukan' };
+    }
+    const file = Bun.file(join(process.cwd(), 'storage', 'pengumuman', filename));
+    if (!(await file.exists())) {
+      set.status = 404;
+      return { error: 'Berkas tidak ditemukan' };
+    }
+    set.headers['Content-Type'] = file.type || 'application/octet-stream';
+    set.headers['Cache-Control'] = 'private, max-age=3600';
+    return file;
+  })
   .use(authMiddleware)
   .onBeforeHandle(auditBeforeHandle)
   .onBeforeHandle(async ({ jwt, set, cookie, headers, path }) => {
@@ -433,6 +461,7 @@ export const app = new Elysia()
   .use(settingsRoutes)
   .use(pasalPelanggaranRoutes)
   .use(pelanggaranRoutes)
+  .use(pengumumanRoutes)
   .use(khsRoutes)
   .use(yudisiumRoutes)
   .use(pddiktiRoutes)

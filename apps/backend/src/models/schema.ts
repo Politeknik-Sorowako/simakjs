@@ -3056,3 +3056,205 @@ export const systemSettingsRelations = relations(systemSettings, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// ─── PENGUMUMAN AKADEMIK & SISTEM ──────────────────────────────────────────
+
+export const pengumumanStatusEnum = pgEnum('pengumuman_status', [
+  'draft',
+  'scheduled',
+  'published',
+  'withdrawn',
+  'archived',
+]);
+
+export const pengumumanTargetRoleEnum = pgEnum('pengumuman_target_role', ['semua', 'mahasiswa', 'dosen', 'admin']);
+
+export const pengumumanTargetProdiTypeEnum = pgEnum('pengumuman_target_prodi_type', ['semua', 'spesifik']);
+
+export const pengumumanTargetScopeTypeEnum = pgEnum('pengumuman_target_scope_type', ['umum', 'kelas', 'rombel']);
+
+export const pengumumanLampiranTypeEnum = pgEnum('pengumuman_lampiran_type', ['file', 'gambar', 'link']);
+
+export const pengumuman = pgTable(
+  'pengumuman',
+  {
+    id: serial('id').primaryKey(),
+    judul: varchar('judul', { length: 255 }).notNull(),
+    konten: text('konten').notNull().default(''),
+    ringkasan: varchar('ringkasan', { length: 500 }),
+    authorId: integer('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    authorRole: varchar('author_role', { length: 50 }).notNull(),
+    status: pengumumanStatusEnum('status').default('draft').notNull(),
+    targetRole: pengumumanTargetRoleEnum('target_role').default('semua').notNull(),
+    targetProdiType: pengumumanTargetProdiTypeEnum('target_prodi_type').default('semua').notNull(),
+    targetScopeType: pengumumanTargetScopeTypeEnum('target_scope_type').default('umum').notNull(),
+    isPinned: boolean('is_pinned').default(false).notNull(),
+    publishedAt: timestamp('published_at'),
+    withdrawnAt: timestamp('withdrawn_at'),
+    withdrawnReason: text('withdrawn_reason'),
+    expiresAt: timestamp('expires_at'),
+    lastAutoSavedAt: timestamp('last_autosaved_at'),
+    viewCount: integer('view_count').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => ({
+    statusPublishedIdx: index('idx_pengumuman_status_published').on(table.status, table.publishedAt),
+    targetRoleIdx: index('idx_pengumuman_target_role').on(table.targetRole),
+    authorIdx: index('idx_pengumuman_author').on(table.authorId),
+  }),
+);
+
+export const pengumumanTargetProdi = pgTable(
+  'pengumuman_target_prodi',
+  {
+    id: serial('id').primaryKey(),
+    pengumumanId: integer('pengumuman_id')
+      .notNull()
+      .references(() => pengumuman.id, { onDelete: 'cascade' }),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pengumumanProdiIdx: index('idx_pengumuman_target_prodi_pair').on(table.pengumumanId, table.programStudiId),
+  }),
+);
+
+export const pengumumanTargetKelas = pgTable(
+  'pengumuman_target_kelas',
+  {
+    id: serial('id').primaryKey(),
+    pengumumanId: integer('pengumuman_id')
+      .notNull()
+      .references(() => pengumuman.id, { onDelete: 'cascade' }),
+    kelasKuliahId: integer('kelas_kuliah_id')
+      .notNull()
+      .references(() => kelasKuliah.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pengumumanKelasIdx: index('idx_pengumuman_target_kelas_pair').on(table.pengumumanId, table.kelasKuliahId),
+  }),
+);
+
+export const pengumumanTargetRombel = pgTable(
+  'pengumuman_target_rombel',
+  {
+    id: serial('id').primaryKey(),
+    pengumumanId: integer('pengumuman_id')
+      .notNull()
+      .references(() => pengumuman.id, { onDelete: 'cascade' }),
+    rombelPraktikumId: integer('rombel_praktikum_id')
+      .notNull()
+      .references(() => rombelPraktikum.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pengumumanRombelIdx: index('idx_pengumuman_target_rombel_pair').on(table.pengumumanId, table.rombelPraktikumId),
+  }),
+);
+
+export const pengumumanLampiran = pgTable(
+  'pengumuman_lampiran',
+  {
+    id: serial('id').primaryKey(),
+    pengumumanId: integer('pengumuman_id')
+      .notNull()
+      .references(() => pengumuman.id, { onDelete: 'cascade' }),
+    tipe: pengumumanLampiranTypeEnum('tipe').notNull(),
+    nama: varchar('nama', { length: 255 }).notNull(),
+    url: text('url').notNull(),
+    ukuran: integer('ukuran'),
+    mimeType: varchar('mime_type', { length: 100 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    pengumumanLampiranIdx: index('idx_pengumuman_lampiran_pengumuman_id').on(table.pengumumanId),
+  }),
+);
+
+export const pengumumanDibaca = pgTable(
+  'pengumuman_dibaca',
+  {
+    id: serial('id').primaryKey(),
+    pengumumanId: integer('pengumuman_id')
+      .notNull()
+      .references(() => pengumuman.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    readAt: timestamp('read_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userPengumumanUnique: unique('pengumuman_dibaca_user_unique').on(table.pengumumanId, table.userId),
+    pengumumanUserIdx: index('idx_pengumuman_dibaca_user').on(table.userId, table.pengumumanId),
+  }),
+);
+
+// Relations
+export const pengumumanRelations = relations(pengumuman, ({ one, many }) => ({
+  author: one(users, {
+    fields: [pengumuman.authorId],
+    references: [users.id],
+  }),
+  targetProdis: many(pengumumanTargetProdi),
+  targetKelas: many(pengumumanTargetKelas),
+  targetRombel: many(pengumumanTargetRombel),
+  lampiran: many(pengumumanLampiran),
+  dibaca: many(pengumumanDibaca),
+}));
+
+export const pengumumanTargetProdiRelations = relations(pengumumanTargetProdi, ({ one }) => ({
+  pengumuman: one(pengumuman, {
+    fields: [pengumumanTargetProdi.pengumumanId],
+    references: [pengumuman.id],
+  }),
+  programStudi: one(programStudi, {
+    fields: [pengumumanTargetProdi.programStudiId],
+    references: [programStudi.id],
+  }),
+}));
+
+export const pengumumanTargetKelasRelations = relations(pengumumanTargetKelas, ({ one }) => ({
+  pengumuman: one(pengumuman, {
+    fields: [pengumumanTargetKelas.pengumumanId],
+    references: [pengumuman.id],
+  }),
+  kelasKuliah: one(kelasKuliah, {
+    fields: [pengumumanTargetKelas.kelasKuliahId],
+    references: [kelasKuliah.id],
+  }),
+}));
+
+export const pengumumanTargetRombelRelations = relations(pengumumanTargetRombel, ({ one }) => ({
+  pengumuman: one(pengumuman, {
+    fields: [pengumumanTargetRombel.pengumumanId],
+    references: [pengumuman.id],
+  }),
+  rombelPraktikum: one(rombelPraktikum, {
+    fields: [pengumumanTargetRombel.rombelPraktikumId],
+    references: [rombelPraktikum.id],
+  }),
+}));
+
+export const pengumumanLampiranRelations = relations(pengumumanLampiran, ({ one }) => ({
+  pengumuman: one(pengumuman, {
+    fields: [pengumumanLampiran.pengumumanId],
+    references: [pengumuman.id],
+  }),
+}));
+
+export const pengumumanDibacaRelations = relations(pengumumanDibaca, ({ one }) => ({
+  pengumuman: one(pengumuman, {
+    fields: [pengumumanDibaca.pengumumanId],
+    references: [pengumuman.id],
+  }),
+  user: one(users, {
+    fields: [pengumumanDibaca.userId],
+    references: [users.id],
+  }),
+}));
