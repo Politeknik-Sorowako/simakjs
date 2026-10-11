@@ -5,6 +5,7 @@ import {
   kelasKuliah,
   krs,
   mahasiswa,
+  mataKuliah,
   pengumuman,
   pengumumanDibaca,
   pengumumanLampiran,
@@ -89,8 +90,7 @@ export class PengumumanService {
     let kelasList: { id: number; namaKelas: string; mataKuliah: string }[] = [];
     let rombelList: { id: number; namaGroup: string; kelas: string }[] = [];
 
-    if (isSuperOrAdmin || isProdi) {
-      const prodiFilterIds = prodiList.map((p) => p.id);
+    if (isSuperOrAdmin) {
       const kRows = await db
         .select({
           id: kelasKuliah.id,
@@ -118,6 +118,42 @@ export class PengumumanService {
         namaGroup: r.namaGroup,
         kelas: r.namaGroup,
       }));
+    } else if (isProdi) {
+      const prodiFilterIds = prodiList.map((p) => p.id);
+      if (prodiFilterIds.length > 0) {
+        const kRows = await db
+          .select({
+            id: kelasKuliah.id,
+            namaKelas: kelasKuliah.namaKelas,
+          })
+          .from(kelasKuliah)
+          .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+          .where(inArray(mataKuliah.programStudiId, prodiFilterIds))
+          .limit(200);
+
+        kelasList = kRows.map((k) => ({
+          id: k.id,
+          namaKelas: k.namaKelas,
+          mataKuliah: k.namaKelas,
+        }));
+
+        const rRows = await db
+          .select({
+            id: rombelPraktikum.id,
+            namaGroup: rombelPraktikum.namaGroup,
+          })
+          .from(rombelPraktikum)
+          .innerJoin(kelasKuliah, eq(rombelPraktikum.kelasKuliahId, kelasKuliah.id))
+          .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
+          .where(inArray(mataKuliah.programStudiId, prodiFilterIds))
+          .limit(200);
+
+        rombelList = rRows.map((r) => ({
+          id: r.id,
+          namaGroup: r.namaGroup,
+          kelas: r.namaGroup,
+        }));
+      }
     } else if (isDosen) {
       const dosenId = await getDosenIdByEmail(user.email);
       if (dosenId) {
@@ -336,6 +372,8 @@ export class PengumumanService {
         } else if (isDosen) {
           const hasCommon = dosenKelasIds.some((kId) => pKelas.includes(kId));
           if (!hasCommon) return false;
+        } else {
+          return false;
         }
       } else if (p.targetScopeType === 'rombel') {
         const pRombel = rombelMap.get(p.id) || [];
@@ -345,6 +383,8 @@ export class PengumumanService {
         } else if (isDosen) {
           const hasCommon = dosenRombelIds.some((rId) => pRombel.includes(rId));
           if (!hasCommon) return false;
+        } else {
+          return false;
         }
       }
 

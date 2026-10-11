@@ -177,6 +177,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
     }
 
     setIsSubmitting(true);
+    clearTimeout(autoSaveTimeout);
     try {
       await pengumumanController.publish({
         id: currentId(),
