@@ -91,8 +91,13 @@ export default function KhsCetak() {
         >
           <p class="font-semibold">Tanda tangan digital gagal dimuat</p>
           <p class="mt-1 text-red-600">
-            {signature.error instanceof Error ? signature.error.message : 'Terjadi kesalahan tidak dikenal.'} — Hubungi
-            administrator. Dokumen cetak TANPA QR verifikasi.
+            <Show
+              when={auth.hasRole(['admin', 'super_admin'])}
+              fallback="Coba muat ulang halaman; bila masalah berlanjut, hubungi administrator. Dokumen cetak TANPA QR verifikasi."
+            >
+              {signature.error instanceof Error ? signature.error.message : 'Terjadi kesalahan tidak dikenal.'} —
+              Dokumen cetak TANPA QR verifikasi.
+            </Show>
           </p>
         </div>
       </Show>
