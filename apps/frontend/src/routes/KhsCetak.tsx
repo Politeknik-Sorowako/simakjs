@@ -43,6 +43,10 @@ export default function KhsCetak() {
     },
   );
 
+  // Tanda tangan = persetujuan Kaprodi: hanya Kaprodi/super_admin yang boleh
+  // menerbitkan QR baru; pemirsa lain hanya membaca baris yang sudah ada.
+  const canSign = () => auth.hasRole(['kaprodi', 'super_admin']);
+
   const [signature] = createResource(
     () => {
       const mhsId = Number(params.mhsId);
@@ -52,16 +56,13 @@ export default function KhsCetak() {
     },
     async (target): Promise<SignKhsResult | null> => {
       if (!target) return null;
-      try {
-        // Idempoten: server mengembalikan tanda tangan yang sama bila snapshot tidak berubah.
-        return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
-      } catch (signError) {
-        // Fallback ke tanda tangan yang sudah ada (mis. tanpa izin tulis).
-        const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
-        if (existing) return existing;
-        // Tidak ada tanda tangan tersedia → lempar agar banner error tampil.
-        throw signError;
-      }
+      // Baca dulu tanda tangan yang sudah ada (idempoten; tanpa menerbitkan baru).
+      const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
+      if (existing) return existing;
+      // Penerbitan baru hanya oleh Kaprodi/super_admin — selain itu cetak tanpa QR
+      // (banner info di bawah memberi tahu pemirsa bahwa dokumen belum ditandatangani).
+      if (!canSign()) return null;
+      return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
     },
   );
 
@@ -98,6 +99,18 @@ export default function KhsCetak() {
               {signature.error instanceof Error ? signature.error.message : 'Terjadi kesalahan tidak dikenal.'} —
               Dokumen cetak TANPA QR verifikasi.
             </Show>
+          </p>
+        </div>
+      </Show>
+      <Show when={printData() && !signature.loading && !signature.error && !signature()}>
+        <div
+          role="status"
+          class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 print:hidden"
+        >
+          <p class="font-semibold">Dokumen belum ditandatangani Kaprodi</p>
+          <p class="mt-1 text-amber-700">
+            Tanda tangan digital (QR verifikasi) hanya diterbitkan setelah Kaprodi program studi terkait menyetujui
+            dengan membuka halaman ini. Dokumen dapat dicetak tanpa QR verifikasi.
           </p>
         </div>
       </Show>

@@ -74,13 +74,14 @@ import {
   systemSettings,
   tagihan,
   transaksiPembayaran,
+  userProdiScopes,
   userRoles,
   users,
   visiMisiProdi,
 } from '../models/schema';
 import { db } from '../utils/db';
 
-const ELEVATED_ROLES = ['admin', 'prodi', 'keuangan'];
+const ELEVATED_ROLES = ['admin', 'prodi', 'keuangan', 'kaprodi', 'super_admin'];
 
 const tokenCache = new Map<string, string>();
 
@@ -195,6 +196,7 @@ export async function clearDatabase() {
   await db.delete(dosen);
   await db.delete(periodeAkademik);
   await db.delete(programStudi);
+  await db.delete(userProdiScopes);
   await db.delete(userRoles);
   await db.delete(passwordResets);
   await db.delete(systemSettings);
@@ -204,7 +206,10 @@ export async function clearDatabase() {
 }
 
 // Helper function to register and login a user, returning their JWT authorization token
-export async function getAuthToken(email: string, role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan' | 'prodi') {
+export async function getAuthToken(
+  email: string,
+  role: 'admin' | 'dosen' | 'mahasiswa' | 'keuangan' | 'prodi' | 'kaprodi' | 'super_admin',
+) {
   const cacheKey = `${email}:${role}`;
   if (tokenCache.has(cacheKey)) {
     return tokenCache.get(cacheKey)!;
