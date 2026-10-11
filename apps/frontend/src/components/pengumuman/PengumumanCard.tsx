@@ -128,13 +128,21 @@ export function PengumumanCard(props: PengumumanCardProps) {
           >
             <div
               onClick={() => props.onClick?.()}
-              class="w-full h-32 rounded-xl overflow-hidden mb-3 bg-secondary-100 dark:bg-secondary-800 cursor-pointer"
+              class="w-full h-32 rounded-xl overflow-hidden mb-3 bg-secondary-100 dark:bg-secondary-800 cursor-pointer relative"
             >
               <img
                 src={getAbsoluteStorageUrl(p().thumbnailUrl!)}
                 alt={p().judul}
                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallbackEl = e.currentTarget.parentElement?.querySelector('.img-fallback');
+                  if (fallbackEl) (fallbackEl as HTMLElement).style.display = 'flex';
+                }}
               />
+              <div class="img-fallback hidden w-full h-full absolute inset-0 bg-gradient-to-br from-amber-100/60 via-amber-50 to-amber-200/40 dark:from-amber-950/40 dark:via-secondary-800 dark:to-secondary-850 items-center justify-center">
+                <span class="text-2xl opacity-60">📌</span>
+              </div>
             </div>
           </Show>
 
@@ -213,13 +221,26 @@ export function PengumumanCard(props: PengumumanCardProps) {
         >
           <div
             onClick={() => props.onClick?.()}
-            class="w-full h-44 sm:h-48 rounded-xl overflow-hidden mb-4 bg-secondary-100 dark:bg-secondary-800 cursor-pointer"
+            class="w-full h-44 sm:h-48 rounded-xl overflow-hidden mb-4 bg-secondary-100 dark:bg-secondary-800 cursor-pointer relative"
           >
             <img
               src={getAbsoluteStorageUrl(p().thumbnailUrl!)}
               alt={p().judul}
               class="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallbackEl = e.currentTarget.parentElement?.querySelector('.img-fallback');
+                if (fallbackEl) (fallbackEl as HTMLElement).style.display = 'flex';
+              }}
             />
+            <div class="img-fallback hidden w-full h-full absolute inset-0 bg-gradient-to-br from-secondary-100 via-secondary-50 to-secondary-200 dark:from-secondary-800 dark:via-secondary-850 dark:to-secondary-900 items-center justify-center">
+              <div class="flex flex-col items-center gap-1.5 opacity-40">
+                <span class="text-3xl">📢</span>
+                <span class="text-[11px] font-semibold text-secondary-500 dark:text-secondary-400">
+                  Pengumuman SIMAK
+                </span>
+              </div>
+            </div>
           </div>
         </Show>
 

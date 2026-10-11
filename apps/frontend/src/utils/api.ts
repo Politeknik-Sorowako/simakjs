@@ -26,23 +26,33 @@ export function getAbsoluteStorageUrl(path: string): string {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
 
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-  // Jika API_URL sudah berupa URL absolut (mis. http://localhost:3000)
-  if (/^https?:\/\//i.test(API_URL)) {
-    const trimmedApi = API_URL.replace(/\/+$/, '');
-    return `${trimmedApi}${normalizedPath}`;
-  }
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
   // Jika di browser dan API_URL bernilai relatif (mis. '/api' di production/staging)
   if (typeof window !== 'undefined') {
     const origin = window.location.origin.replace(/\/+$/, '');
     const apiPrefix =
       API_URL && API_URL !== '/' ? (API_URL.startsWith('/') ? API_URL : `/${API_URL}`).replace(/\/+$/, '') : '';
-    return `${origin}${apiPrefix}${normalizedPath}`;
+
+    // Jika path belum diawali apiPrefix dan apiPrefix ada (misal path: /storage/..., apiPrefix: /api)
+    // tambahkan apiPrefix agar request diarahkan ke backend reverse proxy
+    if (apiPrefix && !cleanPath.startsWith(`${apiPrefix}/`) && cleanPath !== apiPrefix) {
+      return `${origin}${apiPrefix}${cleanPath}`;
+    }
+
+    return `${origin}${cleanPath}`;
   }
 
-  return `${API_URL}${normalizedPath}`;
+  // Jika API_URL berupa URL absolut (mis. http://localhost:3000)
+  if (/^https?:\/\//i.test(API_URL)) {
+    const trimmedApi = API_URL.replace(/\/+$/, '');
+    if (cleanPath.startsWith('/api/') || cleanPath === '/api') {
+      return `${trimmedApi}${cleanPath.replace(/^\/api/, '')}`;
+    }
+    return `${trimmedApi}${cleanPath}`;
+  }
+
+  return `${API_URL}${cleanPath}`;
 }
 
 /**
