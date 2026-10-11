@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
+import { app } from '../app';
 import { pengumuman, users } from '../models/schema';
 import { PengumumanService } from '../services/pengumuman.service';
 import { db } from '../utils/db';
@@ -231,5 +234,38 @@ describe('Pengumuman Service & API Lifecycle', () => {
     expect(foundInManage).toBe(true);
 
     await db.delete(pengumuman).where(eq(pengumuman.id, published.id));
+  });
+
+  it('9. endpoint storage pengumuman menolak path traversal dan berkas non-eksis', async () => {
+    // Path traversal attempt
+    const resTraversal = await app.handle(new Request('http://localhost/storage/pengumuman/..%2F..%2Fpackage.json'));
+    expect(resTraversal.status).toBe(404);
+
+    // Non-existent file
+    const resNonExistent = await app.handle(new Request('http://localhost/storage/pengumuman/file-tidak-ada.jpg'));
+    expect(resNonExistent.status).toBe(404);
+  });
+
+  it('10. endpoint storage pengumuman dapat diakses publik tanpa token & menyajikan header cache', async () => {
+    const storageDir = join(process.cwd(), 'storage', 'pengumuman');
+    await mkdir(storageDir, { recursive: true });
+    const testFileName = `test-img-${Date.now()}.png`;
+    const testFilePath = join(storageDir, testFileName);
+    await writeFile(testFilePath, Buffer.from('fake-png-binary-content'));
+
+    try {
+      // 1. Direct /storage/pengumuman/:filename
+      const res = await app.handle(new Request(`http://localhost/storage/pengumuman/${testFileName}`));
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toContain('public');
+      expect(res.headers.get('Content-Type')).toContain('image');
+
+      // 2. Alias /api/storage/pengumuman/:filename
+      const resApi = await app.handle(new Request(`http://localhost/api/storage/pengumuman/${testFileName}`));
+      expect(resApi.status).toBe(200);
+      expect(resApi.headers.get('Cache-Control')).toContain('public');
+    } finally {
+      await unlink(testFilePath).catch(() => {});
+    }
   });
 });
