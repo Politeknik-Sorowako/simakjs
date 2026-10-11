@@ -81,6 +81,7 @@ const PddiktiSync = lazy(() => import('./routes/PddiktiSync').then((m) => ({ def
 const Pelanggaran = lazy(() => import('./routes/Pelanggaran'));
 const Pengguna = lazy(() => import('./routes/Pengguna'));
 const Pengumuman = lazy(() => import('./routes/Pengumuman'));
+const PengumumanDetail = lazy(() => import('./routes/PengumumanDetail'));
 const PeriodeAkademik = lazy(() => import('./routes/PeriodeAkademik'));
 const PetaObe = lazy(() => import('./routes/PetaObe'));
 const PresensiMahasiswa = lazy(() => import('./routes/PresensiMahasiswa'));
@@ -240,6 +241,14 @@ function AppContent() {
             element={
               <ProtectedRoute>
                 <Pengumuman />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pengumuman/:id"
+            element={
+              <ProtectedRoute>
+                <PengumumanDetail />
               </ProtectedRoute>
             }
           />

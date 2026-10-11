@@ -46,5 +46,6 @@ Deployment goes through GitHub Actions first. SSH is emergency fallback only.
 ## Testing
 
 - Do NOT run full test suites automatically
-- Run targeted tests only for the specific module being modified
-- Test command: `cd apps/backend && bun run test`
+- **Uji `bun test` pada Review / CR HANYA pada modul terkait**: Dilarang menjalankan blanket `bun test` di root saat code review. Jalankan `bun test` hanya untuk file test modul yang mengalami perubahan (misal: `bun test apps/backend/src/__tests__/<modul>.test.ts`).
+- Jika PR hanya mencakup frontend, tidak perlu menjalankan integration test backend; cukup `bun run lint` dan build frontend.
+- Test command: `cd apps/backend && bun run test` (hanya bila DB test container aktif dan diperlukan pengujian penuh).
