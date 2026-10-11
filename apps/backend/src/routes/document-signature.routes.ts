@@ -5,15 +5,17 @@ import {
   getSignatureByRefSchema,
   revokeSignatureSchema,
   signKhsSchema,
-  verifySignatureSchema,
+  verifySignaturePostSchema,
 } from '../schemas/document-signature.schema';
 
 // Publik — TANPA authMiddleware dan dikecualikan dari pemeriksaan sesi via
 // isPublicNoSessionPath (harus didaftarkan di PUBLIC_NO_SESSION_PATHS di app.ts).
-export const documentSignaturePublicRoutes = new Elysia({ prefix: '/document-signatures' }).get(
-  '/verify/:uuid',
+// Antibot Turnstile divalidasi di controller; GET publik lama dihapus agar
+// verifikasi tidak dapat dipanggil mesin tanpa token.
+export const documentSignaturePublicRoutes = new Elysia({ prefix: '/document-signatures' }).post(
+  '/verify',
   DocumentSignatureController.verify,
-  verifySignatureSchema,
+  verifySignaturePostSchema,
 );
 
 export const documentSignatureRoutes = new Elysia({ prefix: '/document-signatures' })

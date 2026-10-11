@@ -3,7 +3,49 @@ import { MahasiswaService } from '../services/mahasiswa.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
 import { getVerifyBaseUrl } from '../utils/document-signing';
 import { hasRole } from '../utils/role';
+import { verifyTurnstile } from '../utils/turnstile';
 import { type AuthContext } from '../utils/types';
+
+// Rate limit verifikasi publik per-IP — proteksi tambahan terhadap enumerasi
+// UUID brute-force. Ringan (30/menit) karena endpoint bersifat baca publik.
+const VERIFY_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const VERIFY_MAX_ATTEMPTS = 30;
+const verifyRateLimit = new Map<string, { count: number; resetTime: number }>();
+
+function getClientIp(request: Request): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return request.headers.get('x-real-ip') ?? 'unknown';
+}
+
+function checkVerifyRateLimit(request: Request): { limited: boolean; retryAfter?: number } {
+  if (process.env.NODE_ENV === 'test') return { limited: false };
+  const key = getClientIp(request);
+  const now = Date.now();
+  const record = verifyRateLimit.get(key);
+  if (!record || now >= record.resetTime) {
+    verifyRateLimit.set(key, { count: 1, resetTime: now + VERIFY_RATE_LIMIT_WINDOW_MS });
+    return { limited: false };
+  }
+  record.count++;
+  if (record.count >= VERIFY_MAX_ATTEMPTS) {
+    return { limited: true, retryAfter: Math.max(1, Math.ceil((record.resetTime - now) / 1000)) };
+  }
+  return { limited: false };
+}
+
+// Bersihkan entri kedaluwarsa agar Map tidak bocor tak terbatas.
+let verifyRateLimitSweepTimer: ReturnType<typeof setInterval> | undefined;
+function ensureVerifyRateLimitSweep() {
+  if (verifyRateLimitSweepTimer) return;
+  verifyRateLimitSweepTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [key, record] of verifyRateLimit) {
+      if (now >= record.resetTime) verifyRateLimit.delete(key);
+    }
+  }, VERIFY_RATE_LIMIT_WINDOW_MS);
+  if (verifyRateLimitSweepTimer.unref) verifyRateLimitSweepTimer.unref();
+}
 
 async function mahasiswaInScope(
   user: NonNullable<Awaited<ReturnType<AuthContext['getCurrentUser']>>>,
@@ -95,11 +137,37 @@ export class DocumentSignatureController {
     }
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
-  static async verify({ params, set }: { params: { uuid: string }; set: any }): Promise<any> {
+  static async verify({
+    body,
+    set,
+    request,
+  }: {
+    body: { uuid: string; turnstileToken?: string };
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+    set: any;
+    request: Request;
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  }): Promise<any> {
+    // Antibot + rate limit SEBELUM query DB: tolak mesin tanpa membocorkan
+    // status dokumen apa pun.
+    ensureVerifyRateLimitSweep();
+    const rate = checkVerifyRateLimit(request);
+    if (rate.limited) {
+      set.status = 429;
+      return {
+        status: 'NOT_FOUND',
+        error: `Terlalu banyak permintaan verifikasi. Coba lagi dalam ${rate.retryAfter} detik.`,
+      };
+    }
+
+    const turnstile = await verifyTurnstile(body.turnstileToken, getClientIp(request));
+    if (!turnstile.ok) {
+      set.status = 400;
+      return { status: 'NOT_FOUND', error: turnstile.error };
+    }
+
     try {
-      const result = await DocumentSignatureService.verify(params.uuid);
-      set.headers['Cache-Control'] = 'public, max-age=60';
+      const result = await DocumentSignatureService.verify(body.uuid);
       if (result.status === 'NOT_FOUND') set.status = 404;
       if (result.status === 'REVOKED') set.status = 410;
       return result;

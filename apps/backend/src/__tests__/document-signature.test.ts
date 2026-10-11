@@ -15,6 +15,16 @@ beforeEach(async () => {
   process.env.VERIFY_BASE_URL = VERIFY_BASE;
 });
 
+// Endpoint verifikasi publik kini POST + token Turnstile (antibot).
+// NODE_ENV=test membuat verifyTurnstile selalu lolos & rate limit dilewati.
+function verifyRequest(uuid: string): Request {
+  return new Request('http://localhost/document-signatures/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid, turnstileToken: 'test-token' }),
+  });
+}
+
 async function seedKhs() {
   const [prodi] = await db
     .insert(programStudi)
@@ -143,7 +153,7 @@ describe('Document Signature (TTE Fase 1)', () => {
     const sign = (await res.json()) as { verifyUuid: string };
 
     // Tanpa header auth sama sekali.
-    const verifyRes = await app.handle(new Request(`http://localhost/document-signatures/verify/${sign.verifyUuid}`));
+    const verifyRes = await app.handle(verifyRequest(sign.verifyUuid));
     expect(verifyRes.status).toBe(200);
     const v = (await verifyRes.json()) as { status: string; namaMask: string; nimMask: string; docHashShort: string };
     expect(v.status).toBe('VALID');
@@ -172,16 +182,14 @@ describe('Document Signature (TTE Fase 1)', () => {
     );
     expect(revokeRes.status).toBe(200);
 
-    const verifyRes = await app.handle(new Request(`http://localhost/document-signatures/verify/${sign.verifyUuid}`));
+    const verifyRes = await app.handle(verifyRequest(sign.verifyUuid));
     expect(verifyRes.status).toBe(410);
     const v = (await verifyRes.json()) as { status: string };
     expect(v.status).toBe('REVOKED');
   });
 
   it('uuid tidak dikenal mengembalikan 404 NOT_FOUND', async () => {
-    const verifyRes = await app.handle(
-      new Request('http://localhost/document-signatures/verify/00000000-0000-4000-8000-000000000000'),
-    );
+    const verifyRes = await app.handle(verifyRequest('00000000-0000-4000-8000-000000000000'));
     expect(verifyRes.status).toBe(404);
     const v = (await verifyRes.json()) as { status: string };
     expect(v.status).toBe('NOT_FOUND');

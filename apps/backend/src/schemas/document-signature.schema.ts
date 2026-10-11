@@ -2,14 +2,16 @@ import { t } from 'elysia';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const verifySignatureSchema = {
+export const verifySignaturePostSchema = {
   detail: {
     tags: ['Dokumen'],
     summary: 'Verifikasi Tanda Tangan Dokumen',
-    description: 'Verifikasi publik tanda tangan dokumen via verifyUuid yang dipindai QR (tanpa autentikasi).',
+    description:
+      'Verifikasi publik tanda tangan dokumen via verifyUuid (tanpa autentikasi). Dilindungi Turnstile sebagai antibot.',
   },
-  params: t.Object({
+  body: t.Object({
     uuid: t.String({ pattern: UUID_PATTERN.source, examples: ['70960e44-7a9e-4f78-9b7e-1a2b3c4d5e6f'] }),
+    turnstileToken: t.Optional(t.String()),
   }),
 };
 
