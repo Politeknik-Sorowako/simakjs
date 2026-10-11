@@ -1,6 +1,7 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { BarChart, LineChart, PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
+import { DashboardPengumumanWidget } from '../components/pengumuman/DashboardPengumumanWidget';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bimbinganController } from '../controllers/bimbinganController';
@@ -136,9 +137,12 @@ function AdminWidgets() {
         />
       </div>
 
-      {/* Baris 2: Charts */}
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Tagihan Status */}
+      {/* Baris 2: Pengumuman, Tagihan, PDDIKTI Sync */}
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Kolom 1: Pengumuman Terbaru */}
+        <DashboardPengumumanWidget />
+
+        {/* Kolom 2: Tagihan Status */}
         <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
           <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran Mahasiswa</h3>
           <Show
@@ -804,6 +808,11 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
+
+        {/* Pengumuman Terbaru Widget untuk role non-admin (admin sudah punya di dalam AdminWidgets) */}
+        <Show when={!auth.hasRole(['admin', 'super_admin'])}>
+          <DashboardPengumumanWidget />
+        </Show>
 
         {/* Role-based Dashboard Content */}
         <Show when={auth.hasRole(['admin', 'super_admin'])}>

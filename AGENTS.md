@@ -36,6 +36,10 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
     cd apps/backend && bun run src/scripts/pre-test.ts
     ```
 - **Merge & Review Efficiency**:
+  - **Scoped Testing saat Review / CR**: Saat bertindak sebagai Senior Code Reviewer / QA Lead pada proses review PR:
+    - **DILARANG menjalankan blanket `bun test` di root** yang memicu seluruh integration test suite.
+    - Jalankan `bun test` **HANYA pada file/modul terkait yang direview** (misal: `bun test apps/backend/src/__tests__/<modul-terkait>.test.ts`).
+    - Bila PR hanya berisi perubahan frontend atau modul tanpa integration test spesifik, cukup validasi via `bun run lint`, build frontend, dan andalkan CI GitHub Actions.
   - **Plan Kerja Tidak Di-commit**: Simpan rencana kerja di `.opencode/plans/<slug>.md` (tidak di-commit ke feature branch) agar tidak memicu konflik antar-PR (mis. dua PR yang sama-sama menulis `implementation_plan.md`).
   - **Auto-merge**: Setelah push & CI mulai, gunakan `gh pr merge <N> --auto --merge` alih-alih polling manual `mergeStateStatus`. Tetap target `development`; jangan hapus protected branch.
   - **Verifikasi Sasaran Review**: Sebelum menjalankan reviewer/agent, pastikan `gh pr view <N> --json number,title,headRefName,state` cocok dengan PR yang dimaksud dan cantumkan nomor + judul PR secara eksplisit di prompt.
@@ -58,7 +62,7 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 ## 3. Backend Development
 
 - **Controllers**: Always use static methods destructuring `AuthContext`, check `getCurrentUser()` for auth/roles first, and wrap logic in try/catch returning `{ error }` with appropriate status code.
-- **Services & DB**: Always static methods. Use Drizzle ORM with explicit `where` clauses (never fetch unbounded tables). Throw standard `Error` instances for business logic failures.
+- **Services & DB (Drizzle ORM First)**: Drizzle ORM (`db` dari `apps/backend/src/utils/db.ts`) WAJIB menjadi **jalur utama untuk seluruh transaksi data** (query, insert, update, delete, relasi, dan transaksi atomik `db.transaction`). Dilarang keras menggunakan raw query/driver SQL langsung kecuali untuk operasi DB khusus yang tidak didukung Drizzle (harus dengan mitigasi SQL injection eksplisit via `sql` tagged template). Selalu gunakan static methods pada Service, gunakan klausul `where` eksplisit (dilarang fetch tabel tanpa batas/unbounded), serta lempar standard `Error` instances untuk kegagalan business logic.
 - **Data & File Operations**: Process bulk imports/CSV row-by-row with individual error handling (do not wrap entire imports in a single DB transaction). Use character-by-character CSV parsing to respect quoted newlines. Use native Node APIs (`node:fs/promises`) instead of shell commands.
 - **Native Bun & Elysia First**: Prefer `Bun.password` for password hashing over external libraries (e.g. `bcrypt`). Use Elysia `t.*` schema validators for all input validation instead of external validators (e.g. zod, joi). Minimize external npm dependencies when Bun/Elysia provide built-in equivalents.
 - **Email Sending (Resend)**: NEVER hardcode the sender `from` in email calls. Always use `getEmailFrom()` from `apps/backend/src/utils/email.ts`, which resolves `EMAIL_FROM` env (default `SIMAK <postman@politekniksorowako.ac.id>`). Set `EMAIL_FROM` explicitly in every deployment env (staging/prod); the sender domain must be verified in the Resend dashboard.
@@ -110,3 +114,10 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - Memproses kode berdasarkan tugas spesifik dari Antigravity.
 - Menggunakan model `DeepSeek V4 Flash` untuk implementasi dasar.
 - Hanya merujuk file yang relevan untuk menghemat context window.
+
+## Senior Code Reviewer & QA Lead
+
+- Menginspeksi file yang diubah pada PR untuk mendeteksi potensi bug, regresi logic, atau celah keamanan.
+- **Uji Otomatis Scoped**: Menjalankan `bun test` HANYA pada modul terkait yang direview (misal `bun test apps/backend/src/__tests__/<modul-terkait>.test.ts`). Dilarang keras menjalankan blanket `bun test` di root.
+- Memvalidasi kepatuhan linting (`bun run lint`) dan build.
+- Jika ada kegagalan, merumuskan list perbaikan kritis dan mendelegasikan perbaikan ke executor/opencode.

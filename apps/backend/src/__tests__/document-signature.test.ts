@@ -1,6 +1,19 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { dosen, kelasKuliah, krs, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
+import {
+  dosen,
+  kelasKuliah,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  programStudi,
+  userProdiScopes,
+  userRoles,
+  users,
+  visiMisiProdi,
+} from '../models/schema';
 import { DocumentSignatureService } from '../services/document-signature.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
@@ -81,60 +94,64 @@ async function seedKhs() {
   return { prodi, mhs, periodeId: '20252', mhsId: mhs.id };
 }
 
-describe('Document Signature (TTE Fase 1)', () => {
-  it('menandatangani KHS menghasilkan QR + verifyUrl dan idempoten', async () => {
-    const { mhsId, periodeId } = await seedKhs();
-    const adminToken = await getAuthToken('admin-sign@test.com', 'admin');
+/** Kaprodi ter-scope ke sebuah prodi (atau tanpa scope bila prodiId null). */
+async function createKaprodiToken(email: string, programStudiId: number | null): Promise<string> {
+  const token = await getAuthToken(email, 'kaprodi');
+  const [u] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  // resolveSigner membaca kandidat dari tabel user_roles (bukan kolom legacy).
+  await db.insert(userRoles).values({ userId: u.id, role: 'kaprodi' }).onConflictDoNothing();
+  if (programStudiId != null) {
+    await db.insert(userProdiScopes).values({ userId: u.id, programStudiId }).onConflictDoNothing();
+  }
+  return token;
+}
 
-    const res1 = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      }),
-    );
+function signRequest(mhsId: number, periodeId: string, token: string): Request {
+  return new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+}
+
+describe('Document Signature (TTE Fase 1)', () => {
+  it('menandatangani KHS menghasilkan QR + verifyUrl dan idempoten (Kaprodi in-scope)', async () => {
+    const { mhsId, periodeId, prodi } = await seedKhs();
+    const kaprodiToken = await createKaprodiToken('kaprodi-sign@test.com', prodi.id);
+
+    const res1 = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
     expect(res1.status).toBe(200);
     const body1 = (await res1.json()) as {
       verifyUuid: string;
       verifyUrl: string;
       docHash: string;
       qrDataUrl: string;
+      signerNama: string;
+      signerJabatan: string | null;
     };
     expect(body1.verifyUuid).toBeTruthy();
     expect(body1.qrDataUrl).toContain('data:image/png;base64,');
     expect(body1.verifyUrl).toContain(`${VERIFY_BASE}/v/`);
+    expect(body1.signerNama).toBe('Test User');
+    expect(body1.signerJabatan).toContain('Kaprodi');
 
     // Idempoten: verifyUuid stabil untuk snapshot yang sama.
-    const res2 = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      }),
-    );
+    const res2 = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
     const body2 = (await res2.json()) as { verifyUuid: string };
     expect(body2.verifyUuid).toBe(body1.verifyUuid);
   });
 
-  it('idempoten lintas pemanggil: admin lalu mahasiswa menghasilkan verifyUuid stabil', async () => {
-    const { mhsId, periodeId } = await seedKhs();
-    const adminToken = await getAuthToken('admin-idem-cross@test.com', 'admin');
+  it('idempoten lintas pemanggil: Kaprodi lalu super_admin menghasilkan verifyUuid stabil', async () => {
+    const { mhsId, periodeId, prodi } = await seedKhs();
+    const kaprodiToken = await createKaprodiToken('kaprodi-idem@test.com', prodi.id);
 
-    const res1 = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      }),
-    );
+    const res1 = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
+    expect(res1.status).toBe(200);
     const body1 = (await res1.json()) as { verifyUuid: string; docHash: string };
 
-    // Pemanggil berbeda (mahasiswa pemilik KHS) tidak boleh mengubah snapshot,
-    // sehingga tidak mencabut QR yang sudah tercetak.
-    const mhsToken = await getAuthToken('student-sign@test.com', 'mahasiswa');
-    const res2 = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${mhsToken}` },
-      }),
-    );
+    // Pemanggil berbeda dengan kewenangan (super_admin darurat) tidak boleh
+    // mengubah snapshot, sehingga tidak mencabut QR yang sudah tercetak.
+    const superAdminToken = await getAuthToken('superadmin-idem@test.com', 'super_admin');
+    const res2 = await app.handle(signRequest(mhsId, periodeId, superAdminToken));
     expect(res2.status).toBe(200);
     const body2 = (await res2.json()) as { verifyUuid: string; docHash: string };
     expect(body2.verifyUuid).toBe(body1.verifyUuid);
@@ -142,14 +159,9 @@ describe('Document Signature (TTE Fase 1)', () => {
   });
 
   it('verifikasi publik VALID dengan identitas ter-mask tanpa auth', async () => {
-    const { mhsId, periodeId } = await seedKhs();
-    const adminToken = await getAuthToken('admin-sign2@test.com', 'admin');
-    const res = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      }),
-    );
+    const { mhsId, periodeId, prodi } = await seedKhs();
+    const kaprodiToken = await createKaprodiToken('kaprodi-sign2@test.com', prodi.id);
+    const res = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
     const sign = (await res.json()) as { verifyUuid: string };
 
     // Tanpa header auth sama sekali.
@@ -163,14 +175,10 @@ describe('Document Signature (TTE Fase 1)', () => {
   });
 
   it('revoke membuat verifikasi publik menjadi REVOKED', async () => {
-    const { mhsId, periodeId } = await seedKhs();
+    const { mhsId, periodeId, prodi } = await seedKhs();
+    const kaprodiToken = await createKaprodiToken('kaprodi-sign3@test.com', prodi.id);
     const adminToken = await getAuthToken('admin-sign3@test.com', 'admin');
-    const res = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      }),
-    );
+    const res = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
     const sign = (await res.json()) as { verifyUuid: string };
 
     const revokeRes = await app.handle(
@@ -215,14 +223,9 @@ describe('Document Signature (TTE Fase 1)', () => {
   });
 
   it('mahasiswa hanya dapat memverifikasi UUID (akses publik), bukan revoke', async () => {
-    const { mhsId, periodeId } = await seedKhs();
-    const adminToken = await getAuthToken('admin-sign4@test.com', 'admin');
-    const res = await app.handle(
-      new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}/sign`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-      }),
-    );
+    const { mhsId, periodeId, prodi } = await seedKhs();
+    const kaprodiToken = await createKaprodiToken('kaprodi-sign4@test.com', prodi.id);
+    const res = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
     const sign = (await res.json()) as { verifyUuid: string };
 
     // Revoke oleh non-admin => 403.
@@ -235,5 +238,109 @@ describe('Document Signature (TTE Fase 1)', () => {
       }),
     );
     expect(revokeRes.status).toBe(403);
+  });
+
+  describe('otorisasi penerbitan tanda tangan (persetujuan Kaprodi)', () => {
+    it('Kaprodi in-scope sukses menandatangani', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-ok@test.com', prodi.id);
+      const res = await app.handle(signRequest(mhsId, periodeId, token));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { verifyUuid: string; signerJabatan: string | null };
+      expect(body.verifyUuid).toBeTruthy();
+      expect(body.signerJabatan).toContain('Kaprodi');
+    });
+
+    it('Kaprodi out-of-scope ditolak 403', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const [otherProdi] = await db
+        .insert(programStudi)
+        .values({ kode: 'TI2', nama: 'Teknik Mesin', jenjang: 'D4' })
+        .returning();
+      const token = await createKaprodiToken('kaprodi-out@test.com', otherProdi.id);
+      const res = await app.handle(signRequest(mhsId, periodeId, token));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain('scope prodi');
+    });
+
+    it('Kaprodi tanpa scope apapun ditolak 403', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-noscope@test.com', null);
+      const res = await app.handle(signRequest(mhsId, periodeId, token));
+      expect(res.status).toBe(403);
+    });
+
+    it('admin (tanpa role kaprodi) ditolak 403 — persetujuan Kaprodi eksplisit', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const adminToken = await getAuthToken('admin-nosign@test.com', 'admin');
+      const res = await app.handle(signRequest(mhsId, periodeId, adminToken));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain('Kaprodi');
+    });
+
+    it('prodi (tanpa role kaprodi) ditolak 403', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const prodiToken = await getAuthToken('prodi-nosign@test.com', 'prodi');
+      const res = await app.handle(signRequest(mhsId, periodeId, prodiToken));
+      expect(res.status).toBe(403);
+    });
+
+    it('mahasiswa ditolak 403 saat mencoba menandatangani KHS-nya sendiri', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const mhsToken = await getAuthToken('student-sign@test.com', 'mahasiswa');
+      const res = await app.handle(signRequest(mhsId, periodeId, mhsToken));
+      expect(res.status).toBe(403);
+    });
+
+    it('super_admin boleh menandatangani sebagai darurat', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const token = await getAuthToken('superadmin-sign@test.com', 'super_admin');
+      const res = await app.handle(signRequest(mhsId, periodeId, token));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { verifyUuid: string };
+      expect(body.verifyUuid).toBeTruthy();
+    });
+
+    it('setelah Kaprodi menandatangani, admin dapat membaca baris existing (getByRef)', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const kaprodiToken = await createKaprodiToken('kaprodi-ref@test.com', prodi.id);
+      const signRes = await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
+      const sign = (await signRes.json()) as { verifyUuid: string };
+
+      const adminToken = await getAuthToken('admin-ref@test.com', 'admin');
+      const refRes = await app.handle(
+        new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(refRes.status).toBe(200);
+      const body = (await refRes.json()) as { verifyUuid: string } | null;
+      expect(body?.verifyUuid).toBe(sign.verifyUuid);
+    });
+
+    it('tanda tangan lama tetap terbaca meski pemanggil bukan Kaprodi (grandfather)', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const kaprodiToken = await createKaprodiToken('kaprodi-old@test.com', prodi.id);
+      await app.handle(signRequest(mhsId, periodeId, kaprodiToken));
+
+      // Pemirsa staf in-scope (prodi) hanya membaca, tanpa menerbitkan baru.
+      const prodiToken = await getAuthToken('prodi-read@test.com', 'prodi');
+      const [prodiUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, 'prodi-read@test.com'))
+        .limit(1);
+      await db.insert(userProdiScopes).values({ userId: prodiUser.id, programStudiId: prodi.id }).onConflictDoNothing();
+      const refRes = await app.handle(
+        new Request(`http://localhost/document-signatures/khs/${mhsId}/${periodeId}`, {
+          headers: { Authorization: `Bearer ${prodiToken}` },
+        }),
+      );
+      expect(refRes.status).toBe(200);
+      const body = (await refRes.json()) as { verifyUuid: string } | null;
+      expect(body?.verifyUuid).toBeTruthy();
+    });
   });
 });

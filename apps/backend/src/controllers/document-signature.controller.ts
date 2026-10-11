@@ -73,16 +73,25 @@ export class DocumentSignatureController {
       return { error: 'ID Mahasiswa / Periode tidak valid.' };
     }
 
-    // Otorisasi: mahasiswa hanya untuk dirinya sendiri; staf sesuai scope; admin bebas.
-    if (hasRole(user, ['mahasiswa'])) {
-      const myMhsId = await MahasiswaService.getMahasiswaIdByEmail(user.email);
-      if (!myMhsId || myMhsId !== mhsId) {
+    // Tanda tangan KHS = persetujuan Kaprodi: hanya Kaprodi prodi terkait
+    // yang boleh menerbitkan QR. super_admin diperbolehkan sebagai darurat
+    // (mis. kursi Kaprodi kosong); jejak pemanggil tetap tercatat di audit
+    // plugin + signerUserId. Baca existing (getByRef) tetap terbuka untuk
+    // staf in-scope / mahasiswa pemilik agar cetakan lama tetap tampil.
+    if (!hasRole(user, ['super_admin'])) {
+      if (!hasRole(user, ['kaprodi'])) {
         set.status = 403;
-        return { error: 'Akses ditolak. Anda hanya dapat menandatangani KHS Anda sendiri.' };
+        return { error: 'Hanya Kaprodi program studi terkait yang dapat menandatangani KHS.' };
       }
-    } else if (!(await mahasiswaInScope(user, mhsId))) {
-      set.status = 403;
-      return { error: 'Akses ditolak. Mahasiswa berada di luar scope Anda.' };
+      const mhs = await MahasiswaService.getById(mhsId);
+      if (!mhs) {
+        set.status = 404;
+        return { error: 'Mahasiswa tidak ditemukan.' };
+      }
+      if (!(await ProdiScopeService.canAccessProdi(user, mhs.programStudiId))) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Mahasiswa berada di luar scope prodi Anda.' };
+      }
     }
 
     try {
