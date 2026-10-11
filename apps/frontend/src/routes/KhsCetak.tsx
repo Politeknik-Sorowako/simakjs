@@ -236,6 +236,15 @@ export default function KhsCetak() {
                 <div class="text-center">
                   <p>Mengetahui,</p>
                   <p>{signature()?.signerJabatan ? signature()?.signerJabatan : 'Kaprodi / Pimpinan'}</p>
+                  <Show when={signature()?.qrDataUrl}>
+                    <img
+                      src={signature()?.qrDataUrl}
+                      width="128"
+                      height="128"
+                      alt="QR verifikasi dokumen"
+                      class="mx-auto my-2"
+                    />
+                  </Show>
                   <div class="h-16" />
                   <p class="font-bold underline">
                     {signature()?.signerNama ?? '.........................................................'}
@@ -254,9 +263,6 @@ export default function KhsCetak() {
               <Show when={signature()}>
                 {(sig) => (
                   <div class="mt-6 flex flex-col items-center border-t border-secondary-200 pt-4 text-center text-xs text-secondary-500">
-                    <Show when={sig().qrDataUrl}>
-                      <img src={sig().qrDataUrl} width="128" height="128" alt="QR verifikasi dokumen" class="mb-2" />
-                    </Show>
                     <p class="font-semibold text-secondary-700">Dokumen ditandatangani digital (QR Signed-Hash)</p>
                     <p>
                       Ditandatangani: {sig().signerNama}

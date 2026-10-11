@@ -29,14 +29,17 @@ export interface SignKhsResult {
 
 export const documentSignatureController = {
   /**
-   * Verifikasi publik. Endpoint mengembalikan HTTP 404 (NOT_FOUND) dan 410
-   * (REVOKED) dengan status di body. `fetchApi` melempar pada respons non-2xx
-   * sehingga status REVOKED tidak akan terbaca — baca body secara langsung.
+   * Verifikasi publik (POST + token Turnstile sebagai antibot). Endpoint
+   * mengembalikan HTTP 404 (NOT_FOUND) dan 410 (REVOKED) dengan status di
+   * body. `fetchApi` melempar pada respons non-2xx sehingga status REVOKED
+   * tidak akan terbaca — baca body secara langsung.
    */
-  verifyPublic: async (uuid: string): Promise<SignatureInfo> => {
-    const res = await fetch(`${API_URL}/document-signatures/verify/${uuid}`, {
-      method: 'GET',
+  verifyPublic: async (uuid: string, turnstileToken = ''): Promise<SignatureInfo> => {
+    const res = await fetch(`${API_URL}/document-signatures/verify`, {
+      method: 'POST',
       credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uuid, turnstileToken }),
     });
     const data = (await res.json().catch(() => null)) as SignatureInfo | null;
     if (data && typeof data.status === 'string') return data;
