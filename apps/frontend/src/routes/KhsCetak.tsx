@@ -55,9 +55,12 @@ export default function KhsCetak() {
       try {
         // Idempoten: server mengembalikan tanda tangan yang sama bila snapshot tidak berubah.
         return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
-      } catch {
-        // fallback ke tanda tangan yang sudah ada (mis. mahasiswa tanpa izin tulis).
-        return documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
+      } catch (signError) {
+        // Fallback ke tanda tangan yang sudah ada (mis. tanpa izin tulis).
+        const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
+        if (existing) return existing;
+        // Tidak ada tanda tangan tersedia → lempar agar banner error tampil.
+        throw signError;
       }
     },
   );
@@ -81,6 +84,23 @@ export default function KhsCetak() {
 
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">
+      <Show when={signature.error}>
+        <div
+          role="alert"
+          class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 print:hidden"
+        >
+          <p class="font-semibold">Tanda tangan digital gagal dimuat</p>
+          <p class="mt-1 text-red-600">
+            <Show
+              when={auth.hasRole(['admin', 'super_admin'])}
+              fallback="Coba muat ulang halaman; bila masalah berlanjut, hubungi administrator. Dokumen cetak TANPA QR verifikasi."
+            >
+              {signature.error instanceof Error ? signature.error.message : 'Terjadi kesalahan tidak dikenal.'} —
+              Dokumen cetak TANPA QR verifikasi.
+            </Show>
+          </p>
+        </div>
+      </Show>
       <div class="mb-4 flex justify-end print:hidden">
         <button
           type="button"
