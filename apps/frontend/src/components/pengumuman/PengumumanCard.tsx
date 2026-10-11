@@ -1,3 +1,4 @@
+import { A } from '@solidjs/router';
 import { For, Show } from 'solid-js';
 import { LampiranItem, PengumumanItem } from '../../controllers/pengumumanController';
 import { getAbsoluteStorageUrl } from '../../utils/api';
@@ -206,13 +207,21 @@ export function PengumumanCard(props: PengumumanCardProps) {
             </Show>
           </div>
 
-          <div class="text-xs text-secondary-500 dark:text-secondary-400">
+          <div class="flex items-center gap-2 text-xs text-secondary-500 dark:text-secondary-400">
             <Show
               when={p().status === 'scheduled'}
               fallback={<span>Rilis: {formatDate(p().publishedAt || p().createdAt)}</span>}
             >
               <span class="text-sky-600 dark:text-sky-400 font-medium">Tayang: {formatDate(p().publishedAt)}</span>
             </Show>
+            <A
+              href={`/pengumuman/${p().id}`}
+              onClick={(e) => e.stopPropagation()}
+              class="hover:text-[#0066cc] dark:hover:text-[#2997ff] text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800 p-0.5 px-1 rounded text-xs transition-colors"
+              title="Buka pada halaman penuh"
+            >
+              ↗
+            </A>
           </div>
         </div>
 

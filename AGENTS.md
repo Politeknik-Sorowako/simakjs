@@ -36,6 +36,10 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
     cd apps/backend && bun run src/scripts/pre-test.ts
     ```
 - **Merge & Review Efficiency**:
+  - **Scoped Testing saat Review / CR**: Saat bertindak sebagai Senior Code Reviewer / QA Lead pada proses review PR:
+    - **DILARANG menjalankan blanket `bun test` di root** yang memicu seluruh integration test suite.
+    - Jalankan `bun test` **HANYA pada file/modul terkait yang direview** (misal: `bun test apps/backend/src/__tests__/<modul-terkait>.test.ts`).
+    - Bila PR hanya berisi perubahan frontend atau modul tanpa integration test spesifik, cukup validasi via `bun run lint`, build frontend, dan andalkan CI GitHub Actions.
   - **Plan Kerja Tidak Di-commit**: Simpan rencana kerja di `.opencode/plans/<slug>.md` (tidak di-commit ke feature branch) agar tidak memicu konflik antar-PR (mis. dua PR yang sama-sama menulis `implementation_plan.md`).
   - **Auto-merge**: Setelah push & CI mulai, gunakan `gh pr merge <N> --auto --merge` alih-alih polling manual `mergeStateStatus`. Tetap target `development`; jangan hapus protected branch.
   - **Verifikasi Sasaran Review**: Sebelum menjalankan reviewer/agent, pastikan `gh pr view <N> --json number,title,headRefName,state` cocok dengan PR yang dimaksud dan cantumkan nomor + judul PR secara eksplisit di prompt.
@@ -110,3 +114,10 @@ All AI agents operating on this codebase MUST follow these guidelines. Violation
 - Memproses kode berdasarkan tugas spesifik dari Antigravity.
 - Menggunakan model `DeepSeek V4 Flash` untuk implementasi dasar.
 - Hanya merujuk file yang relevan untuk menghemat context window.
+
+## Senior Code Reviewer & QA Lead
+
+- Menginspeksi file yang diubah pada PR untuk mendeteksi potensi bug, regresi logic, atau celah keamanan.
+- **Uji Otomatis Scoped**: Menjalankan `bun test` HANYA pada modul terkait yang direview (misal `bun test apps/backend/src/__tests__/<modul-terkait>.test.ts`). Dilarang keras menjalankan blanket `bun test` di root.
+- Memvalidasi kepatuhan linting (`bun run lint`) dan build.
+- Jika ada kegagalan, merumuskan list perbaikan kritis dan mendelegasikan perbaikan ke executor/opencode.
