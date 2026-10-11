@@ -116,7 +116,9 @@ export class EmailOtpService {
 
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
-      console.warn(`[2FA Email OTP] RESEND_API_KEY tidak dikonfigurasi. OTP ${context} untuk ${email}:`, otpCode);
+      console.warn(
+        `[2FA Email OTP] RESEND_API_KEY tidak dikonfigurasi — email OTP ${context} untuk ${email} TIDAK terkirim.`,
+      );
       return;
     }
 
