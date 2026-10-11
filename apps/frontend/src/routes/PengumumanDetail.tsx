@@ -184,6 +184,12 @@ export default function PengumumanDetail() {
                   </span>
                   <span>•</span>
                   <span>{formatDate(item().publishedAt || item().createdAt)}</span>
+                  <Show when={item().expiresAt}>
+                    <span>•</span>
+                    <span class="font-medium text-amber-600 dark:text-amber-400">
+                      Batas Tayang: {formatDate(item().expiresAt)}
+                    </span>
+                  </Show>
                   <Show when={item().viewCount > 0}>
                     <span>•</span>
                     <span>👁️ {item().viewCount} kali dibaca</span>

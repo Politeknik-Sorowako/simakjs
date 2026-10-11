@@ -55,6 +55,11 @@ export function PengumumanDetailModal(props: PengumumanDetailModalProps) {
               <span class="text-xs text-secondary-500">
                 Diterbitkan: {formatDate(p()?.publishedAt || p()?.createdAt)}
               </span>
+              <Show when={p()?.expiresAt}>
+                <span class="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                  • Berakhir: {formatDate(p()?.expiresAt)}
+                </span>
+              </Show>
             </div>
 
             {/* Action Buttons: Open Standalone, Expand/Minimize, Close */}
