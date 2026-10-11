@@ -69,6 +69,10 @@ const PUBLIC_PATHS = [
   '/activate',
   '/rombel/enroll',
   '/protocol',
+  // Halaman verifikasi dokumen (TTE) bersifat publik — setara
+  // PUBLIC_NO_SESSION_PATHS di backend; tanpa probe /auth/me.
+  '/verifikasi',
+  '/v',
 ];
 
 function isPublicPath(pathname: string): boolean {

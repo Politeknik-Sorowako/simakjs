@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from '@solidjs/router';
+import { Navigate, Route, Routes, useLocation } from '@solidjs/router';
 import { QueryClientProvider } from '@tanstack/solid-query';
 import { ErrorBoundary, lazy, Suspense } from 'solid-js';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -151,8 +151,53 @@ function RouteErrorFallback(props: { error: unknown; reset: () => void }) {
   );
 }
 
+function VerificationRouteFallback() {
+  return (
+    <div class="min-h-screen flex flex-col items-center justify-center bg-parchment dark:bg-secondary-950 text-secondary-800 dark:text-secondary-100 p-6 text-center">
+      <div class="w-14 h-14 mb-4 rounded-2xl bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+          />
+        </svg>
+      </div>
+      <h2 class="text-lg font-bold mb-2">Tautan Verifikasi Tidak Dikenali</h2>
+      <p class="text-sm text-secondary-500 dark:text-secondary-400 max-w-md mb-6">
+        Tautan verifikasi dokumen ini tidak dapat dimuat. Muat ulang halaman, atau salin kode verifikasi dari dokumen
+        Anda lalu tempel pada halaman verifikasi.
+      </p>
+      <div class="flex gap-3">
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          class="px-4 py-2 text-sm font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all active:scale-95"
+        >
+          Muat Ulang Halaman
+        </button>
+        <a
+          href="/verifikasi"
+          class="px-4 py-2 text-sm font-semibold rounded-xl border border-secondary-300 dark:border-secondary-700 hover:bg-secondary-100 dark:hover:bg-secondary-800 text-secondary-700 dark:text-secondary-200 transition-all active:scale-95"
+        >
+          Buka Halaman Verifikasi
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function AppContent() {
   const auth = useAuth();
+  const location = useLocation();
+  // Tautan verifikasi (QR/dokumen) tidak boleh diarahkan ke /login/dashboard
+  // walau tidak cocok dengan route — tampilkan pemberitahuan agar pengguna
+  // tetap mengetahui status verifikasinya (halaman verifikasi bersifat publik).
+  const isVerifyPath = () => {
+    const path = location.pathname;
+    return path === '/v' || path.startsWith('/v/') || path === '/verifikasi' || path.startsWith('/verifikasi/');
+  };
 
   return (
     <ErrorBoundary fallback={(err, reset) => <RouteErrorFallback error={err} reset={reset} />}>
@@ -167,7 +212,9 @@ function AppContent() {
           <Route path="/auth/google/callback" component={GoogleCallback} />
           <Route path="/protocol" component={ProtocolHandler} />
           <Route path="/rombel/enroll/:token" component={RombelEnroll} />
+          <Route path="/verifikasi" component={VerifikasiDokumen} />
           <Route path="/verifikasi/:uuid" component={VerifikasiDokumen} />
+          <Route path="/v" component={VerifikasiDokumen} />
           <Route path="/v/:uuid" component={VerifikasiDokumen} />
 
           {/* Protected Routes */}
@@ -860,12 +907,14 @@ function AppContent() {
             }
           />
 
-          {/* Catch-all redirect */}
+          {/* Catch-all redirect — path verifikasi TIDAK boleh diarahkan ke login */}
           <Route
             path="*"
             element={
               !auth.bootstrapped() ? (
                 <RouteLoadingFallback />
+              ) : isVerifyPath() ? (
+                <VerificationRouteFallback />
               ) : auth.isAuthenticated() ? (
                 <Navigate href="/dashboard" />
               ) : (
