@@ -195,7 +195,14 @@ export default function Khs() {
     async (key): Promise<KhsSignStatusPage> => await documentSignatureController.listSignStatus(key),
   );
 
-  const signRows = () => signStatus()?.data ?? [];
+  // Baca resource dengan aman: saat `signStatus` error, accessor-nya melempar.
+  // Tanpa guard ini, ekspresi di luar blok error akan menggagalkan seluruh render.
+  const signRows = () => (signStatus.error ? [] : (signStatus()?.data ?? []));
+  const signPageInfo = () => {
+    if (signStatus.error) return { page: 1, totalPages: 1, total: 0 };
+    const s = signStatus();
+    return { page: s?.page ?? 1, totalPages: Math.max(1, s?.totalPages ?? 1), total: s?.total ?? 0 };
+  };
   const unsignedPageIds = () =>
     signRows()
       .filter((r) => !r.signed)
@@ -852,21 +859,18 @@ export default function Khs() {
                 <div class="flex items-center gap-2 text-caption text-secondary-400 dark:text-secondary-300">
                   <button
                     onClick={() => setSignPage((p) => Math.max(1, p - 1))}
-                    disabled={(signStatus()?.page ?? 1) <= 1 || signStatus.loading}
+                    disabled={signPageInfo().page <= 1 || signStatus.loading}
                     class="px-3 py-1.5 border border-secondary-200 rounded-xl font-bold disabled:opacity-40 active:scale-95 transition-all dark:border-secondary-700"
                     aria-label="Halaman sebelumnya"
                   >
                     ←
                   </button>
                   <span>
-                    Halaman {signStatus()?.page ?? 1} dari {Math.max(1, signStatus()?.totalPages ?? 1)} ·{' '}
-                    {signStatus()?.total ?? 0} mahasiswa
+                    Halaman {signPageInfo().page} dari {signPageInfo().totalPages} · {signPageInfo().total} mahasiswa
                   </span>
                   <button
                     onClick={() => setSignPage((p) => p + 1)}
-                    disabled={
-                      (signStatus()?.page ?? 1) >= Math.max(1, signStatus()?.totalPages ?? 1) || signStatus.loading
-                    }
+                    disabled={signPageInfo().page >= signPageInfo().totalPages || signStatus.loading}
                     class="px-3 py-1.5 border border-secondary-200 rounded-xl font-bold disabled:opacity-40 active:scale-95 transition-all dark:border-secondary-700"
                     aria-label="Halaman berikutnya"
                   >
@@ -970,7 +974,7 @@ export default function Khs() {
                                 </span>
                               </Show>
                             </td>
-                            <td class="p-3 text-center">
+                            <td class="p-3 text-center" onClick={(e) => e.stopPropagation()}>
                               <a
                                 href={`/khs/cetak/${row.mahasiswaId}/${selectedPeriode()}`}
                                 target="_blank"

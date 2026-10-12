@@ -58,9 +58,10 @@ export default function KhsCetak() {
     },
   );
 
-  // Tanda tangan = persetujuan Kaprodi: hanya Kaprodi/super_admin yang boleh
-  // menerbitkan QR baru; pemirsa lain hanya membaca baris yang sudah ada.
-  const canSign = () => auth.hasRole(['kaprodi', 'super_admin']);
+  // Tanda tangan = persetujuan Kaprodi: Kaprodi (atau Admin/super_admin sesuai
+  // kebijakan akses massal) boleh menerbitkan QR baru; pemirsa lain hanya
+  // membaca baris yang sudah ada.
+  const canSign = () => auth.hasRole(['kaprodi', 'admin', 'super_admin']);
 
   const [signature] = createResource(
     () => {
@@ -74,7 +75,7 @@ export default function KhsCetak() {
       // Baca dulu tanda tangan yang sudah ada (idempoten; tanpa menerbitkan baru).
       const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
       if (existing) return ensureQrDataUrl(existing);
-      // Penerbitan baru hanya oleh Kaprodi/super_admin — selain itu cetak tanpa QR
+      // Penerbitan baru hanya oleh Kaprodi/Admin — selain itu cetak tanpa QR
       // (banner info di bawah memberi tahu pemirsa bahwa dokumen belum ditandatangani).
       if (!canSign()) return null;
       return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
