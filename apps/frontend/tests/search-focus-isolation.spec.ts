@@ -123,4 +123,43 @@ test.describe('Search Focus & Table Refresh Isolation', () => {
       await expect(heading).toBeVisible();
     }
   });
+
+  test('tab TTD Massal /khs: pencarian meresfresh tabel saja, kursor tetap di input', async ({ page }) => {
+    await gotoAsAdmin(page, '/khs');
+    await page.getByRole('button', { name: 'TTD Massal' }).click();
+
+    const search = page.locator('input[placeholder="Ketik NIM atau nama..."]');
+    await expect(search).toBeVisible();
+    const placeholder = await search.getAttribute('placeholder');
+
+    // Pilih periode & prodi (bila tersedia) agar refetch daftar benar-benar terpicu.
+    const periodeSel = page.locator('select').nth(0);
+    if ((await periodeSel.locator('option').count()) > 1) await periodeSel.selectOption({ index: 1 });
+    const prodiSel = page.locator('select').nth(1);
+    if ((await prodiSel.locator('option').count()) > 1) await prodiSel.selectOption({ index: 1 });
+
+    await search.click();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.getAttribute('placeholder') ?? null))
+      .toBe(placeholder);
+
+    // Ketik bertahap sambil menunggu debounce + refetch daftar TTD
+    await search.type('a');
+    await page.waitForTimeout(450);
+    await search.type('b');
+    await page.waitForTimeout(450);
+
+    // Kursor tetap di input selama/ setelah refetch
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.getAttribute('placeholder') ?? null))
+      .toBe(placeholder);
+
+    // Fallback Suspense global ("Memuat Halaman") tidak boleh muncul — itu berarti
+    // seluruh halaman di-unmount dan input ikut hilang.
+    const fullScreenLoader = page.locator('.min-h-screen', { hasText: 'Memuat Halaman' });
+    await expect(fullScreenLoader).toHaveCount(0);
+
+    // Kartu filter tetap ter-mount
+    await expect(search).toBeVisible();
+  });
 });

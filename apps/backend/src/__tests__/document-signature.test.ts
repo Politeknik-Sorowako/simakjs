@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
 import {
+  documentSignatures,
   dosen,
   kelasKuliah,
   krs,
@@ -121,11 +122,43 @@ function bulkSignRequest(periodeId: string, mahasiswaIds: number[], token: strin
   });
 }
 
-function signStatusRequest(periodeId: string, programStudiId: number, token: string): Request {
+function signStatusRequest(
+  periodeId: string,
+  programStudiId: number,
+  token: string,
+  extra?: { status?: string; limit?: number; page?: number },
+): Request {
   const qs = new URLSearchParams({ periodeId, programStudiId: String(programStudiId) });
+  if (extra?.status) qs.set('status', extra.status);
+  if (extra?.limit) qs.set('limit', String(extra.limit));
+  if (extra?.page) qs.set('page', String(extra.page));
   return new Request(`http://localhost/document-signatures/khs/sign-status?${qs}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+function revokeRequest(uuid: string, token: string, reason: string): Request {
+  return new Request(`http://localhost/document-signatures/${uuid}/revoke`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+function bulkRevokeRequest(uuids: string[], reason: string, token: string): Request {
+  return new Request('http://localhost/document-signatures/bulk-revoke', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ uuids, reason }),
+  });
+}
+
+/** Tanda tangan satu KHS lalu kembalikan `verifyUuid`-nya. */
+async function signAndGetUuid(mhsId: number, periodeId: string, token: string): Promise<string> {
+  const res = await app.handle(signRequest(mhsId, periodeId, token));
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as { verifyUuid: string };
+  return body.verifyUuid;
 }
 
 /** Mahasiswa tambahan pada prodi yang sama (untuk skenario massal). */
@@ -522,6 +555,290 @@ describe('Document Signature (TTE Fase 1)', () => {
       const prodiToken = await getAuthToken('prodi-list@test.com', 'prodi');
       const res = await app.handle(signStatusRequest(periodeId, prodi.id, prodiToken));
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('filter status & page-size daftar TTD', () => {
+    it('filter signed/unsigned membagi daftar dengan tepat + verifyUuid per baris', async () => {
+      const { prodi, dsn, mhs, periodeId } = await seedKhs();
+      const mhs2 = await addMahasiswa('123458', prodi.id, dsn.id);
+      const token = await createKaprodiToken('kaprodi-filter@test.com', prodi.id);
+      await signAndGetUuid(mhs.id, periodeId, token);
+
+      const allRes = await app.handle(signStatusRequest(periodeId, prodi.id, token));
+      expect(allRes.status).toBe(200);
+      const all = (await allRes.json()) as {
+        total: number;
+        data: { mahasiswaId: number; verifyUuid: string | null }[];
+      };
+      expect(all.total).toBe(2);
+
+      const signedRes = await app.handle(signStatusRequest(periodeId, prodi.id, token, { status: 'signed' }));
+      const signed = (await signedRes.json()) as {
+        total: number;
+        data: { mahasiswaId: number; signed: boolean; verifyUuid: string | null }[];
+      };
+      expect(signed.total).toBe(1);
+      expect(signed.data[0].mahasiswaId).toBe(mhs.id);
+      expect(signed.data[0].signed).toBe(true);
+      expect(signed.data[0].verifyUuid).toBeTruthy();
+
+      const unsignedRes = await app.handle(signStatusRequest(periodeId, prodi.id, token, { status: 'unsigned' }));
+      const unsigned = (await unsignedRes.json()) as {
+        total: number;
+        data: { mahasiswaId: number; signed: boolean; verifyUuid: string | null }[];
+      };
+      expect(unsigned.total).toBe(1);
+      expect(unsigned.data[0].mahasiswaId).toBe(mhs2.id);
+      expect(unsigned.data[0].signed).toBe(false);
+      expect(unsigned.data[0].verifyUuid).toBeNull();
+    });
+
+    it('status di luar enum ditolak 422', async () => {
+      const { prodi, periodeId } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-filter-bad@test.com', prodi.id);
+      const res = await app.handle(signStatusRequest(periodeId, prodi.id, token, { status: 'keliru' }));
+      expect(res.status).toBe(422);
+    });
+
+    it('limit=1 menghitung totalPages 2 & memantulkan limit', async () => {
+      const { prodi, dsn, periodeId } = await seedKhs();
+      await addMahasiswa('123459', prodi.id, dsn.id);
+      const token = await createKaprodiToken('kaprodi-limit@test.com', prodi.id);
+
+      const res = await app.handle(signStatusRequest(periodeId, prodi.id, token, { limit: 1 }));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { page: number; limit: number; total: number; totalPages: number };
+      expect(body.limit).toBe(1);
+      expect(body.total).toBe(2);
+      expect(body.totalPages).toBe(2);
+      expect(body.page).toBe(1);
+    });
+
+    it('duplikat signature aktif pada ref yang sama tidak menggandakan baris/total', async () => {
+      const { prodi, mhs, periodeId } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-dup@test.com', prodi.id);
+      const refId = `khs:${mhs.id}:${periodeId}`;
+      // Simulasi race: dua baris aktif untuk ref yang sama (index non-unique).
+      await db.insert(documentSignatures).values([
+        {
+          tenant: 'simak',
+          docType: 'KHS',
+          refId,
+          docHash: 'a'.repeat(64),
+          signature: 'sig-1',
+          kid: 'k1',
+          signerNama: 'X',
+          payloadSnapshot: {},
+        },
+        {
+          tenant: 'simak',
+          docType: 'KHS',
+          refId,
+          docHash: 'b'.repeat(64),
+          signature: 'sig-2',
+          kid: 'k1',
+          signerNama: 'Y',
+          payloadSnapshot: {},
+        },
+      ]);
+
+      const allRes = await app.handle(signStatusRequest(periodeId, prodi.id, token));
+      expect(allRes.status).toBe(200);
+      const all = (await allRes.json()) as { total: number; data: { signed: boolean }[] };
+      expect(all.total).toBe(1);
+      expect(all.data).toHaveLength(1);
+      expect(all.data[0].signed).toBe(true);
+
+      const signedRes = await app.handle(signStatusRequest(periodeId, prodi.id, token, { status: 'signed' }));
+      const signed = (await signedRes.json()) as { total: number };
+      expect(signed.total).toBe(1);
+    });
+  });
+
+  describe('pencabutan tanda tangan (tunggal & massal)', () => {
+    it('kaprodi in-scope boleh mencabut tunggal → verifikasi publik 410', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-rev@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, token);
+
+      const res = await app.handle(revokeRequest(uuid, token, 'Koreksi nilai salah input'));
+      expect(res.status).toBe(200);
+
+      const verify = await app.handle(verifyRequest(uuid));
+      expect(verify.status).toBe(410);
+      const body = (await verify.json()) as { status: string };
+      expect(body.status).toBe('REVOKED');
+    });
+
+    it('revoke tunggal: reason spasi saja ditolak 400 & >500 karakter ditolak 422, tanda tangan tetap aktif', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-rev-ws@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, token);
+
+      // 3 spasi lolos `minLength: 3`; trim di controller harus menolaknya.
+      const whitespace = await app.handle(revokeRequest(uuid, token, '   '));
+      expect(whitespace.status).toBe(400);
+
+      // Paritas jalur massal: schema membatasi panjang alasan (maxLength 500).
+      const tooLong = await app.handle(revokeRequest(uuid, token, 'a'.repeat(501)));
+      expect(tooLong.status).toBe(422);
+
+      // Tidak ada pencabutan yang terjadi & tidak ada alasan kosong tersimpan.
+      const verify = await app.handle(verifyRequest(uuid));
+      expect(verify.status).toBe(200);
+      const body = (await verify.json()) as { status: string };
+      expect(body.status).toBe('VALID');
+    });
+
+    it('kaprodi out-of-scope ditolak 403 & tanda tangan tetap aktif', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const kaprodiToken = await createKaprodiToken('kaprodi-rev-ok@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, kaprodiToken);
+
+      const [otherProdi] = await db
+        .insert(programStudi)
+        .values({ kode: 'TM-REV', nama: 'Teknik Mesin', jenjang: 'D4' })
+        .returning();
+      const token = await createKaprodiToken('kaprodi-rev-out@test.com', otherProdi.id);
+
+      const res = await app.handle(revokeRequest(uuid, token, 'Coba cabut lintas prodi'));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain('lingkup');
+
+      const row = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+      expect(row).not.toBeNull();
+    });
+
+    it('role prodi ditolak 403 pada revoke tunggal & massal', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const kaprodiToken = await createKaprodiToken('kaprodi-rev-guard@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, kaprodiToken);
+      const prodiToken = await getAuthToken('prodi-rev@test.com', 'prodi');
+
+      const single = await app.handle(revokeRequest(uuid, prodiToken, 'tanpa wewenang'));
+      expect(single.status).toBe(403);
+
+      const bulk = await app.handle(bulkRevokeRequest([uuid], 'tanpa wewenang', prodiToken));
+      expect(bulk.status).toBe(403);
+
+      const row = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+      expect(row).not.toBeNull();
+    });
+
+    it('admin mencabut massal dua uuid → kedua verifikasi 410', async () => {
+      const { prodi, dsn, mhs, periodeId } = await seedKhs();
+      const mhs2 = await addMahasiswa('123460', prodi.id, dsn.id);
+      const kaprodiToken = await createKaprodiToken('kaprodi-rev-admin@test.com', prodi.id);
+      const uuid1 = await signAndGetUuid(mhs.id, periodeId, kaprodiToken);
+      const uuid2 = await signAndGetUuid(mhs2.id, periodeId, kaprodiToken);
+      const adminToken = await getAuthToken('admin-bulk-rev@test.com', 'admin');
+
+      const res = await app.handle(bulkRevokeRequest([uuid1, uuid2], 'Pembatalan massal oleh admin', adminToken));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { total: number; revokedCount: number; failedCount: number };
+      expect(body).toMatchObject({ total: 2, revokedCount: 2, failedCount: 0 });
+
+      for (const uuid of [uuid1, uuid2]) {
+        const verify = await app.handle(verifyRequest(uuid));
+        expect(verify.status).toBe(410);
+      }
+    });
+
+    it('kaprodi in-scope mencabut massal → revokedCount sesuai', async () => {
+      const { prodi, dsn, mhs, periodeId } = await seedKhs();
+      const mhs2 = await addMahasiswa('123461', prodi.id, dsn.id);
+      const token = await createKaprodiToken('kaprodi-rev-bulk@test.com', prodi.id);
+      const uuid1 = await signAndGetUuid(mhs.id, periodeId, token);
+      const uuid2 = await signAndGetUuid(mhs2.id, periodeId, token);
+
+      const res = await app.handle(bulkRevokeRequest([uuid1, uuid2], 'Koreksi KHS massal', token));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { revokedCount: number; failedCount: number };
+      expect(body).toMatchObject({ revokedCount: 2, failedCount: 0 });
+    });
+
+    it('uuid tak dikenal masuk daftar failed & sisanya tetap sukses', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const kaprodiToken = await createKaprodiToken('kaprodi-rev-mix@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, kaprodiToken);
+      const adminToken = await getAuthToken('admin-bulk-rev-mix@test.com', 'admin');
+
+      const res = await app.handle(
+        bulkRevokeRequest([uuid, '00000000-0000-4000-8000-000000000000'], 'Campuran valid & tak dikenal', adminToken),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        total: number;
+        revokedCount: number;
+        failedCount: number;
+        failed: { uuid: string; error: string }[];
+      };
+      expect(body).toMatchObject({ total: 2, revokedCount: 1, failedCount: 1 });
+      expect(body.failed[0].uuid).toBe('00000000-0000-4000-8000-000000000000');
+      expect(body.failed[0].error).toContain('tidak ditemukan');
+
+      const verify = await app.handle(verifyRequest(uuid));
+      expect(verify.status).toBe(410);
+    });
+
+    it('re-revoke idempoten: run kedua dihitung sukses tanpa error', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-rev-idem@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, token);
+
+      const first = await app.handle(bulkRevokeRequest([uuid], 'Pencabutan pertama', token));
+      expect(first.status).toBe(200);
+      const second = await app.handle(bulkRevokeRequest([uuid], 'Pencabutan kedua', token));
+      expect(second.status).toBe(200);
+      const body = (await second.json()) as { revokedCount: number; failedCount: number };
+      expect(body).toMatchObject({ revokedCount: 1, failedCount: 0 });
+    });
+
+    it('massal out-of-scope ditolak 403 utuh — tidak ada parsial', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const kaprodiToken = await createKaprodiToken('kaprodi-rev-scope@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, kaprodiToken);
+
+      const [otherProdi] = await db
+        .insert(programStudi)
+        .values({ kode: 'TM-REV2', nama: 'Teknik Industri', jenjang: 'D4' })
+        .returning();
+      const token = await createKaprodiToken('kaprodi-rev-scope-out@test.com', otherProdi.id);
+
+      const res = await app.handle(bulkRevokeRequest([uuid], 'Coba cabut lintas prodi', token));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain('lingkup');
+
+      const row = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+      expect(row).not.toBeNull();
+      const verify = await app.handle(verifyRequest(uuid));
+      expect(verify.status).toBe(200);
+    });
+
+    it('validasi schema: >50 uuid & reason <3 karakter ditolak 422', async () => {
+      const adminToken = await getAuthToken('admin-bulk-rev-schema@test.com', 'admin');
+
+      const tooMany = Array.from({ length: 51 }, () => crypto.randomUUID());
+      const res1 = await app.handle(bulkRevokeRequest(tooMany, 'Alasan cukup panjang', adminToken));
+      expect(res1.status).toBe(422);
+
+      const res2 = await app.handle(bulkRevokeRequest([crypto.randomUUID()], 'xx', adminToken));
+      expect(res2.status).toBe(422);
+    });
+
+    it('reason berisi spasi saja ditolak 400 (tidak tersimpan kosong)', async () => {
+      const adminToken = await getAuthToken('admin-bulk-rev-ws@test.com', 'admin');
+      // 3 spasi lolos `minLength: 3`; trim di controller harus menolaknya.
+      const res = await app.handle(bulkRevokeRequest([crypto.randomUUID()], '   ', adminToken));
+      expect(res.status).toBe(400);
+    });
+
+    it('bulk revoke tanpa token ditolak 401', async () => {
+      const res = await app.handle(bulkRevokeRequest([crypto.randomUUID()], 'Alasan cukup panjang', 'invalid'));
+      expect(res.status).toBe(401);
     });
   });
 });

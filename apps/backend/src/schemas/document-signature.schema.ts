@@ -38,6 +38,7 @@ export const listKhsSignStatusSchema = {
     periodeId: t.String({ minLength: 1 }),
     programStudiId: t.Numeric({ minimum: 1 }),
     search: t.Optional(t.String({ maxLength: 100 })),
+    status: t.Optional(t.Union([t.Literal('signed'), t.Literal('unsigned'), t.Literal('all')], { default: 'all' })),
     page: t.Optional(t.Numeric({ default: 1, minimum: 1 })),
     limit: t.Optional(t.Numeric({ default: 20, minimum: 1, maximum: 100 })),
   }),
@@ -68,6 +69,19 @@ export const getSignatureByRefSchema = {
   }),
 };
 
+export const bulkRevokeSignaturesSchema = {
+  detail: {
+    tags: ['Dokumen'],
+    summary: 'Cabut Tanda Tangan Massal',
+    description:
+      'Mencabut beberapa tanda tangan sekaligus (maks 50 per permintaan) dengan satu alasan. Proses per-baris; uuid tak dikenal masuk daftar gagal.',
+  },
+  body: t.Object({
+    uuids: t.Array(t.String({ pattern: UUID_PATTERN.source }), { minItems: 1, maxItems: 50 }),
+    reason: t.String({ minLength: 3, maxLength: 500 }),
+  }),
+};
+
 export const revokeSignatureSchema = {
   detail: {
     tags: ['Dokumen'],
@@ -78,6 +92,6 @@ export const revokeSignatureSchema = {
     uuid: t.String({ pattern: UUID_PATTERN.source }),
   }),
   body: t.Object({
-    reason: t.String({ minLength: 3 }),
+    reason: t.String({ minLength: 3, maxLength: 500 }),
   }),
 };

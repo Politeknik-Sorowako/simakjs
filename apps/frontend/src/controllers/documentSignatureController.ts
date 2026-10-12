@@ -35,6 +35,7 @@ export interface KhsSignStatusItem {
   signerNama: string | null;
   signerJabatan: string | null;
   signedAt: string | null;
+  verifyUuid: string | null;
 }
 
 export interface KhsSignStatusPage {
@@ -50,6 +51,13 @@ export interface BulkSignKhsResult {
   signedCount: number;
   failedCount: number;
   failed: { mahasiswaId: number; error: string }[];
+}
+
+export interface BulkRevokeResult {
+  total: number;
+  revokedCount: number;
+  failedCount: number;
+  failed: { uuid: string; error: string }[];
 }
 
 export const documentSignatureController = {
@@ -78,6 +86,7 @@ export const documentSignatureController = {
     periodeId: string;
     programStudiId: number;
     search?: string;
+    status?: 'all' | 'signed' | 'unsigned';
     page?: number;
     limit?: number;
   }) => {
@@ -86,6 +95,7 @@ export const documentSignatureController = {
       programStudiId: String(params.programStudiId),
     });
     if (params.search) qs.set('search', params.search);
+    if (params.status) qs.set('status', params.status);
     if (params.page) qs.set('page', String(params.page));
     if (params.limit) qs.set('limit', String(params.limit));
     return fetchApi<KhsSignStatusPage>(`/document-signatures/khs/sign-status?${qs}`);
@@ -98,5 +108,14 @@ export const documentSignatureController = {
     fetchApi<BulkSignKhsResult>('/document-signatures/khs/bulk-sign', {
       method: 'POST',
       body: JSON.stringify({ periodeId, mahasiswaIds }),
+    }),
+  /**
+   * Pencabutan tanda tangan massal (maks 50 UUID per permintaan) dengan satu
+   * alasan. Pemanggil memecah daftar besar menjadi batch ≤ 50.
+   */
+  bulkRevokeSignatures: (uuids: string[], reason: string) =>
+    fetchApi<BulkRevokeResult>('/document-signatures/bulk-revoke', {
+      method: 'POST',
+      body: JSON.stringify({ uuids, reason }),
     }),
 };

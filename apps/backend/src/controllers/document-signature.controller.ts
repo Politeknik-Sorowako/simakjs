@@ -132,6 +132,7 @@ export class DocumentSignatureController {
         programStudiId,
         periodeId,
         search: query.search,
+        status: query.status,
         page: query.page,
         limit: query.limit,
       });
@@ -262,15 +263,72 @@ export class DocumentSignatureController {
       return { error: 'Silakan login terlebih dahulu.' };
     }
     if (!hasRole(user, ['admin', 'super_admin'])) {
-      set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin yang dapat mencabut tanda tangan.' };
+      // Kaprodi boleh mencabut (kebijakan sama dengan penandatanganan), tetapi
+      // hanya dokumen dalam scope prodi; di luar scope → 403.
+      if (!hasRole(user, ['kaprodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya Admin atau Kaprodi yang dapat mencabut tanda tangan.' };
+      }
+      try {
+        await DocumentSignatureService.assertRefsInScope(user, [params.uuid]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
+    }
+    // Samakan dengan jalur massal: schema memvalidasi panjang pra-trim; trim
+    // dulu agar alasan berisi spasi saja tidak tersimpan kosong.
+    const reason = body.reason.trim();
+    if (reason.length < 3) {
+      set.status = 400;
+      return { error: 'Alasan pencabutan minimal 3 karakter.' };
     }
     try {
-      await DocumentSignatureService.revoke(params.uuid, user.id, body.reason);
+      await DocumentSignatureService.revoke(params.uuid, user.id, reason);
       return { success: true, message: 'Tanda tangan dokumen berhasil dicabut.' };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal mencabut tanda tangan.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async bulkRevoke({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+    if (!hasRole(user, ['kaprodi', 'admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Hanya Kaprodi atau Admin yang dapat mencabut tanda tangan massal.' };
+    }
+
+    // `reason` divalidasi schema pada panjang pra-trim; trim dulu agar alasan
+    // berisi spasi saja tidak lolos menjadi revokeReason kosong.
+    const reason = body.reason.trim();
+    if (reason.length < 3) {
+      set.status = 400;
+      return { error: 'Alasan pencabutan minimal 3 karakter.' };
+    }
+
+    // Pra-validasi scope SELURUH uuid sebelum mencabut apa pun — 403 utuh,
+    // tanpa pencabutan parsial diam-diam. uuid tak dikenal tidak ikut dicek
+    // di sini (lolos ke eksekusi lalu masuk daftar `failed` per-baris).
+    if (!hasRole(user, ['admin', 'super_admin'])) {
+      try {
+        await DocumentSignatureService.assertRefsInScope(user, body.uuids);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
+    }
+
+    try {
+      return await DocumentSignatureService.revokeBulk(body.uuids, user.id, reason);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mencabut tanda tangan massal.' };
     }
   }
 }

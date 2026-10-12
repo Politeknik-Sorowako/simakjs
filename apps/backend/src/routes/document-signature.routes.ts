@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { DocumentSignatureController } from '../controllers/document-signature.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  bulkRevokeSignaturesSchema,
   bulkSignKhsSchema,
   getSignatureByRefSchema,
   listKhsSignStatusSchema,
@@ -26,4 +27,7 @@ export const documentSignatureRoutes = new Elysia({ prefix: '/document-signature
   .post('/khs/bulk-sign', DocumentSignatureController.signKhsBulk, bulkSignKhsSchema)
   .post('/khs/:mhsId/:periodeId/sign', DocumentSignatureController.signKhs, signKhsSchema)
   .get('/khs/:mhsId/:periodeId', DocumentSignatureController.getByRef, getSignatureByRefSchema)
+  // `/bulk-revoke` dideklarasikan SEBELUM `/:uuid/revoke` agar tidak tertelan
+  // sebagai parameter `:uuid`.
+  .post('/bulk-revoke', DocumentSignatureController.bulkRevoke, bulkRevokeSignaturesSchema)
   .post('/:uuid/revoke', DocumentSignatureController.revoke, revokeSignatureSchema);
