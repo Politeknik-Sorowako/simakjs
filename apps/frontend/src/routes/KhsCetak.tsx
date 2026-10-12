@@ -77,7 +77,9 @@ export default function KhsCetak() {
     async (target): Promise<SignKhsResult | null> => {
       if (!target) return null;
       // Hanya membaca tanda tangan yang sudah ada; tanpa menerbitkan baru.
-      const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
+      // Kegagalan baca TIDAK ditelan — biarkan resource masuk ke `signature.error`
+      // agar alert merah tampil (bukan banner "belum ditandatangani" yang menyesatkan).
+      const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId);
       return existing ? ensureQrDataUrl(existing) : null;
     },
   );
@@ -90,7 +92,6 @@ export default function KhsCetak() {
     const mhsId = Number(params.mhsId);
     const periodeId = params.periodeId || '';
     if (!mhsId || !periodeId) return;
-    setShowSignConfirm(false);
     setSignActionError(null);
     setSignBusy(true);
     try {
@@ -99,6 +100,9 @@ export default function KhsCetak() {
     } catch (e: unknown) {
       setSignActionError(e instanceof Error ? e.message : 'Gagal menandatangani KHS.');
     } finally {
+      // Modal ditutup SETELAH request selesai (sukses/gagal): label "Menandatangani..."
+      // sempat tampil selama proses, dan alert kesalahan terlihat di luar overlay modal.
+      setShowSignConfirm(false);
       setSignBusy(false);
     }
   };
