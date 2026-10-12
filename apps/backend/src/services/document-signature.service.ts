@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm';
 import QRCode from 'qrcode';
 import { documentSignatures, mahasiswa, programStudi, userProdiScopes, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
@@ -216,8 +216,11 @@ export class DocumentSignatureService {
 
   /**
    * Daftar mahasiswa per prodi & periode beserta status tanda tangan KHS-nya.
-   * SATU query LEFT JOIN (bukan N+1) sehingga filter `status` (signed/unsigned)
-   * ikut memengaruhi paginasi & total secara benar.
+   * Filter `status` ditegakkan di SQL (EXISTS/NOT EXISTS) sehingga `total` &
+   * paginasi benar; baris mahasiswa tetap 1:1 (signature diambil terpisah dan
+   * di-dedupe "terbaru menang") karena index `(tenant, doc_type, ref_id)` BUKAN
+   * unik — dua baris aktif untuk ref yang sama (mis. race saat sign) tidak boleh
+   * menggandakan baris atau menggelembungkan total.
    */
   static async listKhsSignStatus(params: {
     programStudiId: number;
@@ -233,60 +236,67 @@ export class DocumentSignatureService {
     const search = params.search?.trim();
     const status = params.status ?? 'all';
 
-    // ON: signature aktif (belum dicabut) milik ref KHS mahasiswa×periode ini.
-    // `${periodeId}` dirender sebagai parameter terikat (aman SQL injection).
-    const sigJoin = and(
-      eq(documentSignatures.tenant, TENANT_SIMAK),
-      eq(documentSignatures.docType, 'KHS'),
-      isNull(documentSignatures.revokedAt),
-      sql`"document_signatures"."ref_id" = ('khs:' || ${mahasiswa.id} || ':' || ${periodeId})`,
-    );
+    // `${periodeId}` & `${mahasiswa.id}` dirender sebagai parameter terikat (aman injeksi).
+    const activeSigExists = sql`EXISTS (
+      SELECT 1 FROM "document_signatures" ds
+      WHERE ds."tenant" = ${TENANT_SIMAK}
+        AND ds."doc_type" = 'KHS'
+        AND ds."revoked_at" IS NULL
+        AND ds."ref_id" = ('khs:' || ${mahasiswa.id} || ':' || ${periodeId})
+    )`;
 
     const whereClause = and(
       eq(mahasiswa.programStudiId, programStudiId),
       eq(mahasiswa.status, 'aktif'),
       search ? or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`)) : undefined,
-      status === 'signed'
-        ? isNotNull(documentSignatures.id)
-        : status === 'unsigned'
-          ? isNull(documentSignatures.id)
-          : undefined,
+      status === 'signed' ? activeSigExists : status === 'unsigned' ? sql`NOT ${activeSigExists}` : undefined,
     );
 
-    const [totalRow] = await db
-      .select({ total: count() })
-      .from(mahasiswa)
-      .leftJoin(documentSignatures, sigJoin)
-      .where(whereClause);
+    const [totalRow] = await db.select({ total: count() }).from(mahasiswa).where(whereClause);
     const total = totalRow?.total ?? 0;
 
     const rows = await db
-      .select({
-        id: mahasiswa.id,
-        nim: mahasiswa.nim,
-        nama: mahasiswa.nama,
-        verifyUuid: documentSignatures.verifyUuid,
-        signerNama: documentSignatures.signerNama,
-        signerJabatan: documentSignatures.signerJabatan,
-        signedAt: documentSignatures.signedAt,
-      })
+      .select({ id: mahasiswa.id, nim: mahasiswa.nim, nama: mahasiswa.nama })
       .from(mahasiswa)
-      .leftJoin(documentSignatures, sigJoin)
       .where(whereClause)
       .orderBy(asc(mahasiswa.nim))
       .limit(limit)
       .offset((page - 1) * limit);
 
-    const data: KhsSignStatusItem[] = rows.map((r) => ({
-      mahasiswaId: r.id,
-      nim: r.nim,
-      nama: r.nama,
-      signed: r.verifyUuid !== null,
-      signerNama: r.signerNama ?? null,
-      signerJabatan: r.signerJabatan ?? null,
-      signedAt: r.signedAt ? r.signedAt.toISOString() : null,
-      verifyUuid: r.verifyUuid ?? null,
-    }));
+    const refIds = rows.map((r) => `khs:${r.id}:${periodeId}`);
+    const sigRows = refIds.length
+      ? await db
+          .select()
+          .from(documentSignatures)
+          .where(
+            and(
+              eq(documentSignatures.tenant, TENANT_SIMAK),
+              eq(documentSignatures.docType, 'KHS'),
+              isNull(documentSignatures.revokedAt),
+              inArray(documentSignatures.refId, refIds),
+            ),
+          )
+          .orderBy(desc(documentSignatures.signedAt), desc(documentSignatures.id))
+      : [];
+    // Dedupe: baris pertama per refId = signature aktif terbaru (1:1).
+    const sigByRef = new Map<string, (typeof sigRows)[number]>();
+    for (const s of sigRows) {
+      if (!sigByRef.has(s.refId)) sigByRef.set(s.refId, s);
+    }
+
+    const data: KhsSignStatusItem[] = rows.map((r) => {
+      const sig = sigByRef.get(`khs:${r.id}:${periodeId}`);
+      return {
+        mahasiswaId: r.id,
+        nim: r.nim,
+        nama: r.nama,
+        signed: Boolean(sig),
+        signerNama: sig?.signerNama ?? null,
+        signerJabatan: sig?.signerJabatan ?? null,
+        signedAt: sig ? sig.signedAt.toISOString() : null,
+        verifyUuid: sig?.verifyUuid ?? null,
+      };
+    });
 
     return { data, page, limit, total, totalPages: Math.ceil(total / limit) };
   }
@@ -355,12 +365,6 @@ export class DocumentSignatureService {
       .update(documentSignatures)
       .set({ revokedAt: new Date(), revokedBy: userId, revokeReason: reason })
       .where(eq(documentSignatures.id, row.id));
-  }
-
-  /** Satu baris tanda tangan berdasarkan `verifyUuid` (untuk cek scope pemanggil). */
-  static async getByUuid(uuid: string) {
-    const [row] = await db.select().from(documentSignatures).where(eq(documentSignatures.verifyUuid, uuid)).limit(1);
-    return row ?? null;
   }
 
   /** Banyak baris tanda tangan sekaligus (satu query `inArray`, bukan N+1). */

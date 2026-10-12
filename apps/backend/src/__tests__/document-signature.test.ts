@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
 import {
+  documentSignatures,
   dosen,
   kelasKuliah,
   krs,
@@ -613,6 +614,46 @@ describe('Document Signature (TTE Fase 1)', () => {
       expect(body.totalPages).toBe(2);
       expect(body.page).toBe(1);
     });
+
+    it('duplikat signature aktif pada ref yang sama tidak menggandakan baris/total', async () => {
+      const { prodi, mhs, periodeId } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-dup@test.com', prodi.id);
+      const refId = `khs:${mhs.id}:${periodeId}`;
+      // Simulasi race: dua baris aktif untuk ref yang sama (index non-unique).
+      await db.insert(documentSignatures).values([
+        {
+          tenant: 'simak',
+          docType: 'KHS',
+          refId,
+          docHash: 'a'.repeat(64),
+          signature: 'sig-1',
+          kid: 'k1',
+          signerNama: 'X',
+          payloadSnapshot: {},
+        },
+        {
+          tenant: 'simak',
+          docType: 'KHS',
+          refId,
+          docHash: 'b'.repeat(64),
+          signature: 'sig-2',
+          kid: 'k1',
+          signerNama: 'Y',
+          payloadSnapshot: {},
+        },
+      ]);
+
+      const allRes = await app.handle(signStatusRequest(periodeId, prodi.id, token));
+      expect(allRes.status).toBe(200);
+      const all = (await allRes.json()) as { total: number; data: { signed: boolean }[] };
+      expect(all.total).toBe(1);
+      expect(all.data).toHaveLength(1);
+      expect(all.data[0].signed).toBe(true);
+
+      const signedRes = await app.handle(signStatusRequest(periodeId, prodi.id, token, { status: 'signed' }));
+      const signed = (await signedRes.json()) as { total: number };
+      expect(signed.total).toBe(1);
+    });
   });
 
   describe('pencabutan tanda tangan (tunggal & massal)', () => {
@@ -766,6 +807,13 @@ describe('Document Signature (TTE Fase 1)', () => {
 
       const res2 = await app.handle(bulkRevokeRequest([crypto.randomUUID()], 'xx', adminToken));
       expect(res2.status).toBe(422);
+    });
+
+    it('reason berisi spasi saja ditolak 400 (tidak tersimpan kosong)', async () => {
+      const adminToken = await getAuthToken('admin-bulk-rev-ws@test.com', 'admin');
+      // 3 spasi lolos `minLength: 3`; trim di controller harus menolaknya.
+      const res = await app.handle(bulkRevokeRequest([crypto.randomUUID()], '   ', adminToken));
+      expect(res.status).toBe(400);
     });
 
     it('bulk revoke tanpa token ditolak 401', async () => {

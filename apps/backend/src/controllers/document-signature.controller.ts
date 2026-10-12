@@ -297,6 +297,14 @@ export class DocumentSignatureController {
       return { error: 'Akses ditolak. Hanya Kaprodi atau Admin yang dapat mencabut tanda tangan massal.' };
     }
 
+    // `reason` divalidasi schema pada panjang pra-trim; trim dulu agar alasan
+    // berisi spasi saja tidak lolos menjadi revokeReason kosong.
+    const reason = body.reason.trim();
+    if (reason.length < 3) {
+      set.status = 400;
+      return { error: 'Alasan pencabutan minimal 3 karakter.' };
+    }
+
     // Pra-validasi scope SELURUH uuid sebelum mencabut apa pun — 403 utuh,
     // tanpa pencabutan parsial diam-diam. uuid tak dikenal tidak ikut dicek
     // di sini (lolos ke eksekusi lalu masuk daftar `failed` per-baris).
@@ -310,7 +318,7 @@ export class DocumentSignatureController {
     }
 
     try {
-      return await DocumentSignatureService.revokeBulk(body.uuids, user.id, body.reason.trim());
+      return await DocumentSignatureService.revokeBulk(body.uuids, user.id, reason);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal mencabut tanda tangan massal.' };
