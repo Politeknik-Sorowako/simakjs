@@ -27,6 +27,31 @@ export interface SignKhsResult {
   qrDataUrl?: string;
 }
 
+export interface KhsSignStatusItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  signed: boolean;
+  signerNama: string | null;
+  signerJabatan: string | null;
+  signedAt: string | null;
+}
+
+export interface KhsSignStatusPage {
+  data: KhsSignStatusItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface BulkSignKhsResult {
+  total: number;
+  signedCount: number;
+  failedCount: number;
+  failed: { mahasiswaId: number; error: string }[];
+}
+
 export const documentSignatureController = {
   /**
    * Verifikasi publik (POST + token Turnstile sebagai antibot). Endpoint
@@ -49,4 +74,29 @@ export const documentSignatureController = {
     fetchApi<SignKhsResult>(`/document-signatures/khs/${mhsId}/${periodeId}/sign`, { method: 'POST' }),
   getByRef: (mhsId: number, periodeId: string) =>
     fetchApi<SignKhsResult | null>(`/document-signatures/khs/${mhsId}/${periodeId}`),
+  listSignStatus: (params: {
+    periodeId: string;
+    programStudiId: number;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const qs = new URLSearchParams({
+      periodeId: params.periodeId,
+      programStudiId: String(params.programStudiId),
+    });
+    if (params.search) qs.set('search', params.search);
+    if (params.page) qs.set('page', String(params.page));
+    if (params.limit) qs.set('limit', String(params.limit));
+    return fetchApi<KhsSignStatusPage>(`/document-signatures/khs/sign-status?${qs}`);
+  },
+  /**
+   * Tanda tangan massal (maks 50 ID per permintaan). Pemanggil bertanggung
+   * jawab memecah daftar besar menjadi batch ≤ 50.
+   */
+  signBulkKhs: (periodeId: string, mahasiswaIds: number[]) =>
+    fetchApi<BulkSignKhsResult>('/document-signatures/khs/bulk-sign', {
+      method: 'POST',
+      body: JSON.stringify({ periodeId, mahasiswaIds }),
+    }),
 };

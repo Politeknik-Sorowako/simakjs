@@ -27,6 +27,35 @@ export const signKhsSchema = {
   }),
 };
 
+export const listKhsSignStatusSchema = {
+  detail: {
+    tags: ['Dokumen'],
+    summary: 'Daftar Status Tanda Tangan KHS per Periode',
+    description:
+      'Daftar mahasiswa (per program studi & periode) beserta status tanda tangan KHS-nya. Hanya Kaprodi/Admin/super_admin dengan scope prodi yang relevan.',
+  },
+  query: t.Object({
+    periodeId: t.String({ minLength: 1 }),
+    programStudiId: t.Numeric({ minimum: 1 }),
+    search: t.Optional(t.String({ maxLength: 100 })),
+    page: t.Optional(t.Numeric({ default: 1, minimum: 1 })),
+    limit: t.Optional(t.Numeric({ default: 20, minimum: 1, maximum: 100 })),
+  }),
+};
+
+export const bulkSignKhsSchema = {
+  detail: {
+    tags: ['Dokumen'],
+    summary: 'Tanda Tangan KHS Massal',
+    description:
+      'Menandatangani KHS untuk beberapa mahasiswa sekaligus (maks 50 per permintaan). Proses per-baris dengan hasil gagal individual; idempoten per dokumen.',
+  },
+  body: t.Object({
+    periodeId: t.String({ minLength: 1 }),
+    mahasiswaIds: t.Array(t.Integer({ minimum: 1 }), { minItems: 1, maxItems: 50 }),
+  }),
+};
+
 export const getSignatureByRefSchema = {
   detail: {
     tags: ['Dokumen'],
