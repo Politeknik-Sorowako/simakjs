@@ -92,6 +92,6 @@ export const revokeSignatureSchema = {
     uuid: t.String({ pattern: UUID_PATTERN.source }),
   }),
   body: t.Object({
-    reason: t.String({ minLength: 3 }),
+    reason: t.String({ minLength: 3, maxLength: 500 }),
   }),
 };

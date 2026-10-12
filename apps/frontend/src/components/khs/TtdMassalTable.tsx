@@ -15,7 +15,7 @@ interface TtdMassalTableProps {
 function SkeletonRows() {
   return (
     <>
-      <For each={Array.from({ length: 5 })}>
+      <For each={Array.from({ length: 5 }, (_, i) => i)}>
         {() => (
           <tr class="opacity-70">
             <td class="p-3">

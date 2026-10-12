@@ -276,8 +276,15 @@ export class DocumentSignatureController {
         return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
       }
     }
+    // Samakan dengan jalur massal: schema memvalidasi panjang pra-trim; trim
+    // dulu agar alasan berisi spasi saja tidak tersimpan kosong.
+    const reason = body.reason.trim();
+    if (reason.length < 3) {
+      set.status = 400;
+      return { error: 'Alasan pencabutan minimal 3 karakter.' };
+    }
     try {
-      await DocumentSignatureService.revoke(params.uuid, user.id, body.reason);
+      await DocumentSignatureService.revoke(params.uuid, user.id, reason);
       return { success: true, message: 'Tanda tangan dokumen berhasil dicabut.' };
     } catch (e: unknown) {
       set.status = 400;
