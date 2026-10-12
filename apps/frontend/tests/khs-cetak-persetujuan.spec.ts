@@ -151,4 +151,36 @@ test.describe('KHS Cetak — persetujuan tanda tangan eksplisit', () => {
     await page.waitForTimeout(500);
     expect(signPosts).toHaveLength(0);
   });
+
+  test('gagal baca status tanda tangan: alert merah tampil & halaman cetak tidak kolaps', async ({ page }) => {
+    const signPosts: string[] = [];
+    // Simulasi kegagalan baca metadata tanda tangan (5xx). Regresi yang dijaga:
+    // pembacaan resource ber-error dulu MELEMPAR dan menukar seluruh halaman
+    // dengan error boundary, bukan menampilkan alert merah + cetak tanpa QR.
+    await page.route('**/document-signatures/khs/**', async (route) => {
+      const req = route.request();
+      if (req.method() === 'GET') {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Server error' }),
+        });
+        return;
+      }
+      if (req.method() === 'POST' && req.url().endsWith('/sign')) signPosts.push(req.url());
+      await route.continue();
+    });
+
+    await gotoAsRole(page, `/khs/cetak/${mhsId}/20231`, adminToken, 'admin', 'admin@simak.id');
+
+    // Alert merah tampil (bukan halaman error boundary).
+    await expect(page.locator('[role="alert"]').filter({ hasText: 'Tanda tangan digital gagal dimuat' })).toBeVisible();
+    // Halaman cetak tetap hidup: judul dokumen & tombol cetak tetap ada.
+    await expect(page.getByText('Kartu Hasil Studi (KHS)')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Cetak Sekarang/ })).toBeVisible();
+    // Tidak mencoba menandatangani otomatis, dan tanpa QR.
+    await expect(page.locator('img[alt="QR verifikasi dokumen"]')).toHaveCount(0);
+    await page.waitForTimeout(500);
+    expect(signPosts).toHaveLength(0);
+  });
 });
