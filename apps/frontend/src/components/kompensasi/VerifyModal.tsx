@@ -1,8 +1,9 @@
-import { createEffect, createResource, createSignal, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
 import type { KetidakhadiranRow } from '../../controllers/kompensasiAdminController';
 import { presensiController, type RekapHarianResponse } from '../../controllers/presensiController';
 import { fmtTanggal } from '../../utils/format';
+import { hitungBatasDurasi } from '../../utils/verifikasiKuota';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
@@ -55,7 +56,7 @@ export function VerifyModal(props: VerifyModalProps) {
   const isHadir = () => status() === 'HADIR';
   const isCuti = () => status() === 'CUTI';
 
-  const [rekapHarian] = createResource(
+  const [rekapHarian, { refetch: refetchRekap }] = createResource(
     () => {
       const r = props.row;
       return r ? { mahasiswaId: r.mahasiswaId, tanggal: r.tanggal } : null;
@@ -63,9 +64,37 @@ export function VerifyModal(props: VerifyModalProps) {
     (params) => presensiController.getRekapHarian(params.mahasiswaId, params.tanggal),
   );
 
+  const rekapReady = () => rekapHarian.state === 'ready';
+  const rekapFailed = () => rekapHarian.state === 'errored';
+
+  const batasDurasi = createMemo(() => {
+    const r = props.row;
+    const rekap = rekapHarian();
+    if (!r || !rekap) return 0;
+    return hitungBatasDurasi({
+      maksHarian: rekap.maksHarian,
+      rows: rekap.rows,
+      rowId: r.id,
+      isVerified: r.isVerified,
+      durasiTersimpan: r.durasiMenit ?? 0,
+    });
+  });
+
+  // Hanya status ketidakhadiran (SAKIT/IZIN/ALPA/TERLAMBAT) yang dikenai cap harian.
+  const isStatusDikenaiCap = () =>
+    status() === 'SAKIT' || status() === 'IZIN' || status() === 'ALPA' || status() === 'TERLAMBAT';
+  // Guard/clamp hanya aktif setelah rekap siap — selama masih loading (atau gagal)
+  // batasDurasi() = 0 sehingga tanpa syarat isDurasiExceeds, baris terverifikasi
+  // yang valid langsung terkunci.
+  const isDurasiExceeds = () => rekapReady() && isStatusDikenaiCap() && durasi() > batasDurasi();
+
   const handleSubmit = async () => {
     const row = props.row;
     if (!row || submitting()) return;
+    if (isDurasiExceeds()) {
+      toast.showToast(`Durasi ${durasi()} menit melebihi batas durasi baris ini (${batasDurasi()} menit)`, 'error');
+      return;
+    }
     setSubmitting(true);
     try {
       await presensiController.verifikasiUnknown({
@@ -103,7 +132,19 @@ export function VerifyModal(props: VerifyModalProps) {
               </div>
             </div>
 
-            <Show when={rekapHarian()} fallback={<p class="text-xs text-secondary-400">Memuat rekap harian...</p>}>
+            <Show
+              when={rekapReady() && rekapHarian()}
+              fallback={
+                <Show when={rekapFailed()} fallback={<p class="text-xs text-secondary-400">Memuat rekap harian...</p>}>
+                  <div class="flex items-center justify-between gap-2 rounded-xl border border-danger-200 dark:border-danger-800 bg-danger-50 dark:bg-danger-900/20 px-3 py-2">
+                    <p class="text-xs text-danger-700 dark:text-danger-300">Gagal memuat rekap harian.</p>
+                    <Button onClick={() => refetchRekap()} variant="secondary" size="sm">
+                      Muat ulang
+                    </Button>
+                  </div>
+                </Show>
+              }
+            >
               {(rekap: () => RekapHarianResponse) => (
                 <div class="grid grid-cols-3 gap-3">
                   <div class="rounded-xl border border-secondary-200 dark:border-secondary-800 p-3 text-center">
@@ -140,10 +181,24 @@ export function VerifyModal(props: VerifyModalProps) {
                 <Input
                   type="number"
                   min="0"
+                  max={rekapReady() && isStatusDikenaiCap() ? batasDurasi() : undefined}
                   value={durasi()}
+                  error={isDurasiExceeds() ? `Melebihi batas durasi baris ini (${batasDurasi()} menit)` : undefined}
                   disabled={isUnknown() || isHadir() || isCuti()}
-                  onInput={(e) => setDurasi(parseInt(e.currentTarget.value) || 0)}
+                  onInput={(e) => {
+                    let v = parseInt(e.currentTarget.value) || 0;
+                    if (v < 0) v = 0;
+                    if (rekapReady() && isStatusDikenaiCap() && v > batasDurasi()) v = batasDurasi();
+                    setDurasi(v);
+                  }}
                 />
+                <Show when={isStatusDikenaiCap() && rekapReady() && rekapHarian()}>
+                  <p class="text-fine text-secondary-400 dark:text-secondary-300">
+                    Maks durasi baris ini:{' '}
+                    <b class="text-secondary-600 dark:text-secondary-200">{batasDurasi()} menit</b> (batas harian{' '}
+                    {rekapHarian()?.maksHarian} menit)
+                  </p>
+                </Show>
               </FilterField>
             </div>
             <Show when={isUnknown()}>
@@ -173,7 +228,7 @@ export function VerifyModal(props: VerifyModalProps) {
               <Button onClick={props.onClose} variant="secondary">
                 Batal
               </Button>
-              <Button onClick={handleSubmit} loading={submitting()} variant="primary">
+              <Button onClick={handleSubmit} loading={submitting()} disabled={isDurasiExceeds()} variant="primary">
                 Simpan Verifikasi
               </Button>
             </div>

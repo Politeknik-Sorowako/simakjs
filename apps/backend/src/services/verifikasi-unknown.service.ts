@@ -493,8 +493,12 @@ export class VerifikasiUnknownService {
         const totalTerverifikasi = Number(totalRow?.total || 0);
         const sisaKuota = Math.max(maksHarian - totalTerverifikasi, 0);
         // Koreksi turun (durasi baru <= durasi lama) tidak menambah beban harian,
-        // jadi tetap diizinkan meski kuota sudah penuh.
-        const isKoreksiTurun = durasi <= Number(absence.durasiMenit || 0);
+        // jadi tetap diizinkan meski kuota sudah penuh. HANYA berlaku untuk baris
+        // yang SUDAH terverifikasi (terhitung dalam totalTerverifikasi di atas).
+        // Baris UNKNOWN yang belum terverifikasi membawa durasi sumber asli sehingga
+        // tanpa syarat isVerified, durasi kecil pun bisa lolos sebagai "koreksi turun"
+        // dan menembus cap harian.
+        const isKoreksiTurun = absence.isVerified === true && durasi <= Number(absence.durasiMenit || 0);
         if (!isKoreksiTurun && durasi > sisaKuota) {
           throw new Error(
             `Total durasi terverifikasi pada tanggal ${absence.tanggal} adalah ${totalTerverifikasi} menit. ` +
