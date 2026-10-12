@@ -2,7 +2,9 @@ import { Elysia } from 'elysia';
 import { DocumentSignatureController } from '../controllers/document-signature.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  bulkSignKhsSchema,
   getSignatureByRefSchema,
+  listKhsSignStatusSchema,
   revokeSignatureSchema,
   signKhsSchema,
   verifySignaturePostSchema,
@@ -20,6 +22,8 @@ export const documentSignaturePublicRoutes = new Elysia({ prefix: '/document-sig
 
 export const documentSignatureRoutes = new Elysia({ prefix: '/document-signatures' })
   .use(authMiddleware)
+  .get('/khs/sign-status', DocumentSignatureController.listSignStatus, listKhsSignStatusSchema)
+  .post('/khs/bulk-sign', DocumentSignatureController.signKhsBulk, bulkSignKhsSchema)
   .post('/khs/:mhsId/:periodeId/sign', DocumentSignatureController.signKhs, signKhsSchema)
   .get('/khs/:mhsId/:periodeId', DocumentSignatureController.getByRef, getSignatureByRefSchema)
   .post('/:uuid/revoke', DocumentSignatureController.revoke, revokeSignatureSchema);

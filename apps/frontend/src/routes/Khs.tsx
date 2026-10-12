@@ -1,4 +1,4 @@
-import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -6,10 +6,12 @@ import { SearchableSelect, type SelectOption } from '../components/ui/Searchable
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { documentSignatureController, type KhsSignStatusPage } from '../controllers/documentSignatureController';
 import { type KonversiRekap, type KonversiRekapRule, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { fmtWaktu } from '../utils/format';
 
 export default function Khs() {
   const auth = useAuth();
@@ -18,7 +20,7 @@ export default function Khs() {
   const user = () => auth.user();
   const role = () => user()?.role;
 
-  const [activeTab, setActiveTab] = createSignal<'khs' | 'transkrip' | 'konversi'>('khs');
+  const [activeTab, setActiveTab] = createSignal<'khs' | 'transkrip' | 'konversi' | 'ttd'>('khs');
   const [selectedPeriode, setSelectedPeriode] = createSignal(''); // Dynamic Period selection
 
   // Konversi Nilai states
@@ -141,6 +143,118 @@ export default function Khs() {
       }
     }
   });
+
+  // --- Persetujuan Tanda Tangan KHS Massal (Metode A: daftar centang) ---
+  // Hanya Kaprodi/Admin/super_admin; backend tetap menegakkan scope prodi.
+  const canSignMassal = () => auth.hasRole(['kaprodi', 'admin', 'super_admin']);
+  const SIGN_PAGE_LIMIT = 20;
+  const SIGN_BATCH_MAX = 50; // batas endpoint bulk per permintaan
+  let selectAllSignRef: HTMLInputElement | undefined;
+
+  const [signSearch, setSignSearch] = createSignal('');
+  const [signSearchDebounced, setSignSearchDebounced] = createSignal('');
+  const [signPage, setSignPage] = createSignal(1);
+  const [signSelectedIds, setSignSelectedIds] = createSignal<number[]>([]);
+  const [signBusy, setSignBusy] = createSignal(false);
+  const [showSignConfirm, setShowSignConfirm] = createSignal(false);
+
+  // Debounce pencarian (350ms) agar tidak query tiap ketukan keyboard.
+  createEffect(() => {
+    const value = signSearch();
+    const timer = setTimeout(() => {
+      setSignSearchDebounced(value);
+      setSignPage(1);
+    }, 350);
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  // Reset seleksi saat konteks berubah (tab/prodi/periode) — cegah ID lama
+  // ikut ditandatangani pada prodi/periode berbeda.
+  createEffect(() => {
+    activeTab();
+    selectedProdi();
+    selectedPeriode();
+    setSignSelectedIds([]);
+    setSignPage(1);
+  });
+
+  const [signStatus, { refetch: refetchSignStatus }] = createResource(
+    () => {
+      if (activeTab() !== 'ttd' || !canSignMassal()) return null;
+      const periodeId = selectedPeriode();
+      const prodiId = Number(selectedProdi());
+      if (!periodeId || !prodiId) return null;
+      return {
+        periodeId,
+        programStudiId: prodiId,
+        search: signSearchDebounced().trim() || undefined,
+        page: signPage(),
+        limit: SIGN_PAGE_LIMIT,
+      };
+    },
+    async (key): Promise<KhsSignStatusPage> => await documentSignatureController.listSignStatus(key),
+  );
+
+  const signRows = () => signStatus()?.data ?? [];
+  const unsignedPageIds = () =>
+    signRows()
+      .filter((r) => !r.signed)
+      .map((r) => r.mahasiswaId);
+  const allPageSignedSelected = () => {
+    const ids = unsignedPageIds();
+    return ids.length > 0 && ids.every((id) => signSelectedIds().includes(id));
+  };
+  const somePageSelected = () => unsignedPageIds().some((id) => signSelectedIds().includes(id));
+
+  createEffect(() => {
+    if (selectAllSignRef) {
+      selectAllSignRef.indeterminate = somePageSelected() && !allPageSignedSelected();
+    }
+  });
+
+  const toggleSignSelectAll = () => {
+    if (allPageSignedSelected()) {
+      const pageIds = new Set(unsignedPageIds());
+      setSignSelectedIds((prev) => prev.filter((id) => !pageIds.has(id)));
+      return;
+    }
+    setSignSelectedIds((prev) => [...new Set([...prev, ...unsignedPageIds()])]);
+  };
+
+  const toggleSignRow = (id: number) => {
+    setSignSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const handleBulkSign = async () => {
+    const periodeId = selectedPeriode();
+    const ids = signSelectedIds();
+    if (!periodeId || ids.length === 0) return;
+    setShowSignConfirm(false);
+    setSignBusy(true);
+    try {
+      let signedCount = 0;
+      let failedCount = 0;
+      let firstError = '';
+      // Pecah batch sesuai batas 50 ID/permintaan; kegagalan tidak membatalkan batch berikutnya.
+      for (let i = 0; i < ids.length; i += SIGN_BATCH_MAX) {
+        const res = await documentSignatureController.signBulkKhs(periodeId, ids.slice(i, i + SIGN_BATCH_MAX));
+        signedCount += res.signedCount;
+        failedCount += res.failedCount;
+        if (!firstError && res.failed.length > 0) firstError = res.failed[0].error;
+      }
+      if (failedCount > 0) {
+        toast.showToast(`Massal: ${signedCount} ditandatangani, ${failedCount} gagal — ${firstError}`, 'error');
+      } else {
+        toast.showToast(`${signedCount} KHS berhasil ditandatangani.`, 'success');
+      }
+      setSignSelectedIds([]);
+      await refetchSignStatus();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal menandatangani KHS massal.', 'error');
+    } finally {
+      setSignBusy(false);
+    }
+  };
 
   // For Admin / Dosen view
   const [selectedMhsId, setSelectedMhsId] = createSignal<number | null>(null);
@@ -433,11 +547,19 @@ export default function Khs() {
                 Aturan Konversi Nilai
               </button>
             </Show>
+            <Show when={canSignMassal()}>
+              <button
+                onClick={() => setActiveTab('ttd')}
+                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'ttd' ? 'bg-brand-600 text-white shadow-sm' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
+              >
+                TTD Massal
+              </button>
+            </Show>
           </div>
         </div>
 
         {/* Admin/Dosen Student Selector */}
-        <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi'}>
+        <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi' && activeTab() !== 'ttd'}>
           <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-700 text-base">Pilih Mahasiswa & Periode</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -662,8 +784,241 @@ export default function Khs() {
           })()}
         </Show>
 
+        {/* Persetujuan Tanda Tangan KHS Massal (Kaprodi/Admin) */}
+        <Show when={activeTab() === 'ttd' && canSignMassal()}>
+          {/* Filter & Aksi */}
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Persetujuan Tanda Tangan KHS Massal</h3>
+                <p class="text-xs text-secondary-400 mt-0.5 dark:text-secondary-200">
+                  Centang mahasiswa yang KHS-nya sudah sesuai, lalu tandatangani sekaligus. Tanda tangan = persetujuan
+                  Kaprodi.
+                </p>
+              </div>
+              <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">Periode</label>
+                  <select
+                    value={selectedPeriode()}
+                    onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  >
+                    <option value="">Pilih periode</option>
+                    <For each={periodes() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                    Program Studi
+                  </label>
+                  <select
+                    value={selectedProdi()}
+                    onChange={(e) => setSelectedProdi(e.currentTarget.value)}
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  >
+                    <option value="">Pilih prodi</option>
+                    <For each={prodis() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                    Cari (NIM / Nama)
+                  </label>
+                  <input
+                    type="text"
+                    value={signSearch()}
+                    onInput={(e) => setSignSearch(e.currentTarget.value)}
+                    placeholder="Ketik NIM atau nama..."
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-t border-secondary-100 pt-4 dark:border-secondary-800">
+              <label class="flex items-center gap-2 text-caption font-semibold text-secondary-500 cursor-pointer dark:text-secondary-300">
+                <input
+                  ref={selectAllSignRef}
+                  type="checkbox"
+                  checked={allPageSignedSelected()}
+                  onChange={toggleSignSelectAll}
+                  disabled={unsignedPageIds().length === 0}
+                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                />
+                Centang semua yang belum ditandatangani di halaman ini
+              </label>
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-2 text-caption text-secondary-400 dark:text-secondary-300">
+                  <button
+                    onClick={() => setSignPage((p) => Math.max(1, p - 1))}
+                    disabled={(signStatus()?.page ?? 1) <= 1 || signStatus.loading}
+                    class="px-3 py-1.5 border border-secondary-200 rounded-xl font-bold disabled:opacity-40 active:scale-95 transition-all dark:border-secondary-700"
+                    aria-label="Halaman sebelumnya"
+                  >
+                    ←
+                  </button>
+                  <span>
+                    Halaman {signStatus()?.page ?? 1} dari {Math.max(1, signStatus()?.totalPages ?? 1)} ·{' '}
+                    {signStatus()?.total ?? 0} mahasiswa
+                  </span>
+                  <button
+                    onClick={() => setSignPage((p) => p + 1)}
+                    disabled={
+                      (signStatus()?.page ?? 1) >= Math.max(1, signStatus()?.totalPages ?? 1) || signStatus.loading
+                    }
+                    class="px-3 py-1.5 border border-secondary-200 rounded-xl font-bold disabled:opacity-40 active:scale-95 transition-all dark:border-secondary-700"
+                    aria-label="Halaman berikutnya"
+                  >
+                    →
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowSignConfirm(true)}
+                  disabled={signSelectedIds().length === 0 || signBusy()}
+                  class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
+                >
+                  {signBusy() ? 'Menandatangani...' : `Tandatangani Terpilih (${signSelectedIds().length})`}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Daftar mahasiswa + status tanda tangan */}
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+            <Show
+              when={selectedProdi() && selectedPeriode()}
+              fallback={
+                <div class="text-center py-10 text-secondary-400 italic dark:text-secondary-300">
+                  Pilih program studi dan periode untuk memuat daftar mahasiswa.
+                </div>
+              }
+            >
+              <Show when={signStatus.loading}>
+                <div class="text-center py-10 text-secondary-400 dark:text-secondary-300">Memuat daftar...</div>
+              </Show>
+
+              <Show when={!signStatus.loading && signStatus.error}>
+                <div class="text-center py-10 text-rose-600 font-bold">
+                  {((signStatus.error as Error | undefined)?.message as string) || 'Gagal memuat daftar tanda tangan.'}
+                </div>
+              </Show>
+
+              <Show when={!signStatus.loading && !signStatus.error}>
+                <table class="w-full text-left text-caption border-collapse">
+                  <thead>
+                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800 dark:text-secondary-200">
+                      <th class="p-3 w-10" />
+                      <th class="p-3">NIM</th>
+                      <th class="p-3">Nama Mahasiswa</th>
+                      <th class="p-3">Status Tanda Tangan</th>
+                      <th class="p-3 text-center">Cetak</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
+                    <For
+                      each={signRows()}
+                      fallback={
+                        <tr>
+                          <td colspan="5" class="p-4 text-center text-secondary-400 italic">
+                            Tidak ada mahasiswa ditemukan pada prodi/periode ini.
+                          </td>
+                        </tr>
+                      }
+                    >
+                      {(row) => {
+                        const isChecked = () => signSelectedIds().includes(row.mahasiswaId);
+                        const canCheck = () => !row.signed;
+                        const toggle = () => {
+                          if (canCheck()) toggleSignRow(row.mahasiswaId);
+                        };
+                        return (
+                          <tr
+                            class={`transition-colors dark:hover:bg-secondary-800/20 ${
+                              canCheck() ? 'hover:bg-secondary-50/50 cursor-pointer' : ''
+                            }`}
+                            onClick={toggle}
+                          >
+                            <td class="p-3" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked()}
+                                onChange={toggle}
+                                disabled={!canCheck()}
+                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 dark:border-secondary-700"
+                              />
+                            </td>
+                            <td class="p-3 whitespace-nowrap">{row.nim}</td>
+                            <td class="p-3 font-bold text-secondary-800 dark:text-white">{row.nama}</td>
+                            <td class="p-3">
+                              <Show
+                                when={row.signed}
+                                fallback={
+                                  <span class="inline-block px-2 py-0.5 rounded-full text-fine font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+                                    Belum Ditandatangani
+                                  </span>
+                                }
+                              >
+                                <span class="flex flex-col gap-0.5">
+                                  <span class="inline-block w-fit px-2 py-0.5 rounded-full text-fine font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+                                    Ditandatangani
+                                  </span>
+                                  <span class="text-fine text-secondary-400 dark:text-secondary-300">
+                                    {row.signerNama}
+                                    {row.signedAt ? ` · ${fmtWaktu(row.signedAt)}` : ''}
+                                  </span>
+                                </span>
+                              </Show>
+                            </td>
+                            <td class="p-3 text-center">
+                              <a
+                                href={`/khs/cetak/${row.mahasiswaId}/${selectedPeriode()}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="px-3 py-1.5 border border-brand-600 text-brand-600 font-bold rounded-xl text-caption hover:bg-brand-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
+                              >
+                                Cetak
+                              </a>
+                            </td>
+                          </tr>
+                        );
+                      }}
+                    </For>
+                  </tbody>
+                </table>
+              </Show>
+            </Show>
+          </div>
+
+          {/* Modal konfirmasi penandatanganan massal */}
+          <Modal
+            isOpen={showSignConfirm()}
+            onClose={() => setShowSignConfirm(false)}
+            title="Konfirmasi Penandatanganan Massal"
+            maxWidth="md"
+          >
+            <div class="flex flex-col gap-4">
+              <p class="text-base text-secondary-600 dark:text-secondary-300">
+                Akan menandatangani <b>{signSelectedIds().length} KHS</b> pada periode <b>{periodeNama()}</b>.
+              </p>
+              <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-caption text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+                ⚠ Tanda tangan = persetujuan otoritatif Kaprodi. Bila nilai KHS berubah setelah ditandatangani, tanda
+                tangan lama dicabut (QR cetakan lama menjadi REVOKED) dan diganti tanda tangan baru.
+              </div>
+              <div class="flex justify-end gap-2">
+                <Button variant="secondary" onClick={() => setShowSignConfirm(false)}>
+                  Batal
+                </Button>
+                <Button variant="primary" onClick={handleBulkSign} disabled={signBusy()}>
+                  {signBusy() ? 'Menandatangani...' : `Tandatangani ${signSelectedIds().length} KHS`}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        </Show>
+
         {/* Content Area */}
-        <Show when={activeTab() !== 'konversi'}>
+        <Show when={activeTab() !== 'konversi' && activeTab() !== 'ttd'}>
           <Show
             when={selectedMhsId()}
             fallback={

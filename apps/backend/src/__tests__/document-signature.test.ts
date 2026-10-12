@@ -91,7 +91,7 @@ async function seedKhs() {
       nilaiIndeks: '4.00',
     })
     .returning();
-  return { prodi, mhs, periodeId: '20252', mhsId: mhs.id };
+  return { prodi, dsn, mhs, periodeId: '20252', mhsId: mhs.id };
 }
 
 /** Kaprodi ter-scope ke sebuah prodi (atau tanpa scope bila prodiId null). */
@@ -111,6 +111,41 @@ function signRequest(mhsId: number, periodeId: string, token: string): Request {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
+}
+
+function bulkSignRequest(periodeId: string, mahasiswaIds: number[], token: string): Request {
+  return new Request('http://localhost/document-signatures/khs/bulk-sign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ periodeId, mahasiswaIds }),
+  });
+}
+
+function signStatusRequest(periodeId: string, programStudiId: number, token: string): Request {
+  const qs = new URLSearchParams({ periodeId, programStudiId: String(programStudiId) });
+  return new Request(`http://localhost/document-signatures/khs/sign-status?${qs}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Mahasiswa tambahan pada prodi yang sama (untuk skenario massal). */
+async function addMahasiswa(nim: string, prodiId: number, dsnId: number) {
+  const [m] = await db
+    .insert(mahasiswa)
+    .values({
+      nim,
+      nama: `Student ${nim}`,
+      email: `${nim}@test.com`,
+      programStudiId: prodiId,
+      namaIbuKandung: 'Ibu',
+      // NIK unique per baris (constraint `mahasiswa_nik_unique`).
+      nik: `9${nim}`.padEnd(16, '0'),
+      jenisKelamin: 'L',
+      tanggalLahir: '2000-01-01',
+      dosenPaId: dsnId,
+    })
+    .returning();
+  return m;
 }
 
 describe('Document Signature (TTE Fase 1)', () => {
@@ -271,13 +306,15 @@ describe('Document Signature (TTE Fase 1)', () => {
       expect(res.status).toBe(403);
     });
 
-    it('admin (tanpa role kaprodi) ditolak 403 — persetujuan Kaprodi eksplisit', async () => {
+    it('admin (tanpa role kaprodi) BOLEH menandatangani — kebijakan akses prodi/admin', async () => {
       const { mhsId, periodeId } = await seedKhs();
-      const adminToken = await getAuthToken('admin-nosign@test.com', 'admin');
+      const adminToken = await getAuthToken('admin-sign-ok@test.com', 'admin');
       const res = await app.handle(signRequest(mhsId, periodeId, adminToken));
-      expect(res.status).toBe(403);
-      const body = (await res.json()) as { error: string };
-      expect(body.error).toContain('Kaprodi');
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { verifyUuid: string; signerNama: string };
+      expect(body.verifyUuid).toBeTruthy();
+      // Atribusi signer tetap otoritatif (Kaprodi/Pimpinan), bukan admin pemanggil.
+      expect(body.signerNama).toBeTruthy();
     });
 
     it('prodi (tanpa role kaprodi) ditolak 403', async () => {
@@ -341,6 +378,150 @@ describe('Document Signature (TTE Fase 1)', () => {
       expect(refRes.status).toBe(200);
       const body = (await refRes.json()) as { verifyUuid: string } | null;
       expect(body?.verifyUuid).toBeTruthy();
+    });
+  });
+
+  describe('persetujuan massal KHS (metode A: daftar centang)', () => {
+    it('Kaprodi in-scope menandatangani massal dua mahasiswa sekaligus', async () => {
+      const { prodi, dsn, mhs, periodeId } = await seedKhs();
+      const mhs2 = await addMahasiswa('123457', prodi.id, dsn.id);
+      const token = await createKaprodiToken('kaprodi-bulk@test.com', prodi.id);
+
+      const res = await app.handle(bulkSignRequest(periodeId, [mhs.id, mhs2.id], token));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { total: number; signedCount: number; failedCount: number; failed: unknown[] };
+      expect(body).toMatchObject({ total: 2, signedCount: 2, failedCount: 0, failed: [] });
+
+      const row = await DocumentSignatureService.getByRef('KHS', `khs:${mhs2.id}:${periodeId}`);
+      expect(row).not.toBeNull();
+      expect(row?.signerJabatan).toContain('Kaprodi');
+    });
+
+    it('bulk idempoten: run kedua tidak mengganti verifyUuid', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-bulk-idem@test.com', prodi.id);
+
+      const res1 = await app.handle(bulkSignRequest(periodeId, [mhsId], token));
+      const body1 = (await res1.json()) as { signedCount: number };
+      expect(body1.signedCount).toBe(1);
+      const first = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+
+      const res2 = await app.handle(bulkSignRequest(periodeId, [mhsId], token));
+      const body2 = (await res2.json()) as { signedCount: number; failedCount: number };
+      expect(body2.signedCount).toBe(1);
+      expect(body2.failedCount).toBe(0);
+      const second = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+      expect(second?.verifyUuid).toBe(first?.verifyUuid);
+    });
+
+    it('admin boleh menandatangani massal (kebijakan baru)', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const token = await getAuthToken('admin-bulk@test.com', 'admin');
+      const res = await app.handle(bulkSignRequest(periodeId, [mhsId], token));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { signedCount: number };
+      expect(body.signedCount).toBe(1);
+    });
+
+    it('error per-baris: ID tak dikenal masuk `failed`, sisanya tetap sukses', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-bulk-fail@test.com', prodi.id);
+
+      const res = await app.handle(bulkSignRequest(periodeId, [mhsId, 999999], token));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        signedCount: number;
+        failedCount: number;
+        failed: { mahasiswaId: number; error: string }[];
+      };
+      expect(body.signedCount).toBe(1);
+      expect(body.failedCount).toBe(1);
+      expect(body.failed[0].mahasiswaId).toBe(999999);
+      expect(body.failed[0].error).toContain('tidak ditemukan');
+    });
+
+    it('kaprodi out-of-scope ditolak 403 utuh — tidak ada penandatanganan parsial', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const [otherProdi] = await db
+        .insert(programStudi)
+        .values({ kode: 'TM-BULK', nama: 'Teknik Mesin', jenjang: 'D4' })
+        .returning();
+      const token = await createKaprodiToken('kaprodi-bulk-out@test.com', otherProdi.id);
+
+      const res = await app.handle(bulkSignRequest(periodeId, [mhsId], token));
+      expect(res.status).toBe(403);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toContain('lingkup');
+      expect(prodi.id).not.toBe(otherProdi.id);
+
+      const row = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+      expect(row).toBeNull();
+    });
+
+    it('role prodi ditolak 403 pada bulk-sign', async () => {
+      const { mhsId, periodeId } = await seedKhs();
+      const token = await getAuthToken('prodi-bulk@test.com', 'prodi');
+      const res = await app.handle(bulkSignRequest(periodeId, [mhsId], token));
+      expect(res.status).toBe(403);
+      const row = await DocumentSignatureService.getByRef('KHS', `khs:${mhsId}:${periodeId}`);
+      expect(row).toBeNull();
+    });
+
+    it('validasi schema: lebih dari 50 ID ditolak 422', async () => {
+      const { periodeId } = await seedKhs();
+      const token = await getAuthToken('admin-bulk-max@test.com', 'admin');
+      const ids = Array.from({ length: 51 }, (_, i) => i + 1);
+      const res = await app.handle(bulkSignRequest(periodeId, ids, token));
+      expect(res.status).toBe(422);
+    });
+
+    it('list status: Kaprodi in-scope melihat daftar + flag signed setelah penandatanganan', async () => {
+      const { prodi, mhs, periodeId } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-list@test.com', prodi.id);
+
+      const res1 = await app.handle(signStatusRequest(periodeId, prodi.id, token));
+      expect(res1.status).toBe(200);
+      const body1 = (await res1.json()) as {
+        data: { mahasiswaId: number; signed: boolean; signerNama: string | null }[];
+        total: number;
+        page: number;
+        totalPages: number;
+      };
+      expect(body1.total).toBeGreaterThanOrEqual(1);
+      const before = body1.data.find((r) => r.mahasiswaId === mhs.id);
+      expect(before?.signed).toBe(false);
+
+      await app.handle(signRequest(mhs.id, periodeId, token));
+
+      const res2 = await app.handle(signStatusRequest(periodeId, prodi.id, token));
+      const body2 = (await res2.json()) as {
+        data: { mahasiswaId: number; signed: boolean; signerNama: string | null }[];
+      };
+      const after = body2.data.find((r) => r.mahasiswaId === mhs.id);
+      expect(after?.signed).toBe(true);
+      expect(after?.signerNama).toBeTruthy();
+    });
+
+    it('list status: kaprodi prodi lain ditolak 403', async () => {
+      const { prodi, periodeId } = await seedKhs();
+      const [otherProdi] = await db
+        .insert(programStudi)
+        .values({ kode: 'TM-LIST', nama: 'Teknik Mesin', jenjang: 'D4' })
+        .returning();
+      const token = await createKaprodiToken('kaprodi-list-out@test.com', otherProdi.id);
+      const res = await app.handle(signStatusRequest(periodeId, prodi.id, token));
+      expect(res.status).toBe(403);
+    });
+
+    it('list status: tanpa token 401 & role prodi ditolak 403', async () => {
+      const { prodi, periodeId } = await seedKhs();
+
+      const anon = await app.handle(signStatusRequest(periodeId, prodi.id, 'invalid-token'));
+      expect(anon.status).toBe(401);
+
+      const prodiToken = await getAuthToken('prodi-list@test.com', 'prodi');
+      const res = await app.handle(signStatusRequest(periodeId, prodi.id, prodiToken));
+      expect(res.status).toBe(403);
     });
   });
 });
