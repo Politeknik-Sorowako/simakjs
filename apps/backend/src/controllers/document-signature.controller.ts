@@ -74,14 +74,15 @@ export class DocumentSignatureController {
     }
 
     // Tanda tangan KHS = persetujuan Kaprodi: hanya Kaprodi prodi terkait
-    // yang boleh menerbitkan QR. super_admin diperbolehkan sebagai darurat
-    // (mis. kursi Kaprodi kosong); jejak pemanggil tetap tercatat di audit
-    // plugin + signerUserId. Baca existing (getByRef) tetap terbuka untuk
-    // staf in-scope / mahasiswa pemilik agar cetakan lama tetap tampil.
-    if (!hasRole(user, ['super_admin'])) {
+    // yang boleh menerbitkan QR. Admin ikut diizinkan (kebijakan akses massal
+    // prodi/admin); super_admin sebagai darurat (mis. kursi Kaprodi kosong).
+    // Jejak pemanggil tetap tercatat di audit plugin + signerUserId. Baca
+    // existing (getByRef) tetap terbuka untuk staf in-scope / mahasiswa pemilik
+    // agar cetakan lama tetap tampil.
+    if (!hasRole(user, ['super_admin', 'admin'])) {
       if (!hasRole(user, ['kaprodi'])) {
         set.status = 403;
-        return { error: 'Hanya Kaprodi program studi terkait yang dapat menandatangani KHS.' };
+        return { error: 'Hanya Kaprodi program studi terkait atau Admin yang dapat menandatangani KHS.' };
       }
       const mhs = await MahasiswaService.getById(mhsId);
       if (!mhs) {
@@ -99,6 +100,73 @@ export class DocumentSignatureController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal menandatangani KHS.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async listSignStatus({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+    if (!hasRole(user, ['kaprodi', 'admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Hanya Kaprodi atau Admin yang dapat melihat status tanda tangan KHS.' };
+    }
+
+    const periodeId = query.periodeId;
+    const programStudiId = Number(query.programStudiId);
+    if (!periodeId || !Number.isInteger(programStudiId) || programStudiId < 1) {
+      set.status = 400;
+      return { error: 'Periode / Program Studi tidak valid.' };
+    }
+    // Kaprodi wajib dalam scope prodi yang diminta; admin/super_admin global.
+    if (!hasRole(user, ['admin', 'super_admin']) && !(await ProdiScopeService.canAccessProdi(user, programStudiId))) {
+      set.status = 403;
+      return { error: 'Akses ditolak. Program studi berada di luar scope Anda.' };
+    }
+
+    try {
+      return await DocumentSignatureService.listKhsSignStatus({
+        programStudiId,
+        periodeId,
+        search: query.search,
+        page: query.page,
+        limit: query.limit,
+      });
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil status tanda tangan.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async signKhsBulk({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu.' };
+    }
+    if (!hasRole(user, ['kaprodi', 'admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Hanya Kaprodi atau Admin yang dapat menandatangani KHS massal.' };
+    }
+
+    // Seluruh ID harus dalam scope pemanggil SEBELUM menandatangani apa pun
+    // (gagal seluruh batch bila ada satu ID di luar scope — cegah parsial diam-diam).
+    try {
+      await ProdiScopeService.assertMahasiswaInScope(user, body.mahasiswaIds);
+    } catch (e: unknown) {
+      set.status = 403;
+      return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+    }
+
+    try {
+      return await DocumentSignatureService.signKhsBulk(body.periodeId, body.mahasiswaIds);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menandatangani KHS massal.' };
     }
   }
 

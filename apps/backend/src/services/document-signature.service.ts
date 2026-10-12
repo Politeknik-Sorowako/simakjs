@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
 import QRCode from 'qrcode';
-import { documentSignatures, programStudi, userProdiScopes, userRoles, users } from '../models/schema';
+import { documentSignatures, mahasiswa, programStudi, userProdiScopes, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
 import {
   canonicalJson,
@@ -51,6 +51,31 @@ export interface VerifyResult {
   docHashShort?: string;
 }
 
+export interface KhsSignStatusItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  signed: boolean;
+  signerNama: string | null;
+  signerJabatan: string | null;
+  signedAt: string | null;
+}
+
+export interface KhsSignStatusPage {
+  data: KhsSignStatusItem[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface BulkSignKhsResult {
+  total: number;
+  signedCount: number;
+  failedCount: number;
+  failed: { mahasiswaId: number; error: string }[];
+}
+
 interface ResolvedSigner {
   userId: number | null;
   nama: string;
@@ -84,9 +109,14 @@ export class DocumentSignatureService {
     return row ?? null;
   }
 
-  /** Menandatangani KHS secara idempoten + menghasilkan QR data URL. */
-  static async signKhs(input: SignKhsInput): Promise<SignResult> {
+  /**
+   * Menandatangani KHS secara idempoten + menghasilkan QR data URL.
+   * `opts.withQr = false` melewatkan pembuatan QR (jalur massal cukup butuh
+   * status; QR per dokumen tidak dikembalikan sehingga hemat CPU).
+   */
+  static async signKhs(input: SignKhsInput, opts: { withQr?: boolean } = {}): Promise<SignResult> {
     const { mhsId, periodeId } = input;
+    const withQr = opts.withQr ?? true;
     const refId = `khs:${mhsId}:${periodeId}`;
 
     const mhs = await MahasiswaService.getById(mhsId);
@@ -143,7 +173,7 @@ export class DocumentSignatureService {
     // pakai ulang baris yang sama (verifyUuid stabil).
     const existing = await DocumentSignatureService.getByRef('KHS', refId);
     if (existing && existing.docHash === docHash) {
-      return DocumentSignatureService.toSignResult(existing);
+      return DocumentSignatureService.toSignResult(existing, withQr);
     }
 
     // Snapshot berubah → cabut tanda tangan lama (superseded) sebelum insert baru.
@@ -171,7 +201,96 @@ export class DocumentSignatureService {
       })
       .returning();
 
-    return DocumentSignatureService.toSignResult(inserted);
+    return DocumentSignatureService.toSignResult(inserted, withQr);
+  }
+
+  /**
+   * Daftar mahasiswa per prodi & periode beserta status tanda tangan KHS-nya.
+   * Satu query `inArray` untuk seluruh halaman (bukan N+1 per mahasiswa).
+   */
+  static async listKhsSignStatus(params: {
+    programStudiId: number;
+    periodeId: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<KhsSignStatusPage> {
+    const { programStudiId, periodeId } = params;
+    const page = Math.max(1, Math.trunc(params.page ?? 1));
+    const limit = Math.min(100, Math.max(1, Math.trunc(params.limit ?? 20)));
+    const search = params.search?.trim();
+
+    const whereClause = and(
+      eq(mahasiswa.programStudiId, programStudiId),
+      eq(mahasiswa.status, 'aktif'),
+      search ? or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`)) : undefined,
+    );
+
+    const [totalRow] = await db.select({ total: count() }).from(mahasiswa).where(whereClause);
+    const total = totalRow?.total ?? 0;
+
+    const rows = await db
+      .select({ id: mahasiswa.id, nim: mahasiswa.nim, nama: mahasiswa.nama })
+      .from(mahasiswa)
+      .where(whereClause)
+      .orderBy(asc(mahasiswa.nim))
+      .limit(limit)
+      .offset((page - 1) * limit);
+
+    const refIds = rows.map((r) => `khs:${r.id}:${periodeId}`);
+    const sigRows = refIds.length
+      ? await db
+          .select()
+          .from(documentSignatures)
+          .where(
+            and(
+              eq(documentSignatures.tenant, TENANT_SIMAK),
+              eq(documentSignatures.docType, 'KHS'),
+              isNull(documentSignatures.revokedAt),
+              inArray(documentSignatures.refId, refIds),
+            ),
+          )
+      : [];
+    const sigByRef = new Map(sigRows.map((s) => [s.refId, s]));
+
+    const data: KhsSignStatusItem[] = rows.map((r) => {
+      const sig = sigByRef.get(`khs:${r.id}:${periodeId}`);
+      return {
+        mahasiswaId: r.id,
+        nim: r.nim,
+        nama: r.nama,
+        signed: Boolean(sig),
+        signerNama: sig?.signerNama ?? null,
+        signerJabatan: sig?.signerJabatan ?? null,
+        signedAt: sig ? sig.signedAt.toISOString() : null,
+      };
+    });
+
+    return { data, page, limit, total, totalPages: Math.ceil(total / limit) };
+  }
+
+  /**
+   * Tanda tangan massal: proses PER BARIS dengan penanganan error individual
+   * (sesuai standar bulk di repo) — satu mahasiswa gagal tidak membatalkan
+   * sisanya. Idempoten: dokumen sudah tanda tangan dengan snapshot sama dihitung
+   * sukses tanpa mencabut QR yang sudah tercetak.
+   */
+  static async signKhsBulk(periodeId: string, mahasiswaIds: number[]): Promise<BulkSignKhsResult> {
+    const uniqueIds = [...new Set(mahasiswaIds)];
+    const failed: { mahasiswaId: number; error: string }[] = [];
+    let signedCount = 0;
+
+    for (const mhsId of uniqueIds) {
+      try {
+        // QR tidak dibutuhkan pada jalur massal (hanya status) — lewati pembuatannya.
+        await DocumentSignatureService.signKhs({ mhsId, periodeId }, { withQr: false });
+        signedCount++;
+      } catch (e: unknown) {
+        failed.push({ mahasiswaId: mhsId, error: e instanceof Error ? e.message : 'Gagal menandatangani KHS.' });
+      }
+    }
+
+    return { total: uniqueIds.length, signedCount, failedCount: failed.length, failed };
   }
 
   /** Verifikasi publik berdasarkan `verifyUuid`. */
@@ -216,13 +335,15 @@ export class DocumentSignatureService {
       .where(eq(documentSignatures.id, row.id));
   }
 
-  private static async toSignResult(row: typeof documentSignatures.$inferSelect): Promise<SignResult> {
+  private static async toSignResult(row: typeof documentSignatures.$inferSelect, withQr = true): Promise<SignResult> {
     const verifyUrl = `${getVerifyBaseUrl()}/v/${row.verifyUuid}`;
     let qrDataUrl = '';
-    try {
-      qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 240 });
-    } catch {
-      // QR gagal dibuat — dokumen tetap dapat dicetak tanpa gambar QR.
+    if (withQr) {
+      try {
+        qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 240 });
+      } catch {
+        // QR gagal dibuat — dokumen tetap dapat dicetak tanpa gambar QR.
+      }
     }
     return {
       verifyUuid: row.verifyUuid,
