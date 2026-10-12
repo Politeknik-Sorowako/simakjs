@@ -1,4 +1,5 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { TtdMassalTable } from '../components/khs/TtdMassalTable';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -11,7 +12,6 @@ import { type KonversiRekap, type KonversiRekapRule, khsController } from '../co
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
-import { fmtWaktu } from '../utils/format';
 
 export default function Khs() {
   const auth = useAuth();
@@ -187,30 +187,57 @@ export default function Khs() {
     setSignPage(1);
   });
 
-  const [signStatus, { refetch: refetchSignStatus }] = createResource(
-    () => {
-      if (activeTab() !== 'ttd' || !canSignMassal()) return null;
-      const periodeId = selectedPeriode();
-      const prodiId = Number(selectedProdi());
-      if (!periodeId || !prodiId) return null;
-      return {
-        periodeId,
-        programStudiId: prodiId,
-        search: signSearchDebounced().trim() || undefined,
-        status: signStatusFilter(),
-        page: signPage(),
-        limit: signLimit(),
-      };
-    },
-    async (key): Promise<KhsSignStatusPage> => await documentSignatureController.listSignStatus(key),
-  );
+  // Daftar TTD dimuat lewat effect (BUKAN createResource): membaca resource
+  // yang masih pending dari dalam route memicu <Suspense> GLOBAL di App.tsx
+  // yang me-replace SELURUH halaman ("Memuat Halaman...") — termasuk input
+  // pencarian di kartu filter — sehingga kursor hilang saat mengetik. Dengan
+  // signal + fetch manual, refetch tidak pernah tersangkut di Suspense apa pun;
+  // hanya isi tabel yang di-refresh in-place.
+  const [signList, setSignList] = createSignal<KhsSignStatusPage | null>(null);
+  const [signListLoading, setSignListLoading] = createSignal(false);
+  const [signListError, setSignListError] = createSignal<string | null>(null);
+  const [signReload, setSignReload] = createSignal(0);
 
-  // Baca resource dengan aman: saat `signStatus` error, accessor-nya melempar.
-  // Tanpa guard ini, ekspresi di luar blok error akan menggagalkan seluruh render.
-  const signRows = () => (signStatus.error ? [] : (signStatus()?.data ?? []));
+  createEffect(() => {
+    if (activeTab() !== 'ttd' || !canSignMassal()) return;
+    const periodeId = selectedPeriode();
+    const prodiId = Number(selectedProdi());
+    void signReload(); // penanda refetch manual setelah sign/revoke massal
+    if (!periodeId || !prodiId) {
+      setSignList(null);
+      setSignListError(null);
+      setSignListLoading(false);
+      return;
+    }
+    const search = signSearchDebounced().trim();
+    const status = signStatusFilter();
+    const page = signPage();
+    const limit = signLimit();
+    let cancelled = false;
+    setSignListLoading(true);
+    documentSignatureController
+      .listSignStatus({ periodeId, programStudiId: prodiId, search: search || undefined, status, page, limit })
+      .then((res) => {
+        if (!cancelled) {
+          setSignList(res);
+          setSignListError(null);
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setSignListError(e instanceof Error ? e.message : 'Gagal memuat daftar tanda tangan.');
+      })
+      .finally(() => {
+        if (!cancelled) setSignListLoading(false);
+      });
+    onCleanup(() => {
+      cancelled = true;
+    });
+  });
+
+  const signRows = () => (signListError() ? [] : (signList()?.data ?? []));
   const signPageInfo = () => {
-    if (signStatus.error) return { page: 1, totalPages: 1, total: 0 };
-    const s = signStatus();
+    if (signListError()) return { page: 1, totalPages: 1, total: 0 };
+    const s = signList();
     return { page: s?.page ?? 1, totalPages: Math.max(1, s?.totalPages ?? 1), total: s?.total ?? 0 };
   };
   const unsignedPageIds = () =>
@@ -284,7 +311,7 @@ export default function Khs() {
         toast.showToast(`${signedCount} KHS berhasil ditandatangani.`, 'success');
       }
       setSignSelection([]);
-      await refetchSignStatus();
+      setSignReload((x) => x + 1);
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menandatangani KHS massal.', 'error');
     } finally {
@@ -316,7 +343,7 @@ export default function Khs() {
       }
       setSignRevokeReason('');
       setSignSelection([]);
-      await refetchSignStatus();
+      setSignReload((x) => x + 1);
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal mencabut tanda tangan massal.', 'error');
     } finally {
@@ -952,7 +979,7 @@ export default function Khs() {
                 <div class="flex items-center gap-2 text-caption text-secondary-400 dark:text-secondary-300">
                   <button
                     onClick={() => setSignPage((p) => Math.max(1, p - 1))}
-                    disabled={signPageInfo().page <= 1 || signStatus.loading}
+                    disabled={signPageInfo().page <= 1 || signListLoading()}
                     class="px-3 py-1.5 border border-secondary-200 rounded-xl font-bold disabled:opacity-40 active:scale-95 transition-all dark:border-secondary-700"
                     aria-label="Halaman sebelumnya"
                   >
@@ -963,7 +990,7 @@ export default function Khs() {
                   </span>
                   <button
                     onClick={() => setSignPage((p) => p + 1)}
-                    disabled={signPageInfo().page >= signPageInfo().totalPages || signStatus.loading}
+                    disabled={signPageInfo().page >= signPageInfo().totalPages || signListLoading()}
                     class="px-3 py-1.5 border border-secondary-200 rounded-xl font-bold disabled:opacity-40 active:scale-95 transition-all dark:border-secondary-700"
                     aria-label="Halaman berikutnya"
                   >
@@ -998,93 +1025,14 @@ export default function Khs() {
                 </div>
               }
             >
-              <Show when={signStatus.loading}>
-                <div class="text-center py-10 text-secondary-400 dark:text-secondary-300">Memuat daftar...</div>
-              </Show>
-
-              <Show when={!signStatus.loading && signStatus.error}>
-                <div class="text-center py-10 text-rose-600 font-bold">
-                  {((signStatus.error as Error | undefined)?.message as string) || 'Gagal memuat daftar tanda tangan.'}
-                </div>
-              </Show>
-
-              <Show when={!signStatus.loading && !signStatus.error}>
-                <table class="w-full text-left text-caption border-collapse">
-                  <thead>
-                    <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800 dark:text-secondary-200">
-                      <th class="p-3 w-10" />
-                      <th class="p-3">NIM</th>
-                      <th class="p-3">Nama Mahasiswa</th>
-                      <th class="p-3">Status Tanda Tangan</th>
-                      <th class="p-3 text-center">Cetak</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
-                    <For
-                      each={signRows()}
-                      fallback={
-                        <tr>
-                          <td colspan="5" class="p-4 text-center text-secondary-400 italic">
-                            Tidak ada mahasiswa ditemukan pada prodi/periode ini.
-                          </td>
-                        </tr>
-                      }
-                    >
-                      {(row) => {
-                        const isChecked = () => selectedIdSet().has(row.mahasiswaId);
-                        const toggle = () => toggleSignRow(row);
-                        return (
-                          <tr
-                            class="cursor-pointer transition-colors hover:bg-secondary-50/50 dark:hover:bg-secondary-800/20"
-                            onClick={toggle}
-                          >
-                            <td class="p-3" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked()}
-                                onChange={toggle}
-                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
-                              />
-                            </td>
-                            <td class="p-3 whitespace-nowrap">{row.nim}</td>
-                            <td class="p-3 font-bold text-secondary-800 dark:text-white">{row.nama}</td>
-                            <td class="p-3">
-                              <Show
-                                when={row.signed}
-                                fallback={
-                                  <span class="inline-block px-2 py-0.5 rounded-full text-fine font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
-                                    Belum Ditandatangani
-                                  </span>
-                                }
-                              >
-                                <span class="flex flex-col gap-0.5">
-                                  <span class="inline-block w-fit px-2 py-0.5 rounded-full text-fine font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
-                                    Ditandatangani
-                                  </span>
-                                  <span class="text-fine text-secondary-400 dark:text-secondary-300">
-                                    {row.signerNama}
-                                    {row.signedAt ? ` · ${fmtWaktu(row.signedAt)}` : ''}
-                                  </span>
-                                </span>
-                              </Show>
-                            </td>
-                            <td class="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              <a
-                                href={`/khs/cetak/${row.mahasiswaId}/${selectedPeriode()}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                class="px-3 py-1.5 border border-brand-600 text-brand-600 font-bold rounded-xl text-caption hover:bg-brand-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
-                              >
-                                Cetak
-                              </a>
-                            </td>
-                          </tr>
-                        );
-                      }}
-                    </For>
-                  </tbody>
-                </table>
-              </Show>
+              <TtdMassalTable
+                rows={signRows()}
+                loading={signListLoading()}
+                error={signListError()}
+                periodeId={selectedPeriode()}
+                isRowChecked={(id) => selectedIdSet().has(id)}
+                onToggleRow={(row) => toggleSignRow(row)}
+              />
             </Show>
           </div>
 
