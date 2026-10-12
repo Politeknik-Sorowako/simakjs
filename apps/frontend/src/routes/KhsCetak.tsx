@@ -84,6 +84,12 @@ export default function KhsCetak() {
     },
   );
 
+  // Membaca resource yang ber-error akan melempar dan ditangkap ErrorBoundary
+  // aplikasi (halaman cetak gagal total, bukan cetak-tanpa-QR). Akses lewat
+  // `sigData` agar kegagalan baca diperlakukan sebagai "belum ditandatangani"
+  // sehingga alert merah + cetak tanpa QR tetap berjalan.
+  const sigData = () => (signature.error ? null : signature());
+
   const [showSignConfirm, setShowSignConfirm] = createSignal(false);
   const [signBusy, setSignBusy] = createSignal(false);
   const [signActionError, setSignActionError] = createSignal<string | null>(null);
@@ -315,10 +321,10 @@ export default function KhsCetak() {
               <div class="mt-12 grid grid-cols-2 gap-4 text-xs text-secondary-700">
                 <div class="text-center">
                   <p>Mengetahui,</p>
-                  <p>{signature()?.signerJabatan ? signature()?.signerJabatan : 'Kaprodi / Pimpinan'}</p>
-                  <Show when={signature()?.qrDataUrl} fallback={<div class="h-16" />}>
+                  <p>{sigData()?.signerJabatan ? sigData()?.signerJabatan : 'Kaprodi / Pimpinan'}</p>
+                  <Show when={sigData()?.qrDataUrl} fallback={<div class="h-16" />}>
                     <img
-                      src={signature()?.qrDataUrl}
+                      src={sigData()?.qrDataUrl}
                       width="128"
                       height="128"
                       alt="QR verifikasi dokumen"
@@ -326,10 +332,10 @@ export default function KhsCetak() {
                     />
                   </Show>
                   <p class="font-bold underline">
-                    {signature()?.signerNama ?? '.........................................................'}
+                    {sigData()?.signerNama ?? '.........................................................'}
                   </p>
-                  <Show when={signature()?.signerJabatan}>
-                    <p class="mt-1 text-secondary-500">{signature()?.signerJabatan}</p>
+                  <Show when={sigData()?.signerJabatan}>
+                    <p class="mt-1 text-secondary-500">{sigData()?.signerJabatan}</p>
                   </Show>
                 </div>
                 <div class="text-center">
@@ -339,7 +345,7 @@ export default function KhsCetak() {
                 </div>
               </div>
 
-              <Show when={signature()}>
+              <Show when={sigData()}>
                 {(sig) => (
                   <div class="mt-6 flex flex-col items-center border-t border-secondary-200 pt-4 text-center text-xs text-secondary-500">
                     <p class="font-semibold text-secondary-700">Dokumen ditandatangani digital (QR Signed-Hash)</p>
