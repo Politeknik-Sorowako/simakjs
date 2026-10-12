@@ -101,7 +101,7 @@ test.describe('Search Focus & Table Refresh Isolation', () => {
   }
 
   test('refresh tabel terisolasi (bukan unmount seluruh halaman) pada halaman laporan', async ({ page }) => {
-    for (const target of ['/laporan/akademik', '/laporan/rekap-nilai', '/laporan/kompensasi', '/laporan/peringatan']) {
+    for (const target of ['/laporan/akademik', '/laporan/rekap-nilai', '/laporan-kompensasi', '/laporan/peringatan']) {
       await gotoAsAdmin(page, target);
 
       const input = page.locator('input[placeholder]').first();
@@ -162,5 +162,4 @@ test.describe('Search Focus & Table Refresh Isolation', () => {
     // Kartu filter tetap ter-mount
     await expect(search).toBeVisible();
   });
-});
 });

@@ -214,6 +214,7 @@ export default function Khs() {
     const page = signPage();
     const limit = signLimit();
     let cancelled = false;
+    setSignListError(null); // error basi tidak boleh bertahan selama refetch
     setSignListLoading(true);
     documentSignatureController
       .listSignStatus({ periodeId, programStudiId: prodiId, search: search || undefined, status, page, limit })
