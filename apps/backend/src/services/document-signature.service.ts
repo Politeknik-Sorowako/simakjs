@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, ilike, inArray, isNull, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import QRCode from 'qrcode';
 import { documentSignatures, mahasiswa, programStudi, userProdiScopes, userRoles, users } from '../models/schema';
 import { db } from '../utils/db';
@@ -12,10 +12,12 @@ import {
   sha256Hex,
 } from '../utils/document-signing';
 import { formatDateTimeInTimezone } from '../utils/timezone';
+import type { UserPayload } from '../utils/types';
 import { KhsService } from './khs.service';
 import { MahasiswaService } from './mahasiswa.service';
 import { PelanggaranService } from './pelanggaran.service';
 import { PeriodeAkademikService } from './periode-akademik.service';
+import { ProdiScopeService } from './prodi-scope.service';
 
 export const TENANT_SIMAK = 'simak';
 
@@ -59,6 +61,7 @@ export interface KhsSignStatusItem {
   signerNama: string | null;
   signerJabatan: string | null;
   signedAt: string | null;
+  verifyUuid: string | null;
 }
 
 export interface KhsSignStatusPage {
@@ -74,6 +77,13 @@ export interface BulkSignKhsResult {
   signedCount: number;
   failedCount: number;
   failed: { mahasiswaId: number; error: string }[];
+}
+
+export interface BulkRevokeResult {
+  total: number;
+  revokedCount: number;
+  failedCount: number;
+  failed: { uuid: string; error: string }[];
 }
 
 interface ResolvedSigner {
@@ -206,12 +216,14 @@ export class DocumentSignatureService {
 
   /**
    * Daftar mahasiswa per prodi & periode beserta status tanda tangan KHS-nya.
-   * Satu query `inArray` untuk seluruh halaman (bukan N+1 per mahasiswa).
+   * SATU query LEFT JOIN (bukan N+1) sehingga filter `status` (signed/unsigned)
+   * ikut memengaruhi paginasi & total secara benar.
    */
   static async listKhsSignStatus(params: {
     programStudiId: number;
     periodeId: string;
     search?: string;
+    status?: 'signed' | 'unsigned' | 'all';
     page?: number;
     limit?: number;
   }): Promise<KhsSignStatusPage> {
@@ -219,52 +231,62 @@ export class DocumentSignatureService {
     const page = Math.max(1, Math.trunc(params.page ?? 1));
     const limit = Math.min(100, Math.max(1, Math.trunc(params.limit ?? 20)));
     const search = params.search?.trim();
+    const status = params.status ?? 'all';
+
+    // ON: signature aktif (belum dicabut) milik ref KHS mahasiswa×periode ini.
+    // `${periodeId}` dirender sebagai parameter terikat (aman SQL injection).
+    const sigJoin = and(
+      eq(documentSignatures.tenant, TENANT_SIMAK),
+      eq(documentSignatures.docType, 'KHS'),
+      isNull(documentSignatures.revokedAt),
+      sql`"document_signatures"."ref_id" = ('khs:' || ${mahasiswa.id} || ':' || ${periodeId})`,
+    );
 
     const whereClause = and(
       eq(mahasiswa.programStudiId, programStudiId),
       eq(mahasiswa.status, 'aktif'),
       search ? or(ilike(mahasiswa.nim, `%${search}%`), ilike(mahasiswa.nama, `%${search}%`)) : undefined,
+      status === 'signed'
+        ? isNotNull(documentSignatures.id)
+        : status === 'unsigned'
+          ? isNull(documentSignatures.id)
+          : undefined,
     );
 
-    const [totalRow] = await db.select({ total: count() }).from(mahasiswa).where(whereClause);
+    const [totalRow] = await db
+      .select({ total: count() })
+      .from(mahasiswa)
+      .leftJoin(documentSignatures, sigJoin)
+      .where(whereClause);
     const total = totalRow?.total ?? 0;
 
     const rows = await db
-      .select({ id: mahasiswa.id, nim: mahasiswa.nim, nama: mahasiswa.nama })
+      .select({
+        id: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        verifyUuid: documentSignatures.verifyUuid,
+        signerNama: documentSignatures.signerNama,
+        signerJabatan: documentSignatures.signerJabatan,
+        signedAt: documentSignatures.signedAt,
+      })
       .from(mahasiswa)
+      .leftJoin(documentSignatures, sigJoin)
       .where(whereClause)
       .orderBy(asc(mahasiswa.nim))
       .limit(limit)
       .offset((page - 1) * limit);
 
-    const refIds = rows.map((r) => `khs:${r.id}:${periodeId}`);
-    const sigRows = refIds.length
-      ? await db
-          .select()
-          .from(documentSignatures)
-          .where(
-            and(
-              eq(documentSignatures.tenant, TENANT_SIMAK),
-              eq(documentSignatures.docType, 'KHS'),
-              isNull(documentSignatures.revokedAt),
-              inArray(documentSignatures.refId, refIds),
-            ),
-          )
-      : [];
-    const sigByRef = new Map(sigRows.map((s) => [s.refId, s]));
-
-    const data: KhsSignStatusItem[] = rows.map((r) => {
-      const sig = sigByRef.get(`khs:${r.id}:${periodeId}`);
-      return {
-        mahasiswaId: r.id,
-        nim: r.nim,
-        nama: r.nama,
-        signed: Boolean(sig),
-        signerNama: sig?.signerNama ?? null,
-        signerJabatan: sig?.signerJabatan ?? null,
-        signedAt: sig ? sig.signedAt.toISOString() : null,
-      };
-    });
+    const data: KhsSignStatusItem[] = rows.map((r) => ({
+      mahasiswaId: r.id,
+      nim: r.nim,
+      nama: r.nama,
+      signed: r.verifyUuid !== null,
+      signerNama: r.signerNama ?? null,
+      signerJabatan: r.signerJabatan ?? null,
+      signedAt: r.signedAt ? r.signedAt.toISOString() : null,
+      verifyUuid: r.verifyUuid ?? null,
+    }));
 
     return { data, page, limit, total, totalPages: Math.ceil(total / limit) };
   }
@@ -333,6 +355,80 @@ export class DocumentSignatureService {
       .update(documentSignatures)
       .set({ revokedAt: new Date(), revokedBy: userId, revokeReason: reason })
       .where(eq(documentSignatures.id, row.id));
+  }
+
+  /** Satu baris tanda tangan berdasarkan `verifyUuid` (untuk cek scope pemanggil). */
+  static async getByUuid(uuid: string) {
+    const [row] = await db.select().from(documentSignatures).where(eq(documentSignatures.verifyUuid, uuid)).limit(1);
+    return row ?? null;
+  }
+
+  /** Banyak baris tanda tangan sekaligus (satu query `inArray`, bukan N+1). */
+  static async getManyByUuids(uuids: string[]) {
+    const unique = [...new Set(uuids)];
+    if (unique.length === 0) return [];
+    return db.select().from(documentSignatures).where(inArray(documentSignatures.verifyUuid, unique));
+  }
+
+  /**
+   * Tegakkan scope prodi pemanggil atas sejumlah `verifyUuid` SEBELUM aksi tulis.
+   * Gagal-dituju (fail-closed): refId non-KHS, atau refId yang tidak merujuk
+   * mahasiswa valid, dianggap di luar lingkup. Admin/super_admin lolos tanpa
+   * query (via `getUserAccessibleProdiIds` → null = global). `uuid` yang tidak
+   * ditemukan TIDAK ikut dicek (agar kasus tak-dikenal tetap jatuh ke 400/failed
+   * di pemanggil, bukan 403).
+   */
+  static async assertRefsInScope(user: UserPayload | null, uuids: string[]): Promise<void> {
+    const rows = await DocumentSignatureService.getManyByUuids(uuids);
+    const mhsIds: number[] = [];
+    for (const r of rows) {
+      const m = /^khs:(\d+):/.exec(r.refId);
+      if (!m) {
+        throw new Error('Akses ditolak. Hanya dokumen KHS yang dapat dicabut pada jalur ini.');
+      }
+      mhsIds.push(Number(m[1]));
+    }
+    const uniqueIds = [...new Set(mhsIds)];
+    if (uniqueIds.length === 0) return;
+
+    const allowed = await ProdiScopeService.getUserAccessibleProdiIds(user);
+    if (allowed === null) return; // global scope (admin/super_admin)
+    const allowedSet = new Set(allowed);
+
+    const found = await db
+      .select({ id: mahasiswa.id, programStudiId: mahasiswa.programStudiId })
+      .from(mahasiswa)
+      .where(inArray(mahasiswa.id, uniqueIds));
+    const prodiById = new Map(found.map((r) => [r.id, r.programStudiId]));
+    const outOfScope = uniqueIds.filter((id) => {
+      const prodiId = prodiById.get(id);
+      return prodiId == null || !allowedSet.has(prodiId);
+    });
+    if (outOfScope.length > 0) {
+      throw new Error('Akses ditolak. Ada dokumen di luar lingkup prodi Anda.');
+    }
+  }
+
+  /**
+   * Pencabutan massal: per BARIS dengan penanganan error individual (konvensi
+   * bulk repo). `revoke()` tidak melempar untuk baris yang sudah dicabut
+   * (no-op = dihitung sukses), sehingga re-run aman.
+   */
+  static async revokeBulk(uuids: string[], userId: number, reason: string): Promise<BulkRevokeResult> {
+    const uniqueIds = [...new Set(uuids)];
+    const failed: { uuid: string; error: string }[] = [];
+    let revokedCount = 0;
+
+    for (const uuid of uniqueIds) {
+      try {
+        await DocumentSignatureService.revoke(uuid, userId, reason);
+        revokedCount++;
+      } catch (e: unknown) {
+        failed.push({ uuid, error: e instanceof Error ? e.message : 'Gagal mencabut tanda tangan.' });
+      }
+    }
+
+    return { total: uniqueIds.length, revokedCount, failedCount: failed.length, failed };
   }
 
   private static async toSignResult(row: typeof documentSignatures.$inferSelect, withQr = true): Promise<SignResult> {

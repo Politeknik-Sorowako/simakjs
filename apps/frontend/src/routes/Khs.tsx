@@ -147,16 +147,23 @@ export default function Khs() {
   // --- Persetujuan Tanda Tangan KHS Massal (Metode A: daftar centang) ---
   // Hanya Kaprodi/Admin/super_admin; backend tetap menegakkan scope prodi.
   const canSignMassal = () => auth.hasRole(['kaprodi', 'admin', 'super_admin']);
-  const SIGN_PAGE_LIMIT = 20;
   const SIGN_BATCH_MAX = 50; // batas endpoint bulk per permintaan
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
   let selectAllSignRef: HTMLInputElement | undefined;
 
   const [signSearch, setSignSearch] = createSignal('');
   const [signSearchDebounced, setSignSearchDebounced] = createSignal('');
+  const [signStatusFilter, setSignStatusFilter] = createSignal<'all' | 'signed' | 'unsigned'>('all');
+  const [signLimit, setSignLimit] = createSignal(20);
   const [signPage, setSignPage] = createSignal(1);
-  const [signSelectedIds, setSignSelectedIds] = createSignal<number[]>([]);
+  // Seleksi menyimpan {id, uuid} agar uuid baris signed tetap sahih walau
+  // berpindah halaman (dipakai pencabutan massal).
+  const [signSelection, setSignSelection] = createSignal<{ id: number; uuid: string | null }[]>([]);
   const [signBusy, setSignBusy] = createSignal(false);
   const [showSignConfirm, setShowSignConfirm] = createSignal(false);
+  const [revokeBusy, setRevokeBusy] = createSignal(false);
+  const [showRevokeConfirm, setShowRevokeConfirm] = createSignal(false);
+  const [signRevokeReason, setSignRevokeReason] = createSignal('');
 
   // Debounce pencarian (350ms) agar tidak query tiap ketukan keyboard.
   createEffect(() => {
@@ -168,13 +175,15 @@ export default function Khs() {
     onCleanup(() => clearTimeout(timer));
   });
 
-  // Reset seleksi saat konteks berubah (tab/prodi/periode) — cegah ID lama
-  // ikut ditandatangani pada prodi/periode berbeda.
+  // Reset seleksi saat konteks berubah (tab/prodi/periode/filter status) —
+  // cegah ID lama ikut diproses pada konteks berbeda. Ganti page-size TIDAK
+  // reset seleksi (sama dengan perilaku pencarian).
   createEffect(() => {
     activeTab();
     selectedProdi();
     selectedPeriode();
-    setSignSelectedIds([]);
+    signStatusFilter();
+    setSignSelection([]);
     setSignPage(1);
   });
 
@@ -188,8 +197,9 @@ export default function Khs() {
         periodeId,
         programStudiId: prodiId,
         search: signSearchDebounced().trim() || undefined,
+        status: signStatusFilter(),
         page: signPage(),
-        limit: SIGN_PAGE_LIMIT,
+        limit: signLimit(),
       };
     },
     async (key): Promise<KhsSignStatusPage> => await documentSignatureController.listSignStatus(key),
@@ -207,11 +217,20 @@ export default function Khs() {
     signRows()
       .filter((r) => !r.signed)
       .map((r) => r.mahasiswaId);
+  const selectedIdSet = () => new Set(signSelection().map((s) => s.id));
+  // Item yang layak ditandatangani: seleksi tanpa uuid (baris yang belum signed).
+  const unsignedSelectedIds = () =>
+    signSelection()
+      .filter((s) => s.uuid === null)
+      .map((s) => s.id);
+  // Item yang layak dicabut: seleksi dengan uuid (baris signed saat dipilih).
+  const signedSelected = () => signSelection().filter((s) => s.uuid !== null);
   const allPageSignedSelected = () => {
     const ids = unsignedPageIds();
-    return ids.length > 0 && ids.every((id) => signSelectedIds().includes(id));
+    const sel = selectedIdSet();
+    return ids.length > 0 && ids.every((id) => sel.has(id));
   };
-  const somePageSelected = () => unsignedPageIds().some((id) => signSelectedIds().includes(id));
+  const somePageSelected = () => unsignedPageIds().some((id) => selectedIdSet().has(id));
 
   createEffect(() => {
     if (selectAllSignRef) {
@@ -222,19 +241,29 @@ export default function Khs() {
   const toggleSignSelectAll = () => {
     if (allPageSignedSelected()) {
       const pageIds = new Set(unsignedPageIds());
-      setSignSelectedIds((prev) => prev.filter((id) => !pageIds.has(id)));
+      setSignSelection((prev) => prev.filter((s) => !pageIds.has(s.id)));
       return;
     }
-    setSignSelectedIds((prev) => [...new Set([...prev, ...unsignedPageIds()])]);
+    const sel = selectedIdSet();
+    setSignSelection((prev) => [
+      ...prev,
+      ...signRows()
+        .filter((r) => !r.signed && !sel.has(r.mahasiswaId))
+        .map((r) => ({ id: r.mahasiswaId, uuid: null })),
+    ]);
   };
 
-  const toggleSignRow = (id: number) => {
-    setSignSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const toggleSignRow = (row: { mahasiswaId: number; signed: boolean; verifyUuid: string | null }) => {
+    setSignSelection((prev) =>
+      prev.some((s) => s.id === row.mahasiswaId)
+        ? prev.filter((s) => s.id !== row.mahasiswaId)
+        : [...prev, { id: row.mahasiswaId, uuid: row.signed ? row.verifyUuid : null }],
+    );
   };
 
   const handleBulkSign = async () => {
     const periodeId = selectedPeriode();
-    const ids = signSelectedIds();
+    const ids = unsignedSelectedIds();
     if (!periodeId || ids.length === 0) return;
     setShowSignConfirm(false);
     setSignBusy(true);
@@ -254,12 +283,44 @@ export default function Khs() {
       } else {
         toast.showToast(`${signedCount} KHS berhasil ditandatangani.`, 'success');
       }
-      setSignSelectedIds([]);
+      setSignSelection([]);
       await refetchSignStatus();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal menandatangani KHS massal.', 'error');
     } finally {
       setSignBusy(false);
+    }
+  };
+
+  const handleBulkRevoke = async () => {
+    const reason = signRevokeReason().trim();
+    const uuids = signedSelected().map((s) => s.uuid as string);
+    if (uuids.length === 0 || reason.length < 3) return;
+    setShowRevokeConfirm(false);
+    setRevokeBusy(true);
+    try {
+      let revokedCount = 0;
+      let failedCount = 0;
+      let firstError = '';
+      // Pecah batch sesuai batas 50 UUID/permintaan; satu alasan untuk seluruh batch.
+      for (let i = 0; i < uuids.length; i += SIGN_BATCH_MAX) {
+        const res = await documentSignatureController.bulkRevokeSignatures(uuids.slice(i, i + SIGN_BATCH_MAX), reason);
+        revokedCount += res.revokedCount;
+        failedCount += res.failedCount;
+        if (!firstError && res.failed.length > 0) firstError = res.failed[0].error;
+      }
+      if (failedCount > 0) {
+        toast.showToast(`Pencabutan: ${revokedCount} dicabut, ${failedCount} gagal — ${firstError}`, 'error');
+      } else {
+        toast.showToast(`${revokedCount} tanda tangan berhasil dicabut.`, 'success');
+      }
+      setSignRevokeReason('');
+      setSignSelection([]);
+      await refetchSignStatus();
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mencabut tanda tangan massal.', 'error');
+    } finally {
+      setRevokeBusy(false);
     }
   };
 
@@ -803,7 +864,7 @@ export default function Khs() {
                   Kaprodi.
                 </p>
               </div>
-              <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3">
                 <div class="flex flex-col gap-1.5">
                   <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">Periode</label>
                   <select
@@ -839,6 +900,38 @@ export default function Khs() {
                     placeholder="Ketik NIM atau nama..."
                     class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                    Status Tanda Tangan
+                  </label>
+                  <select
+                    value={signStatusFilter()}
+                    onChange={(e) => {
+                      setSignStatusFilter(e.currentTarget.value as 'all' | 'signed' | 'unsigned');
+                      setSignPage(1);
+                    }}
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  >
+                    <option value="all">Semua</option>
+                    <option value="signed">Sudah Ditandatangani</option>
+                    <option value="unsigned">Belum Ditandatangani</option>
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                    Baris / Halaman
+                  </label>
+                  <select
+                    value={String(signLimit())}
+                    onChange={(e) => {
+                      setSignLimit(Number(e.currentTarget.value));
+                      setSignPage(1);
+                    }}
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  >
+                    <For each={PAGE_SIZE_OPTIONS}>{(n) => <option value={String(n)}>{n}</option>}</For>
+                  </select>
                 </div>
               </div>
             </div>
@@ -879,10 +972,17 @@ export default function Khs() {
                 </div>
                 <button
                   onClick={() => setShowSignConfirm(true)}
-                  disabled={signSelectedIds().length === 0 || signBusy()}
+                  disabled={unsignedSelectedIds().length === 0 || signBusy()}
                   class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
                 >
-                  {signBusy() ? 'Menandatangani...' : `Tandatangani Terpilih (${signSelectedIds().length})`}
+                  {signBusy() ? 'Menandatangani...' : `Tandatangani Terpilih (${unsignedSelectedIds().length})`}
+                </button>
+                <button
+                  onClick={() => setShowRevokeConfirm(true)}
+                  disabled={signedSelected().length === 0 || revokeBusy()}
+                  class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-caption hover:bg-rose-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-rose-700 dark:hover:bg-rose-600"
+                >
+                  {revokeBusy() ? 'Mencabut...' : `Cabut TTD Terpilih (${signedSelected().length})`}
                 </button>
               </div>
             </div>
@@ -931,16 +1031,11 @@ export default function Khs() {
                       }
                     >
                       {(row) => {
-                        const isChecked = () => signSelectedIds().includes(row.mahasiswaId);
-                        const canCheck = () => !row.signed;
-                        const toggle = () => {
-                          if (canCheck()) toggleSignRow(row.mahasiswaId);
-                        };
+                        const isChecked = () => selectedIdSet().has(row.mahasiswaId);
+                        const toggle = () => toggleSignRow(row);
                         return (
                           <tr
-                            class={`transition-colors dark:hover:bg-secondary-800/20 ${
-                              canCheck() ? 'hover:bg-secondary-50/50 cursor-pointer' : ''
-                            }`}
+                            class="cursor-pointer transition-colors hover:bg-secondary-50/50 dark:hover:bg-secondary-800/20"
                             onClick={toggle}
                           >
                             <td class="p-3" onClick={(e) => e.stopPropagation()}>
@@ -948,8 +1043,7 @@ export default function Khs() {
                                 type="checkbox"
                                 checked={isChecked()}
                                 onChange={toggle}
-                                disabled={!canCheck()}
-                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 dark:border-secondary-700"
+                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
                               />
                             </td>
                             <td class="p-3 whitespace-nowrap">{row.nim}</td>
@@ -1003,7 +1097,7 @@ export default function Khs() {
           >
             <div class="flex flex-col gap-4">
               <p class="text-base text-secondary-600 dark:text-secondary-300">
-                Akan menandatangani <b>{signSelectedIds().length} KHS</b> pada periode <b>{periodeNama()}</b>.
+                Akan menandatangani <b>{unsignedSelectedIds().length} KHS</b> pada periode <b>{periodeNama()}</b>.
               </p>
               <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-caption text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
                 ⚠ Tanda tangan = persetujuan otoritatif Kaprodi. Bila nilai KHS berubah setelah ditandatangani, tanda
@@ -1014,7 +1108,49 @@ export default function Khs() {
                   Batal
                 </Button>
                 <Button variant="primary" onClick={handleBulkSign} disabled={signBusy()}>
-                  {signBusy() ? 'Menandatangani...' : `Tandatangani ${signSelectedIds().length} KHS`}
+                  {signBusy() ? 'Menandatangani...' : `Tandatangani ${unsignedSelectedIds().length} KHS`}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+
+          {/* Modal konfirmasi pencabutan tanda tangan massal */}
+          <Modal
+            isOpen={showRevokeConfirm()}
+            onClose={() => setShowRevokeConfirm(false)}
+            title="Konfirmasi Pencabutan Tanda Tangan"
+            maxWidth="md"
+          >
+            <div class="flex flex-col gap-4">
+              <p class="text-base text-secondary-600 dark:text-secondary-300">
+                Akan mencabut <b>{signedSelected().length} tanda tangan</b> pada periode <b>{periodeNama()}</b>.
+              </p>
+              <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-caption text-rose-800 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
+                ⚠ QR cetakan yang tanda tangannya dicabut akan menjadi <b>REVOKED</b> — halaman verifikasi publik
+                menampilkan dokumen tidak lagi berlaku. Pencabutan tidak menghapus nilai KHS.
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label class="text-caption font-semibold text-secondary-500 dark:text-secondary-300">
+                  Alasan Pencabutan (min. 3 karakter)
+                </label>
+                <textarea
+                  value={signRevokeReason()}
+                  onInput={(e) => setSignRevokeReason(e.currentTarget.value)}
+                  rows={3}
+                  placeholder="mis. Koreksi nilai salah input / persetujuan ditarik pimpinan"
+                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                />
+              </div>
+              <div class="flex justify-end gap-2">
+                <Button variant="secondary" onClick={() => setShowRevokeConfirm(false)}>
+                  Batal
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={handleBulkRevoke}
+                  disabled={revokeBusy() || signRevokeReason().trim().length < 3}
+                >
+                  {revokeBusy() ? 'Mencabut...' : `Cabut ${signedSelected().length} Tanda Tangan`}
                 </Button>
               </div>
             </div>
