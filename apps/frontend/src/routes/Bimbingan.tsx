@@ -1295,7 +1295,7 @@ export default function Bimbingan() {
                     <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100vh-2rem)] overflow-hidden dark:bg-secondary-900">
                       <div class="shrink-0 px-6 pt-5 pb-3 border-b border-secondary-100 dark:border-secondary-800">
                         <h3 class="font-bold text-secondary-800 text-base dark:text-white">
-                          {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'}
+                          {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'} {selectedMhsNama()}
                         </h3>
                       </div>
 

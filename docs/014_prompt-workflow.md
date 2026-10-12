@@ -4,7 +4,7 @@ Context: Refer to @CODEBASE_CONTEXT.MD and existing codebase structure.
 
 Task: Create a detailed step-by-step implementation plan for the following task:
 
-- pada halaman /laporan/bkd, lewati BAP dan presensi yang kosong tidak perlu dimasukkan dalam laporan BAP dan Presensi yang dicetak.
+- pada halaman /ketidakhadiran-kompensasi, apabila status diupdate menjadi UNKNOWN. maka status verifikasinya kembali menjadi Belum Diverifikasi
 
 Requirements:
 
@@ -51,7 +51,7 @@ gh pr create --title "feat: implementasi [Nama Fitur]" --body "PR otomatis dibua
 
 Role: You are acting as the Senior Code Reviewer & QA Lead under @AGENTS.MD.
 
-Task: Perform a thorough code review on the changes made in PR 461
+Task: Perform a thorough code review on the changes made in PR 476
 
 Steps:
 
@@ -73,7 +73,7 @@ If everything passes, write a summary review and approve the PR for merging.
 
 Role: You are acting as the Senior Code Reviewer & QA Lead under @AGENTS.MD.
 
-Task: Perform a thorough code review on the changes made in PR 463
+Task: Perform a thorough code review on the changes made in PR 477
 
 Steps:
 
