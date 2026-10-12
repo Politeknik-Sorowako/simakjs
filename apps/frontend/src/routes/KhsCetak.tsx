@@ -1,6 +1,8 @@
 import { useParams } from '@solidjs/router';
 import QRCode from 'qrcode';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import { documentSignatureController, type SignKhsResult } from '../controllers/documentSignatureController';
 import { type KhsResponse, khsController } from '../controllers/khsController';
@@ -16,9 +18,9 @@ interface PrintData {
 }
 
 /**
- * Endpoint `getByRef` hanya mengembalikan metadata tanda tangan (tanpa QR),
- * sedangkan `signKhs` menyertakan `qrDataUrl`. Regenerasi QR di klien dari
- * `verifyUrl` agar cetakan berikutnya tetap menampilkan QR verifikasi.
+ * Endpoint `getByRef` hanya mengembalikan metadata tanda tangan (tanpa QR);
+ * regenerasi QR dilakukan di klien dari `verifyUrl` agar cetakan berikutnya
+ * tetap menampilkan QR verifikasi.
  */
 async function ensureQrDataUrl(sig: SignKhsResult): Promise<SignKhsResult> {
   if (sig.qrDataUrl || !sig.verifyUrl) return sig;
@@ -58,12 +60,14 @@ export default function KhsCetak() {
     },
   );
 
-  // Tanda tangan = persetujuan Kaprodi: Kaprodi (atau Admin/super_admin sesuai
-  // kebijakan akses massal) boleh menerbitkan QR baru; pemirsa lain hanya
-  // membaca baris yang sudah ada.
+  // Tanda tangan = persetujuan Kaprodi/Admin: halaman cetak HANYA MEMBACA baris
+  // tanda tangan yang sudah ada — TIDAK PERNAH menerbitkan sendiri saat dibuka.
+  // Penerbitan hanya melalui tombol "Setujui & Tandatangani" + konfirmasi modal
+  // di halaman ini (atau lewat tab TTD Massal di /khs). Backend tetap menegakkan
+  // role + scope prodi.
   const canSign = () => auth.hasRole(['kaprodi', 'admin', 'super_admin']);
 
-  const [signature] = createResource(
+  const [signature, { mutate: mutateSignature }] = createResource(
     () => {
       const mhsId = Number(params.mhsId);
       const periodeId = params.periodeId || '';
@@ -72,18 +76,37 @@ export default function KhsCetak() {
     },
     async (target): Promise<SignKhsResult | null> => {
       if (!target) return null;
-      // Baca dulu tanda tangan yang sudah ada (idempoten; tanpa menerbitkan baru).
+      // Hanya membaca tanda tangan yang sudah ada; tanpa menerbitkan baru.
       const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId).catch(() => null);
-      if (existing) return ensureQrDataUrl(existing);
-      // Penerbitan baru hanya oleh Kaprodi/Admin — selain itu cetak tanpa QR
-      // (banner info di bawah memberi tahu pemirsa bahwa dokumen belum ditandatangani).
-      if (!canSign()) return null;
-      return await documentSignatureController.signKhs(target.mhsId, target.periodeId);
+      return existing ? ensureQrDataUrl(existing) : null;
     },
   );
 
+  const [showSignConfirm, setShowSignConfirm] = createSignal(false);
+  const [signBusy, setSignBusy] = createSignal(false);
+  const [signActionError, setSignActionError] = createSignal<string | null>(null);
+
+  const handleApprove = async () => {
+    const mhsId = Number(params.mhsId);
+    const periodeId = params.periodeId || '';
+    if (!mhsId || !periodeId) return;
+    setShowSignConfirm(false);
+    setSignActionError(null);
+    setSignBusy(true);
+    try {
+      const signed = await documentSignatureController.signKhs(mhsId, periodeId);
+      mutateSignature(await ensureQrDataUrl(signed));
+    } catch (e: unknown) {
+      setSignActionError(e instanceof Error ? e.message : 'Gagal menandatangani KHS.');
+    } finally {
+      setSignBusy(false);
+    }
+  };
+
   createEffect(() => {
-    if (printData() && !hasPrinted()) {
+    // Cetak setelah status tanda tangan selesai dimuat (bacaan `.loading` tidak
+    // memicu Suspense) — cegah cetakan tanpa QR padahal dokumen sudah signed.
+    if (printData() && !signature.loading && !hasPrinted()) {
       setHasPrinted(true);
       setTimeout(() => window.print(), 300);
     }
@@ -101,6 +124,15 @@ export default function KhsCetak() {
 
   return (
     <div class="min-h-screen bg-white p-8 text-secondary-800">
+      <Show when={signActionError()}>
+        <div
+          role="alert"
+          class="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 print:hidden"
+        >
+          <p class="font-semibold">Penandatanganan gagal</p>
+          <p class="mt-1 text-red-600">{signActionError()} — Dokumen tetap TANPA QR verifikasi.</p>
+        </div>
+      </Show>
       <Show when={signature.error}>
         <div
           role="alert"
@@ -123,11 +155,26 @@ export default function KhsCetak() {
           role="status"
           class="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 print:hidden"
         >
-          <p class="font-semibold">Dokumen belum ditandatangani Kaprodi</p>
+          <p class="font-semibold">Dokumen belum ditandatangani Kaprodi/Admin</p>
           <p class="mt-1 text-amber-700">
-            Tanda tangan digital (QR verifikasi) hanya diterbitkan setelah Kaprodi program studi terkait menyetujui
-            dengan membuka halaman ini. Dokumen dapat dicetak tanpa QR verifikasi.
+            Tanda tangan digital (QR verifikasi) hanya diterbitkan setelah persetujuan Kaprodi/Admin di halaman ini
+            (tombol di bawah) atau melalui tab TTD Massal. Dokumen dapat dicetak tanpa QR verifikasi.
           </p>
+          <Show when={canSign()}>
+            <div class="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setSignActionError(null);
+                  setShowSignConfirm(true);
+                }}
+                disabled={signBusy()}
+                class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-50"
+              >
+                Setujui & Tandatangani
+              </button>
+            </div>
+          </Show>
         </div>
       </Show>
       <div class="mb-4 flex justify-end print:hidden">
@@ -305,6 +352,33 @@ export default function KhsCetak() {
           )}
         </Show>
       </Show>
+
+      {/* Modal konfirmasi — satu-satunya jalur penerbitan tanda tangan di halaman cetak */}
+      <Modal
+        isOpen={showSignConfirm()}
+        onClose={() => setShowSignConfirm(false)}
+        title="Konfirmasi Persetujuan Tanda Tangan"
+        maxWidth="md"
+      >
+        <div class="flex flex-col gap-4">
+          <p class="text-base text-secondary-600 dark:text-secondary-300">
+            Akan menyetujui dan menandatangani KHS <b>{printData()?.nama || '-'}</b>
+            {printData()?.nim ? ` (NIM ${printData()?.nim})` : ''} pada periode <b>{periodeName()}</b>.
+          </p>
+          <div class="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-caption text-amber-800 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+            ⚠ Tanda tangan = persetujuan otoritatif Kaprodi/Admin. Bila nilai KHS berubah setelah ditandatangani, tanda
+            tangan lama dicabut (QR cetakan lama menjadi REVOKED) dan diganti tanda tangan baru.
+          </div>
+          <div class="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowSignConfirm(false)}>
+              Batal
+            </Button>
+            <Button variant="primary" onClick={handleApprove} disabled={signBusy()}>
+              {signBusy() ? 'Menandatangani...' : 'Setujui & Tandatangani'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
