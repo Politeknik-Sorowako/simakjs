@@ -8,6 +8,7 @@ import { apelController, UnknownPresensiItem } from '../controllers/apelControll
 import { presensiController } from '../controllers/presensiController';
 import { PaginatedResponse, prodiController } from '../controllers/prodiController';
 import { fmtTanggal, fmtWaktu } from '../utils/format';
+import { hitungBatasDurasi } from '../utils/verifikasiKuota';
 
 function TableLoadingFallback() {
   return (
@@ -88,7 +89,18 @@ export default function ApelVerifikasi() {
 
   const sisaKuota = createMemo(() => dailyRekap()?.sisaKuota ?? 0);
   const totalTerverifikasi = createMemo(() => dailyRekap()?.totalTerverifikasi ?? 0);
-  const maksDurasi = createMemo(() => Math.max(sisaKuota(), selectedAbsence()?.durasiMenit ?? 0));
+  const maksDurasi = createMemo(() => {
+    const rekap = dailyRekap();
+    const row = selectedAbsence();
+    if (!rekap || !row) return 0;
+    return hitungBatasDurasi({
+      maksHarian: rekap.maksHarian,
+      rows: rekap.rows,
+      rowId: row.id,
+      isVerified: row.isVerified,
+      durasiTersimpan: row.durasiMenit ?? 0,
+    });
+  });
 
   createEffect(() => {
     const row = selectedAbsence();
@@ -149,10 +161,11 @@ export default function ApelVerifikasi() {
         return;
       }
       const row = selectedAbsence();
-      const isKoreksiTurun = dur <= (row?.durasiMenit ?? 0);
-      if (!isKoreksiTurun && dur > sisaKuota()) {
+      const isKoreksiTurun = (row?.isVerified ?? false) && dur <= (row?.durasiMenit ?? 0);
+      const maxAllowed = maksDurasi();
+      if (!isKoreksiTurun && dur > maxAllowed) {
         toast.showToast(
-          `Durasi ${dur} menit melebihi sisa kuota ${sisaKuota()} menit pada tanggal ${modal.tanggal}`,
+          `Durasi ${dur} menit melebihi sisa kuota ${maxAllowed} menit pada tanggal ${modal.tanggal}`,
           'error',
         );
         return;
