@@ -671,6 +671,26 @@ describe('Document Signature (TTE Fase 1)', () => {
       expect(body.status).toBe('REVOKED');
     });
 
+    it('revoke tunggal: reason spasi saja ditolak 400 & >500 karakter ditolak 422, tanda tangan tetap aktif', async () => {
+      const { mhsId, periodeId, prodi } = await seedKhs();
+      const token = await createKaprodiToken('kaprodi-rev-ws@test.com', prodi.id);
+      const uuid = await signAndGetUuid(mhsId, periodeId, token);
+
+      // 3 spasi lolos `minLength: 3`; trim di controller harus menolaknya.
+      const whitespace = await app.handle(revokeRequest(uuid, token, '   '));
+      expect(whitespace.status).toBe(400);
+
+      // Paritas jalur massal: schema membatasi panjang alasan (maxLength 500).
+      const tooLong = await app.handle(revokeRequest(uuid, token, 'a'.repeat(501)));
+      expect(tooLong.status).toBe(422);
+
+      // Tidak ada pencabutan yang terjadi & tidak ada alasan kosong tersimpan.
+      const verify = await app.handle(verifyRequest(uuid));
+      expect(verify.status).toBe(200);
+      const body = (await verify.json()) as { status: string };
+      expect(body.status).toBe('VALID');
+    });
+
     it('kaprodi out-of-scope ditolak 403 & tanda tangan tetap aktif', async () => {
       const { mhsId, periodeId, prodi } = await seedKhs();
       const kaprodiToken = await createKaprodiToken('kaprodi-rev-ok@test.com', prodi.id);
