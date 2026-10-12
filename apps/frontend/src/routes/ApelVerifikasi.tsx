@@ -160,12 +160,13 @@ export default function ApelVerifikasi() {
         toast.showToast('Durasi ketidakhadiran wajib lebih dari 0 menit', 'error');
         return;
       }
-      const row = selectedAbsence();
-      const isKoreksiTurun = (row?.isVerified ?? false) && dur <= (row?.durasiMenit ?? 0);
+      // Guard hanya aktif setelah rekap siap; tanpa itu maksDurasi() = 0 dan
+      // verifikasi valid terkunci selama loading/gagal muat.
+      const rekapReady = dailyRekap.state === 'ready';
       const maxAllowed = maksDurasi();
-      if (!isKoreksiTurun && dur > maxAllowed) {
+      if (rekapReady && dur > maxAllowed) {
         toast.showToast(
-          `Durasi ${dur} menit melebihi sisa kuota ${maxAllowed} menit pada tanggal ${modal.tanggal}`,
+          `Durasi ${dur} menit melebihi batas durasi baris ini (${maxAllowed} menit) pada tanggal ${modal.tanggal}`,
           'error',
         );
         return;
