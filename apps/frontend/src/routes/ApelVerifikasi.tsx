@@ -8,6 +8,7 @@ import { apelController, UnknownPresensiItem } from '../controllers/apelControll
 import { presensiController } from '../controllers/presensiController';
 import { PaginatedResponse, prodiController } from '../controllers/prodiController';
 import { fmtTanggal, fmtWaktu } from '../utils/format';
+import { bolehNotice, hitungBatasDurasi, pesanBatasDurasi } from '../utils/verifikasiKuota';
 
 function TableLoadingFallback() {
   return (
@@ -88,12 +89,42 @@ export default function ApelVerifikasi() {
 
   const sisaKuota = createMemo(() => dailyRekap()?.sisaKuota ?? 0);
   const totalTerverifikasi = createMemo(() => dailyRekap()?.totalTerverifikasi ?? 0);
-  const maksDurasi = createMemo(() => Math.max(sisaKuota(), selectedAbsence()?.durasiMenit ?? 0));
+  const maksDurasi = createMemo(() => {
+    const rekap = dailyRekap();
+    const row = selectedAbsence();
+    if (!rekap || !row) return 0;
+    return hitungBatasDurasi({
+      maksHarian: rekap.maksHarian,
+      rows: rekap.rows,
+      rowId: row.id,
+      isVerified: row.isVerified,
+      durasiTersimpan: row.durasiMenit ?? 0,
+    });
+  });
 
   createEffect(() => {
     const row = selectedAbsence();
     if (!row) return;
     setVerifyDuration(row.durasiMenit ?? 0);
+  });
+
+  // Notice kelebihan kuota: teks inline persisten + toast info sekali (throttle)
+  // saat durasi input pertama kali melewati batas baris ini.
+  const isDurasiOver = () =>
+    dailyRekap.state === 'ready' && !isAnulir() && verifyStatus() !== 'hadir' && verifyDuration() > maksDurasi();
+
+  let wasOver = false;
+  const lastNoticeAt = { t: 0 };
+  createEffect(() => {
+    const over = isDurasiOver();
+    if (over && !wasOver) {
+      const now = Date.now();
+      if (bolehNotice(lastNoticeAt.t, now)) {
+        lastNoticeAt.t = now;
+        toast.showToast(pesanBatasDurasi(maksDurasi()), 'info');
+      }
+    }
+    wasOver = over;
   });
 
   const [data, { refetch }] = createResource(
@@ -148,11 +179,13 @@ export default function ApelVerifikasi() {
         toast.showToast('Durasi ketidakhadiran wajib lebih dari 0 menit', 'error');
         return;
       }
-      const row = selectedAbsence();
-      const isKoreksiTurun = dur <= (row?.durasiMenit ?? 0);
-      if (!isKoreksiTurun && dur > sisaKuota()) {
+      // Guard hanya aktif setelah rekap siap; tanpa itu maksDurasi() = 0 dan
+      // verifikasi valid terkunci selama loading/gagal muat.
+      const rekapReady = dailyRekap.state === 'ready';
+      const maxAllowed = maksDurasi();
+      if (rekapReady && dur > maxAllowed) {
         toast.showToast(
-          `Durasi ${dur} menit melebihi sisa kuota ${sisaKuota()} menit pada tanggal ${modal.tanggal}`,
+          `Durasi ${dur} menit melebihi batas durasi baris ini (${maxAllowed} menit) pada tanggal ${modal.tanggal}`,
           'error',
         );
         return;
@@ -486,6 +519,11 @@ export default function ApelVerifikasi() {
                       onInput={(e) => setVerifyDuration(Number(e.currentTarget.value) || 0)}
                       placeholder="0"
                     />
+                    <Show when={isDurasiOver()}>
+                      <p class="mt-1 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 px-3 py-2">
+                        Durasi melebihi batas baris ini ({maksDurasi()} menit) — sisa kuota harian sudah habis.
+                      </p>
+                    </Show>
                   </div>
                 </Show>
                 <Show when={isAnulir()}>

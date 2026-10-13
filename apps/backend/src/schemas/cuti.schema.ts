@@ -96,3 +96,47 @@ export const aktifKembaliSchema = {
     id: t.Numeric(),
   }),
 };
+
+const semesterPattern = '^\\d{4}[12]$';
+
+export const updateCutiSchema = {
+  detail: {
+    tags: ['Cuti'],
+    summary: 'Edit Data Cuti',
+    description: 'Admin/Prodi mengedit data cuti. Status tidak berubah melalui endpoint ini.',
+  },
+  params: t.Object({ id: t.Numeric() }),
+  body: t.Object({
+    periodeId: t.Optional(t.String({ pattern: semesterPattern })),
+    alasan: t.Optional(t.String({ minLength: 1 })),
+    semesterMulaiCuti: t.Optional(t.Union([t.String({ pattern: semesterPattern }), t.Null()])),
+    semesterBerakhirCuti: t.Optional(t.Union([t.String({ pattern: semesterPattern }), t.Null()])),
+    noSuratIzin: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
+    tanggalSuratIzin: t.Optional(t.Union([t.String(), t.Null()])),
+    catatan: t.Optional(t.Union([t.String(), t.Null()])),
+  }),
+};
+
+export const listLampiranCutiSchema = {
+  detail: { tags: ['Cuti'], summary: 'Daftar Lampiran Cuti' },
+  params: t.Object({ id: t.Numeric() }),
+};
+
+export const uploadLampiranCutiSchema = {
+  detail: {
+    tags: ['Cuti'],
+    summary: 'Unggah Lampiran Cuti',
+    description: 'Unggah Surat SK (jenis=sk, menggantikan yang lama) atau berkas pendukung. Opsional.',
+  },
+  params: t.Object({ id: t.Numeric() }),
+  body: t.Object({
+    file: t.File(),
+    jenis: t.Union([t.Literal('sk'), t.Literal('pendukung')]),
+    keterangan: t.Optional(t.String({ maxLength: 255 })),
+  }),
+};
+
+export const lampiranCutiParamsSchema = {
+  detail: { tags: ['Cuti'], summary: 'Unduh / Hapus Lampiran Cuti' },
+  params: t.Object({ id: t.Numeric(), lampiranId: t.Numeric() }),
+};

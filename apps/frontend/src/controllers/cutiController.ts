@@ -2,6 +2,16 @@ import { fetchApi } from '../utils/api';
 import { Mahasiswa } from './mahasiswaController';
 import { PaginatedResponse } from './prodiController';
 
+export interface LampiranStatus {
+  id: number;
+  jenis: 'sk' | 'pendukung';
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  keterangan?: string | null;
+  createdAt: string;
+}
+
 export interface CutiRequest {
   id: number;
   mahasiswaId: number;
@@ -15,6 +25,7 @@ export interface CutiRequest {
   tanggalSuratIzin?: string | null;
   mahasiswa?: Mahasiswa;
   periodeAkademik?: { id: string; nama: string };
+  lampiran?: LampiranStatus[];
   createdAt: string;
 }
 
@@ -62,6 +73,65 @@ export const cutiController = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  async update(
+    id: number,
+    data: {
+      periodeId?: string;
+      alasan?: string;
+      semesterMulaiCuti?: string | null;
+      semesterBerakhirCuti?: string | null;
+      noSuratIzin?: string | null;
+      tanggalSuratIzin?: string | null;
+      catatan?: string | null;
+    },
+  ): Promise<CutiRequest> {
+    return fetchApi<CutiRequest>(`/cuti/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async listLampiran(id: number): Promise<LampiranStatus[]> {
+    return fetchApi<LampiranStatus[]>(`/cuti/${id}/lampiran`);
+  },
+
+  async uploadLampiran(
+    id: number,
+    file: File,
+    jenis: 'sk' | 'pendukung',
+    keterangan?: string,
+  ): Promise<LampiranStatus> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('jenis', jenis);
+    if (keterangan) formData.append('keterangan', keterangan);
+    return fetchApi<LampiranStatus>(`/cuti/${id}/lampiran`, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  async deleteLampiran(id: number, lampiranId: number): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>(`/cuti/${id}/lampiran/${lampiranId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async openLampiran(id: number, lampiranId: number): Promise<void> {
+    const { API_URL } = await import('../utils/api');
+    const res = await fetch(`${API_URL}/cuti/${id}/lampiran/${lampiranId}/file`, {
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      throw new Error('Gagal mengunduh atau membuka lampiran');
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    // Lepaskan object URL setelah tab baru sempat memuat berkas.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 
   async approve(

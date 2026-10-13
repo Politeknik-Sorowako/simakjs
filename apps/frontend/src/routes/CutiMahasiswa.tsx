@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
+import { LampiranManager } from '../components/lampiran/LampiranManager';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
@@ -6,7 +7,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
-import { cutiController } from '../controllers/cutiController';
+import { cutiController, LampiranStatus } from '../controllers/cutiController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
 
@@ -84,6 +85,21 @@ export default function CutiMahasiswa() {
       setErrorMsg((e as Error).message || 'Gagal mengajukan cuti.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const [showLampiranModal, setShowLampiranModal] = createSignal(false);
+  const [lampiranCutiId, setLampiranCutiId] = createSignal<number | null>(null);
+  const [lampiranItems, setLampiranItems] = createSignal<LampiranStatus[]>([]);
+
+  const openLampiranModal = async (cutiId: number) => {
+    setLampiranCutiId(cutiId);
+    setShowLampiranModal(true);
+    try {
+      const items = await cutiController.listLampiran(cutiId);
+      setLampiranItems(items);
+    } catch {
+      setLampiranItems([]);
     }
   };
 
@@ -203,6 +219,15 @@ export default function CutiMahasiswa() {
                       <div>No: {item.noSuratIzin}</div>
                       <div class="text-xs text-secondary-400 dark:text-secondary-200">Tgl: {item.tanggalSuratIzin}</div>
                     </Show>
+                    <Show when={(item.lampiran?.length ?? 0) > 0}>
+                      <button
+                        type="button"
+                        onClick={() => openLampiranModal(item.id)}
+                        class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                      >
+                        <span>📎 {item.lampiran?.length} Berkas</span>
+                      </button>
+                    </Show>
                   </td>
                   <td class="px-6 py-4 text-sm text-secondary-500 italic dark:text-secondary-200">
                     {item.catatan || <span class="text-secondary-300 dark:border-secondary-700">-</span>}
@@ -234,6 +259,32 @@ export default function CutiMahasiswa() {
           />
         </Show>
       </div>
+
+      {/* ===================== MODAL LAMPIRAN MAHASISWA ===================== */}
+      <Modal
+        show={showLampiranModal()}
+        onClose={() => setShowLampiranModal(false)}
+        title="Berkas Lampiran Pengajuan Cuti"
+      >
+        <div class="flex flex-col gap-4">
+          <LampiranManager
+            items={lampiranItems()}
+            readonly={true}
+            onOpen={(lampiranId) => {
+              if (lampiranCutiId()) {
+                cutiController.openLampiran(lampiranCutiId()!, lampiranId).catch(() => {
+                  toast.showToast('Gagal membuka lampiran.', 'error');
+                });
+              }
+            }}
+          />
+          <div class="flex justify-end mt-2">
+            <Button variant="secondary" onClick={() => setShowLampiranModal(false)} type="button">
+              Tutup
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal show={showModal()} onClose={() => setShowModal(false)} title="Ajukan Cuti Akademik">
         <form onSubmit={handleSave} class="flex flex-col gap-4">

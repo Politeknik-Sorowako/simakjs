@@ -705,6 +705,23 @@ describe('Ketidakhadiran Terpusat & Verifikasi Unknown', () => {
     expect(upBody.error).toContain('sisa kuota');
   });
 
+  it('baris UNKNOWN unverified tidak bisa memakai jalur koreksi-turun untuk menembus cap', async () => {
+    // Hari sudah penuh: 300 + 180 = 480 terverifikasi.
+    const a = await seedBapPresensi('2026-09-21', 'unknown', 0);
+    const b = await seedBapPresensi('2026-09-21', 'unknown', 0);
+    expect((await verifyPresensi('BAP', a.presensiId, 'ALPA', 300)).status).toBe(200);
+    expect((await verifyPresensi('BAP', b.presensiId, 'ALPA', 180)).status).toBe(200);
+
+    // Baris UNKNOWN ketiga membawa durasi sumber asli 480 (belum terverifikasi,
+    // tidak menghabiskan kuota). Input 60 <= 480 tidak boleh lolos sebagai
+    // "koreksi turun" — kuota sudah habis sehingga wajib ditolak.
+    const c = await seedBapPresensi('2026-09-21', 'unknown', MAKS_HARIAN);
+    const res = await verifyPresensi('BAP', c.presensiId, 'ALPA', 60);
+    expect(res.status).toBe(400);
+    const resBody = await res.json();
+    expect(resBody.error).toContain('sisa kuota');
+  });
+
   it('konfirmasi HADIR dan anulir (durasi 0) tetap berhasil saat kuota penuh', async () => {
     const a = await seedBapPresensi('2026-09-14', 'unknown', 0);
     expect((await verifyPresensi('BAP', a.presensiId, 'ALPA', MAKS_HARIAN)).status).toBe(200);
