@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import { LampiranManager, PendingLampiranFiles } from '../components/lampiran/LampiranManager';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -8,8 +9,9 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { useToast } from '../contexts/ToastContext';
+import { LampiranStatus } from '../controllers/cutiController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
-import { mahasiswaKeluarController } from '../controllers/mahasiswaKeluarController';
+import { MahasiswaKeluarRecord, mahasiswaKeluarController } from '../controllers/mahasiswaKeluarController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
 import { getTodayString } from '../utils/format';
@@ -107,6 +109,7 @@ export default function MahasiswaKeluarPage() {
 
   // Form State
   const [showModal, setShowModal] = createSignal(false);
+  const [editingId, setEditingId] = createSignal<number | null>(null);
   const [selectedMhs, setSelectedMhs] = createSignal<Mahasiswa | null>(null);
   const [periodeId, setPeriodeId] = createSignal('');
   const [statusBaru, setStatusBaru] = createSignal('keluar');
@@ -116,10 +119,31 @@ export default function MahasiswaKeluarPage() {
   const [tanggalSk, setTanggalSk] = createSignal('');
   const [ipk, setIpk] = createSignal('');
   const [nomorIjazah, setNomorIjazah] = createSignal('');
+  const [modalLampiran, setModalLampiran] = createSignal<LampiranStatus[]>([]);
+  const [pendingFiles, setPendingFiles] = createSignal<PendingLampiranFiles>({ sk: null, pendukung: [] });
   const [errorMsg, setErrorMsg] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
 
+  // View Lampiran Modal
+  const [showViewLampiranModal, setShowViewLampiranModal] = createSignal(false);
+  const [viewLampiranTitle, setViewLampiranTitle] = createSignal('');
+  const [viewLampiranId, setViewLampiranId] = createSignal<number | null>(null);
+  const [viewLampiranItems, setViewLampiranItems] = createSignal<LampiranStatus[]>([]);
+
+  const openViewLampiranModal = async (id: number, title: string) => {
+    setViewLampiranId(id);
+    setViewLampiranTitle(title);
+    setShowViewLampiranModal(true);
+    try {
+      const items = await mahasiswaKeluarController.listLampiran(id);
+      setViewLampiranItems(items);
+    } catch {
+      setViewLampiranItems([]);
+    }
+  };
+
   const openFormModal = async () => {
+    setEditingId(null);
     setSelectedMhs(null);
     const active = periodes()?.data?.find((p) => p.aktif);
     setPeriodeId(active?.id || periodes()?.data?.[0]?.id || '');
@@ -130,6 +154,8 @@ export default function MahasiswaKeluarPage() {
     setTanggalSk('');
     setIpk('');
     setNomorIjazah('');
+    setModalLampiran([]);
+    setPendingFiles({ sk: null, pendukung: [] });
     setErrorMsg('');
     try {
       const result = await mahasiswaController.getAll('', 1, 500);
@@ -138,6 +164,28 @@ export default function MahasiswaKeluarPage() {
       setMhsList([]);
     }
     setShowModal(true);
+  };
+
+  const openEditModal = async (record: MahasiswaKeluarRecord) => {
+    setEditingId(record.id);
+    setSelectedMhs(record.mahasiswa || null);
+    setPeriodeId(record.periodeId);
+    setStatusBaru(record.statusBaru);
+    setTanggalKeluar(record.tanggalKeluar);
+    setAlasanKeluar(record.alasanKeluar || '');
+    setNoSk(record.noSk || '');
+    setTanggalSk(record.tanggalSk || '');
+    setIpk(record.ipk || '');
+    setNomorIjazah(record.nomorIjazah || '');
+    setPendingFiles({ sk: null, pendukung: [] });
+    setErrorMsg('');
+    setShowModal(true);
+    try {
+      const items = await mahasiswaKeluarController.listLampiran(record.id);
+      setModalLampiran(items);
+    } catch {
+      setModalLampiran([]);
+    }
   };
 
   const handleSave = async (e: Event) => {
@@ -159,22 +207,56 @@ export default function MahasiswaKeluarPage() {
     setSubmitting(true);
     setErrorMsg('');
     try {
-      await mahasiswaKeluarController.create({
-        mahasiswaId: mhs.id,
-        periodeId: periodeId(),
-        statusBaru: statusBaru(),
-        tanggalKeluar: tanggalKeluar(),
-        alasanKeluar: alasanKeluar() || undefined,
-        noSk: noSk() || undefined,
-        tanggalSk: tanggalSk() || undefined,
-        ipk: ipk() ? Number(ipk()) : undefined,
-        nomorIjazah: nomorIjazah() || undefined,
-      });
-      toast.showToast('Status mahasiswa berhasil diubah ke non-aktif.', 'success');
+      const editId = editingId();
+      if (editId) {
+        await mahasiswaKeluarController.update(editId, {
+          periodeId: periodeId(),
+          statusBaru: statusBaru(),
+          tanggalKeluar: tanggalKeluar(),
+          alasanKeluar: alasanKeluar() || null,
+          noSk: noSk() || null,
+          tanggalSk: tanggalSk() || null,
+          ipk: ipk() ? Number(ipk()) : null,
+          nomorIjazah: nomorIjazah() || null,
+        });
+        toast.showToast('Data status mahasiswa berhasil diperbarui.', 'success');
+      } else {
+        const created = await mahasiswaKeluarController.create({
+          mahasiswaId: mhs.id,
+          periodeId: periodeId(),
+          statusBaru: statusBaru(),
+          tanggalKeluar: tanggalKeluar(),
+          alasanKeluar: alasanKeluar() || undefined,
+          noSk: noSk() || undefined,
+          tanggalSk: tanggalSk() || undefined,
+          ipk: ipk() ? Number(ipk()) : undefined,
+          nomorIjazah: nomorIjazah() || undefined,
+        });
+
+        // Upload any pending files that were selected during create
+        const pending = pendingFiles();
+        if (pending.sk) {
+          try {
+            await mahasiswaKeluarController.uploadLampiran(created.id, pending.sk, 'sk');
+          } catch {
+            toast.showToast('Gagal mengunggah surat SK, Anda dapat mengunggahnya via tombol Edit.', 'error');
+          }
+        }
+        for (const file of pending.pendukung) {
+          try {
+            await mahasiswaKeluarController.uploadLampiran(created.id, file, 'pendukung');
+          } catch {
+            toast.showToast(`Gagal mengunggah berkas ${file.name}.`, 'error');
+          }
+        }
+
+        toast.showToast('Status mahasiswa berhasil diubah ke non-aktif.', 'success');
+      }
+
       setShowModal(false);
       refetchRecords();
     } catch (e: unknown) {
-      setErrorMsg((e as Error).message || 'Gagal mengubah status mahasiswa.');
+      setErrorMsg((e as Error).message || 'Gagal menyimpan data mahasiswa.');
     } finally {
       setSubmitting(false);
     }
@@ -313,6 +395,15 @@ export default function MahasiswaKeluarPage() {
                       <div>No SK: {item.noSk}</div>
                       <div class="text-xs text-secondary-400 dark:text-secondary-200">Tgl SK: {item.tanggalSk}</div>
                     </Show>
+                    <Show when={(item.lampiran?.length ?? 0) > 0}>
+                      <button
+                        type="button"
+                        onClick={() => openViewLampiranModal(item.id, `Lampiran - ${item.mahasiswa?.nama}`)}
+                        class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                      >
+                        <span>📎 {item.lampiran?.length} Berkas</span>
+                      </button>
+                    </Show>
                   </td>
                   <td class="px-6 py-4 text-sm text-secondary-500 dark:text-secondary-200">
                     <div>IPK: {item.ipk || 'N/A'}</div>
@@ -321,9 +412,14 @@ export default function MahasiswaKeluarPage() {
                     </Show>
                   </td>
                   <td class="px-6 py-4">
-                    <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>
-                      Batal Keluar
-                    </Button>
+                    <div class="flex items-center gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => openEditModal(item)}>
+                        Edit
+                      </Button>
+                      <Button variant="danger" size="sm" onClick={() => handleDelete(item.id)}>
+                        Batal Keluar
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -340,7 +436,11 @@ export default function MahasiswaKeluarPage() {
         </Suspense>
       </div>
 
-      <Modal show={showModal()} onClose={() => setShowModal(false)} title="Pencatatan Mahasiswa Keluar/Non-Aktif">
+      <Modal
+        show={showModal()}
+        onClose={() => setShowModal(false)}
+        title={editingId() ? 'Edit Pencatatan Mahasiswa Keluar/Non-Aktif' : 'Pencatatan Mahasiswa Keluar/Non-Aktif'}
+      >
         <form onSubmit={handleSave} class="flex flex-col gap-4">
           <Show when={errorMsg()}>
             <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100 dark:bg-red-900/30 dark:text-red-400">
@@ -349,7 +449,7 @@ export default function MahasiswaKeluarPage() {
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Cari Mahasiswa Aktif</label>
+            <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Mahasiswa</label>
             <Show
               when={!selectedMhs()}
               fallback={
@@ -360,9 +460,11 @@ export default function MahasiswaKeluarPage() {
                       NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
                     </div>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>
-                    Ganti
-                  </Button>
+                  <Show when={!editingId()}>
+                    <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)} type="button">
+                      Ganti
+                    </Button>
+                  </Show>
                 </div>
               }
             >
@@ -460,6 +562,43 @@ export default function MahasiswaKeluarPage() {
             />
           </div>
 
+          {/* Lampiran Manager */}
+          <div class="border-t border-secondary-200/80 dark:border-secondary-800 pt-3">
+            <div class="text-xs font-semibold uppercase tracking-wider text-secondary-400 mb-2">Berkas Lampiran</div>
+            <LampiranManager
+              items={modalLampiran()}
+              pendingFiles={pendingFiles()}
+              onPendingChange={setPendingFiles}
+              onUpload={
+                editingId()
+                  ? async (file, jenis) => {
+                      const uploaded = await mahasiswaKeluarController.uploadLampiran(editingId()!, file, jenis);
+                      if (jenis === 'sk') {
+                        setModalLampiran((prev) => [uploaded, ...prev.filter((item) => item.jenis !== 'sk')]);
+                      } else {
+                        setModalLampiran((prev) => [uploaded, ...prev]);
+                      }
+                      refetchRecords();
+                    }
+                  : undefined
+              }
+              onDelete={
+                editingId()
+                  ? async (lampiranId) => {
+                      await mahasiswaKeluarController.deleteLampiran(editingId()!, lampiranId);
+                      setModalLampiran((prev) => prev.filter((item) => item.id !== lampiranId));
+                      refetchRecords();
+                    }
+                  : undefined
+              }
+              onOpen={(lampiranId) => {
+                if (editingId()) {
+                  mahasiswaKeluarController.openLampiran(editingId()!, lampiranId);
+                }
+              }}
+            />
+          </div>
+
           <div class="flex justify-end gap-2 mt-4">
             <Button variant="secondary" onClick={() => setShowModal(false)} type="button">
               Batal
@@ -469,6 +608,32 @@ export default function MahasiswaKeluarPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* ===================== MODAL PREVIEW/VIEW LAMPIRAN ===================== */}
+      <Modal show={showViewLampiranModal()} onClose={() => setShowViewLampiranModal(false)} title={viewLampiranTitle()}>
+        <div class="flex flex-col gap-4">
+          <LampiranManager
+            items={viewLampiranItems()}
+            onDelete={async (lampiranId) => {
+              if (viewLampiranId()) {
+                await mahasiswaKeluarController.deleteLampiran(viewLampiranId()!, lampiranId);
+                setViewLampiranItems((prev) => prev.filter((i) => i.id !== lampiranId));
+                refetchRecords();
+              }
+            }}
+            onOpen={(lampiranId) => {
+              if (viewLampiranId()) {
+                mahasiswaKeluarController.openLampiran(viewLampiranId()!, lampiranId);
+              }
+            }}
+          />
+          <div class="flex justify-end mt-2">
+            <Button variant="secondary" onClick={() => setShowViewLampiranModal(false)} type="button">
+              Tutup
+            </Button>
+          </div>
+        </div>
       </Modal>
     </MainLayout>
   );
