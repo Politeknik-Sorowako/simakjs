@@ -1279,16 +1279,19 @@ export default function Pelanggaran() {
                                   variant="secondary"
                                   class="py-1 px-2 text-fine"
                                   title="Cetak Dokumen SP di jendela baru"
+                                  aria-label="Cetak SP"
                                 >
-                                  Cetak SP
+                                  <span aria-hidden="true">🖨️</span> <span class="hidden sm:inline">Cetak SP</span>
                                 </Button>
                                 <Show when={auth.hasRole(['admin'])}>
                                   <Button
                                     onClick={() => openEditModal(item)}
                                     variant="secondary"
                                     class="py-1 px-2 text-fine"
+                                    title="Edit catatan pelanggaran"
+                                    aria-label="Edit"
                                   >
-                                    Edit
+                                    <span aria-hidden="true">✏️</span> <span class="hidden sm:inline">Edit</span>
                                   </Button>
                                 </Show>
                                 <Show when={canDelete()}>
@@ -1296,8 +1299,9 @@ export default function Pelanggaran() {
                                     onClick={() => setDeleteTarget(item)}
                                     class="py-1 px-2 text-fine font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all active:scale-95 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                                     title="Hapus catatan pelanggaran"
+                                    aria-label="Hapus"
                                   >
-                                    Hapus
+                                    <span aria-hidden="true">🗑️</span> <span class="hidden sm:inline">Hapus</span>
                                   </button>
                                 </Show>
                               </div>
@@ -1772,8 +1776,9 @@ export default function Pelanggaran() {
                                 variant="secondary"
                                 class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
                                 title="Lihat riwayat pelanggaran mahasiswa"
+                                aria-label="Riwayat"
                               >
-                                <span>👁️</span> Riwayat
+                                <span aria-hidden="true">👁️</span> <span class="hidden sm:inline">Riwayat</span>
                               </Button>
                             </td>
                           </tr>
