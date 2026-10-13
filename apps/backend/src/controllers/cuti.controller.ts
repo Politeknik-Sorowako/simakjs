@@ -5,7 +5,7 @@ import { LampiranStatusService } from '../services/lampiran-status.service';
 import { db } from '../utils/db';
 import { lampiranFilePath } from '../utils/lampiran-storage';
 import { hasRole } from '../utils/role';
-import { canViewLampiranMahasiswa } from '../utils/status-mahasiswa-access';
+import { canDownloadLampiranMahasiswa, canViewLampiranMahasiswa } from '../utils/status-mahasiswa-access';
 import { AuthContext } from '../utils/types';
 
 export class CutiController {
@@ -262,7 +262,7 @@ export class CutiController {
       set.status = 404;
       return { error: 'Data tidak ditemukan.' };
     }
-    if (!(await canViewLampiranMahasiswa(user, cuti.mahasiswaId))) {
+    if (!(await canDownloadLampiranMahasiswa(user, cuti.mahasiswaId))) {
       set.status = 403;
       return { error: 'Akses ditolak.' };
     }

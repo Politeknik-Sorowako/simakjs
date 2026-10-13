@@ -3,7 +3,15 @@ import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { dosen, mahasiswa, periodeAkademik, programStudi, statusMahasiswaLampiran } from '../models/schema';
+import {
+  dosen,
+  mahasiswa,
+  periodeAkademik,
+  programStudi,
+  statusMahasiswaLampiran,
+  userProdiScopes,
+  users,
+} from '../models/schema';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -286,6 +294,77 @@ describe('Modul Status Mahasiswa (Edit & Lampiran)', () => {
         }),
       );
       expect(otherPaDl.status).toBe(403);
+    });
+
+    it('Unduhan lampiran lintas prodi: prodi/kaprodi dibatasi scope prodi, keuangan global', async () => {
+      // Prodi kedua untuk skenario lintas prodi.
+      const [prodiB] = await db
+        .insert(programStudi)
+        .values({ kode: 'SI', nama: 'Sistem Informasi', jenjang: 'D4' })
+        .returning();
+
+      const prodiA = await getAuthToken('prodi.a@test.com', 'prodi');
+      const prodiBToken = await getAuthToken('prodi.b@test.com', 'prodi');
+      const kaprodiBToken = await getAuthToken('kaprodi.b@test.com', 'kaprodi');
+      const keuanganToken = await getAuthToken('keuangan@test.com', 'keuangan');
+
+      // prodi.a -> scope ke prodi A (milik mahasiswa), prodi.b/kaprodi.b -> scope prodi B.
+      const [userProdiA] = await db.select().from(users).where(eq(users.email, 'prodi.a@test.com'));
+      const [userProdiB] = await db.select().from(users).where(eq(users.email, 'prodi.b@test.com'));
+      const [userKaprodiB] = await db.select().from(users).where(eq(users.email, 'kaprodi.b@test.com'));
+      await db.insert(userProdiScopes).values([
+        { userId: userProdiA.id, programStudiId: prodiId },
+        { userId: userProdiB.id, programStudiId: prodiB.id },
+        { userId: userKaprodiB.id, programStudiId: prodiB.id },
+      ]);
+
+      // Mahasiswa prodi A mengajukan cuti + admin unggah berkas.
+      const createRes = await app.handle(
+        new Request('http://localhost/cuti', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${mhsToken}` },
+          body: JSON.stringify({ periodeId: testPeriodId, alasan: 'Alasan Cuti' }),
+        }),
+      );
+      const cutiId = ((await createRes.json()) as { id: number }).id;
+
+      const formData = new FormData();
+      formData.append('file', new File(['%PDF-1.4 Berkas'], 'surat.pdf', { type: 'application/pdf' }));
+      formData.append('jenis', 'pendukung');
+      const uploadRes = await app.handle(
+        new Request(`http://localhost/cuti/${cutiId}/lampiran`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}` },
+          body: formData,
+        }),
+      );
+      const lampiran = (await uploadRes.json()) as { id: number };
+
+      const download = (token: string) =>
+        app.handle(
+          new Request(`http://localhost/cuti/${cutiId}/lampiran/${lampiran.id}/file`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        );
+      const list = (token: string) =>
+        app.handle(
+          new Request(`http://localhost/cuti/${cutiId}/lampiran`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        );
+
+      // List (metadata) tetap terlihat lintas prodi — tidak di-scope.
+      expect((await list(prodiBToken)).status).toBe(200);
+
+      // Unduhan dibatasi: prodi/kaprodi prodi B ditolak.
+      expect((await download(prodiBToken)).status).toBe(403);
+      expect((await download(kaprodiBToken)).status).toBe(403);
+
+      // prodi prodi A (prodi mahasiswa) boleh unduh.
+      expect((await download(prodiA)).status).toBe(200);
+
+      // keuangan tetap global (lintas prodi).
+      expect((await download(keuanganToken)).status).toBe(200);
     });
   });
 
