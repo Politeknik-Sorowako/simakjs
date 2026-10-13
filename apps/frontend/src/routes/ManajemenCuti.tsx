@@ -922,7 +922,11 @@ export default function ManajemenCuti() {
                   setAutoBerakhir(false);
                 }}
               />
-              <span class="text-xs text-secondary-400">Default 2 semester (otomatis). Ubah untuk manual.</span>
+              <span class="text-xs text-secondary-400">
+                {semesterBerakhirCuti() || !semesterMulaiCuti()
+                  ? 'Default 2 semester (otomatis). Ubah untuk manual.'
+                  : `Dikosongkan → otomatis ${hitungSemesterBerakhir(semesterMulaiCuti())} (2 semester).`}
+              </span>
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-secondary-700">Tanggal Surat Izin</label>
