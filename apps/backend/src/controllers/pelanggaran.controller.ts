@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { dosen, mahasiswa } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { PelanggaranService } from '../services/pelanggaran.service';
+import { ProdiScopeService } from '../services/prodi-scope.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
 import { AuthContext } from '../utils/types';
@@ -117,10 +118,8 @@ export class PelanggaranController {
       const search = query?.search;
       const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
       const periodeId = query?.periodeId;
-      const startDate = query?.startDate;
-      const endDate = query?.endDate;
 
-      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId, periodeId, startDate, endDate);
+      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId, periodeId);
     } catch (err: unknown) {
       console.error('[PelanggaranController.getAll]', err);
       set.status = 400;
@@ -142,13 +141,30 @@ export class PelanggaranController {
 
     try {
       const search = query?.search;
-      const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
       const periodeId = query?.periodeId;
       const predikat = query?.predikat;
+      const programStudiId = query?.programStudiId ? parseInt(query.programStudiId, 10) : undefined;
+
+      // Scoping prodi: admin/super_admin (global) bebas; dosen/instruktur/prodi
+      // dibatasi ke prodi yang menjadi scope-nya sendiri.
+      let scopedProdiIds: number[] | null = await ProdiScopeService.getUserAccessibleProdiIds(user);
+      if (scopedProdiIds !== null) {
+        if (programStudiId !== undefined) {
+          if (!scopedProdiIds.includes(programStudiId)) {
+            set.status = 403;
+            return { error: 'Akses ditolak ke program studi tersebut.' };
+          }
+          scopedProdiIds = [programStudiId];
+        } else if (scopedProdiIds.length === 0) {
+          return [];
+        }
+      } else if (programStudiId !== undefined) {
+        scopedProdiIds = [programStudiId];
+      }
 
       return await PelanggaranService.getMahasiswaPredikatList({
         search,
-        programStudiId,
+        programStudiIds: scopedProdiIds ?? undefined,
         periodeId,
         predikat,
       });

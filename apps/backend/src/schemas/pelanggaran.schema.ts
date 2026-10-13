@@ -96,8 +96,6 @@ export const getAllPelanggaranSchema = {
     search: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
     periodeId: t.Optional(t.String()),
-    startDate: t.Optional(t.String()),
-    endDate: t.Optional(t.String()),
   }),
   response: {
     200: t.Any(),

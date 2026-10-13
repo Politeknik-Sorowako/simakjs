@@ -11,6 +11,7 @@ interface SearchableSelectProps {
   onChange: (value: string | number) => void;
   placeholder?: string;
   label?: string;
+  id?: string;
   disabled?: boolean;
   required?: boolean;
   class?: string;
@@ -113,6 +114,7 @@ export function SearchableSelect(props: SearchableSelectProps) {
         {/* Trigger Button */}
         <button
           type="button"
+          id={props.id}
           role="combobox"
           aria-expanded={isOpen()}
           aria-haspopup="listbox"

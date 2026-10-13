@@ -364,8 +364,6 @@ export const bimbinganController = {
     search?: string;
     prodiId?: number;
     periodeId?: string;
-    startDate?: string;
-    endDate?: string;
   }): Promise<
     | {
         data: Pelanggaran[];
@@ -379,8 +377,6 @@ export const bimbinganController = {
     if (params?.search) searchParams.append('search', params.search);
     if (params?.prodiId) searchParams.append('prodiId', String(params.prodiId));
     if (params?.periodeId) searchParams.append('periodeId', params.periodeId);
-    if (params?.startDate) searchParams.append('startDate', params.startDate);
-    if (params?.endDate) searchParams.append('endDate', params.endDate);
     const qs = searchParams.toString() ? `?${searchParams.toString()}` : '';
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
     return fetchApi<any>(`/pelanggaran${qs}`);
