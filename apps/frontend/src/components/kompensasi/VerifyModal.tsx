@@ -3,7 +3,7 @@ import { useToast } from '../../contexts/ToastContext';
 import type { KetidakhadiranRow } from '../../controllers/kompensasiAdminController';
 import { presensiController, type RekapHarianResponse } from '../../controllers/presensiController';
 import { fmtTanggal } from '../../utils/format';
-import { hitungBatasDurasi } from '../../utils/verifikasiKuota';
+import { bolehNotice, hitungBatasDurasi, pesanBatasDurasi } from '../../utils/verifikasiKuota';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
@@ -42,6 +42,10 @@ export function VerifyModal(props: VerifyModalProps) {
   const [durasi, setDurasi] = createSignal(0);
   const [note, setNote] = createSignal('');
   const [submitting, setSubmitting] = createSignal(false);
+  // Menandai durasi diklamping otomatis ke batas harian saat pengguna mengetik
+  // nilai di atas sisa kuota, agar tampil notice inline + toast info (di-throttle).
+  const [noticeDibatasi, setNoticeDibatasi] = createSignal(false);
+  const lastNoticeAt = { t: 0 };
 
   createEffect(() => {
     const r = props.row;
@@ -50,6 +54,8 @@ export function VerifyModal(props: VerifyModalProps) {
     setStatus(isRecognizedStatus(s) ? s! : 'ALPA');
     setDurasi(s === 'HADIR' ? 0 : (r.durasiMenit ?? 0));
     setNote(r.keterangan || '');
+    setNoticeDibatasi(false);
+    lastNoticeAt.t = 0;
   });
 
   const isUnknown = () => status() === 'UNKNOWN';
@@ -188,7 +194,18 @@ export function VerifyModal(props: VerifyModalProps) {
                   onInput={(e) => {
                     let v = parseInt(e.currentTarget.value) || 0;
                     if (v < 0) v = 0;
-                    if (rekapReady() && isStatusDikenaiCap() && v > batasDurasi()) v = batasDurasi();
+                    const batas = batasDurasi();
+                    if (rekapReady() && isStatusDikenaiCap() && v > batas) {
+                      v = batas;
+                      setNoticeDibatasi(true);
+                      const now = Date.now();
+                      if (bolehNotice(lastNoticeAt.t, now)) {
+                        lastNoticeAt.t = now;
+                        toast.showToast(pesanBatasDurasi(batas), 'info');
+                      }
+                    } else {
+                      setNoticeDibatasi(false);
+                    }
                     setDurasi(v);
                   }}
                 />
@@ -197,6 +214,11 @@ export function VerifyModal(props: VerifyModalProps) {
                     Maks durasi baris ini:{' '}
                     <b class="text-secondary-600 dark:text-secondary-200">{batasDurasi()} menit</b> (batas harian{' '}
                     {rekapHarian()?.maksHarian} menit)
+                  </p>
+                </Show>
+                <Show when={noticeDibatasi()}>
+                  <p class="text-xs rounded-lg bg-warning-50 dark:bg-warning-900/20 border border-warning-200 dark:border-warning-800 text-warning-700 dark:text-warning-300 px-3 py-2">
+                    Durasi melebihi batas harian tersisa, disesuaikan otomatis ke <b>{batasDurasi()} menit</b>.
                   </p>
                 </Show>
               </FilterField>
