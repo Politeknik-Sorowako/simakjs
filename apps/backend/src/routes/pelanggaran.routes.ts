@@ -5,6 +5,7 @@ import {
   createPelanggaranSchema,
   deletePelanggaranSchema,
   getAllPelanggaranSchema,
+  getMahasiswaPredikatSchema,
   getPelanggaranMahasiswaSchema,
   getRekapPasalSchema,
   getRekapPelanggaranSchema,
@@ -16,6 +17,7 @@ export const pelanggaranRoutes = new Elysia({ prefix: '/pelanggaran' })
   .use(authMiddleware)
   .post('/', PelanggaranController.create, createPelanggaranSchema)
   .get('/mahasiswa/:mhsId', PelanggaranController.getByMhsId, getPelanggaranMahasiswaSchema)
+  .get('/mahasiswa-predikat', PelanggaranController.getMahasiswaPredikat, getMahasiswaPredikatSchema)
   .get('/rekap', PelanggaranController.getRekap, getRekapPelanggaranSchema)
   .get('/rekap-pasal', PelanggaranController.getRekapPasal, getRekapPasalSchema)
   .get('/', PelanggaranController.getAll, getAllPelanggaranSchema)

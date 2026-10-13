@@ -139,6 +139,7 @@ export interface Pelanggaran {
   pelapor?: string | null;
   nomorPasal?: string | null;
   bunyiPasal?: string | null;
+  periodeId?: string | null;
   dibuatOleh?: number | null;
   createdAt?: string;
 }
@@ -166,6 +167,21 @@ export interface RekapPelanggaran {
     predikat: string;
     degradasiNilaiSikap?: number;
   }[];
+}
+
+export interface MahasiswaTxlyItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  foto?: string | null;
+  angkatan?: string | null;
+  programStudiId?: number | null;
+  prodiNama?: string | null;
+  semester?: number | null;
+  totalPoin: number;
+  jumlahPelanggaran: number;
+  predikat: string;
+  degradasiNilaiSikap: number;
 }
 
 export const bimbinganController = {
@@ -386,6 +402,21 @@ export const bimbinganController = {
     if (periodeId) params.append('periodeId', periodeId);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return fetchApi(`/pelanggaran/rekap-pasal${qs}`);
+  },
+
+  async getMahasiswaPredikat(filter?: {
+    search?: string;
+    programStudiId?: number;
+    periodeId?: string;
+    predikat?: string;
+  }): Promise<MahasiswaTxlyItem[]> {
+    const params = new URLSearchParams();
+    if (filter?.search) params.append('search', filter.search);
+    if (filter?.programStudiId) params.append('programStudiId', String(filter.programStudiId));
+    if (filter?.periodeId) params.append('periodeId', filter.periodeId);
+    if (filter?.predikat) params.append('predikat', filter.predikat);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<MahasiswaTxlyItem[]>(`/pelanggaran/mahasiswa-predikat${qs}`);
   },
 
   async getRekapPelanggaran(programStudiId?: number): Promise<RekapPelanggaran> {

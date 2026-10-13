@@ -12,11 +12,16 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { KhsService } from './khs.service';
 
 export function hitungPredikatTxly(totalPoin: number): string {
-  const x = Math.floor(totalPoin / 4);
-  const y = totalPoin % 4;
-  return `T${x}L${y}`;
+  if (totalPoin <= 0) return '-';
+  const t = Math.floor(totalPoin / 4);
+  const l = totalPoin % 4;
+  if (t > 0 && l > 0) return `T${t}L${l}`;
+  if (t > 0 && l === 0) return `T${t}`;
+  if (t === 0 && l > 0) return `L${l}`;
+  return '-';
 }
 
 export function hitungDegradasiNilaiSikap(totalPoin: number): number {
@@ -488,7 +493,7 @@ export class PelanggaranService {
       .where(whereClause)
       .groupBy(pelanggaran.mahasiswaId, mhs.nim, mhs.nama, mhs.foto, ps.nama)
       .orderBy(sql`SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)) DESC`)
-      .limit(10);
+      .limit(programStudiId ? 100 : 50);
 
     return {
       totalPelanggaran: Number(totals?.totalPelanggaran || 0),
@@ -555,5 +560,110 @@ export class PelanggaranService {
   static async remove(id: number) {
     const [deleted] = await db.delete(pelanggaran).where(eq(pelanggaran.id, id)).returning();
     return deleted || null;
+  }
+
+  static async getMahasiswaPredikatList(filter?: {
+    search?: string;
+    programStudiIds?: number[];
+    periodeId?: string;
+    predikat?: string;
+  }) {
+    // 1. Dapatkan periode aktif untuk acuan semester berjalan
+    const [activePeriode] = await db
+      .select({ id: periodeAkademik.id })
+      .from(periodeAkademik)
+      .where(eq(periodeAkademik.aktif, true));
+    const targetPeriodeId = filter?.periodeId || activePeriode?.id || null;
+
+    // 2. Susun kondisi filter
+    const conditions = [];
+    if (filter?.programStudiIds && filter.programStudiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, filter.programStudiIds));
+    }
+    if (filter?.periodeId) {
+      conditions.push(eq(pelanggaran.periodeId, filter.periodeId));
+    }
+    if (filter?.search && filter.search.trim()) {
+      const s = `%${filter.search.trim()}%`;
+      conditions.push(or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s)));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // 3. Agregasi pelanggaran per mahasiswa
+    const rows = await db
+      .select({
+        mahasiswaId: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
+        angkatan: mahasiswa.angkatan,
+        programStudiId: mahasiswa.programStudiId,
+        prodiNama: programStudi.nama,
+        totalPoin: sql<number>`COALESCE(SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)), 0)`,
+        jumlahPelanggaran: count(pelanggaran.id),
+      })
+      .from(pelanggaran)
+      .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .where(whereClause)
+      .groupBy(
+        mahasiswa.id,
+        mahasiswa.nim,
+        mahasiswa.nama,
+        mahasiswa.foto,
+        mahasiswa.angkatan,
+        mahasiswa.programStudiId,
+        programStudi.nama,
+      )
+      .orderBy(sql`SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)) DESC`);
+
+    // 4. Hitung semester untuk SELURUH baris dalam SATU query (hindari N+1).
+    // Matematika semester tetap di KhsService.hitungSemester; di sini hanya memetakan.
+    const angkatanById = new Map<number, string | null>();
+    if (targetPeriodeId) {
+      for (const r of rows) {
+        if (r.angkatan) angkatanById.set(r.mahasiswaId, r.angkatan);
+      }
+    }
+    const semesterById = targetPeriodeId
+      ? await KhsService.hitungSemesterBatch([...angkatanById.keys()], targetPeriodeId, angkatanById)
+      : new Map<number, number | null>();
+
+    // 5. Susun predikat TXLY per mahasiswa
+    const result = [];
+    for (const r of rows) {
+      const totalPoin = Number(r.totalPoin);
+      const predikat = hitungPredikatTxly(totalPoin);
+
+      // Filter predikat jika parameter disediakan
+      if (filter?.predikat) {
+        const target = filter.predikat.trim().toUpperCase();
+        const predikatUpper = predikat.toUpperCase();
+        const fullPredikat = `T${Math.floor(totalPoin / 4)}L${totalPoin % 4}`;
+        if (predikatUpper !== target && fullPredikat !== target) {
+          continue;
+        }
+      }
+
+      const semester = semesterById.get(r.mahasiswaId) ?? null;
+
+      result.push({
+        mahasiswaId: r.mahasiswaId,
+        nim: r.nim,
+        nama: r.nama,
+        foto: r.foto,
+        angkatan: r.angkatan,
+        programStudiId: r.programStudiId,
+        prodiNama: r.prodiNama || '-',
+        semester,
+        totalPoin,
+        jumlahPelanggaran: Number(r.jumlahPelanggaran),
+        predikat,
+        degradasiNilaiSikap: hitungDegradasiNilaiSikap(totalPoin),
+      });
+    }
+
+    return result;
   }
 }

@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -10,11 +10,18 @@ import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { bimbinganController, Pelanggaran as IPelanggaran } from '../controllers/bimbinganController';
+import {
+  bimbinganController,
+  Pelanggaran as IPelanggaran,
+  MahasiswaTxlyItem,
+} from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
+import { PeriodeAkademik, periodeAkademikController } from '../controllers/periodeAkademikController';
+import { Prodi, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
-import { getTodayString } from '../utils/format';
+import { ExportColumn, exportToExcel, exportToPDF } from '../utils/export';
+import { fmtTanggal, getTodayString } from '../utils/format';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -62,6 +69,31 @@ export default function Pelanggaran() {
   const [sortField, setSortField] = createSignal<SortField>('tanggal');
   const [sortDir, setSortDir] = createSignal<'asc' | 'desc'>('desc');
 
+  // Filter tambahan untuk tab Daftar Pelanggaran
+  const [filterProdiId, setFilterProdiId] = createSignal<number | undefined>(undefined);
+  const [filterPeriodeId, setFilterPeriodeId] = createSignal<string | undefined>(undefined);
+  const [filterStartDate, setFilterStartDate] = createSignal('');
+  const [filterEndDate, setFilterEndDate] = createSignal('');
+
+  // Master Program Studi dan Periode Akademik
+  const [prodiList] = createResource(async () => {
+    try {
+      const res = await prodiController.getAll('', 1, 100);
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [periodeList] = createResource(async () => {
+    try {
+      const res = await periodeAkademikController.getAll('', 1, 50);
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  });
+
   // Pagination state
   const { page, limit, setPage, setLimit, resetPage } = usePagination();
   const pageOptions = [10, 20, 50, 100];
@@ -80,7 +112,25 @@ export default function Pelanggaran() {
   const visibleViolations = createMemo(() => {
     const list = allViolations() || [];
     const q = violationSearch().trim().toLowerCase();
+    const pid = filterProdiId();
+    const perId = filterPeriodeId();
+    const sDate = filterStartDate();
+    const eDate = filterEndDate();
+
     let rows = list;
+
+    if (pid) {
+      rows = rows.filter((v) => v.programStudiId === pid);
+    }
+    if (perId) {
+      rows = rows.filter((v) => v.periodeId === perId);
+    }
+    if (sDate) {
+      rows = rows.filter((v) => v.tanggal >= sDate);
+    }
+    if (eDate) {
+      rows = rows.filter((v) => v.tanggal <= eDate);
+    }
     if (q) {
       rows = rows.filter((v) => {
         const haystack = [
@@ -120,6 +170,130 @@ export default function Pelanggaran() {
     const start = (page() - 1) * limit();
     return visibleViolations().slice(start, start + limit());
   });
+
+  // Ekspor Columns & Handlers
+  const exportColumns: ExportColumn<IPelanggaran>[] = [
+    { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
+    { header: 'Tanggal', accessor: (r) => fmtTanggal(r.tanggal) },
+    { header: 'NIM', accessor: (r) => r.nim || '-' },
+    { header: 'Nama Mahasiswa', accessor: (r) => r.namaMahasiswa || '-' },
+    { header: 'Program Studi', accessor: (r) => r.prodiNama || '-' },
+    { header: 'Pasal BPA', accessor: (r) => r.nomorPasal || '-' },
+    { header: 'Jenis Pelanggaran', accessor: (r) => r.jenisPelanggaran },
+    {
+      header: 'Tingkat Sanksi',
+      accessor: (r) => (r.jenisSanksi === 4 ? 'Peringatan Tertulis (-1.00)' : 'Peringatan Lisan (-0.25)'),
+    },
+    { header: 'Pelapor', accessor: (r) => r.pelapor || '-' },
+    { header: 'Keterangan', accessor: (r) => r.keterangan },
+  ];
+
+  const handleExportExcel = () => {
+    const data = visibleViolations();
+    if (!data.length) {
+      toast.showToast('Tidak ada data pelanggaran untuk diekspor', 'info');
+      return;
+    }
+    exportToExcel(data, exportColumns, `Daftar_Pelanggaran_${getTodayString()}`);
+    toast.showToast('Data pelanggaran berhasil diekspor (.xlsx)', 'success');
+  };
+
+  const handleExportPDF = () => {
+    const data = visibleViolations();
+    if (!data.length) {
+      toast.showToast('Tidak ada data pelanggaran untuk diekspor', 'info');
+      return;
+    }
+    exportToPDF(
+      data,
+      exportColumns,
+      `Daftar_Pelanggaran_${getTodayString()}`,
+      'DAFTAR TINDAKAN INDISIPLINER MAHASISWA',
+      'Politeknik Sorowako - Sistem Informasi Akademik & Kedisiplinan',
+    );
+    toast.showToast('Dokumen PDF pelanggaran berhasil dibuat (.pdf)', 'success');
+  };
+
+  // Ekspor Columns & Handlers untuk Tab Mahasiswa TXLY
+  const exportMhsTxlyColumns: ExportColumn<MahasiswaTxlyItem>[] = [
+    { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
+    { header: 'NIM', accessor: (r) => r.nim },
+    { header: 'Nama Mahasiswa', accessor: (r) => r.nama },
+    { header: 'Program Studi', accessor: (r) => r.prodiNama || '-' },
+    { header: 'Semester', accessor: (r) => (r.semester ? `Semester ${r.semester}` : '-') },
+    { header: 'Jumlah Pelanggaran', accessor: (r) => r.jumlahPelanggaran },
+    { header: 'Predikat TXLY', accessor: (r) => r.predikat },
+    { header: 'Total Poin', accessor: (r) => r.totalPoin },
+    { header: 'Degradasi Mutu Sikap', accessor: (r) => `-${r.degradasiNilaiSikap}` },
+  ];
+
+  const handleExportMhsTxlyExcel = () => {
+    const data = visibleMahasiswaTxly();
+    if (!data.length) {
+      toast.showToast('Tidak ada data mahasiswa kedisiplinan untuk diekspor', 'info');
+      return;
+    }
+    exportToExcel(data, exportMhsTxlyColumns, `Daftar_Mahasiswa_TXLY_${getTodayString()}`);
+    toast.showToast('Data mahasiswa kedisiplinan berhasil diekspor (.xlsx)', 'success');
+  };
+
+  const handleExportMhsTxlyPDF = () => {
+    const data = visibleMahasiswaTxly();
+    if (!data.length) {
+      toast.showToast('Tidak ada data mahasiswa kedisiplinan untuk diekspor', 'info');
+      return;
+    }
+    exportToPDF(
+      data,
+      exportMhsTxlyColumns,
+      `Daftar_Mahasiswa_TXLY_${getTodayString()}`,
+      'DAFTAR MAHASISWA & PREDIKAT KEDISIPLINAN TXLY',
+      'Politeknik Sorowako - Sistem Informasi Akademik & Kedisiplinan',
+    );
+    toast.showToast('Dokumen PDF mahasiswa kedisiplinan berhasil dibuat (.pdf)', 'success');
+  };
+
+  // Ekspor Columns & Handlers untuk Modal Riwayat Pelanggaran Mahasiswa
+  const exportMhsDetailColumns: ExportColumn<IPelanggaran>[] = [
+    { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
+    { header: 'Tanggal', accessor: (r) => fmtTanggal(r.tanggal) },
+    { header: 'Pasal BPA', accessor: (r) => r.nomorPasal || '-' },
+    { header: 'Jenis Pelanggaran', accessor: (r) => r.jenisPelanggaran },
+    {
+      header: 'Tingkat Sanksi',
+      accessor: (r) => (r.jenisSanksi === 4 ? 'Peringatan Tertulis (-1.00)' : 'Peringatan Lisan (-0.25)'),
+    },
+    { header: 'Pelapor', accessor: (r) => r.pelapor || '-' },
+    { header: 'Keterangan', accessor: (r) => r.keterangan },
+  ];
+
+  const handleExportDetailExcel = () => {
+    const m = selectedMhsDetail();
+    const list = mhsViolationsDetail()?.pelanggaranList || [];
+    if (!list.length) {
+      toast.showToast('Tidak ada riwayat pelanggaran untuk diekspor', 'info');
+      return;
+    }
+    exportToExcel(list, exportMhsDetailColumns, `Riwayat_Pelanggaran_${m?.nim || ''}_${getTodayString()}`);
+    toast.showToast('Riwayat pelanggaran mahasiswa berhasil diekspor (.xlsx)', 'success');
+  };
+
+  const handleExportDetailPDF = () => {
+    const m = selectedMhsDetail();
+    const list = mhsViolationsDetail()?.pelanggaranList || [];
+    if (!list.length) {
+      toast.showToast('Tidak ada riwayat pelanggaran untuk diekspor', 'info');
+      return;
+    }
+    exportToPDF(
+      list,
+      exportMhsDetailColumns,
+      `Riwayat_Pelanggaran_${m?.nim || ''}_${getTodayString()}`,
+      `RIWAYAT TINDAKAN INDISIPLINER MAHASISWA: ${m?.nama || ''} (${m?.nim || ''})`,
+      `Program Studi: ${m?.prodiNama || '-'} | Predikat TXLY: ${m?.predikat || '-'} | Total Poin: ${m?.totalPoin ?? 0}`,
+    );
+    toast.showToast('Dokumen PDF riwayat pelanggaran berhasil dibuat (.pdf)', 'success');
+  };
 
   // Load master pasal BPA (global + prodi scoped)
   const [pasalList] = createResource(
@@ -434,8 +608,8 @@ export default function Pelanggaran() {
     }
   };
 
-  // Rekap state
-  const [viewTab, setViewTab] = createSignal<'daftar' | 'rekap'>('daftar');
+  // Rekap state & Tab Mahasiswa TXLY state
+  const [viewTab, setViewTab] = createSignal<'daftar' | 'rekap' | 'mahasiswa'>('daftar');
   const [rekapProdi, setRekapProdi] = createSignal<number | undefined>(undefined);
   const [rekap, { refetch: refetchRekap }] = createResource(
     () => rekapProdi(),
@@ -444,6 +618,152 @@ export default function Pelanggaran() {
       return await bimbinganController.getRekapPelanggaran(prodi);
     },
   );
+
+  // Tab 3: Mahasiswa TXLY State & Filters
+  const [mhsTxlySearch, setMhsTxlySearch] = createSignal('');
+  const [mhsTxlyProdi, setMhsTxlyProdi] = createSignal<number | undefined>(undefined);
+  const [mhsTxlyPredikat, setMhsTxlyPredikat] = createSignal<string | undefined>(undefined);
+  type MhsTxlySortField = 'predikat' | 'nama' | 'nim' | 'prodiNama' | 'semester' | 'jumlahPelanggaran';
+  const [mhsTxlySortField, setMhsTxlySortField] = createSignal<MhsTxlySortField>('predikat');
+  const [mhsTxlySortDir, setMhsTxlySortDir] = createSignal<'asc' | 'desc'>('desc');
+  const mhsTxlySortAria = (field: MhsTxlySortField): 'ascending' | 'descending' | 'none' =>
+    mhsTxlySortField() === field ? (mhsTxlySortDir() === 'asc' ? 'ascending' : 'descending') : 'none';
+
+  // Debounce pencarian (~300ms) agar tidak menembak endpoint per ketikan.
+  const [mhsTxlySearchDebounced, setMhsTxlySearchDebounced] = createSignal('');
+  createEffect(() => {
+    const value = mhsTxlySearch();
+    const timer = setTimeout(() => setMhsTxlySearchDebounced(value), 300);
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  // Resource hanya aktif saat tab "mahasiswa" terbuka (menghindari fetch eager).
+  const [mahasiswaTxlyList, { refetch: refetchMahasiswaTxly }] = createResource(
+    () =>
+      isStaff() && viewTab() === 'mahasiswa'
+        ? {
+            search: mhsTxlySearchDebounced(),
+            programStudiId: mhsTxlyProdi(),
+            predikat: mhsTxlyPredikat(),
+          }
+        : null,
+    async (params) => {
+      return await bimbinganController.getMahasiswaPredikat({
+        search: params.search || undefined,
+        programStudiId: params.programStudiId,
+        predikat: params.predikat || undefined,
+      });
+    },
+  );
+
+  const visibleMahasiswaTxly = createMemo(() => {
+    const list = mahasiswaTxlyList() || [];
+    const field = mhsTxlySortField();
+    const dir = mhsTxlySortDir() === 'asc' ? 1 : -1;
+
+    return [...list].sort((a, b) => {
+      let cmp = 0;
+      if (field === 'predikat') {
+        // Urutkan berdasarkan total poin / akumulasi sanksi tertinggi
+        cmp = a.totalPoin - b.totalPoin;
+      } else if (field === 'jumlahPelanggaran') {
+        cmp = a.jumlahPelanggaran - b.jumlahPelanggaran;
+      } else if (field === 'semester') {
+        cmp = (a.semester || 0) - (b.semester || 0);
+      } else {
+        const av = String(a[field] || '');
+        const bv = String(b[field] || '');
+        cmp = av.localeCompare(bv, 'id', { sensitivity: 'base' });
+      }
+      return cmp * dir;
+    });
+  });
+
+  const toggleMhsTxlySort = (field: MhsTxlySortField) => {
+    if (mhsTxlySortField() === field) {
+      setMhsTxlySortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setMhsTxlySortField(field);
+      setMhsTxlySortDir(field === 'predikat' ? 'desc' : 'asc');
+    }
+  };
+
+  // Modal Riwayat Mahasiswa (klik item dari tab mahasiswa TXLY)
+  const [selectedMhsDetail, setSelectedMhsDetail] = createSignal<MahasiswaTxlyItem | null>(null);
+  const [mhsViolationsDetail, { refetch: refetchMhsViolationsDetail }] = createResource(
+    () => selectedMhsDetail()?.mahasiswaId,
+    async (mhsId) => {
+      if (!mhsId) return null;
+      return await bimbinganController.getPelanggaranByMhsId(mhsId);
+    },
+  );
+
+  const openMahasiswaDetail = (item: MahasiswaTxlyItem) => {
+    setSelectedMhsDetail(item);
+    modalRiwayatPagination.resetPage();
+  };
+
+  // 1. Pagination untuk Tab Mahasiswa TXLY
+  const mhsTxlyPagination = usePagination(10);
+  const totalMhsTxlyPages = createMemo(() => Math.ceil(visibleMahasiswaTxly().length / mhsTxlyPagination.limit()) || 1);
+  const paginatedMhsTxly = createMemo(() => {
+    const start = (mhsTxlyPagination.page() - 1) * mhsTxlyPagination.limit();
+    return visibleMahasiswaTxly().slice(start, start + mhsTxlyPagination.limit());
+  });
+
+  // Auto reset page saat filter Mahasiswa TXLY berubah
+  createEffect(() => {
+    mhsTxlySearch();
+    mhsTxlyProdi();
+    mhsTxlyPredikat();
+    mhsTxlySortField();
+    mhsTxlySortDir();
+    mhsTxlyPagination.resetPage();
+  });
+
+  // 2. Pagination untuk Tab Rekap - Pelanggar Terbanyak
+  const rekapTopPagination = usePagination(10);
+  const totalRekapTopPages = createMemo(
+    () => Math.ceil((rekap()?.topPelanggar?.length || 0) / rekapTopPagination.limit()) || 1,
+  );
+  const paginatedRekapTop = createMemo(() => {
+    const list = rekap()?.topPelanggar || [];
+    const start = (rekapTopPagination.page() - 1) * rekapTopPagination.limit();
+    return list.slice(start, start + rekapTopPagination.limit());
+  });
+
+  // 3. Pagination untuk Tab Rekap - Per Jenis Pelanggaran
+  const rekapJenisPagination = usePagination(10);
+  const totalRekapJenisPages = createMemo(
+    () => Math.ceil((rekap()?.perJenis?.length || 0) / rekapJenisPagination.limit()) || 1,
+  );
+  const paginatedRekapJenis = createMemo(() => {
+    const list = rekap()?.perJenis || [];
+    const start = (rekapJenisPagination.page() - 1) * rekapJenisPagination.limit();
+    return list.slice(start, start + rekapJenisPagination.limit());
+  });
+
+  // 4. Pagination untuk Modal Riwayat Mahasiswa
+  const modalRiwayatPagination = usePagination(5);
+  const modalRiwayatList = createMemo(() => mhsViolationsDetail()?.pelanggaranList || []);
+  const totalModalRiwayatPages = createMemo(
+    () => Math.ceil(modalRiwayatList().length / modalRiwayatPagination.limit()) || 1,
+  );
+  const paginatedModalRiwayat = createMemo(() => {
+    const start = (modalRiwayatPagination.page() - 1) * modalRiwayatPagination.limit();
+    return modalRiwayatList().slice(start, start + modalRiwayatPagination.limit());
+  });
+
+  // 5. Pagination untuk Mahasiswa View (Riwayat Pribadi)
+  const studentPagination = usePagination(10);
+  const studentViolationsList = createMemo(() => studentViolations()?.pelanggaranList || []);
+  const totalStudentPages = createMemo(
+    () => Math.ceil(studentViolationsList().length / studentPagination.limit()) || 1,
+  );
+  const paginatedStudentViolations = createMemo(() => {
+    const start = (studentPagination.page() - 1) * studentPagination.limit();
+    return studentViolationsList().slice(start, start + studentPagination.limit());
+  });
 
   return (
     <MainLayout>
@@ -504,6 +824,16 @@ export default function Pelanggaran() {
               }`}
             >
               Rekap & Predikat TXLY
+            </button>
+            <button
+              onClick={() => setViewTab('mahasiswa')}
+              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
+                viewTab() === 'mahasiswa'
+                  ? 'bg-brand-600 text-white shadow-sm'
+                  : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
+              }`}
+            >
+              Daftar Mahasiswa TXLY
             </button>
           </div>
         </Show>
@@ -573,7 +903,7 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={studentViolations()?.pelanggaranList}>
+                      <For each={paginatedStudentViolations()}>
                         {(item) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
@@ -623,6 +953,15 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={studentPagination.page()}
+                  totalPages={totalStudentPages()}
+                  total={studentViolationsList().length}
+                  limit={studentPagination.limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={studentPagination.setPage}
+                  onLimitChange={studentPagination.setLimit}
+                />
               </Show>
             </div>
           </div>
@@ -631,20 +970,147 @@ export default function Pelanggaran() {
         {/* Staff View (Admin/Dosen/Prodi/Instruktur) */}
         <Show when={isStaff() && viewTab() === 'daftar'}>
           <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
-            <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <Input
-                type="text"
-                placeholder="Cari nama, NIM, prodi, pasal, pelapor, atau keterangan..."
-                value={violationSearch()}
-                onInput={(e) => {
-                  setViolationSearch(e.currentTarget.value);
-                  resetPage();
-                }}
-                class="w-full sm:max-w-xs"
-              />
-              <span class="text-caption text-secondary-400 dark:text-secondary-300">
-                {visibleViolations().length} dari {allViolations()?.length || 0} catatan
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-3">
+              <div>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
+                <p class="text-caption text-secondary-500 dark:text-secondary-300">
+                  Riwayat seluruh catatan tindakan indisipliner yang dapat difilter dan diekspor
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleExportExcel}
+                  class="flex items-center gap-1.5 py-1.5 text-caption font-semibold"
+                >
+                  <span>📊</span> Ekspor Excel
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleExportPDF}
+                  class="flex items-center gap-1.5 py-1.5 text-caption font-semibold"
+                >
+                  <span>📄</span> Ekspor PDF
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 bg-secondary-50/70 rounded-xl border border-secondary-100 dark:bg-secondary-800/50 dark:border-secondary-800">
+              <div class="flex flex-col gap-1 lg:col-span-1">
+                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                  Pencarian
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Cari nama, NIM, keterangan..."
+                  value={violationSearch()}
+                  onInput={(e) => {
+                    setViolationSearch(e.currentTarget.value);
+                    resetPage();
+                  }}
+                  class="w-full text-caption"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1 lg:col-span-1">
+                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                  Program Studi
+                </label>
+                <SearchableSelect
+                  placeholder="Semua Prodi..."
+                  value={filterProdiId() ?? ''}
+                  options={[
+                    { label: 'Semua Program Studi', value: '' },
+                    ...(prodiList() || []).map((p) => ({
+                      label: `${p.nama} (${p.jenjang})`,
+                      value: p.id,
+                    })),
+                  ]}
+                  onChange={(val) => {
+                    setFilterProdiId(val ? Number(val) : undefined);
+                    resetPage();
+                  }}
+                />
+              </div>
+
+              <div class="flex flex-col gap-1 lg:col-span-1">
+                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                  Periode Semester
+                </label>
+                <SearchableSelect
+                  placeholder="Semua Periode..."
+                  value={filterPeriodeId() ?? ''}
+                  options={[
+                    { label: 'Semua Periode Semester', value: '' },
+                    ...(periodeList() || []).map((per) => ({
+                      label: `${per.nama} (${per.id})`,
+                      value: per.id,
+                    })),
+                  ]}
+                  onChange={(val) => {
+                    setFilterPeriodeId(val ? String(val) : undefined);
+                    resetPage();
+                  }}
+                />
+              </div>
+
+              <div class="flex flex-col gap-1 lg:col-span-1">
+                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                  Dari Tanggal
+                </label>
+                <input
+                  type="date"
+                  value={filterStartDate()}
+                  onInput={(e) => {
+                    setFilterStartDate(e.currentTarget.value);
+                    resetPage();
+                  }}
+                  class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1 lg:col-span-1">
+                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                  Sampai Tanggal
+                </label>
+                <div class="flex items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={filterEndDate()}
+                    onInput={(e) => {
+                      setFilterEndDate(e.currentTarget.value);
+                      resetPage();
+                    }}
+                    class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                  />
+                  <Show
+                    when={
+                      filterProdiId() || filterPeriodeId() || filterStartDate() || filterEndDate() || violationSearch()
+                    }
+                  >
+                    <button
+                      onClick={() => {
+                        setViolationSearch('');
+                        setFilterProdiId(undefined);
+                        setFilterPeriodeId(undefined);
+                        setFilterStartDate('');
+                        setFilterEndDate('');
+                        resetPage();
+                      }}
+                      class="px-2 py-1.5 text-fine text-rose-600 hover:bg-rose-50 rounded-lg border border-rose-200 font-semibold whitespace-nowrap transition-all dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                      title="Reset semua filter"
+                    >
+                      Reset
+                    </button>
+                  </Show>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-caption text-secondary-400 dark:text-secondary-300">
+              <span>
+                Menampilkan {visibleViolations().length} dari {allViolations()?.length || 0} catatan
               </span>
             </div>
             <Show
@@ -820,21 +1286,26 @@ export default function Pelanggaran() {
                 </p>
               </div>
               <div class="flex items-center gap-3">
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-1 w-64">
                   <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
                     Program Studi
                   </label>
-                  <input
-                    type="number"
-                    placeholder="Prodi ID"
+                  <SearchableSelect
+                    placeholder="Semua Program Studi..."
                     value={rekapProdi() ?? ''}
-                    onInput={(e) => setRekapProdi(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
-                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                    options={[
+                      { label: 'Semua Program Studi', value: '' },
+                      ...(prodiList() || []).map((p) => ({
+                        label: `${p.nama} (${p.jenjang})`,
+                        value: p.id,
+                      })),
+                    ]}
+                    onChange={(val) => {
+                      setRekapProdi(val ? Number(val) : undefined);
+                      refetchRekap();
+                    }}
                   />
                 </div>
-                <Button variant="secondary" class="mt-4" onClick={() => refetchRekap()}>
-                  Terapkan
-                </Button>
               </div>
             </div>
 
@@ -866,15 +1337,22 @@ export default function Pelanggaran() {
                 <div class="text-2xl font-bold text-brand-600 dark:text-brand-400">
                   {rekap()?.topPelanggar.length || 0}
                 </div>
-                <div class="text-fine uppercase font-semibold text-secondary-400 dark:text-secondary-300">Top 10</div>
+                <div class="text-fine uppercase font-semibold text-secondary-400 dark:text-secondary-300">
+                  Total Pelanggar
+                </div>
               </div>
             </div>
 
             {/* Top pelanggar table with predikat */}
             <div>
-              <h4 class="text-base font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
-                Pelanggar Terbanyak (Top 10)
-              </h4>
+              <div class="flex items-center justify-between border-b pb-2 mb-2">
+                <h4 class="text-base font-bold text-secondary-700 dark:text-secondary-200">
+                  {rekapProdi()
+                    ? `Daftar Pelanggar - ${prodiList()?.find((p) => p.id === rekapProdi())?.nama || 'Program Studi Terpilih'}`
+                    : 'Pelanggar Terbanyak (Seluruh Program Studi)'}
+                </h4>
+                <span class="text-fine text-secondary-400">{rekap()?.topPelanggar?.length || 0} mahasiswa</span>
+              </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-caption border-collapse">
                   <thead>
@@ -890,10 +1368,12 @@ export default function Pelanggaran() {
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                    <For each={rekap()?.topPelanggar || []}>
+                    <For each={paginatedRekapTop()}>
                       {(item, idx) => (
                         <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                          <td class="p-3">{idx() + 1}</td>
+                          <td class="p-3">
+                            {(rekapTopPagination.page() - 1) * rekapTopPagination.limit() + idx() + 1}
+                          </td>
                           <td class="p-3 font-mono">{item.nim}</td>
                           <td class="p-3 font-bold text-secondary-800 dark:text-white">
                             <div class="flex items-center gap-2">
@@ -922,6 +1402,15 @@ export default function Pelanggaran() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={rekapTopPagination.page()}
+                totalPages={totalRekapTopPages()}
+                total={rekap()?.topPelanggar?.length || 0}
+                limit={rekapTopPagination.limit()}
+                pageOptions={pageOptions}
+                onPageChange={rekapTopPagination.setPage}
+                onLimitChange={rekapTopPagination.setLimit}
+              />
             </div>
 
             {/* Per prodi breakdown */}
@@ -948,9 +1437,10 @@ export default function Pelanggaran() {
             {/* Per jenis breakdown */}
             <Show when={(rekap()?.perJenis || []).length > 0}>
               <div>
-                <h4 class="text-base font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
-                  Per Jenis Pelanggaran
-                </h4>
+                <div class="flex items-center justify-between border-b pb-2 mb-2">
+                  <h4 class="text-base font-bold text-secondary-700 dark:text-secondary-200">Per Jenis Pelanggaran</h4>
+                  <span class="text-fine text-secondary-400">{rekap()?.perJenis?.length || 0} jenis</span>
+                </div>
                 <div class="overflow-x-auto">
                   <table class="w-full text-left text-caption border-collapse">
                     <thead>
@@ -961,7 +1451,7 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={rekap()?.perJenis || []}>
+                      <For each={paginatedRekapJenis()}>
                         {(j) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3">{j.jenis}</td>
@@ -973,10 +1463,443 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={rekapJenisPagination.page()}
+                  totalPages={totalRekapJenisPages()}
+                  total={rekap()?.perJenis?.length || 0}
+                  limit={rekapJenisPagination.limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={rekapJenisPagination.setPage}
+                  onLimitChange={rekapJenisPagination.setLimit}
+                />
               </div>
             </Show>
           </div>
         </Show>
+
+        {/* Tab 3: Daftar Mahasiswa TXLY (Staff View) */}
+        <Show when={isStaff() && viewTab() === 'mahasiswa'}>
+          <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-3">
+              <div>
+                <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Predikat TXLY</h3>
+                <p class="text-caption text-secondary-500 dark:text-secondary-300">
+                  Ringkasan status kedisiplinan mahasiswa, predikat TXLY, degradasi mutu sikap, dan jumlah semester
+                  berjalan.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleExportMhsTxlyExcel}
+                  class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
+                  title="Ekspor daftar mahasiswa kedisiplinan ke file Excel (.xlsx)"
+                >
+                  <span>📊</span> Ekspor Excel
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleExportMhsTxlyPDF}
+                  class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
+                  title="Ekspor daftar mahasiswa kedisiplinan ke dokumen PDF (.pdf)"
+                >
+                  <span>📄</span> Ekspor PDF
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Bar Mahasiswa TXLY */}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-secondary-50/70 rounded-xl border border-secondary-100 dark:bg-secondary-800/50 dark:border-secondary-800">
+              <div class="flex flex-col gap-1">
+                <label
+                  for="mhsTxlySearch"
+                  class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase"
+                >
+                  Cari Mahasiswa
+                </label>
+                <Input
+                  id="mhsTxlySearch"
+                  type="text"
+                  placeholder="Cari Nama atau NIM..."
+                  value={mhsTxlySearch()}
+                  onInput={(e) => setMhsTxlySearch(e.currentTarget.value)}
+                  class="w-full text-caption"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label
+                  for="mhsTxlyProdi"
+                  class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase"
+                >
+                  Program Studi
+                </label>
+                <SearchableSelect
+                  id="mhsTxlyProdi"
+                  placeholder="Semua Program Studi..."
+                  value={mhsTxlyProdi() ?? ''}
+                  options={[
+                    { label: 'Semua Program Studi', value: '' },
+                    ...(prodiList() || []).map((p) => ({
+                      label: `${p.nama} (${p.jenjang})`,
+                      value: p.id,
+                    })),
+                  ]}
+                  onChange={(val) => setMhsTxlyProdi(val ? Number(val) : undefined)}
+                />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label
+                  for="mhsTxlyPredikat"
+                  class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase"
+                >
+                  Predikat TXLY
+                </label>
+                <input
+                  id="mhsTxlyPredikat"
+                  type="text"
+                  placeholder="Semua / filter predikat (mis. T1L0)..."
+                  value={mhsTxlyPredikat() ?? ''}
+                  onInput={(e) => setMhsTxlyPredikat(e.currentTarget.value.trim() || undefined)}
+                  class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                />
+              </div>
+
+              <div class="flex flex-col justify-end">
+                <Show when={mhsTxlySearch() || mhsTxlyProdi() || mhsTxlyPredikat()}>
+                  <button
+                    onClick={() => {
+                      setMhsTxlySearch('');
+                      setMhsTxlyProdi(undefined);
+                      setMhsTxlyPredikat(undefined);
+                    }}
+                    class="px-3 py-2 text-caption text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 font-semibold transition-all dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                  >
+                    Reset Filter
+                  </button>
+                </Show>
+              </div>
+            </div>
+
+            {/* Tabel Daftar Mahasiswa TXLY */}
+            <Show
+              when={!mahasiswaTxlyList.loading}
+              fallback={
+                <div class="py-12 text-center text-secondary-400 dark:text-secondary-300 text-base">
+                  Memuat data mahasiswa kedisiplinan...
+                </div>
+              }
+            >
+              <Show
+                when={visibleMahasiswaTxly().length > 0}
+                fallback={
+                  <div class="py-12 text-center text-secondary-400 dark:text-secondary-300 text-base">
+                    Tidak ada mahasiswa yang cocok dengan kriteria pencarian.
+                  </div>
+                }
+              >
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-caption border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th class="p-3">#</th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('nama')} class="p-3">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('nama')}
+                          >
+                            Mahasiswa {mhsTxlySortField() === 'nama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('nim')} class="p-3">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('nim')}
+                          >
+                            NIM {mhsTxlySortField() === 'nim' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('prodiNama')} class="p-3">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('prodiNama')}
+                          >
+                            Program Studi{' '}
+                            {mhsTxlySortField() === 'prodiNama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('semester')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('semester')}
+                          >
+                            Semester {mhsTxlySortField() === 'semester' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('jumlahPelanggaran')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('jumlahPelanggaran')}
+                          >
+                            Jumlah Pelanggaran{' '}
+                            {mhsTxlySortField() === 'jumlahPelanggaran' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('predikat')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('predikat')}
+                          >
+                            Predikat TXLY{' '}
+                            {mhsTxlySortField() === 'predikat' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th class="p-3 text-center">Total Poin</th>
+                        <th class="p-3 text-center">Degradasi Mutu</th>
+                        <th class="p-3 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
+                      <For each={paginatedMhsTxly()}>
+                        {(item, idx) => (
+                          <tr
+                            onClick={() => openMahasiswaDetail(item)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                openMahasiswaDetail(item);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            class="cursor-pointer transition-colors hover:bg-brand-50/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-brand-950/20"
+                            title="Tekan Enter untuk melihat riwayat pelanggaran mahasiswa"
+                          >
+                            <td class="p-3 text-secondary-400">
+                              {(mhsTxlyPagination.page() - 1) * mhsTxlyPagination.limit() + idx() + 1}
+                            </td>
+                            <td class="p-3 font-bold text-secondary-800 dark:text-white">
+                              <div class="flex items-center gap-2">
+                                <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
+                                <div>
+                                  <div class="hover:text-brand-600 transition-colors">{item.nama}</div>
+                                  <div class="text-fine text-secondary-400 font-normal">
+                                    {item.angkatan ? `Angkatan ${item.angkatan}` : ''}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td class="p-3 whitespace-nowrap font-mono">{item.nim}</td>
+                            <td class="p-3">{item.prodiNama}</td>
+                            <td class="p-3 text-center font-bold">{item.semester ? `Sem. ${item.semester}` : '-'}</td>
+                            <td class="p-3 text-center font-bold text-secondary-700 dark:text-secondary-300">
+                              {item.jumlahPelanggaran}
+                            </td>
+                            <td class="p-3 text-center">
+                              <span class="px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                                {item.predikat}
+                              </span>
+                            </td>
+                            <td class="p-3 text-center">
+                              <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                                {item.totalPoin}
+                              </span>
+                            </td>
+                            <td class="p-3 text-center font-bold text-rose-600 dark:text-rose-400">
+                              -{item.degradasiNilaiSikap}
+                            </td>
+                            <td class="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                onClick={() => openMahasiswaDetail(item)}
+                                variant="secondary"
+                                class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
+                                title="Lihat riwayat pelanggaran mahasiswa"
+                              >
+                                <span>👁️</span> Riwayat
+                              </Button>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={mhsTxlyPagination.page()}
+                  totalPages={totalMhsTxlyPages()}
+                  total={visibleMahasiswaTxly().length}
+                  limit={mhsTxlyPagination.limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={mhsTxlyPagination.setPage}
+                  onLimitChange={mhsTxlyPagination.setLimit}
+                />
+              </Show>
+            </Show>
+          </div>
+        </Show>
+
+        {/* Modal Riwayat Pelanggaran Mahasiswa (Klik Item Mahasiswa TXLY) */}
+        <Modal
+          show={!!selectedMhsDetail()}
+          onClose={() => setSelectedMhsDetail(null)}
+          title={`Riwayat Pelanggaran: ${selectedMhsDetail()?.nama || ''} (${selectedMhsDetail()?.nim || ''})`}
+        >
+          <div class="flex flex-col gap-5 max-w-4xl">
+            {/* Student Summary Card */}
+            <div class="p-4 rounded-xl bg-secondary-50 border border-secondary-200/80 flex flex-wrap items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-700">
+              <div class="flex items-center gap-3">
+                <StudentAvatar
+                  foto={selectedMhsDetail()?.foto}
+                  nama={selectedMhsDetail()?.nama || '-'}
+                  nim={selectedMhsDetail()?.nim || '-'}
+                  size="md"
+                />
+                <div>
+                  <h4 class="font-bold text-secondary-800 dark:text-white text-base">{selectedMhsDetail()?.nama}</h4>
+                  <p class="text-caption text-secondary-500 dark:text-secondary-300">
+                    NIM: {selectedMhsDetail()?.nim} · {selectedMhsDetail()?.prodiNama} ·{' '}
+                    {selectedMhsDetail()?.semester ? `Semester ${selectedMhsDetail()?.semester}` : ''}
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Predikat</span>
+                  <span class="font-bold text-brand-600 dark:text-brand-400 text-base">
+                    {selectedMhsDetail()?.predikat}
+                  </span>
+                </div>
+                <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Total Poin</span>
+                  <span class="font-bold text-rose-600 dark:text-rose-400 text-base">
+                    {selectedMhsDetail()?.totalPoin}
+                  </span>
+                </div>
+                <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Degradasi Mutu</span>
+                  <span class="font-bold text-rose-600 dark:text-rose-400 text-base">
+                    -{selectedMhsDetail()?.degradasiNilaiSikap}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Violation Records Table Header & Actions */}
+            <div>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <h5 class="text-caption uppercase font-bold text-secondary-500 dark:text-secondary-300">
+                  Daftar Pelanggaran Terdaftar ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
+                </h5>
+                <div class="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={handleExportDetailExcel}
+                    class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
+                    title="Ekspor riwayat pelanggaran ke Excel (.xlsx)"
+                  >
+                    <span>📊</span> Ekspor Excel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleExportDetailPDF}
+                    class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
+                    title="Ekspor riwayat pelanggaran ke PDF (.pdf)"
+                  >
+                    <span>📄</span> Ekspor PDF
+                  </Button>
+                </div>
+              </div>
+              <Show
+                when={!mhsViolationsDetail.loading}
+                fallback={<div class="py-8 text-center text-secondary-400">Memuat riwayat pelanggaran...</div>}
+              >
+                <Show
+                  when={(mhsViolationsDetail()?.pelanggaranList || []).length > 0}
+                  fallback={
+                    <div class="py-8 text-center text-secondary-400 text-caption">
+                      Tidak ada catatan pelanggaran untuk mahasiswa ini.
+                    </div>
+                  }
+                >
+                  <div class="overflow-x-auto border border-secondary-100 rounded-xl dark:border-secondary-800">
+                    <table class="w-full text-left text-caption border-collapse">
+                      <thead class="sticky top-0 bg-secondary-50 text-secondary-500 font-bold uppercase border-b border-secondary-200 dark:bg-secondary-800 dark:text-secondary-300 dark:border-secondary-700">
+                        <tr>
+                          <th class="p-2.5">Tanggal</th>
+                          <th class="p-2.5">Pasal</th>
+                          <th class="p-2.5">Pelanggaran</th>
+                          <th class="p-2.5">Sanksi</th>
+                          <th class="p-2.5">Pelapor</th>
+                          <th class="p-2.5">Keterangan</th>
+                          <th class="p-2.5 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                        <For each={paginatedModalRiwayat()}>
+                          {(v) => (
+                            <tr class="hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40">
+                              <td class="p-2.5 whitespace-nowrap">{new Date(v.tanggal).toLocaleDateString('id-ID')}</td>
+                              <td class="p-2.5 font-bold">{v.nomorPasal || '-'}</td>
+                              <td class="p-2.5">{v.jenisPelanggaran}</td>
+                              <td class="p-2.5">
+                                <span
+                                  class={`px-2 py-0.5 rounded border text-fine font-bold ${
+                                    v.jenisSanksi === 4
+                                      ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                      : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                                  }`}
+                                >
+                                  {v.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
+                                </span>
+                              </td>
+                              <td class="p-2.5 text-secondary-500">{v.pelapor || '-'}</td>
+                              <td class="p-2.5 max-w-xs truncate" title={v.keterangan}>
+                                {v.keterangan}
+                              </td>
+                              <td class="p-2.5 text-center whitespace-nowrap">
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => openSpPrint(v)}
+                                  class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
+                                  title="Cetak SP di jendela baru"
+                                >
+                                  <span>📄</span> Cetak SP
+                                </Button>
+                              </td>
+                            </tr>
+                          )}
+                        </For>
+                      </tbody>
+                    </table>
+                  </div>
+                  <Pagination
+                    currentPage={modalRiwayatPagination.page()}
+                    totalPages={totalModalRiwayatPages()}
+                    total={modalRiwayatList().length}
+                    limit={modalRiwayatPagination.limit()}
+                    pageOptions={[5, 10, 20]}
+                    onPageChange={modalRiwayatPagination.setPage}
+                    onLimitChange={modalRiwayatPagination.setLimit}
+                  />
+                </Show>
+              </Show>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <Button variant="secondary" onClick={() => setSelectedMhsDetail(null)}>
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Modal Konfirmasi Hapus Pelanggaran */}
         <Modal show={!!deleteTarget()} onClose={() => setDeleteTarget(null)} title="Hapus Catatan Pelanggaran">
