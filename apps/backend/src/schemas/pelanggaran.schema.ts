@@ -96,10 +96,48 @@ export const getAllPelanggaranSchema = {
     search: t.Optional(t.String()),
     prodiId: t.Optional(t.String()),
     periodeId: t.Optional(t.String()),
+    startDate: t.Optional(t.String()),
+    endDate: t.Optional(t.String()),
   }),
   response: {
     200: t.Any(),
     400: t.Object({ error: t.String() }),
+    403: t.Object({ error: t.String() }),
+  },
+};
+
+export const getMahasiswaPredikatSchema = {
+  detail: {
+    tags: ['Kedisiplinan'],
+    summary: 'Daftar Mahasiswa dengan Predikat TXLY',
+    description:
+      'Mengambil daftar mahasiswa yang memiliki riwayat pelanggaran beserta akumulasi predikat TXLY, total poin, dan semester saat ini.',
+  },
+  query: t.Object({
+    search: t.Optional(t.String()),
+    programStudiId: t.Optional(t.String()),
+    periodeId: t.Optional(t.String()),
+    predikat: t.Optional(t.String()),
+  }),
+  response: {
+    200: t.Array(
+      t.Object({
+        mahasiswaId: t.Integer(),
+        nim: t.String(),
+        nama: t.String(),
+        foto: t.Union([t.String(), t.Null()]),
+        angkatan: t.Union([t.String(), t.Null()]),
+        programStudiId: t.Union([t.Integer(), t.Null()]),
+        prodiNama: t.Union([t.String(), t.Null()]),
+        semester: t.Union([t.Integer(), t.Null()]),
+        totalPoin: t.Integer(),
+        jumlahPelanggaran: t.Integer(),
+        predikat: t.String(),
+        degradasiNilaiSikap: t.Number(),
+      }),
+    ),
+    400: t.Object({ error: t.String() }),
+    401: t.Object({ error: t.String() }),
     403: t.Object({ error: t.String() }),
   },
 };

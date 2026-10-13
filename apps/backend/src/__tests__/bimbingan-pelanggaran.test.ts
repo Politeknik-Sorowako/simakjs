@@ -773,6 +773,35 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(resRekap.status).toBe(200);
       const dataRekap = await resRekap.json();
       expect(dataRekap.total).toBe(1);
+
+      // 4. Fetch list dengan filter startDate dan endDate
+      const resDateFilter = await app.handle(
+        new Request('http://localhost/pelanggaran?startDate=2024-03-01&endDate=2024-03-31', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resDateFilter.status).toBe(200);
+      const dataDateFilter = await resDateFilter.json();
+      const dateItems = Array.isArray(dataDateFilter) ? dataDateFilter : dataDateFilter.data;
+      expect(dateItems.length).toBe(1);
+      expect(dateItems[0].jenisPelanggaran).toBe('Merokok di Area Terlarang');
+
+      // 5. Fetch daftar mahasiswa beserta predikat TXLY (GET /pelanggaran/mahasiswa-predikat)
+      const resMhsPredikat = await app.handle(
+        new Request('http://localhost/pelanggaran/mahasiswa-predikat', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resMhsPredikat.status).toBe(200);
+      const dataMhsPredikat = await resMhsPredikat.json();
+      expect(Array.isArray(dataMhsPredikat)).toBe(true);
+      expect(dataMhsPredikat.length).toBeGreaterThanOrEqual(1);
+      const targetMhs = dataMhsPredikat.find(
+        (m: { mahasiswaId: number; predikat: string; totalPoin: number }) => m.mahasiswaId === mhsId,
+      );
+      expect(targetMhs).toBeDefined();
+      expect(targetMhs?.predikat).toBeDefined();
+      expect(targetMhs?.totalPoin).toBeGreaterThanOrEqual(2);
     });
   });
 });
