@@ -272,7 +272,9 @@ export default function CutiMahasiswa() {
             readonly={true}
             onOpen={(lampiranId) => {
               if (lampiranCutiId()) {
-                cutiController.openLampiran(lampiranCutiId()!, lampiranId);
+                cutiController.openLampiran(lampiranCutiId()!, lampiranId).catch(() => {
+                  toast.showToast('Gagal membuka lampiran.', 'error');
+                });
               }
             }}
           />

@@ -1,5 +1,6 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
+import { validateAdmissionFileMagic } from './file-validation';
 
 export const LAMPIRAN_DIR = join(process.cwd(), 'storage', 'status-mahasiswa');
 export const LAMPIRAN_MAX_MB = 10;
@@ -23,13 +24,21 @@ export function validateLampiranFile(file: File): string {
 
 export async function saveLampiranFile(file: File, prefix: string): Promise<string> {
   const ext = validateLampiranFile(file);
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  // Cegah berkas yang di-rename ekstensinya (mis. .exe -> .pdf) dengan
+  // memverifikasi magic bytes, selaras dengan validasi upload admisi.
+  // validateAdmissionFileMagic menerima ekstensi tanpa titik awal.
+  const magicError = validateAdmissionFileMagic(ext.replace(/^\./, ''), buffer);
+  if (magicError) {
+    throw new Error('Isi lampiran tidak sesuai dengan format file (PDF/gambar).');
+  }
   await mkdir(LAMPIRAN_DIR, { recursive: true });
   const base = file.name
     .replace(/\.[^.]+$/, '')
     .replace(/[^a-zA-Z0-9._-]/g, '-')
     .slice(0, 60);
   const storageKey = `${prefix}-${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${base}${ext}`;
-  await writeFile(join(LAMPIRAN_DIR, storageKey), new Uint8Array(await file.arrayBuffer()));
+  await writeFile(join(LAMPIRAN_DIR, storageKey), buffer);
   return storageKey;
 }
 
