@@ -1,6 +1,7 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { IconActionButton } from '../components/ui/IconActionButton';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
@@ -385,6 +386,7 @@ export default function Pelanggaran() {
       refetchAllViolations();
       refetchStudentViolations();
       refetchRekap();
+      refetchMahasiswaTxly();
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal menghapus data pelanggaran', 'error');
     } finally {
@@ -603,6 +605,7 @@ export default function Pelanggaran() {
       setShowModal(false);
       refetchAllViolations();
       refetchRekap();
+      refetchMahasiswaTxly();
     } catch (err: unknown) {
       setErrorMsg((err as Error).message || 'Gagal menyimpan data.');
     }
@@ -612,8 +615,8 @@ export default function Pelanggaran() {
   const [viewTab, setViewTab] = createSignal<'daftar' | 'rekap' | 'mahasiswa'>('daftar');
   const [rekapProdi, setRekapProdi] = createSignal<number | undefined>(undefined);
   const [rekap, { refetch: refetchRekap }] = createResource(
-    () => rekapProdi(),
-    async (prodi) => {
+    () => ({ prodi: rekapProdi() }),
+    async ({ prodi }) => {
       if (!isStaff()) return null;
       return await bimbinganController.getRekapPelanggaran(prodi);
     },
@@ -629,39 +632,45 @@ export default function Pelanggaran() {
   const mhsTxlySortAria = (field: MhsTxlySortField): 'ascending' | 'descending' | 'none' =>
     mhsTxlySortField() === field ? (mhsTxlySortDir() === 'asc' ? 'ascending' : 'descending') : 'none';
 
-  // Debounce pencarian (~300ms) agar tidak menembak endpoint per ketikan.
-  const [mhsTxlySearchDebounced, setMhsTxlySearchDebounced] = createSignal('');
-  createEffect(() => {
-    const value = mhsTxlySearch();
-    const timer = setTimeout(() => setMhsTxlySearchDebounced(value), 300);
-    onCleanup(() => clearTimeout(timer));
-  });
+  // Input pencarian dibuat uncontrolled (tanpa binding `value`) agar Solid
+  // tidak pernah menyentuh DOM input — kursor/fokus tidak mungkin terganggu.
+  // Nilai dibaca via onInput + dikosongkan lewat ref saat Reset Filter.
+  let mhsTxlySearchEl: HTMLInputElement | undefined;
 
-  // Resource hanya aktif saat tab "mahasiswa" terbuka (menghindari fetch eager).
+  // Pola tab Daftar: ambil daftar penuh SEKALI per buka tab; filter
+  // (cari/prodi/predikat) berjalan sepenuhnya di memori sehingga mengetik
+  // tidak menyentuh network sama sekali. Kembali ke tab = refetch (segar).
   const [mahasiswaTxlyList, { refetch: refetchMahasiswaTxly }] = createResource(
-    () =>
-      isStaff() && viewTab() === 'mahasiswa'
-        ? {
-            search: mhsTxlySearchDebounced(),
-            programStudiId: mhsTxlyProdi(),
-            predikat: mhsTxlyPredikat(),
-          }
-        : null,
-    async (params) => {
-      return await bimbinganController.getMahasiswaPredikat({
-        search: params.search || undefined,
-        programStudiId: params.programStudiId,
-        predikat: params.predikat || undefined,
-      });
+    () => (isStaff() && viewTab() === 'mahasiswa' ? true : null),
+    async () => {
+      return await bimbinganController.getMahasiswaPredikat({});
     },
   );
 
   const visibleMahasiswaTxly = createMemo(() => {
     const list = mahasiswaTxlyList() || [];
+    const q = mhsTxlySearch().trim().toLowerCase();
+    const pid = mhsTxlyProdi();
+    const pred = mhsTxlyPredikat()?.trim().toUpperCase();
+
+    let rows = list;
+    if (pid) {
+      rows = rows.filter((m) => m.programStudiId === pid);
+    }
+    if (pred) {
+      rows = rows.filter((m) => {
+        const full = `T${Math.floor(m.totalPoin / 4)}L${m.totalPoin % 4}`;
+        return m.predikat.toUpperCase() === pred || full === pred;
+      });
+    }
+    if (q) {
+      rows = rows.filter((m) => m.nama.toLowerCase().includes(q) || m.nim.toLowerCase().includes(q));
+    }
+
     const field = mhsTxlySortField();
     const dir = mhsTxlySortDir() === 'asc' ? 1 : -1;
 
-    return [...list].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       let cmp = 0;
       if (field === 'predikat') {
         // Urutkan berdasarkan total poin / akumulasi sanksi tertinggi
@@ -743,6 +752,13 @@ export default function Pelanggaran() {
     return list.slice(start, start + rekapJenisPagination.limit());
   });
 
+  // Auto reset halaman tabel rekap saat program studi berubah
+  createEffect(() => {
+    rekapProdi();
+    rekapTopPagination.resetPage();
+    rekapJenisPagination.resetPage();
+  });
+
   // 4. Pagination untuk Modal Riwayat Mahasiswa
   const modalRiwayatPagination = usePagination(5);
   const modalRiwayatList = createMemo(() => mhsViolationsDetail()?.pelanggaranList || []);
@@ -777,27 +793,65 @@ export default function Pelanggaran() {
             </p>
           </div>
           <Show when={isStaff()}>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
               <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
                 <a
                   href="/pelanggaran/pasal-bpa"
-                  class="px-5 py-2.5 bg-white border border-secondary-200 hover:bg-secondary-50 text-secondary-700 font-bold rounded-xl text-base transition-all active:scale-95 dark:bg-secondary-900 dark:border-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-800"
+                  title="Kelola Pasal BPA"
+                  aria-label="Kelola Pasal BPA"
+                  class="inline-flex items-center justify-center gap-2 h-11 px-3 sm:px-5 bg-white border border-secondary-200 hover:bg-secondary-50 text-secondary-700 font-bold rounded-full text-base transition-all active:scale-95 dark:bg-secondary-900 dark:border-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-800"
                 >
-                  Kelola Pasal BPA
+                  <svg
+                    class="w-5 h-5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
+                  </svg>
+                  <span class="hidden sm:inline">Kelola Pasal BPA</span>
                 </a>
               </Show>
-              <button
+              <IconActionButton
+                label="Impor CSV"
+                variant="gray"
                 onClick={() => setShowImportModal(true)}
-                class="px-5 py-2.5 bg-secondary-100 hover:bg-secondary-200 text-secondary-700 font-bold rounded-xl text-base transition-all active:scale-95 dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
-              >
-                Impor CSV
-              </button>
-              <button
+                icon={
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 15V3m0 0-4 4m4-4 4 4M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"
+                    />
+                  </svg>
+                }
+              />
+              <IconActionButton
+                label="Catat Pelanggaran"
+                variant="blue"
                 onClick={openAddModal}
-                class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-base transition-all active:scale-95 shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
-              >
-                + Catat Pelanggaran
-              </button>
+                icon={
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                  </svg>
+                }
+              />
             </div>
           </Show>
         </div>
@@ -981,16 +1035,20 @@ export default function Pelanggaran() {
                 <Button
                   variant="secondary"
                   onClick={handleExportExcel}
+                  title="Ekspor daftar pelanggaran ke file Excel (.xlsx)"
+                  aria-label="Ekspor Excel"
                   class="flex items-center gap-1.5 py-1.5 text-caption font-semibold"
                 >
-                  <span>📊</span> Ekspor Excel
+                  <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={handleExportPDF}
+                  title="Ekspor daftar pelanggaran ke dokumen PDF (.pdf)"
+                  aria-label="Ekspor PDF"
                   class="flex items-center gap-1.5 py-1.5 text-caption font-semibold"
                 >
-                  <span>📄</span> Ekspor PDF
+                  <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
                 </Button>
               </div>
             </div>
@@ -1229,16 +1287,19 @@ export default function Pelanggaran() {
                                   variant="secondary"
                                   class="py-1 px-2 text-fine"
                                   title="Cetak Dokumen SP di jendela baru"
+                                  aria-label="Cetak SP"
                                 >
-                                  Cetak SP
+                                  <span aria-hidden="true">🖨️</span> <span class="hidden sm:inline">Cetak SP</span>
                                 </Button>
                                 <Show when={auth.hasRole(['admin'])}>
                                   <Button
                                     onClick={() => openEditModal(item)}
                                     variant="secondary"
                                     class="py-1 px-2 text-fine"
+                                    title="Edit catatan pelanggaran"
+                                    aria-label="Edit"
                                   >
-                                    Edit
+                                    <span aria-hidden="true">✏️</span> <span class="hidden sm:inline">Edit</span>
                                   </Button>
                                 </Show>
                                 <Show when={canDelete()}>
@@ -1246,8 +1307,9 @@ export default function Pelanggaran() {
                                     onClick={() => setDeleteTarget(item)}
                                     class="py-1 px-2 text-fine font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-all active:scale-95 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-950/40"
                                     title="Hapus catatan pelanggaran"
+                                    aria-label="Hapus"
                                   >
-                                    Hapus
+                                    <span aria-hidden="true">🗑️</span> <span class="hidden sm:inline">Hapus</span>
                                   </button>
                                 </Show>
                               </div>
@@ -1302,7 +1364,6 @@ export default function Pelanggaran() {
                     ]}
                     onChange={(val) => {
                       setRekapProdi(val ? Number(val) : undefined);
-                      refetchRekap();
                     }}
                   />
                 </div>
@@ -1495,7 +1556,7 @@ export default function Pelanggaran() {
                   class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
                   title="Ekspor daftar mahasiswa kedisiplinan ke file Excel (.xlsx)"
                 >
-                  <span>📊</span> Ekspor Excel
+                  <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
                 </Button>
                 <Button
                   variant="secondary"
@@ -1503,7 +1564,7 @@ export default function Pelanggaran() {
                   class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
                   title="Ekspor daftar mahasiswa kedisiplinan ke dokumen PDF (.pdf)"
                 >
-                  <span>📄</span> Ekspor PDF
+                  <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
                 </Button>
               </div>
             </div>
@@ -1521,7 +1582,9 @@ export default function Pelanggaran() {
                   id="mhsTxlySearch"
                   type="text"
                   placeholder="Cari Nama atau NIM..."
-                  value={mhsTxlySearch()}
+                  ref={(el) => {
+                    mhsTxlySearchEl = el;
+                  }}
                   onInput={(e) => setMhsTxlySearch(e.currentTarget.value)}
                   class="w-full text-caption"
                 />
@@ -1571,6 +1634,7 @@ export default function Pelanggaran() {
                   <button
                     onClick={() => {
                       setMhsTxlySearch('');
+                      if (mhsTxlySearchEl) mhsTxlySearchEl.value = '';
                       setMhsTxlyProdi(undefined);
                       setMhsTxlyPredikat(undefined);
                     }}
@@ -1582,9 +1646,11 @@ export default function Pelanggaran() {
               </div>
             </div>
 
-            {/* Tabel Daftar Mahasiswa TXLY */}
+            {/* Tabel Daftar Mahasiswa TXLY — stale-while-revalidate: tampilkan data
+                lama selama refetch berjalan (tanpa flash penuh); spinner hanya saat
+                belum pernah ada data. */}
             <Show
-              when={!mahasiswaTxlyList.loading}
+              when={!mahasiswaTxlyList.loading || mahasiswaTxlyList()}
               fallback={
                 <div class="py-12 text-center text-secondary-400 dark:text-secondary-300 text-base">
                   Memuat data mahasiswa kedisiplinan...
@@ -1721,8 +1787,9 @@ export default function Pelanggaran() {
                                 variant="secondary"
                                 class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
                                 title="Lihat riwayat pelanggaran mahasiswa"
+                                aria-label="Riwayat"
                               >
-                                <span>👁️</span> Riwayat
+                                <span aria-hidden="true">👁️</span> <span class="hidden sm:inline">Riwayat</span>
                               </Button>
                             </td>
                           </tr>
@@ -1805,7 +1872,7 @@ export default function Pelanggaran() {
                     class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
                     title="Ekspor riwayat pelanggaran ke Excel (.xlsx)"
                   >
-                    <span>📊</span> Ekspor Excel
+                    <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
                   </Button>
                   <Button
                     variant="secondary"
@@ -1813,7 +1880,7 @@ export default function Pelanggaran() {
                     class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
                     title="Ekspor riwayat pelanggaran ke PDF (.pdf)"
                   >
-                    <span>📄</span> Ekspor PDF
+                    <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
                   </Button>
                 </div>
               </div>
