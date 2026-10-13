@@ -631,6 +631,11 @@ export default function Pelanggaran() {
     mhsTxlySortField() === field ? (mhsTxlySortDir() === 'asc' ? 'ascending' : 'descending') : 'none';
 
   // Debounce pencarian (~300ms) agar tidak menembak endpoint per ketikan.
+  // Input pencarian dibuat uncontrolled (tanpa binding `value`) agar Solid
+  // tidak pernah menyentuh DOM input — kursor/fokus tidak mungkin terganggu
+  // oleh refetch tabel di bawahnya. Nilai dibaca via onInput + dikosongkan
+  // lewat ref saat Reset Filter.
+  let mhsTxlySearchEl: HTMLInputElement | undefined;
   const [mhsTxlySearchDebounced, setMhsTxlySearchDebounced] = createSignal('');
   createEffect(() => {
     const value = mhsTxlySearch();
@@ -1574,7 +1579,9 @@ export default function Pelanggaran() {
                   id="mhsTxlySearch"
                   type="text"
                   placeholder="Cari Nama atau NIM..."
-                  value={mhsTxlySearch()}
+                  ref={(el) => {
+                    mhsTxlySearchEl = el;
+                  }}
                   onInput={(e) => setMhsTxlySearch(e.currentTarget.value)}
                   class="w-full text-caption"
                 />
@@ -1624,6 +1631,7 @@ export default function Pelanggaran() {
                   <button
                     onClick={() => {
                       setMhsTxlySearch('');
+                      if (mhsTxlySearchEl) mhsTxlySearchEl.value = '';
                       setMhsTxlyProdi(undefined);
                       setMhsTxlyPredikat(undefined);
                     }}
