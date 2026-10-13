@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { IconActionButton } from '../components/ui/IconActionButton';
@@ -386,6 +386,7 @@ export default function Pelanggaran() {
       refetchAllViolations();
       refetchStudentViolations();
       refetchRekap();
+      refetchMahasiswaTxly();
     } catch (err: unknown) {
       toast.showToast((err as Error).message || 'Gagal menghapus data pelanggaran', 'error');
     } finally {
@@ -604,6 +605,7 @@ export default function Pelanggaran() {
       setShowModal(false);
       refetchAllViolations();
       refetchRekap();
+      refetchMahasiswaTxly();
     } catch (err: unknown) {
       setErrorMsg((err as Error).message || 'Gagal menyimpan data.');
     }
@@ -630,44 +632,45 @@ export default function Pelanggaran() {
   const mhsTxlySortAria = (field: MhsTxlySortField): 'ascending' | 'descending' | 'none' =>
     mhsTxlySortField() === field ? (mhsTxlySortDir() === 'asc' ? 'ascending' : 'descending') : 'none';
 
-  // Debounce pencarian (~300ms) agar tidak menembak endpoint per ketikan.
   // Input pencarian dibuat uncontrolled (tanpa binding `value`) agar Solid
-  // tidak pernah menyentuh DOM input — kursor/fokus tidak mungkin terganggu
-  // oleh refetch tabel di bawahnya. Nilai dibaca via onInput + dikosongkan
-  // lewat ref saat Reset Filter.
+  // tidak pernah menyentuh DOM input — kursor/fokus tidak mungkin terganggu.
+  // Nilai dibaca via onInput + dikosongkan lewat ref saat Reset Filter.
   let mhsTxlySearchEl: HTMLInputElement | undefined;
-  const [mhsTxlySearchDebounced, setMhsTxlySearchDebounced] = createSignal('');
-  createEffect(() => {
-    const value = mhsTxlySearch();
-    const timer = setTimeout(() => setMhsTxlySearchDebounced(value), 300);
-    onCleanup(() => clearTimeout(timer));
-  });
 
-  // Resource hanya aktif saat tab "mahasiswa" terbuka (menghindari fetch eager).
+  // Pola tab Daftar: ambil daftar penuh SEKALI per buka tab; filter
+  // (cari/prodi/predikat) berjalan sepenuhnya di memori sehingga mengetik
+  // tidak menyentuh network sama sekali. Kembali ke tab = refetch (segar).
   const [mahasiswaTxlyList, { refetch: refetchMahasiswaTxly }] = createResource(
-    () =>
-      isStaff() && viewTab() === 'mahasiswa'
-        ? {
-            search: mhsTxlySearchDebounced(),
-            programStudiId: mhsTxlyProdi(),
-            predikat: mhsTxlyPredikat(),
-          }
-        : null,
-    async (params) => {
-      return await bimbinganController.getMahasiswaPredikat({
-        search: params.search || undefined,
-        programStudiId: params.programStudiId,
-        predikat: params.predikat || undefined,
-      });
+    () => (isStaff() && viewTab() === 'mahasiswa' ? true : null),
+    async () => {
+      return await bimbinganController.getMahasiswaPredikat({});
     },
   );
 
   const visibleMahasiswaTxly = createMemo(() => {
     const list = mahasiswaTxlyList() || [];
+    const q = mhsTxlySearch().trim().toLowerCase();
+    const pid = mhsTxlyProdi();
+    const pred = mhsTxlyPredikat()?.trim().toUpperCase();
+
+    let rows = list;
+    if (pid) {
+      rows = rows.filter((m) => m.programStudiId === pid);
+    }
+    if (pred) {
+      rows = rows.filter((m) => {
+        const full = `T${Math.floor(m.totalPoin / 4)}L${m.totalPoin % 4}`;
+        return m.predikat.toUpperCase() === pred || full === pred;
+      });
+    }
+    if (q) {
+      rows = rows.filter((m) => m.nama.toLowerCase().includes(q) || m.nim.toLowerCase().includes(q));
+    }
+
     const field = mhsTxlySortField();
     const dir = mhsTxlySortDir() === 'asc' ? 1 : -1;
 
-    return [...list].sort((a, b) => {
+    return [...rows].sort((a, b) => {
       let cmp = 0;
       if (field === 'predikat') {
         // Urutkan berdasarkan total poin / akumulasi sanksi tertinggi
