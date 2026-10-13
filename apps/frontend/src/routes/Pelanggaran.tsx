@@ -214,6 +214,87 @@ export default function Pelanggaran() {
     toast.showToast('Dokumen PDF pelanggaran berhasil dibuat (.pdf)', 'success');
   };
 
+  // Ekspor Columns & Handlers untuk Tab Mahasiswa TXLY
+  const exportMhsTxlyColumns: ExportColumn<MahasiswaTxlyItem>[] = [
+    { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
+    { header: 'NIM', accessor: (r) => r.nim },
+    { header: 'Nama Mahasiswa', accessor: (r) => r.nama },
+    { header: 'Program Studi', accessor: (r) => r.prodiNama },
+    { header: 'Semester', accessor: (r) => (r.semester ? `Semester ${r.semester}` : '-') },
+    { header: 'Jumlah Pelanggaran', accessor: (r) => r.jumlahPelanggaran },
+    { header: 'Predikat TXLY', accessor: (r) => r.predikat },
+    { header: 'Total Poin', accessor: (r) => r.totalPoin },
+    { header: 'Degradasi Mutu Sikap', accessor: (r) => `-${r.degradasiNilaiSikap}` },
+  ];
+
+  const handleExportMhsTxlyExcel = () => {
+    const data = visibleMahasiswaTxly();
+    if (!data.length) {
+      toast.showToast('Tidak ada data mahasiswa kedisiplinan untuk diekspor', 'info');
+      return;
+    }
+    exportToExcel(data, exportMhsTxlyColumns, `Daftar_Mahasiswa_TXLY_${getTodayString()}`);
+    toast.showToast('Data mahasiswa kedisiplinan berhasil diekspor (.xlsx)', 'success');
+  };
+
+  const handleExportMhsTxlyPDF = () => {
+    const data = visibleMahasiswaTxly();
+    if (!data.length) {
+      toast.showToast('Tidak ada data mahasiswa kedisiplinan untuk diekspor', 'info');
+      return;
+    }
+    exportToPDF(
+      data,
+      exportMhsTxlyColumns,
+      `Daftar_Mahasiswa_TXLY_${getTodayString()}`,
+      'DAFTAR MAHASISWA & PREDIKAT KEDISIPLINAN TXLY',
+      'Politeknik Sorowako - Sistem Informasi Akademik & Kedisiplinan',
+    );
+    toast.showToast('Dokumen PDF mahasiswa kedisiplinan berhasil dibuat (.pdf)', 'success');
+  };
+
+  // Ekspor Columns & Handlers untuk Modal Riwayat Pelanggaran Mahasiswa
+  const exportMhsDetailColumns: ExportColumn<IPelanggaran>[] = [
+    { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
+    { header: 'Tanggal', accessor: (r) => new Date(r.tanggal).toLocaleDateString('id-ID') },
+    { header: 'Pasal BPA', accessor: (r) => r.nomorPasal || '-' },
+    { header: 'Jenis Pelanggaran', accessor: (r) => r.jenisPelanggaran },
+    {
+      header: 'Tingkat Sanksi',
+      accessor: (r) => (r.jenisSanksi === 4 ? 'Peringatan Tertulis (-1.00)' : 'Peringatan Lisan (-0.25)'),
+    },
+    { header: 'Pelapor', accessor: (r) => r.pelapor || '-' },
+    { header: 'Keterangan', accessor: (r) => r.keterangan },
+  ];
+
+  const handleExportDetailExcel = () => {
+    const m = selectedMhsDetail();
+    const list = mhsViolationsDetail()?.pelanggaranList || [];
+    if (!list.length) {
+      toast.showToast('Tidak ada riwayat pelanggaran untuk diekspor', 'info');
+      return;
+    }
+    exportToExcel(list, exportMhsDetailColumns, `Riwayat_Pelanggaran_${m?.nim || ''}_${getTodayString()}`);
+    toast.showToast('Riwayat pelanggaran mahasiswa berhasil diekspor (.xlsx)', 'success');
+  };
+
+  const handleExportDetailPDF = () => {
+    const m = selectedMhsDetail();
+    const list = mhsViolationsDetail()?.pelanggaranList || [];
+    if (!list.length) {
+      toast.showToast('Tidak ada riwayat pelanggaran untuk diekspor', 'info');
+      return;
+    }
+    exportToPDF(
+      list,
+      exportMhsDetailColumns,
+      `Riwayat_Pelanggaran_${m?.nim || ''}_${getTodayString()}`,
+      `RIWAYAT TINDAKAN INDISIPLINER MAHASISWA: ${m?.nama || ''} (${m?.nim || ''})`,
+      `Program Studi: ${m?.prodiNama || '-'} | Predikat TXLY: ${m?.predikat || '-'} | Total Poin: ${m?.totalPoin ?? 0}`,
+    );
+    toast.showToast('Dokumen PDF riwayat pelanggaran berhasil dibuat (.pdf)', 'success');
+  };
+
   // Load master pasal BPA (global + prodi scoped)
   const [pasalList] = createResource(
     () => (isStaff() ? true : null),
@@ -606,7 +687,70 @@ export default function Pelanggaran() {
 
   const openMahasiswaDetail = (item: MahasiswaTxlyItem) => {
     setSelectedMhsDetail(item);
+    modalRiwayatPagination.resetPage();
   };
+
+  // 1. Pagination untuk Tab Mahasiswa TXLY
+  const mhsTxlyPagination = usePagination(10);
+  const totalMhsTxlyPages = createMemo(() => Math.ceil(visibleMahasiswaTxly().length / mhsTxlyPagination.limit()) || 1);
+  const paginatedMhsTxly = createMemo(() => {
+    const start = (mhsTxlyPagination.page() - 1) * mhsTxlyPagination.limit();
+    return visibleMahasiswaTxly().slice(start, start + mhsTxlyPagination.limit());
+  });
+
+  // Auto reset page saat filter Mahasiswa TXLY berubah
+  createEffect(() => {
+    mhsTxlySearch();
+    mhsTxlyProdi();
+    mhsTxlyPredikat();
+    mhsTxlySortField();
+    mhsTxlySortDir();
+    mhsTxlyPagination.resetPage();
+  });
+
+  // 2. Pagination untuk Tab Rekap - Pelanggar Terbanyak
+  const rekapTopPagination = usePagination(10);
+  const totalRekapTopPages = createMemo(
+    () => Math.ceil((rekap()?.topPelanggar?.length || 0) / rekapTopPagination.limit()) || 1,
+  );
+  const paginatedRekapTop = createMemo(() => {
+    const list = rekap()?.topPelanggar || [];
+    const start = (rekapTopPagination.page() - 1) * rekapTopPagination.limit();
+    return list.slice(start, start + rekapTopPagination.limit());
+  });
+
+  // 3. Pagination untuk Tab Rekap - Per Jenis Pelanggaran
+  const rekapJenisPagination = usePagination(10);
+  const totalRekapJenisPages = createMemo(
+    () => Math.ceil((rekap()?.perJenis?.length || 0) / rekapJenisPagination.limit()) || 1,
+  );
+  const paginatedRekapJenis = createMemo(() => {
+    const list = rekap()?.perJenis || [];
+    const start = (rekapJenisPagination.page() - 1) * rekapJenisPagination.limit();
+    return list.slice(start, start + rekapJenisPagination.limit());
+  });
+
+  // 4. Pagination untuk Modal Riwayat Mahasiswa
+  const modalRiwayatPagination = usePagination(5);
+  const modalRiwayatList = createMemo(() => mhsViolationsDetail()?.pelanggaranList || []);
+  const totalModalRiwayatPages = createMemo(
+    () => Math.ceil(modalRiwayatList().length / modalRiwayatPagination.limit()) || 1,
+  );
+  const paginatedModalRiwayat = createMemo(() => {
+    const start = (modalRiwayatPagination.page() - 1) * modalRiwayatPagination.limit();
+    return modalRiwayatList().slice(start, start + modalRiwayatPagination.limit());
+  });
+
+  // 5. Pagination untuk Mahasiswa View (Riwayat Pribadi)
+  const studentPagination = usePagination(10);
+  const studentViolationsList = createMemo(() => studentViolations()?.pelanggaranList || []);
+  const totalStudentPages = createMemo(
+    () => Math.ceil(studentViolationsList().length / studentPagination.limit()) || 1,
+  );
+  const paginatedStudentViolations = createMemo(() => {
+    const start = (studentPagination.page() - 1) * studentPagination.limit();
+    return studentViolationsList().slice(start, start + studentPagination.limit());
+  });
 
   return (
     <MainLayout>
@@ -746,7 +890,7 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={studentViolations()?.pelanggaranList}>
+                      <For each={paginatedStudentViolations()}>
                         {(item) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString()}</td>
@@ -796,6 +940,15 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={studentPagination.page()}
+                  totalPages={totalStudentPages()}
+                  total={studentViolationsList().length}
+                  limit={studentPagination.limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={studentPagination.setPage}
+                  onLimitChange={studentPagination.setLimit}
+                />
               </Show>
             </div>
           </div>
@@ -1171,15 +1324,22 @@ export default function Pelanggaran() {
                 <div class="text-2xl font-bold text-brand-600 dark:text-brand-400">
                   {rekap()?.topPelanggar.length || 0}
                 </div>
-                <div class="text-fine uppercase font-semibold text-secondary-400 dark:text-secondary-300">Top 10</div>
+                <div class="text-fine uppercase font-semibold text-secondary-400 dark:text-secondary-300">
+                  Total Pelanggar
+                </div>
               </div>
             </div>
 
             {/* Top pelanggar table with predikat */}
             <div>
-              <h4 class="text-base font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
-                Pelanggar Terbanyak (Top 10)
-              </h4>
+              <div class="flex items-center justify-between border-b pb-2 mb-2">
+                <h4 class="text-base font-bold text-secondary-700 dark:text-secondary-200">
+                  {rekapProdi()
+                    ? `Daftar Pelanggar - ${prodiList()?.find((p) => p.id === rekapProdi())?.nama || 'Program Studi Terpilih'}`
+                    : 'Pelanggar Terbanyak (Seluruh Program Studi)'}
+                </h4>
+                <span class="text-fine text-secondary-400">{rekap()?.topPelanggar?.length || 0} mahasiswa</span>
+              </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-left text-caption border-collapse">
                   <thead>
@@ -1195,10 +1355,12 @@ export default function Pelanggaran() {
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                    <For each={rekap()?.topPelanggar || []}>
+                    <For each={paginatedRekapTop()}>
                       {(item, idx) => (
                         <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                          <td class="p-3">{idx() + 1}</td>
+                          <td class="p-3">
+                            {(rekapTopPagination.page() - 1) * rekapTopPagination.limit() + idx() + 1}
+                          </td>
                           <td class="p-3 font-mono">{item.nim}</td>
                           <td class="p-3 font-bold text-secondary-800 dark:text-white">
                             <div class="flex items-center gap-2">
@@ -1227,6 +1389,15 @@ export default function Pelanggaran() {
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                currentPage={rekapTopPagination.page()}
+                totalPages={totalRekapTopPages()}
+                total={rekap()?.topPelanggar?.length || 0}
+                limit={rekapTopPagination.limit()}
+                pageOptions={pageOptions}
+                onPageChange={rekapTopPagination.setPage}
+                onLimitChange={rekapTopPagination.setLimit}
+              />
             </div>
 
             {/* Per prodi breakdown */}
@@ -1253,9 +1424,10 @@ export default function Pelanggaran() {
             {/* Per jenis breakdown */}
             <Show when={(rekap()?.perJenis || []).length > 0}>
               <div>
-                <h4 class="text-base font-bold text-secondary-700 border-b pb-2 mb-2 dark:text-secondary-200">
-                  Per Jenis Pelanggaran
-                </h4>
+                <div class="flex items-center justify-between border-b pb-2 mb-2">
+                  <h4 class="text-base font-bold text-secondary-700 dark:text-secondary-200">Per Jenis Pelanggaran</h4>
+                  <span class="text-fine text-secondary-400">{rekap()?.perJenis?.length || 0} jenis</span>
+                </div>
                 <div class="overflow-x-auto">
                   <table class="w-full text-left text-caption border-collapse">
                     <thead>
@@ -1266,7 +1438,7 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={rekap()?.perJenis || []}>
+                      <For each={paginatedRekapJenis()}>
                         {(j) => (
                           <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
                             <td class="p-3">{j.jenis}</td>
@@ -1278,6 +1450,15 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={rekapJenisPagination.page()}
+                  totalPages={totalRekapJenisPages()}
+                  total={rekap()?.perJenis?.length || 0}
+                  limit={rekapJenisPagination.limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={rekapJenisPagination.setPage}
+                  onLimitChange={rekapJenisPagination.setLimit}
+                />
               </div>
             </Show>
           </div>
@@ -1294,9 +1475,24 @@ export default function Pelanggaran() {
                   berjalan.
                 </p>
               </div>
-              <span class="text-caption text-secondary-400 dark:text-secondary-300">
-                {visibleMahasiswaTxly().length} mahasiswa terdaftar
-              </span>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleExportMhsTxlyExcel}
+                  class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
+                  title="Ekspor daftar mahasiswa kedisiplinan ke file Excel (.xlsx)"
+                >
+                  <span>📊</span> Ekspor Excel
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleExportMhsTxlyPDF}
+                  class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
+                  title="Ekspor daftar mahasiswa kedisiplinan ke dokumen PDF (.pdf)"
+                >
+                  <span>📄</span> Ekspor PDF
+                </Button>
+              </div>
             </div>
 
             {/* Filter Bar Mahasiswa TXLY */}
@@ -1428,14 +1624,16 @@ export default function Pelanggaran() {
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 font-medium text-secondary-600 dark:text-secondary-200">
-                      <For each={visibleMahasiswaTxly()}>
+                      <For each={paginatedMhsTxly()}>
                         {(item, idx) => (
                           <tr
                             onClick={() => openMahasiswaDetail(item)}
                             class="hover:bg-brand-50/30 cursor-pointer transition-colors dark:hover:bg-brand-950/20"
                             title="Klik untuk melihat riwayat pelanggaran mahasiswa"
                           >
-                            <td class="p-3 text-secondary-400">{idx() + 1}</td>
+                            <td class="p-3 text-secondary-400">
+                              {(mhsTxlyPagination.page() - 1) * mhsTxlyPagination.limit() + idx() + 1}
+                            </td>
                             <td class="p-3 font-bold text-secondary-800 dark:text-white">
                               <div class="flex items-center gap-2">
                                 <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
@@ -1470,9 +1668,10 @@ export default function Pelanggaran() {
                               <Button
                                 onClick={() => openMahasiswaDetail(item)}
                                 variant="secondary"
-                                class="py-1 px-2.5 text-fine"
+                                class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
+                                title="Lihat riwayat pelanggaran mahasiswa"
                               >
-                                Lihat Riwayat
+                                <span>👁️</span> Riwayat
                               </Button>
                             </td>
                           </tr>
@@ -1481,6 +1680,15 @@ export default function Pelanggaran() {
                     </tbody>
                   </table>
                 </div>
+                <Pagination
+                  currentPage={mhsTxlyPagination.page()}
+                  totalPages={totalMhsTxlyPages()}
+                  total={visibleMahasiswaTxly().length}
+                  limit={mhsTxlyPagination.limit()}
+                  pageOptions={pageOptions}
+                  onPageChange={mhsTxlyPagination.setPage}
+                  onLimitChange={mhsTxlyPagination.setLimit}
+                />
               </Show>
             </Show>
           </div>
@@ -1533,11 +1741,31 @@ export default function Pelanggaran() {
               </div>
             </div>
 
-            {/* Violation Records Table */}
+            {/* Violation Records Table Header & Actions */}
             <div>
-              <h5 class="text-caption uppercase font-bold text-secondary-500 dark:text-secondary-300 mb-2">
-                Daftar Pelanggaran Terdaftar ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
-              </h5>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                <h5 class="text-caption uppercase font-bold text-secondary-500 dark:text-secondary-300">
+                  Daftar Pelanggaran Terdaftar ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
+                </h5>
+                <div class="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={handleExportDetailExcel}
+                    class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
+                    title="Ekspor riwayat pelanggaran ke Excel (.xlsx)"
+                  >
+                    <span>📊</span> Ekspor Excel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleExportDetailPDF}
+                    class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
+                    title="Ekspor riwayat pelanggaran ke PDF (.pdf)"
+                  >
+                    <span>📄</span> Ekspor PDF
+                  </Button>
+                </div>
+              </div>
               <Show
                 when={!mhsViolationsDetail.loading}
                 fallback={<div class="py-8 text-center text-secondary-400">Memuat riwayat pelanggaran...</div>}
@@ -1550,7 +1778,7 @@ export default function Pelanggaran() {
                     </div>
                   }
                 >
-                  <div class="overflow-x-auto max-h-[380px] border border-secondary-100 rounded-xl dark:border-secondary-800">
+                  <div class="overflow-x-auto border border-secondary-100 rounded-xl dark:border-secondary-800">
                     <table class="w-full text-left text-caption border-collapse">
                       <thead class="sticky top-0 bg-secondary-50 text-secondary-500 font-bold uppercase border-b border-secondary-200 dark:bg-secondary-800 dark:text-secondary-300 dark:border-secondary-700">
                         <tr>
@@ -1564,7 +1792,7 @@ export default function Pelanggaran() {
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                        <For each={mhsViolationsDetail()?.pelanggaranList || []}>
+                        <For each={paginatedModalRiwayat()}>
                           {(v) => (
                             <tr class="hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40">
                               <td class="p-2.5 whitespace-nowrap">{new Date(v.tanggal).toLocaleDateString('id-ID')}</td>
@@ -1589,9 +1817,10 @@ export default function Pelanggaran() {
                                 <Button
                                   variant="secondary"
                                   onClick={() => openSpPrint(v)}
-                                  class="py-0.5 px-2 text-fine"
+                                  class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
+                                  title="Cetak SP di jendela baru"
                                 >
-                                  Cetak SP
+                                  <span>📄</span> Cetak SP
                                 </Button>
                               </td>
                             </tr>
@@ -1600,6 +1829,15 @@ export default function Pelanggaran() {
                       </tbody>
                     </table>
                   </div>
+                  <Pagination
+                    currentPage={modalRiwayatPagination.page()}
+                    totalPages={totalModalRiwayatPages()}
+                    total={modalRiwayatList().length}
+                    limit={modalRiwayatPagination.limit()}
+                    pageOptions={[5, 10, 20]}
+                    onPageChange={modalRiwayatPagination.setPage}
+                    onLimitChange={modalRiwayatPagination.setLimit}
+                  />
                 </Show>
               </Show>
             </div>
