@@ -177,6 +177,9 @@ export const getRekapPelanggaranSchema = {
     description:
       'Mengambil rekapitulasi pelanggaran per program studi beserta predikat TXLY (T=kali sanksi tertulis, L=sisa sanksi lisan).',
   },
+  query: t.Object({
+    programStudiId: t.Optional(t.String()),
+  }),
   response: {
     200: t.Object({
       totalPelanggaran: t.Integer(),

@@ -913,5 +913,58 @@ describe('Bimbingan & Pelanggaran API', () => {
       const adminItems = await resAdmin.json();
       expect(adminItems.some((m: { mahasiswaId: number }) => m.mahasiswaId === mhsB.id)).toBe(true);
     });
+
+    it('rekap: programStudiId benar-benar memfilter summary, perProdi & topPelanggar', async () => {
+      // Mahasiswa kedua di prodi berbeda + pelanggaran di kedua prodi
+      const [prodiB] = await db
+        .insert(programStudi)
+        .values({ kode: `TI_RB_${Date.now()}`, nama: 'Prodi Rekap B', jenjang: 'D4' })
+        .returning();
+      const [mhsB] = await db
+        .insert(mahasiswa)
+        .values({
+          nim: '20200077',
+          nama: 'Mhs Rekap B',
+          email: 'mhsrb@test.com',
+          programStudiId: prodiB.id,
+          status: 'aktif',
+          namaIbuKandung: 'Ibu Test',
+          nik: '1234567890123777',
+          jenisKelamin: 'L',
+          tanggalLahir: '2000-01-01',
+        })
+        .returning();
+      await db.insert(pelanggaran).values([
+        { mahasiswaId: mhsId, tanggal: '2023-03-01', jenisPelanggaran: 'RKA', keterangan: 'k', jenisSanksi: 4 },
+        { mahasiswaId: mhsB.id, tanggal: '2023-03-02', jenisPelanggaran: 'RKB', keterangan: 'k', jenisSanksi: 1 },
+      ]);
+
+      // 1. Tanpa param → kedua prodi muncul di perProdi
+      const resGlobal = await app.handle(
+        new Request('http://localhost/pelanggaran/rekap', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resGlobal.status).toBe(200);
+      const global = await resGlobal.json();
+      expect(global.totalPelanggaran).toBe(2);
+      expect(global.perProdi.length).toBe(2);
+
+      // 2. Dengan programStudiId=prodi A → hanya prodi A
+      const resFiltered = await app.handle(
+        new Request(`http://localhost/pelanggaran/rekap?programStudiId=${prodiId}`, {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resFiltered.status).toBe(200);
+      const filtered = await resFiltered.json();
+      expect(filtered.totalPelanggaran).toBe(1);
+      expect(filtered.totalMahasiswa).toBe(1);
+      expect(filtered.perProdi.length).toBe(1);
+      expect(filtered.perProdi[0].prodiId).toBe(prodiId);
+      expect(filtered.topPelanggar.length).toBe(1);
+      expect(filtered.topPelanggar[0].mahasiswaId).toBe(mhsId);
+      expect(filtered.topPelanggar[0].prodiNama).toBe('Teknik Informatika');
+    });
   });
 });
