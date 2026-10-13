@@ -7,11 +7,15 @@ export type SafeAny = any;
 
 export interface ExportColumn<T = SafeAny> {
   header: string;
-  accessor: string | ((row: T) => string | number);
+  accessor: string | ((row: T, index?: number) => string | number);
 }
 
-function getValue(row: SafeAny, accessor: string | ((row: SafeAny) => string | number)): string | number {
-  if (typeof accessor === 'function') return accessor(row);
+function getValue(
+  row: SafeAny,
+  accessor: string | ((row: SafeAny, index?: number) => string | number),
+  index?: number,
+): string | number {
+  if (typeof accessor === 'function') return accessor(row, index);
   const keys = accessor.split('.');
   let val: SafeAny = row;
   for (const k of keys) {
@@ -25,10 +29,10 @@ function getValue(row: SafeAny, accessor: string | ((row: SafeAny) => string | n
 }
 
 export function exportToExcel(data: SafeAny[], columns: ExportColumn[], filename: string) {
-  const rows = data.map((row) => {
+  const rows = data.map((row, idx) => {
     const obj: Record<string, SafeAny> = {};
     columns.forEach((col) => {
-      obj[col.header] = getValue(row, col.accessor);
+      obj[col.header] = getValue(row, col.accessor, idx);
     });
     return obj;
   });
@@ -147,7 +151,7 @@ export function exportToPDF(
   }
 
   const headers = columns.map((c) => c.header);
-  const rows = data.map((row) => columns.map((col) => getValue(row, col.accessor)));
+  const rows = data.map((row, idx) => columns.map((col) => getValue(row, col.accessor, idx)));
 
   autoTable(doc, {
     head: [headers],

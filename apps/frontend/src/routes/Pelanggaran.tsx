@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -219,7 +219,7 @@ export default function Pelanggaran() {
     { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
     { header: 'NIM', accessor: (r) => r.nim },
     { header: 'Nama Mahasiswa', accessor: (r) => r.nama },
-    { header: 'Program Studi', accessor: (r) => r.prodiNama },
+    { header: 'Program Studi', accessor: (r) => r.prodiNama || '-' },
     { header: 'Semester', accessor: (r) => (r.semester ? `Semester ${r.semester}` : '-') },
     { header: 'Jumlah Pelanggaran', accessor: (r) => r.jumlahPelanggaran },
     { header: 'Predikat TXLY', accessor: (r) => r.predikat },
