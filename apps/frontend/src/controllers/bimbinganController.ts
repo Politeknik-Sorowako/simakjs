@@ -168,6 +168,21 @@ export interface RekapPelanggaran {
   }[];
 }
 
+export interface MahasiswaTxlyItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  foto?: string | null;
+  angkatan?: string | null;
+  programStudiId?: number | null;
+  prodiNama?: string | null;
+  semester?: number | null;
+  totalPoin: number;
+  jumlahPelanggaran: number;
+  predikat: string;
+  degradasiNilaiSikap: number;
+}
+
 export const bimbinganController = {
   async getByMhsId(mhsId: number, periodeId?: string, kategori?: string): Promise<Bimbingan> {
     const params = new URLSearchParams();
@@ -348,6 +363,8 @@ export const bimbinganController = {
     search?: string;
     prodiId?: number;
     periodeId?: string;
+    startDate?: string;
+    endDate?: string;
   }): Promise<
     | {
         data: Pelanggaran[];
@@ -361,6 +378,8 @@ export const bimbinganController = {
     if (params?.search) searchParams.append('search', params.search);
     if (params?.prodiId) searchParams.append('prodiId', String(params.prodiId));
     if (params?.periodeId) searchParams.append('periodeId', params.periodeId);
+    if (params?.startDate) searchParams.append('startDate', params.startDate);
+    if (params?.endDate) searchParams.append('endDate', params.endDate);
     const qs = searchParams.toString() ? `?${searchParams.toString()}` : '';
     // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
     return fetchApi<any>(`/pelanggaran${qs}`);
@@ -386,6 +405,21 @@ export const bimbinganController = {
     if (periodeId) params.append('periodeId', periodeId);
     const qs = params.toString() ? `?${params.toString()}` : '';
     return fetchApi(`/pelanggaran/rekap-pasal${qs}`);
+  },
+
+  async getMahasiswaPredikat(filter?: {
+    search?: string;
+    programStudiId?: number;
+    periodeId?: string;
+    predikat?: string;
+  }): Promise<MahasiswaTxlyItem[]> {
+    const params = new URLSearchParams();
+    if (filter?.search) params.append('search', filter.search);
+    if (filter?.programStudiId) params.append('programStudiId', String(filter.programStudiId));
+    if (filter?.periodeId) params.append('periodeId', filter.periodeId);
+    if (filter?.predikat) params.append('predikat', filter.predikat);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return fetchApi<MahasiswaTxlyItem[]>(`/pelanggaran/mahasiswa-predikat${qs}`);
   },
 
   async getRekapPelanggaran(programStudiId?: number): Promise<RekapPelanggaran> {

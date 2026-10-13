@@ -117,12 +117,45 @@ export class PelanggaranController {
       const search = query?.search;
       const prodiId = query?.prodiId ? parseInt(query.prodiId) : undefined;
       const periodeId = query?.periodeId;
+      const startDate = query?.startDate;
+      const endDate = query?.endDate;
 
-      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId, periodeId);
+      return await PelanggaranService.getAllPelanggaran(page, limit, search, prodiId, periodeId, startDate, endDate);
     } catch (err: unknown) {
       console.error('[PelanggaranController.getAll]', err);
       set.status = 400;
       return { error: safeErrorMessage(err, 'Gagal mengambil data pelanggaran') };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getMahasiswaPredikat({ query, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'dosen', 'prodi', 'instruktur', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+
+    try {
+      const search = query?.search;
+      const programStudiId = query?.programStudiId ? parseInt(query.programStudiId) : undefined;
+      const periodeId = query?.periodeId;
+      const predikat = query?.predikat;
+
+      return await PelanggaranService.getMahasiswaPredikatList({
+        search,
+        programStudiId,
+        periodeId,
+        predikat,
+      });
+    } catch (err: unknown) {
+      console.error('[PelanggaranController.getMahasiswaPredikat]', err);
+      set.status = 400;
+      return { error: safeErrorMessage(err, 'Gagal mengambil daftar mahasiswa TXLY') };
     }
   }
 
