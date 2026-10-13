@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
+import { IconActionButton } from '../components/ui/IconActionButton';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
@@ -612,8 +613,8 @@ export default function Pelanggaran() {
   const [viewTab, setViewTab] = createSignal<'daftar' | 'rekap' | 'mahasiswa'>('daftar');
   const [rekapProdi, setRekapProdi] = createSignal<number | undefined>(undefined);
   const [rekap, { refetch: refetchRekap }] = createResource(
-    () => rekapProdi(),
-    async (prodi) => {
+    () => ({ prodi: rekapProdi() }),
+    async ({ prodi }) => {
       if (!isStaff()) return null;
       return await bimbinganController.getRekapPelanggaran(prodi);
     },
@@ -743,6 +744,13 @@ export default function Pelanggaran() {
     return list.slice(start, start + rekapJenisPagination.limit());
   });
 
+  // Auto reset halaman tabel rekap saat program studi berubah
+  createEffect(() => {
+    rekapProdi();
+    rekapTopPagination.resetPage();
+    rekapJenisPagination.resetPage();
+  });
+
   // 4. Pagination untuk Modal Riwayat Mahasiswa
   const modalRiwayatPagination = usePagination(5);
   const modalRiwayatList = createMemo(() => mhsViolationsDetail()?.pelanggaranList || []);
@@ -777,27 +785,65 @@ export default function Pelanggaran() {
             </p>
           </div>
           <Show when={isStaff()}>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
               <Show when={auth.hasRole(['admin', 'prodi', 'super_admin'])}>
                 <a
                   href="/pelanggaran/pasal-bpa"
-                  class="px-5 py-2.5 bg-white border border-secondary-200 hover:bg-secondary-50 text-secondary-700 font-bold rounded-xl text-base transition-all active:scale-95 dark:bg-secondary-900 dark:border-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-800"
+                  title="Kelola Pasal BPA"
+                  aria-label="Kelola Pasal BPA"
+                  class="inline-flex items-center justify-center gap-2 h-11 px-3 sm:px-5 bg-white border border-secondary-200 hover:bg-secondary-50 text-secondary-700 font-bold rounded-full text-base transition-all active:scale-95 dark:bg-secondary-900 dark:border-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-800"
                 >
-                  Kelola Pasal BPA
+                  <svg
+                    class="w-5 h-5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h10" />
+                  </svg>
+                  <span class="hidden sm:inline">Kelola Pasal BPA</span>
                 </a>
               </Show>
-              <button
+              <IconActionButton
+                label="Impor CSV"
+                variant="gray"
                 onClick={() => setShowImportModal(true)}
-                class="px-5 py-2.5 bg-secondary-100 hover:bg-secondary-200 text-secondary-700 font-bold rounded-xl text-base transition-all active:scale-95 dark:bg-secondary-800 dark:text-secondary-200 dark:hover:bg-secondary-700"
-              >
-                Impor CSV
-              </button>
-              <button
+                icon={
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 15V3m0 0-4 4m4-4 4 4M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"
+                    />
+                  </svg>
+                }
+              />
+              <IconActionButton
+                label="Catat Pelanggaran"
+                variant="blue"
                 onClick={openAddModal}
-                class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl text-base transition-all active:scale-95 shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
-              >
-                + Catat Pelanggaran
-              </button>
+                icon={
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14" />
+                  </svg>
+                }
+              />
             </div>
           </Show>
         </div>
@@ -981,16 +1027,20 @@ export default function Pelanggaran() {
                 <Button
                   variant="secondary"
                   onClick={handleExportExcel}
+                  title="Ekspor daftar pelanggaran ke file Excel (.xlsx)"
+                  aria-label="Ekspor Excel"
                   class="flex items-center gap-1.5 py-1.5 text-caption font-semibold"
                 >
-                  <span>📊</span> Ekspor Excel
+                  <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={handleExportPDF}
+                  title="Ekspor daftar pelanggaran ke dokumen PDF (.pdf)"
+                  aria-label="Ekspor PDF"
                   class="flex items-center gap-1.5 py-1.5 text-caption font-semibold"
                 >
-                  <span>📄</span> Ekspor PDF
+                  <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
                 </Button>
               </div>
             </div>
@@ -1302,7 +1352,6 @@ export default function Pelanggaran() {
                     ]}
                     onChange={(val) => {
                       setRekapProdi(val ? Number(val) : undefined);
-                      refetchRekap();
                     }}
                   />
                 </div>
@@ -1495,7 +1544,7 @@ export default function Pelanggaran() {
                   class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
                   title="Ekspor daftar mahasiswa kedisiplinan ke file Excel (.xlsx)"
                 >
-                  <span>📊</span> Ekspor Excel
+                  <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
                 </Button>
                 <Button
                   variant="secondary"
@@ -1503,7 +1552,7 @@ export default function Pelanggaran() {
                   class="flex items-center gap-1.5 py-1.5 px-3 text-caption font-semibold"
                   title="Ekspor daftar mahasiswa kedisiplinan ke dokumen PDF (.pdf)"
                 >
-                  <span>📄</span> Ekspor PDF
+                  <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
                 </Button>
               </div>
             </div>
@@ -1582,9 +1631,11 @@ export default function Pelanggaran() {
               </div>
             </div>
 
-            {/* Tabel Daftar Mahasiswa TXLY */}
+            {/* Tabel Daftar Mahasiswa TXLY — stale-while-revalidate: tampilkan data
+                lama selama refetch berjalan (tanpa flash penuh); spinner hanya saat
+                belum pernah ada data. */}
             <Show
-              when={!mahasiswaTxlyList.loading}
+              when={!mahasiswaTxlyList.loading || mahasiswaTxlyList()}
               fallback={
                 <div class="py-12 text-center text-secondary-400 dark:text-secondary-300 text-base">
                   Memuat data mahasiswa kedisiplinan...
@@ -1805,7 +1856,7 @@ export default function Pelanggaran() {
                     class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
                     title="Ekspor riwayat pelanggaran ke Excel (.xlsx)"
                   >
-                    <span>📊</span> Ekspor Excel
+                    <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
                   </Button>
                   <Button
                     variant="secondary"
@@ -1813,7 +1864,7 @@ export default function Pelanggaran() {
                     class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
                     title="Ekspor riwayat pelanggaran ke PDF (.pdf)"
                   >
-                    <span>📄</span> Ekspor PDF
+                    <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
                   </Button>
                 </div>
               </div>
