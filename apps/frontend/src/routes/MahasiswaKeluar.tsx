@@ -593,7 +593,9 @@ export default function MahasiswaKeluarPage() {
               }
               onOpen={(lampiranId) => {
                 if (editingId()) {
-                  mahasiswaKeluarController.openLampiran(editingId()!, lampiranId);
+                  mahasiswaKeluarController.openLampiran(editingId()!, lampiranId).catch(() => {
+                    toast.showToast('Gagal membuka lampiran.', 'error');
+                  });
                 }
               }}
             />
@@ -624,7 +626,9 @@ export default function MahasiswaKeluarPage() {
             }}
             onOpen={(lampiranId) => {
               if (viewLampiranId()) {
-                mahasiswaKeluarController.openLampiran(viewLampiranId()!, lampiranId);
+                mahasiswaKeluarController.openLampiran(viewLampiranId()!, lampiranId).catch(() => {
+                  toast.showToast('Gagal membuka lampiran.', 'error');
+                });
               }
             }}
           />

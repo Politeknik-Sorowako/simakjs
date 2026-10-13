@@ -996,7 +996,9 @@ export default function ManajemenCuti() {
               }
               onOpen={(lampiranId) => {
                 if (editingCutiId()) {
-                  cutiController.openLampiran(editingCutiId()!, lampiranId);
+                  cutiController.openLampiran(editingCutiId()!, lampiranId).catch(() => {
+                    toast.showToast('Gagal membuka lampiran.', 'error');
+                  });
                 }
               }}
             />
@@ -1032,7 +1034,9 @@ export default function ManajemenCuti() {
             }
             onOpen={(lampiranId) => {
               if (viewLampiranCutiId()) {
-                cutiController.openLampiran(viewLampiranCutiId()!, lampiranId);
+                cutiController.openLampiran(viewLampiranCutiId()!, lampiranId).catch(() => {
+                  toast.showToast('Gagal membuka lampiran.', 'error');
+                });
               }
             }}
           />

@@ -36,6 +36,11 @@ export function LampiranManager(props: LampiranManagerProps) {
   let skInputRef: HTMLInputElement | undefined;
   let pendukungInputRef: HTMLInputElement | undefined;
 
+  // Kontrol tambah/unggah hanya tampil bila memang ada handler yang menerima
+  // berkas. Modal view-only (tanpa onUpload/onPendingChange) tidak boleh
+  // menampilkan tombol unggah yang tidak melakukan apa-apa.
+  const canAdd = () => !props.readonly && (props.onUpload !== undefined || props.onPendingChange !== undefined);
+
   const handleSkFileSelect = async (e: Event) => {
     const input = e.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -140,7 +145,7 @@ export function LampiranManager(props: LampiranManagerProps) {
             </div>
             <p class="text-xs text-secondary-500">Unggah salinan dokumen resmi SK izin/yudisium.</p>
           </div>
-          <Show when={!props.readonly}>
+          <Show when={canAdd()}>
             <input
               type="file"
               ref={skInputRef}
@@ -159,7 +164,7 @@ export function LampiranManager(props: LampiranManagerProps) {
             <Show
               when={props.pendingFiles?.sk}
               fallback={
-                <Show when={!props.readonly}>
+                <Show when={canAdd()}>
                   <button
                     type="button"
                     disabled={uploadingSk()}
@@ -268,7 +273,7 @@ export function LampiranManager(props: LampiranManagerProps) {
             </div>
             <p class="text-xs text-secondary-500">Surat permohonan, bukti pembayaran, surat keterangan dokter, dll.</p>
           </div>
-          <Show when={!props.readonly}>
+          <Show when={canAdd()}>
             <div>
               <input
                 type="file"

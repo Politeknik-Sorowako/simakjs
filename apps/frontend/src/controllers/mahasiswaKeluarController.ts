@@ -109,6 +109,8 @@ export const mahasiswaKeluarController = {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
+    // Lepaskan object URL setelah tab baru sempat memuat berkas.
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 
   async delete(id: number): Promise<{ message: string }> {
