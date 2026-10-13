@@ -378,9 +378,12 @@ async function main() {
   }
 
   // Step 4: Seed Admin & Dummy Data
-  log('Step 4/5: Seeding admin user...');
+  // stdio 'ignore': output seed hanya informasional. Dengan 'pipe', proses cucu
+  // yang menggantung bisa menjepit execSync sampai EOF (typecheck staging pernah
+  // menahan deploy 8+ menit karena pola ini di Step lama) — 'ignore' menghindarinya.
+  log('Step 4/4: Seeding admin user...');
   try {
-    execSync('bun run src/scripts/seed-admin.ts', { stdio: 'pipe', timeout: 30000, cwd: process.cwd() });
+    execSync('bun run src/scripts/seed-admin.ts', { stdio: 'ignore', timeout: 30000, cwd: process.cwd() });
     log('[OK] Admin user seeded.');
   } catch {
     log('[WARN] Admin seed skipped (already exists or error).');
@@ -388,22 +391,13 @@ async function main() {
 
   const seedEnv = process.env.SEED_DUMMY || '';
   if (seedEnv === 'true') {
-    log('Step 4b/5: Seeding dummy data...');
+    log('Step 4b/4: Seeding dummy data...');
     try {
-      execSync('bun run src/scripts/seed-dummy.ts', { stdio: 'pipe', timeout: 60000, cwd: process.cwd() });
+      execSync('bun run src/scripts/seed-dummy.ts', { stdio: 'ignore', timeout: 60000, cwd: process.cwd() });
       log('[OK] Dummy data seeded.');
     } catch {
       log('[WARN] Dummy seed skipped.');
     }
-  }
-
-  // Step 5: Verify
-  log('Step 5/5: Verifying migration...');
-  try {
-    execSync('bunx tsc --noEmit', { stdio: 'pipe', timeout: 60000, cwd: process.cwd() });
-    log('[OK] Schema verification passed.');
-  } catch {
-    log('[WARN] Schema verification could not be completed. Check manually.');
   }
 
   console.log('');
