@@ -15,9 +15,13 @@ import { db } from '../utils/db';
 import { KhsService } from './khs.service';
 
 export function hitungPredikatTxly(totalPoin: number): string {
-  const x = Math.floor(totalPoin / 4);
-  const y = totalPoin % 4;
-  return `T${x}L${y}`;
+  if (totalPoin <= 0) return '-';
+  const t = Math.floor(totalPoin / 4);
+  const l = totalPoin % 4;
+  if (t > 0 && l > 0) return `T${t}L${l}`;
+  if (t > 0 && l === 0) return `T${t}`;
+  if (t === 0 && l > 0) return `L${l}`;
+  return '-';
 }
 
 export function hitungDegradasiNilaiSikap(totalPoin: number): number {
@@ -499,7 +503,7 @@ export class PelanggaranService {
       .where(whereClause)
       .groupBy(pelanggaran.mahasiswaId, mhs.nim, mhs.nama, mhs.foto, ps.nama)
       .orderBy(sql`SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)) DESC`)
-      .limit(10);
+      .limit(programStudiId ? 100 : 50);
 
     return {
       totalPelanggaran: Number(totals?.totalPelanggaran || 0),
@@ -631,8 +635,13 @@ export class PelanggaranService {
       const predikat = hitungPredikatTxly(totalPoin);
 
       // Filter predikat jika parameter disediakan
-      if (filter?.predikat && predikat !== filter.predikat) {
-        continue;
+      if (filter?.predikat) {
+        const target = filter.predikat.trim().toUpperCase();
+        const predikatUpper = predikat.toUpperCase();
+        const fullPredikat = `T${Math.floor(totalPoin / 4)}L${totalPoin % 4}`;
+        if (predikatUpper !== target && fullPredikat !== target) {
+          continue;
+        }
       }
 
       let semester: number | null = null;
