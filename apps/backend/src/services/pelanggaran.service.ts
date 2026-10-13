@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, ilike, inArray, lte, or, SQL, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, or, SQL, sql, sum } from 'drizzle-orm';
 import {
   dosen,
   mahasiswa,
@@ -310,20 +310,10 @@ export class PelanggaranService {
     };
   }
 
-  static async getAllPelanggaran(
-    page?: number,
-    limit?: number,
-    search?: string,
-    prodiId?: number,
-    periodeId?: string,
-    startDate?: string,
-    endDate?: string,
-  ) {
+  static async getAllPelanggaran(page?: number, limit?: number, search?: string, prodiId?: number, periodeId?: string) {
     const conditions = [];
     if (prodiId) conditions.push(eq(mahasiswa.programStudiId, prodiId));
     if (periodeId && periodeId.trim()) conditions.push(eq(pelanggaran.periodeId, periodeId.trim()));
-    if (startDate && startDate.trim()) conditions.push(gte(pelanggaran.tanggal, startDate.trim()));
-    if (endDate && endDate.trim()) conditions.push(lte(pelanggaran.tanggal, endDate.trim()));
     if (search && search.trim()) {
       const s = `%${search.trim()}%`;
       conditions.push(or(ilike(mahasiswa.nama, s), ilike(mahasiswa.nim, s), ilike(pelanggaran.jenisPelanggaran, s)));
@@ -574,7 +564,7 @@ export class PelanggaranService {
 
   static async getMahasiswaPredikatList(filter?: {
     search?: string;
-    programStudiId?: number;
+    programStudiIds?: number[];
     periodeId?: string;
     predikat?: string;
   }) {
@@ -587,8 +577,8 @@ export class PelanggaranService {
 
     // 2. Susun kondisi filter
     const conditions = [];
-    if (filter?.programStudiId) {
-      conditions.push(eq(mahasiswa.programStudiId, filter.programStudiId));
+    if (filter?.programStudiIds && filter.programStudiIds.length > 0) {
+      conditions.push(inArray(mahasiswa.programStudiId, filter.programStudiIds));
     }
     if (filter?.periodeId) {
       conditions.push(eq(pelanggaran.periodeId, filter.periodeId));
@@ -628,7 +618,19 @@ export class PelanggaranService {
       )
       .orderBy(sql`SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)) DESC`);
 
-    // 4. Hitung predikat TXLY dan semester saat ini untuk setiap mahasiswa
+    // 4. Hitung semester untuk SELURUH baris dalam SATU query (hindari N+1).
+    // Matematika semester tetap di KhsService.hitungSemester; di sini hanya memetakan.
+    const angkatanById = new Map<number, string | null>();
+    if (targetPeriodeId) {
+      for (const r of rows) {
+        if (r.angkatan) angkatanById.set(r.mahasiswaId, r.angkatan);
+      }
+    }
+    const semesterById = targetPeriodeId
+      ? await KhsService.hitungSemesterBatch([...angkatanById.keys()], targetPeriodeId, angkatanById)
+      : new Map<number, number | null>();
+
+    // 5. Susun predikat TXLY per mahasiswa
     const result = [];
     for (const r of rows) {
       const totalPoin = Number(r.totalPoin);
@@ -644,10 +646,7 @@ export class PelanggaranService {
         }
       }
 
-      let semester: number | null = null;
-      if (targetPeriodeId && r.angkatan) {
-        semester = await KhsService.hitungSemester(r.mahasiswaId, targetPeriodeId, r.angkatan);
-      }
+      const semester = semesterById.get(r.mahasiswaId) ?? null;
 
       result.push({
         mahasiswaId: r.mahasiswaId,

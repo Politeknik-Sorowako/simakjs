@@ -1012,6 +1012,7 @@ export class KhsService {
     mahasiswaId: number,
     periodeId: string,
     angkatanOverride?: string | null,
+    cutiRowsOverride?: Array<{ mulai: string | null; berakhir: string | null }>,
   ): Promise<number | null> {
     const angkatanRaw =
       angkatanOverride ??
@@ -1035,15 +1036,19 @@ export class KhsService {
     // Kurangi semester cuti yang sudah dilalui sebelum periode ini.
     // Deduplikasi rentang cuti: hitung set unik index semester yang di-cover
     // agar cuti berlapis (overlap/duplikat) tidak mengurangi dua kali.
-    const cutis = await db
-      .select({ mulai: pengajuanCuti.semesterMulaiCuti, berakhir: pengajuanCuti.semesterBerakhirCuti })
-      .from(pengajuanCuti)
-      .where(
-        and(
-          eq(pengajuanCuti.mahasiswaId, mahasiswaId),
-          inArray(pengajuanCuti.status, ['disetujui_pa', 'disetujui_keuangan', 'disetujui_prodi', 'kembali_aktif']),
-        ),
-      );
+    // `cutiRowsOverride` dipakai jalur batch (hitungSemesterBatch) agar tidak
+    // mengulang query per mahasiswa; bila tersedia, lewati query.
+    const cutis =
+      cutiRowsOverride ??
+      (await db
+        .select({ mulai: pengajuanCuti.semesterMulaiCuti, berakhir: pengajuanCuti.semesterBerakhirCuti })
+        .from(pengajuanCuti)
+        .where(
+          and(
+            eq(pengajuanCuti.mahasiswaId, mahasiswaId),
+            inArray(pengajuanCuti.status, ['disetujui_pa', 'disetujui_keuangan', 'disetujui_prodi', 'kembali_aktif']),
+          ),
+        ));
 
     const currentIdx = periodeTahun * 2 + term;
     const idxOf = (pid: string | null) => {
@@ -1066,6 +1071,51 @@ export class KhsService {
     semester -= cutiSemesters.size;
 
     return Math.max(1, semester);
+  }
+
+  /**
+   * Versi batch `hitungSemester` untuk daftar mahasiswa besar.
+   * Menjalankan SATU query `pengajuanCuti` untuk seluruh `mahasiswaIds`
+   * (menggantikan N query dalam loop), lalu memetakan tiap mahasiswa ke
+   * `hitungSemester` dengan baris cuti yang sudah di-fetch (override).
+   *
+   * Matematika semester tetap berada di `hitungSemester` (satu sumber).
+   */
+  static async hitungSemesterBatch(
+    mahasiswaIds: number[],
+    periodeId: string,
+    angkatanById: Map<number, string | null>,
+  ): Promise<Map<number, number | null>> {
+    const result = new Map<number, number | null>();
+    if (mahasiswaIds.length === 0) return result;
+
+    const cutiRows = await db
+      .select({
+        mahasiswaId: pengajuanCuti.mahasiswaId,
+        mulai: pengajuanCuti.semesterMulaiCuti,
+        berakhir: pengajuanCuti.semesterBerakhirCuti,
+      })
+      .from(pengajuanCuti)
+      .where(
+        and(
+          inArray(pengajuanCuti.mahasiswaId, mahasiswaIds),
+          inArray(pengajuanCuti.status, ['disetujui_pa', 'disetujui_keuangan', 'disetujui_prodi', 'kembali_aktif']),
+        ),
+      );
+
+    const cutiByMahasiswa = new Map<number, Array<{ mulai: string | null; berakhir: string | null }>>();
+    for (const row of cutiRows) {
+      const list = cutiByMahasiswa.get(row.mahasiswaId);
+      if (list) list.push(row);
+      else cutiByMahasiswa.set(row.mahasiswaId, [row]);
+    }
+
+    for (const id of mahasiswaIds) {
+      const semester = await this.hitungSemester(id, periodeId, angkatanById.get(id), cutiByMahasiswa.get(id) ?? []);
+      result.set(id, semester);
+    }
+
+    return result;
   }
 
   /**

@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { ImportCsvModal } from '../components/ui/ImportCsvModal';
@@ -21,7 +21,7 @@ import { PeriodeAkademik, periodeAkademikController } from '../controllers/perio
 import { Prodi, prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn, exportToExcel, exportToPDF } from '../utils/export';
-import { getTodayString } from '../utils/format';
+import { fmtTanggal, getTodayString } from '../utils/format';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -174,7 +174,7 @@ export default function Pelanggaran() {
   // Ekspor Columns & Handlers
   const exportColumns: ExportColumn<IPelanggaran>[] = [
     { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
-    { header: 'Tanggal', accessor: (r) => new Date(r.tanggal).toLocaleDateString('id-ID') },
+    { header: 'Tanggal', accessor: (r) => fmtTanggal(r.tanggal) },
     { header: 'NIM', accessor: (r) => r.nim || '-' },
     { header: 'Nama Mahasiswa', accessor: (r) => r.namaMahasiswa || '-' },
     { header: 'Program Studi', accessor: (r) => r.prodiNama || '-' },
@@ -256,7 +256,7 @@ export default function Pelanggaran() {
   // Ekspor Columns & Handlers untuk Modal Riwayat Pelanggaran Mahasiswa
   const exportMhsDetailColumns: ExportColumn<IPelanggaran>[] = [
     { header: 'No', accessor: (_r, idx) => (idx !== undefined ? idx + 1 : '-') },
-    { header: 'Tanggal', accessor: (r) => new Date(r.tanggal).toLocaleDateString('id-ID') },
+    { header: 'Tanggal', accessor: (r) => fmtTanggal(r.tanggal) },
     { header: 'Pasal BPA', accessor: (r) => r.nomorPasal || '-' },
     { header: 'Jenis Pelanggaran', accessor: (r) => r.jenisPelanggaran },
     {
@@ -626,15 +626,28 @@ export default function Pelanggaran() {
   type MhsTxlySortField = 'predikat' | 'nama' | 'nim' | 'prodiNama' | 'semester' | 'jumlahPelanggaran';
   const [mhsTxlySortField, setMhsTxlySortField] = createSignal<MhsTxlySortField>('predikat');
   const [mhsTxlySortDir, setMhsTxlySortDir] = createSignal<'asc' | 'desc'>('desc');
+  const mhsTxlySortAria = (field: MhsTxlySortField): 'ascending' | 'descending' | 'none' =>
+    mhsTxlySortField() === field ? (mhsTxlySortDir() === 'asc' ? 'ascending' : 'descending') : 'none';
 
+  // Debounce pencarian (~300ms) agar tidak menembak endpoint per ketikan.
+  const [mhsTxlySearchDebounced, setMhsTxlySearchDebounced] = createSignal('');
+  createEffect(() => {
+    const value = mhsTxlySearch();
+    const timer = setTimeout(() => setMhsTxlySearchDebounced(value), 300);
+    onCleanup(() => clearTimeout(timer));
+  });
+
+  // Resource hanya aktif saat tab "mahasiswa" terbuka (menghindari fetch eager).
   const [mahasiswaTxlyList, { refetch: refetchMahasiswaTxly }] = createResource(
-    () => ({
-      search: mhsTxlySearch(),
-      programStudiId: mhsTxlyProdi(),
-      predikat: mhsTxlyPredikat(),
-    }),
+    () =>
+      isStaff() && viewTab() === 'mahasiswa'
+        ? {
+            search: mhsTxlySearchDebounced(),
+            programStudiId: mhsTxlyProdi(),
+            predikat: mhsTxlyPredikat(),
+          }
+        : null,
     async (params) => {
-      if (!isStaff()) return [];
       return await bimbinganController.getMahasiswaPredikat({
         search: params.search || undefined,
         programStudiId: params.programStudiId,
@@ -1498,10 +1511,14 @@ export default function Pelanggaran() {
             {/* Filter Bar Mahasiswa TXLY */}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 p-4 bg-secondary-50/70 rounded-xl border border-secondary-100 dark:bg-secondary-800/50 dark:border-secondary-800">
               <div class="flex flex-col gap-1">
-                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                <label
+                  for="mhsTxlySearch"
+                  class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase"
+                >
                   Cari Mahasiswa
                 </label>
                 <Input
+                  id="mhsTxlySearch"
                   type="text"
                   placeholder="Cari Nama atau NIM..."
                   value={mhsTxlySearch()}
@@ -1511,10 +1528,14 @@ export default function Pelanggaran() {
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                <label
+                  for="mhsTxlyProdi"
+                  class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase"
+                >
                   Program Studi
                 </label>
                 <SearchableSelect
+                  id="mhsTxlyProdi"
                   placeholder="Semua Program Studi..."
                   value={mhsTxlyProdi() ?? ''}
                   options={[
@@ -1529,10 +1550,14 @@ export default function Pelanggaran() {
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase">
+                <label
+                  for="mhsTxlyPredikat"
+                  class="text-fine font-bold text-secondary-500 dark:text-secondary-300 uppercase"
+                >
                   Predikat TXLY
                 </label>
                 <input
+                  id="mhsTxlyPredikat"
                   type="text"
                   placeholder="Semua / filter predikat (mis. T1L0)..."
                   value={mhsTxlyPredikat() ?? ''}
@@ -1579,44 +1604,62 @@ export default function Pelanggaran() {
                     <thead>
                       <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
                         <th class="p-3">#</th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
-                          onClick={() => toggleMhsTxlySort('nama')}
-                        >
-                          Mahasiswa {mhsTxlySortField() === 'nama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                        <th scope="col" aria-sort={mhsTxlySortAria('nama')} class="p-3">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('nama')}
+                          >
+                            Mahasiswa {mhsTxlySortField() === 'nama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
                         </th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
-                          onClick={() => toggleMhsTxlySort('nim')}
-                        >
-                          NIM {mhsTxlySortField() === 'nim' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                        <th scope="col" aria-sort={mhsTxlySortAria('nim')} class="p-3">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('nim')}
+                          >
+                            NIM {mhsTxlySortField() === 'nim' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
                         </th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
-                          onClick={() => toggleMhsTxlySort('prodiNama')}
-                        >
-                          Program Studi{' '}
-                          {mhsTxlySortField() === 'prodiNama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                        <th scope="col" aria-sort={mhsTxlySortAria('prodiNama')} class="p-3">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('prodiNama')}
+                          >
+                            Program Studi{' '}
+                            {mhsTxlySortField() === 'prodiNama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
                         </th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500 text-center"
-                          onClick={() => toggleMhsTxlySort('semester')}
-                        >
-                          Semester {mhsTxlySortField() === 'semester' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                        <th scope="col" aria-sort={mhsTxlySortAria('semester')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('semester')}
+                          >
+                            Semester {mhsTxlySortField() === 'semester' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
                         </th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500 text-center"
-                          onClick={() => toggleMhsTxlySort('jumlahPelanggaran')}
-                        >
-                          Jumlah Pelanggaran{' '}
-                          {mhsTxlySortField() === 'jumlahPelanggaran' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                        <th scope="col" aria-sort={mhsTxlySortAria('jumlahPelanggaran')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('jumlahPelanggaran')}
+                          >
+                            Jumlah Pelanggaran{' '}
+                            {mhsTxlySortField() === 'jumlahPelanggaran' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
                         </th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500 text-center"
-                          onClick={() => toggleMhsTxlySort('predikat')}
-                        >
-                          Predikat TXLY{' '}
-                          {mhsTxlySortField() === 'predikat' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                        <th scope="col" aria-sort={mhsTxlySortAria('predikat')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-brand-500"
+                            onClick={() => toggleMhsTxlySort('predikat')}
+                          >
+                            Predikat TXLY{' '}
+                            {mhsTxlySortField() === 'predikat' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
                         </th>
                         <th class="p-3 text-center">Total Poin</th>
                         <th class="p-3 text-center">Degradasi Mutu</th>
@@ -1628,8 +1671,16 @@ export default function Pelanggaran() {
                         {(item, idx) => (
                           <tr
                             onClick={() => openMahasiswaDetail(item)}
-                            class="hover:bg-brand-50/30 cursor-pointer transition-colors dark:hover:bg-brand-950/20"
-                            title="Klik untuk melihat riwayat pelanggaran mahasiswa"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                openMahasiswaDetail(item);
+                              }
+                            }}
+                            tabIndex={0}
+                            role="button"
+                            class="cursor-pointer transition-colors hover:bg-brand-50/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-brand-950/20"
+                            title="Tekan Enter untuk melihat riwayat pelanggaran mahasiswa"
                           >
                             <td class="p-3 text-secondary-400">
                               {(mhsTxlyPagination.page() - 1) * mhsTxlyPagination.limit() + idx() + 1}

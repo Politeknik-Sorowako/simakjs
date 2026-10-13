@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { app } from '../app';
-import { dosen, mahasiswa, periodeAkademik, programStudi } from '../models/schema';
+import {
+  dosen,
+  mahasiswa,
+  pelanggaran,
+  pengajuanCuti,
+  periodeAkademik,
+  programStudi,
+  userProdiScopes,
+  users,
+} from '../models/schema';
+import { KhsService } from '../services/khs.service';
 import { MahasiswaService } from '../services/mahasiswa.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
@@ -774,19 +785,7 @@ describe('Bimbingan & Pelanggaran API', () => {
       const dataRekap = await resRekap.json();
       expect(dataRekap.total).toBe(1);
 
-      // 4. Fetch list dengan filter startDate dan endDate
-      const resDateFilter = await app.handle(
-        new Request('http://localhost/pelanggaran?startDate=2024-03-01&endDate=2024-03-31', {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }),
-      );
-      expect(resDateFilter.status).toBe(200);
-      const dataDateFilter = await resDateFilter.json();
-      const dateItems = Array.isArray(dataDateFilter) ? dataDateFilter : dataDateFilter.data;
-      expect(dateItems.length).toBe(1);
-      expect(dateItems[0].jenisPelanggaran).toBe('Merokok di Area Terlarang');
-
-      // 5. Fetch daftar mahasiswa beserta predikat TXLY (GET /pelanggaran/mahasiswa-predikat)
+      // 4. Fetch daftar mahasiswa beserta predikat TXLY (GET /pelanggaran/mahasiswa-predikat)
       const resMhsPredikat = await app.handle(
         new Request('http://localhost/pelanggaran/mahasiswa-predikat', {
           headers: { Authorization: `Bearer ${adminToken}` },
@@ -802,6 +801,117 @@ describe('Bimbingan & Pelanggaran API', () => {
       expect(targetMhs).toBeDefined();
       expect(targetMhs?.predikat).toBeDefined();
       expect(targetMhs?.totalPoin).toBeGreaterThanOrEqual(2);
+    });
+
+    it('hitungSemesterBatch menghasilkan semester yang sama dengan hitungSemester (dengan & tanpa cuti)', async () => {
+      const [mhsBatch] = await db
+        .insert(mahasiswa)
+        .values({
+          nim: '20200099',
+          nama: 'Batch Test Mhs',
+          email: 'batch@test.com',
+          programStudiId: prodiId,
+          status: 'aktif',
+          angkatan: '2020',
+          namaIbuKandung: 'Ibu Test',
+          nik: '1234567890123999',
+          jenisKelamin: 'L',
+          tanggalLahir: '2000-01-01',
+        })
+        .returning();
+
+      // Satu semester cuti disetujui, sebelum periode berjalan 20231
+      await db.insert(pengajuanCuti).values({
+        mahasiswaId: mhsBatch.id,
+        periodeId: '20231',
+        alasan: 'Cuti semester test batch',
+        status: 'disetujui_prodi',
+        semesterMulaiCuti: '20221',
+        semesterBerakhirCuti: '20221',
+      });
+
+      const angkatanById = new Map<number, string | null>([[mhsBatch.id, '2020']]);
+      const single = await KhsService.hitungSemester(mhsBatch.id, '20231', '2020');
+      const batch = await KhsService.hitungSemesterBatch([mhsBatch.id], '20231', angkatanById);
+
+      // Kalender tanpa cuti: (2023-2020)*2 + 1 = 7; satu semester cuti → 6
+      expect(single).toBe(6);
+      expect(batch.get(mhsBatch.id)).toBe(single);
+
+      // Tanpa cuti (angkatan 2023): kalender = 1, batch & single tetap sama
+      const batchNoCuti = await KhsService.hitungSemesterBatch(
+        [mhsBatch.id],
+        '20231',
+        new Map([[mhsBatch.id, '2023']]),
+      );
+      const singleNoCuti = await KhsService.hitungSemester(mhsBatch.id, '20231', '2023');
+      expect(singleNoCuti).toBe(1);
+      expect(batchNoCuti.get(mhsBatch.id)).toBe(singleNoCuti);
+    });
+
+    it('scoping prodi: prodi user dibatasi; programStudiId di luar scope → 403', async () => {
+      // Prodi B + mahasiswa berpelanggaran di prodi B (di luar scope prodi user)
+      const [prodiB] = await db
+        .insert(programStudi)
+        .values({ kode: `TI_B_${Date.now()}`, nama: 'Prodi B', jenjang: 'D4' })
+        .returning();
+      const [mhsB] = await db
+        .insert(mahasiswa)
+        .values({
+          nim: '20200088',
+          nama: 'Mhs Prodi B',
+          email: 'mhsb@test.com',
+          programStudiId: prodiB.id,
+          status: 'aktif',
+          namaIbuKandung: 'Ibu Test',
+          nik: '1234567890123888',
+          jenisKelamin: 'L',
+          tanggalLahir: '2000-01-01',
+        })
+        .returning();
+      // Pelanggaran di prodi A (mhsId) dan prodi B (mhsB)
+      await db.insert(pelanggaran).values([
+        { mahasiswaId: mhsId, tanggal: '2023-03-01', jenisPelanggaran: 'PA', keterangan: 'k', jenisSanksi: 2 },
+        { mahasiswaId: mhsB.id, tanggal: '2023-03-01', jenisPelanggaran: 'PB', keterangan: 'k', jenisSanksi: 4 },
+      ]);
+
+      // Prodi user yang di-scope hanya ke prodi A
+      const prodiToken = await getAuthToken('prodi_scoping@test.com', 'prodi');
+      const [prodiUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, 'prodi_scoping@test.com'));
+      await db.insert(userProdiScopes).values({ userId: prodiUser.id, programStudiId: prodiId });
+
+      // 1. programStudiId di luar scope (prodi B) → 403
+      const resForbidden = await app.handle(
+        new Request(`http://localhost/pelanggaran/mahasiswa-predikat?programStudiId=${prodiB.id}`, {
+          headers: { Authorization: `Bearer ${prodiToken}` },
+        }),
+      );
+      expect(resForbidden.status).toBe(403);
+
+      // 2. Tanpa programStudiId → hanya melihat mahasiswa prodi A (bukan prodi B)
+      const resScoped = await app.handle(
+        new Request('http://localhost/pelanggaran/mahasiswa-predikat', {
+          headers: { Authorization: `Bearer ${prodiToken}` },
+        }),
+      );
+      expect(resScoped.status).toBe(200);
+      const scopedItems = await resScoped.json();
+      expect(scopedItems.length).toBeGreaterThanOrEqual(1);
+      expect(scopedItems.every((m: { programStudiId: number }) => m.programStudiId === prodiId)).toBe(true);
+      expect(scopedItems.some((m: { mahasiswaId: number }) => m.mahasiswaId === mhsB.id)).toBe(false);
+
+      // 3. Admin tetap global: melihat kedua prodi
+      const resAdmin = await app.handle(
+        new Request('http://localhost/pelanggaran/mahasiswa-predikat', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(resAdmin.status).toBe(200);
+      const adminItems = await resAdmin.json();
+      expect(adminItems.some((m: { mahasiswaId: number }) => m.mahasiswaId === mhsB.id)).toBe(true);
     });
   });
 });
