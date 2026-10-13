@@ -139,6 +139,7 @@ export interface Pelanggaran {
   pelapor?: string | null;
   nomorPasal?: string | null;
   bunyiPasal?: string | null;
+  periodeId?: string | null;
   dibuatOleh?: number | null;
   createdAt?: string;
 }
