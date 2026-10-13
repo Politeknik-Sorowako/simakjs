@@ -1801,7 +1801,7 @@ export const pengajuanCuti = pgTable('pengajuan_cuti', {
     .$onUpdate(() => new Date()),
 });
 
-export const pengajuanCutiRelations = relations(pengajuanCuti, ({ one }) => ({
+export const pengajuanCutiRelations = relations(pengajuanCuti, ({ one, many }) => ({
   mahasiswa: one(mahasiswa, {
     fields: [pengajuanCuti.mahasiswaId],
     references: [mahasiswa.id],
@@ -1810,6 +1810,7 @@ export const pengajuanCutiRelations = relations(pengajuanCuti, ({ one }) => ({
     fields: [pengajuanCuti.periodeId],
     references: [periodeAkademik.id],
   }),
+  lampiran: many(statusMahasiswaLampiran),
 }));
 
 export const mahasiswaKeluar = pgTable('mahasiswa_keluar', {
@@ -1837,7 +1838,7 @@ export const mahasiswaKeluar = pgTable('mahasiswa_keluar', {
     .$onUpdate(() => new Date()),
 });
 
-export const mahasiswaKeluarRelations = relations(mahasiswaKeluar, ({ one }) => ({
+export const mahasiswaKeluarRelations = relations(mahasiswaKeluar, ({ one, many }) => ({
   mahasiswa: one(mahasiswa, {
     fields: [mahasiswaKeluar.mahasiswaId],
     references: [mahasiswa.id],
@@ -1845,6 +1846,38 @@ export const mahasiswaKeluarRelations = relations(mahasiswaKeluar, ({ one }) => 
   periodeAkademik: one(periodeAkademik, {
     fields: [mahasiswaKeluar.periodeId],
     references: [periodeAkademik.id],
+  }),
+  lampiran: many(statusMahasiswaLampiran),
+}));
+
+// Lampiran (Surat SK + berkas pendukung) untuk pengajuan cuti ATAU mahasiswa keluar.
+// Tepat satu parent terisi (CHECK constraint di migrasi 0083).
+export const statusMahasiswaLampiran = pgTable(
+  'status_mahasiswa_lampiran',
+  {
+    id: serial('id').primaryKey(),
+    pengajuanCutiId: integer('pengajuan_cuti_id').references(() => pengajuanCuti.id, { onDelete: 'cascade' }),
+    mahasiswaKeluarId: integer('mahasiswa_keluar_id').references(() => mahasiswaKeluar.id, { onDelete: 'cascade' }),
+    jenis: varchar('jenis', { length: 20 }).notNull(), // 'sk' | 'pendukung'
+    storageKey: varchar('storage_key', { length: 255 }).notNull(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    fileSize: integer('file_size').notNull(),
+    fileType: varchar('file_type', { length: 100 }).notNull(),
+    keterangan: varchar('keterangan', { length: 255 }),
+    uploadedBy: integer('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('sml_cuti_idx').on(t.pengajuanCutiId), index('sml_keluar_idx').on(t.mahasiswaKeluarId)],
+);
+
+export const statusMahasiswaLampiranRelations = relations(statusMahasiswaLampiran, ({ one }) => ({
+  pengajuanCuti: one(pengajuanCuti, {
+    fields: [statusMahasiswaLampiran.pengajuanCutiId],
+    references: [pengajuanCuti.id],
+  }),
+  mahasiswaKeluar: one(mahasiswaKeluar, {
+    fields: [statusMahasiswaLampiran.mahasiswaKeluarId],
+    references: [mahasiswaKeluar.id],
   }),
 }));
 

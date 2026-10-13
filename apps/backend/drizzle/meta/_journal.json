@@ -575,6 +575,13 @@
       "when": 1789886662800,
       "tag": "0082_pengumuman_thumbnail",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1789886662900,
+      "tag": "0083_status_mahasiswa_lampiran",
+      "breakpoints": true
     }
   ]
 }

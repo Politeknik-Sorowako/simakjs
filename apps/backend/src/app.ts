@@ -112,6 +112,7 @@ mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursiv
 // Direktori lampiran bimbingan & dokumen SK prodi & pengumuman.
 mkdirSync(join(process.cwd(), 'storage', 'bimbingan-attachments'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'sk-prodi'), { recursive: true });
+mkdirSync(join(process.cwd(), 'storage', 'status-mahasiswa'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'pengumuman'), { recursive: true });
 
 export const app = new Elysia()

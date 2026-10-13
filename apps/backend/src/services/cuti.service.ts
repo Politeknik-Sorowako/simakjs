@@ -1,6 +1,21 @@
 import { and, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { mahasiswa, pengajuanCuti } from '../models/schema';
 import { db } from '../utils/db';
+import { LampiranStatusService } from './lampiran-status.service';
+
+const lampiranMeta = {
+  columns: { id: true, jenis: true, fileName: true, fileSize: true, fileType: true, keterangan: true, createdAt: true },
+} as const;
+
+export interface UpdateCutiDto {
+  periodeId?: string;
+  alasan?: string;
+  semesterMulaiCuti?: string | null;
+  semesterBerakhirCuti?: string | null;
+  noSuratIzin?: string | null;
+  tanggalSuratIzin?: string | null;
+  catatan?: string | null;
+}
 
 export interface CreateCutiDto {
   mahasiswaId: number;
@@ -36,6 +51,41 @@ export class CutiService {
       .returning();
 
     return newCuti;
+  }
+
+  static async update(id: number, data: UpdateCutiDto) {
+    const cuti = await db.query.pengajuanCuti.findFirst({ where: eq(pengajuanCuti.id, id) });
+    if (!cuti) throw new Error('Pengajuan cuti tidak ditemukan.');
+
+    if (data.periodeId && data.periodeId !== cuti.periodeId) {
+      const dup = await db.query.pengajuanCuti.findFirst({
+        where: and(eq(pengajuanCuti.mahasiswaId, cuti.mahasiswaId), eq(pengajuanCuti.periodeId, data.periodeId)),
+      });
+      if (dup) throw new Error('Mahasiswa sudah memiliki catatan cuti pada periode tersebut.');
+    }
+
+    const mulai = data.semesterMulaiCuti === undefined ? cuti.semesterMulaiCuti : data.semesterMulaiCuti;
+    let berakhir = data.semesterBerakhirCuti === undefined ? cuti.semesterBerakhirCuti : data.semesterBerakhirCuti;
+    if (mulai && !berakhir) berakhir = CutiService.hitungSemesterBerakhir(mulai);
+    if (mulai && berakhir && berakhir < mulai) {
+      throw new Error('Semester berakhir tidak boleh sebelum semester mulai.');
+    }
+
+    const [updated] = await db
+      .update(pengajuanCuti)
+      .set({
+        periodeId: data.periodeId ?? cuti.periodeId,
+        alasan: data.alasan ?? cuti.alasan,
+        semesterMulaiCuti: mulai,
+        semesterBerakhirCuti: berakhir,
+        noSuratIzin: data.noSuratIzin === undefined ? cuti.noSuratIzin : data.noSuratIzin,
+        tanggalSuratIzin: data.tanggalSuratIzin === undefined ? cuti.tanggalSuratIzin : data.tanggalSuratIzin,
+        catatan: data.catatan === undefined ? cuti.catatan : data.catatan,
+        updatedAt: new Date(),
+      })
+      .where(eq(pengajuanCuti.id, id))
+      .returning();
+    return updated;
   }
 
   static async inputByAdmin(data: {
@@ -108,6 +158,7 @@ export class CutiService {
           },
         },
         periodeAkademik: true,
+        lampiran: lampiranMeta,
       },
     });
 
@@ -148,6 +199,7 @@ export class CutiService {
           where: (table, { eq: eqFn }) => (params.periodeId ? eqFn(table.periodeId, params.periodeId) : undefined),
           with: {
             periodeAkademik: true,
+            lampiran: lampiranMeta,
           },
           orderBy: [desc(pengajuanCuti.createdAt)],
           limit: 1,
@@ -180,6 +232,7 @@ export class CutiService {
             },
           },
           periodeAkademik: true,
+          lampiran: lampiranMeta,
         },
       })) || null
     );
@@ -290,7 +343,9 @@ export class CutiService {
       await db.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, cuti.mahasiswaId));
     }
 
+    const cleanupFiles = await LampiranStatusService.removeFilesForParent({ type: 'cuti', id });
     const [deleted] = await db.delete(pengajuanCuti).where(eq(pengajuanCuti.id, id)).returning();
+    await cleanupFiles();
 
     return deleted;
   }

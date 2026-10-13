@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import { LampiranManager, PendingLampiranFiles } from '../components/lampiran/LampiranManager';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -10,7 +11,7 @@ import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { CutiRequest, cutiController, MahasiswaCuti } from '../controllers/cutiController';
+import { CutiRequest, cutiController, LampiranStatus, MahasiswaCuti } from '../controllers/cutiController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { usePagination } from '../hooks/usePagination';
@@ -112,6 +113,7 @@ export default function ManajemenCuti() {
   const [mhsList, setMhsList] = createSignal<Mahasiswa[]>([]);
 
   const [showInputModal, setShowInputModal] = createSignal(false);
+  const [editingCutiId, setEditingCutiId] = createSignal<number | null>(null);
   const [selectedMhs, setSelectedMhs] = createSignal<Mahasiswa | null>(null);
   const [inputPeriodeId, setInputPeriodeId] = createSignal('');
   const [alasan, setAlasan] = createSignal('');
@@ -120,8 +122,29 @@ export default function ManajemenCuti() {
   const [autoBerakhir, setAutoBerakhir] = createSignal(true);
   const [noSuratIzin, setNoSuratIzin] = createSignal('');
   const [tanggalSuratIzin, setTanggalSuratIzin] = createSignal('');
+  const [catatan, setCatatan] = createSignal('');
+  const [modalLampiran, setModalLampiran] = createSignal<LampiranStatus[]>([]);
+  const [pendingFiles, setPendingFiles] = createSignal<PendingLampiranFiles>({ sk: null, pendukung: [] });
   const [inputError, setInputError] = createSignal('');
   const [inputSubmitting, setInputSubmitting] = createSignal(false);
+
+  // Modal khusus view lampiran (untuk tab approval atau quick preview)
+  const [showViewLampiranModal, setShowViewLampiranModal] = createSignal(false);
+  const [viewLampiranTitle, setViewLampiranTitle] = createSignal('');
+  const [viewLampiranCutiId, setViewLampiranCutiId] = createSignal<number | null>(null);
+  const [viewLampiranItems, setViewLampiranItems] = createSignal<LampiranStatus[]>([]);
+
+  const openViewLampiranModal = async (cutiId: number, title: string) => {
+    setViewLampiranCutiId(cutiId);
+    setViewLampiranTitle(title);
+    setShowViewLampiranModal(true);
+    try {
+      const items = await cutiController.listLampiran(cutiId);
+      setViewLampiranItems(items);
+    } catch {
+      setViewLampiranItems([]);
+    }
+  };
 
   const hitungSemesterBerakhir = (mulai: string) => {
     if (!mulai || mulai.length < 5) return '';
@@ -132,6 +155,7 @@ export default function ManajemenCuti() {
   };
 
   const openFormModal = async () => {
+    setEditingCutiId(null);
     setSelectedMhs(null);
     const active = periodes()?.data?.find((p) => p.aktif);
     const activeId = active?.id || periodes()?.data?.[0]?.id || '';
@@ -142,6 +166,9 @@ export default function ManajemenCuti() {
     setAlasan('');
     setNoSuratIzin('');
     setTanggalSuratIzin(getTodayString());
+    setCatatan('');
+    setModalLampiran([]);
+    setPendingFiles({ sk: null, pendukung: [] });
     setInputError('');
     setShowInputModal(true);
     try {
@@ -149,6 +176,28 @@ export default function ManajemenCuti() {
       setMhsList(result.data || []);
     } catch {
       setMhsList([]);
+    }
+  };
+
+  const openEditModal = async (mhs: Mahasiswa, cutiRecord: CutiRequest) => {
+    setEditingCutiId(cutiRecord.id);
+    setSelectedMhs(mhs);
+    setInputPeriodeId(cutiRecord.periodeId);
+    setSemesterMulaiCuti(cutiRecord.semesterMulaiCuti || cutiRecord.periodeId);
+    setSemesterBerakhirCuti(cutiRecord.semesterBerakhirCuti || '');
+    setAutoBerakhir(false);
+    setAlasan(cutiRecord.alasan);
+    setNoSuratIzin(cutiRecord.noSuratIzin || '');
+    setTanggalSuratIzin(cutiRecord.tanggalSuratIzin || '');
+    setCatatan(cutiRecord.catatan || '');
+    setPendingFiles({ sk: null, pendukung: [] });
+    setInputError('');
+    setShowInputModal(true);
+    try {
+      const items = await cutiController.listLampiran(cutiRecord.id);
+      setModalLampiran(items);
+    } catch {
+      setModalLampiran([]);
     }
   };
 
@@ -171,20 +220,53 @@ export default function ManajemenCuti() {
     setInputSubmitting(true);
     setInputError('');
     try {
-      await cutiController.inputByAdmin({
-        mahasiswaId: mhs.id,
-        periodeId: inputPeriodeId(),
-        alasan: alasan(),
-        semesterMulaiCuti: semesterMulaiCuti() || undefined,
-        semesterBerakhirCuti: semesterBerakhirCuti() || undefined,
-        noSuratIzin: noSuratIzin() || undefined,
-        tanggalSuratIzin: tanggalSuratIzin() || undefined,
-      });
-      toast.showToast(`Mahasiswa "${mhs.nama}" berhasil dicatat cuti.`, 'success');
+      const editId = editingCutiId();
+      if (editId) {
+        await cutiController.update(editId, {
+          periodeId: inputPeriodeId(),
+          alasan: alasan(),
+          semesterMulaiCuti: semesterMulaiCuti() || null,
+          semesterBerakhirCuti: semesterBerakhirCuti() || null,
+          noSuratIzin: noSuratIzin() || null,
+          tanggalSuratIzin: tanggalSuratIzin() || null,
+          catatan: catatan() || null,
+        });
+        toast.showToast(`Data cuti mahasiswa "${mhs.nama}" berhasil diperbarui.`, 'success');
+      } else {
+        const created = await cutiController.inputByAdmin({
+          mahasiswaId: mhs.id,
+          periodeId: inputPeriodeId(),
+          alasan: alasan(),
+          semesterMulaiCuti: semesterMulaiCuti() || undefined,
+          semesterBerakhirCuti: semesterBerakhirCuti() || undefined,
+          noSuratIzin: noSuratIzin() || undefined,
+          tanggalSuratIzin: tanggalSuratIzin() || undefined,
+        });
+
+        // Upload any pending files that were selected during create
+        const pending = pendingFiles();
+        if (pending.sk) {
+          try {
+            await cutiController.uploadLampiran(created.id, pending.sk, 'sk');
+          } catch {
+            toast.showToast('Gagal mengunggah surat SK, Anda dapat mengunggahnya via tombol Edit.', 'error');
+          }
+        }
+        for (const file of pending.pendukung) {
+          try {
+            await cutiController.uploadLampiran(created.id, file, 'pendukung');
+          } catch {
+            toast.showToast(`Gagal mengunggah berkas ${file.name}.`, 'error');
+          }
+        }
+
+        toast.showToast(`Mahasiswa "${mhs.nama}" berhasil dicatat cuti.`, 'success');
+      }
+
       setShowInputModal(false);
       refetchInput();
     } catch (e: unknown) {
-      setInputError((e as Error).message || 'Gagal mencatat cuti mahasiswa.');
+      setInputError((e as Error).message || 'Gagal menyimpan data cuti.');
     } finally {
       setInputSubmitting(false);
     }
@@ -508,9 +590,23 @@ export default function ManajemenCuti() {
                         <Show when={cutiRecord?.noSuratIzin} fallback={<span class="text-secondary-300">-</span>}>
                           <div>{cutiRecord?.noSuratIzin}</div>
                         </Show>
+                        <Show when={cutiRecord?.lampiran && cutiRecord.lampiran.length > 0}>
+                          <button
+                            type="button"
+                            onClick={() => openViewLampiranModal(cutiRecord!.id, `Lampiran - ${item.nama}`)}
+                            class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                          >
+                            <span>📎 {cutiRecord!.lampiran!.length} Berkas</span>
+                          </button>
+                        </Show>
                       </td>
                       <td class="px-6 py-4">
-                        <div class="flex gap-2">
+                        <div class="flex items-center gap-2">
+                          <Show when={cutiRecord && (role() === 'admin' || role() === 'prodi')}>
+                            <Button variant="secondary" size="sm" onClick={() => openEditModal(item, cutiRecord!)}>
+                              Edit
+                            </Button>
+                          </Show>
                           <Show
                             when={
                               cutiRecord && (cutiRecord.status === 'disetujui_prodi' || cutiRecord.status === 'pending')
@@ -521,7 +617,7 @@ export default function ManajemenCuti() {
                               size="sm"
                               onClick={() => handleDeleteCuti(cutiRecord!.id, item.nama)}
                             >
-                              Batalkan Cuti
+                              Batalkan
                             </Button>
                           </Show>
                           <Show when={cutiRecord?.status === 'disetujui_prodi'}>
@@ -611,6 +707,15 @@ export default function ManajemenCuti() {
                       <Show when={item.noSuratIzin} fallback={<span class="text-secondary-300">-</span>}>
                         <div>No: {item.noSuratIzin}</div>
                         <div class="text-xs text-secondary-400">Tgl: {item.tanggalSuratIzin}</div>
+                      </Show>
+                      <Show when={(item.lampiran?.length ?? 0) > 0}>
+                        <button
+                          type="button"
+                          onClick={() => openViewLampiranModal(item.id, `Lampiran - ${item.mahasiswa?.nama}`)}
+                          class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                        >
+                          <span>📎 {item.lampiran?.length} Berkas</span>
+                        </button>
                       </Show>
                     </td>
                     <td class="px-6 py-4">
@@ -735,8 +840,12 @@ export default function ManajemenCuti() {
         </Show>
       </div>
 
-      {/* ===================== MODAL INPUT CUTI ===================== */}
-      <Modal show={showInputModal()} onClose={() => setShowInputModal(false)} title="Catat Cuti Mahasiswa">
+      {/* ===================== MODAL INPUT/EDIT CUTI ===================== */}
+      <Modal
+        show={showInputModal()}
+        onClose={() => setShowInputModal(false)}
+        title={editingCutiId() ? 'Edit Data Cuti Mahasiswa' : 'Catat Cuti Mahasiswa'}
+      >
         <form onSubmit={handleSaveInput} class="flex flex-col gap-4">
           <Show when={inputError()}>
             <div class="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100 dark:bg-red-900/30 dark:text-red-400">
@@ -745,7 +854,7 @@ export default function ManajemenCuti() {
           </Show>
 
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-semibold text-secondary-700">Cari Mahasiswa Aktif</label>
+            <label class="text-sm font-semibold text-secondary-700">Mahasiswa</label>
             <Show
               when={!selectedMhs()}
               fallback={
@@ -756,9 +865,11 @@ export default function ManajemenCuti() {
                       NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
                     </div>
                   </div>
-                  <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)}>
-                    Ganti
-                  </Button>
+                  <Show when={!editingCutiId()}>
+                    <Button variant="secondary" size="sm" onClick={() => setSelectedMhs(null)} type="button">
+                      Ganti
+                    </Button>
+                  </Show>
                 </div>
               }
             >
@@ -843,6 +954,54 @@ export default function ManajemenCuti() {
             />
           </div>
 
+          <Show when={editingCutiId()}>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-semibold text-secondary-700">Catatan / Catatan Persetujuan</label>
+              <Input
+                placeholder="Catatan tambahan (opsional)..."
+                value={catatan()}
+                onInput={(e) => setCatatan(e.currentTarget.value)}
+              />
+            </div>
+          </Show>
+
+          {/* Lampiran Manager */}
+          <div class="border-t border-secondary-200/80 dark:border-secondary-800 pt-3">
+            <div class="text-xs font-semibold uppercase tracking-wider text-secondary-400 mb-2">Berkas Lampiran</div>
+            <LampiranManager
+              items={modalLampiran()}
+              pendingFiles={pendingFiles()}
+              onPendingChange={setPendingFiles}
+              onUpload={
+                editingCutiId()
+                  ? async (file, jenis) => {
+                      const uploaded = await cutiController.uploadLampiran(editingCutiId()!, file, jenis);
+                      if (jenis === 'sk') {
+                        setModalLampiran((prev) => [uploaded, ...prev.filter((item) => item.jenis !== 'sk')]);
+                      } else {
+                        setModalLampiran((prev) => [uploaded, ...prev]);
+                      }
+                      refetchInput();
+                    }
+                  : undefined
+              }
+              onDelete={
+                editingCutiId()
+                  ? async (lampiranId) => {
+                      await cutiController.deleteLampiran(editingCutiId()!, lampiranId);
+                      setModalLampiran((prev) => prev.filter((item) => item.id !== lampiranId));
+                      refetchInput();
+                    }
+                  : undefined
+              }
+              onOpen={(lampiranId) => {
+                if (editingCutiId()) {
+                  cutiController.openLampiran(editingCutiId()!, lampiranId);
+                }
+              }}
+            />
+          </div>
+
           <div class="flex justify-end gap-2 mt-4">
             <Button variant="secondary" onClick={() => setShowInputModal(false)} type="button">
               Batal
@@ -852,6 +1011,37 @@ export default function ManajemenCuti() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* ===================== MODAL PREVIEW/VIEW LAMPIRAN ===================== */}
+      <Modal show={showViewLampiranModal()} onClose={() => setShowViewLampiranModal(false)} title={viewLampiranTitle()}>
+        <div class="flex flex-col gap-4">
+          <LampiranManager
+            items={viewLampiranItems()}
+            readonly={role() !== 'admin' && role() !== 'prodi'}
+            onDelete={
+              role() === 'admin' || role() === 'prodi'
+                ? async (lampiranId) => {
+                    if (viewLampiranCutiId()) {
+                      await cutiController.deleteLampiran(viewLampiranCutiId()!, lampiranId);
+                      setViewLampiranItems((prev) => prev.filter((i) => i.id !== lampiranId));
+                      refetchInput();
+                    }
+                  }
+                : undefined
+            }
+            onOpen={(lampiranId) => {
+              if (viewLampiranCutiId()) {
+                cutiController.openLampiran(viewLampiranCutiId()!, lampiranId);
+              }
+            }}
+          />
+          <div class="flex justify-end mt-2">
+            <Button variant="secondary" onClick={() => setShowViewLampiranModal(false)} type="button">
+              Tutup
+            </Button>
+          </div>
+        </div>
       </Modal>
 
       {/* ===================== MODAL PERSETUJUAN ===================== */}

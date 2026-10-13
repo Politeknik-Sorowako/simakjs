@@ -1,6 +1,22 @@
 import { and, count, desc, eq, ilike, or, SQL } from 'drizzle-orm';
 import { mahasiswa, mahasiswaKeluar, periodeAkademik } from '../models/schema';
 import { db } from '../utils/db';
+import { LampiranStatusService } from './lampiran-status.service';
+
+const lampiranMeta = {
+  columns: { id: true, jenis: true, fileName: true, fileSize: true, fileType: true, keterangan: true, createdAt: true },
+} as const;
+
+export interface UpdateMahasiswaKeluarDto {
+  periodeId?: string;
+  statusBaru?: string;
+  tanggalKeluar?: string;
+  alasanKeluar?: string | null;
+  noSk?: string | null;
+  tanggalSk?: string | null;
+  ipk?: number | null;
+  nomorIjazah?: string | null;
+}
 
 export interface CreateMahasiswaKeluarDto {
   mahasiswaId: number;
@@ -46,6 +62,43 @@ export class MahasiswaKeluarService {
     return newKeluar;
   }
 
+  static async update(id: number, data: UpdateMahasiswaKeluarDto) {
+    return db.transaction(async (tx) => {
+      const record = await tx.query.mahasiswaKeluar.findFirst({ where: eq(mahasiswaKeluar.id, id) });
+      if (!record) throw new Error('Data riwayat mahasiswa keluar tidak ditemukan.');
+
+      const [updated] = await tx
+        .update(mahasiswaKeluar)
+        .set({
+          periodeId: data.periodeId ?? record.periodeId,
+          statusBaru: data.statusBaru ?? record.statusBaru,
+          tanggalKeluar: data.tanggalKeluar ?? record.tanggalKeluar,
+          alasanKeluar: data.alasanKeluar === undefined ? record.alasanKeluar : data.alasanKeluar,
+          noSk: data.noSk === undefined ? record.noSk : data.noSk,
+          tanggalSk: data.tanggalSk === undefined ? record.tanggalSk : data.tanggalSk,
+          ipk: data.ipk === undefined ? record.ipk : data.ipk === null ? null : String(data.ipk),
+          nomorIjazah: data.nomorIjazah === undefined ? record.nomorIjazah : data.nomorIjazah,
+          updatedAt: new Date(),
+        })
+        .where(eq(mahasiswaKeluar.id, id))
+        .returning();
+
+      if (data.statusBaru && data.statusBaru !== record.statusBaru) {
+        await tx.update(mahasiswa).set({ status: data.statusBaru }).where(eq(mahasiswa.id, record.mahasiswaId));
+      }
+      return updated;
+    });
+  }
+
+  static async getById(id: number) {
+    return (
+      (await db.query.mahasiswaKeluar.findFirst({
+        where: eq(mahasiswaKeluar.id, id),
+        with: { lampiran: lampiranMeta },
+      })) || null
+    );
+  }
+
   static async getAll(params: { page?: number; limit?: number; search?: string; periodeId?: string }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
@@ -67,6 +120,7 @@ export class MahasiswaKeluarService {
           },
         },
         periodeAkademik: true,
+        lampiran: lampiranMeta,
       },
     });
 
@@ -135,8 +189,10 @@ export class MahasiswaKeluarService {
       throw new Error('Data riwayat mahasiswa keluar tidak ditemukan.');
     }
 
-    // Delete record
+    // Delete record (row lampiran ikut terhapus via CASCADE; berkas fisik dibersihkan sesudahnya)
+    const cleanupFiles = await LampiranStatusService.removeFilesForParent({ type: 'keluar', id });
     const [deleted] = await db.delete(mahasiswaKeluar).where(eq(mahasiswaKeluar.id, id)).returning();
+    await cleanupFiles();
 
     // Revert status to aktif
     await db.update(mahasiswa).set({ status: 'aktif' }).where(eq(mahasiswa.id, record.mahasiswaId));
