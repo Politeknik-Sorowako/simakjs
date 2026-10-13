@@ -8,7 +8,7 @@ import { apelController, UnknownPresensiItem } from '../controllers/apelControll
 import { presensiController } from '../controllers/presensiController';
 import { PaginatedResponse, prodiController } from '../controllers/prodiController';
 import { fmtTanggal, fmtWaktu } from '../utils/format';
-import { hitungBatasDurasi } from '../utils/verifikasiKuota';
+import { bolehNotice, hitungBatasDurasi, pesanBatasDurasi } from '../utils/verifikasiKuota';
 
 function TableLoadingFallback() {
   return (
@@ -106,6 +106,25 @@ export default function ApelVerifikasi() {
     const row = selectedAbsence();
     if (!row) return;
     setVerifyDuration(row.durasiMenit ?? 0);
+  });
+
+  // Notice kelebihan kuota: teks inline persisten + toast info sekali (throttle)
+  // saat durasi input pertama kali melewati batas baris ini.
+  const isDurasiOver = () =>
+    dailyRekap.state === 'ready' && !isAnulir() && verifyStatus() !== 'hadir' && verifyDuration() > maksDurasi();
+
+  let wasOver = false;
+  const lastNoticeAt = { t: 0 };
+  createEffect(() => {
+    const over = isDurasiOver();
+    if (over && !wasOver) {
+      const now = Date.now();
+      if (bolehNotice(lastNoticeAt.t, now)) {
+        lastNoticeAt.t = now;
+        toast.showToast(pesanBatasDurasi(maksDurasi()), 'info');
+      }
+    }
+    wasOver = over;
   });
 
   const [data, { refetch }] = createResource(
@@ -500,6 +519,11 @@ export default function ApelVerifikasi() {
                       onInput={(e) => setVerifyDuration(Number(e.currentTarget.value) || 0)}
                       placeholder="0"
                     />
+                    <Show when={isDurasiOver()}>
+                      <p class="mt-1 text-xs rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 px-3 py-2">
+                        Durasi melebihi batas baris ini ({maksDurasi()} menit) — sisa kuota harian sudah habis.
+                      </p>
+                    </Show>
                   </div>
                 </Show>
                 <Show when={isAnulir()}>
