@@ -2,6 +2,7 @@ services:
   db_staging:
     image: postgres:15-alpine
     container_name: simak_db_staging
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-simak_user_staging}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password_staging}
@@ -27,6 +28,7 @@ services:
       context: .
       dockerfile: apps/backend/Dockerfile
     init: true
+    restart: unless-stopped
     container_name: simak_backend_staging
     ports:
       - "127.0.0.1:${BACKEND_PORT:-3001}:3000"
@@ -72,6 +74,7 @@ services:
         - VITE_APP_MODE=${VITE_APP_MODE:-development}
         - VITE_TURNSTILE_SITE_KEY=${VITE_TURNSTILE_SITE_KEY:-}
     init: true
+    restart: unless-stopped
     container_name: simak_frontend_staging
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8082}:80"
