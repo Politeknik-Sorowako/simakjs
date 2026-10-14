@@ -54,6 +54,12 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'number',
     description: 'Batas minimal total SKS kelulusan kurikulum jenjang D4/S1 Terapan (BPA Pasal Kurikulum Blok)',
   },
+  // Key mengikuti PRD SKPI §4.4/§9 (`skpi_min_kegiatan`), dibaca oleh SkpiService.getSyaratPenerbitan.
+  skpi_min_kegiatan: {
+    value: '1',
+    type: 'number',
+    description: 'Jumlah minimum kegiatan terverifikasi sebelum SKPI dapat diterbitkan',
+  },
   BLOCK_KRS_JIKA_TANGGUNGAN: {
     value: 'false',
     type: 'boolean',

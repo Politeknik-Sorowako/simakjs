@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, like, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, like, or } from 'drizzle-orm';
 import { kategoriKegiatanSkpi, kegiatanMahasiswaSkpi, lampiranKegiatanSkpi, mahasiswa } from '../models/schema';
 import { db } from '../utils/db';
 import {
@@ -7,6 +7,7 @@ import {
   SKPI_LAMPIRAN_MAX_MB,
   saveLampiranFile,
 } from '../utils/lampiran-storage';
+import { SystemParameterService } from './system-parameter.service';
 
 export interface CreateKegiatanSkpiDto {
   mahasiswaId: number;
@@ -240,6 +241,79 @@ export class SkpiService {
         with: kegiatanWithRelations,
       })) || null
     );
+  }
+
+  // ─── Dokumen SKPI (siap cetak) ─────────────────────────────────────────────
+
+  /**
+   * Kegiatan terverifikasi milik mahasiswa — satu-satunya sumber isi dokumen
+   * SKPI. Urutan deterministik (tanggalMulai lalu id) agar snapshot hash stabil.
+   */
+  static async getKegiatanTerverifikasi(mhsId: number) {
+    return await db.query.kegiatanMahasiswaSkpi.findMany({
+      where: and(eq(kegiatanMahasiswaSkpi.mahasiswaId, mhsId), eq(kegiatanMahasiswaSkpi.status, 'diverifikasi')),
+      orderBy: [asc(kegiatanMahasiswaSkpi.tanggalMulai), asc(kegiatanMahasiswaSkpi.id)],
+      columns: {
+        id: true,
+        namaKegiatan: true,
+        penyelenggara: true,
+        tanggalMulai: true,
+        tanggalSelesai: true,
+        lokasi: true,
+        poin: true,
+      },
+      with: { kategori: { columns: { nama: true, jenis: true } } },
+    });
+  }
+
+  /** Syarat penerbitan SKPI: status akademik valid + minimum kegiatan terverifikasi. */
+  static async getSyaratPenerbitan(mhsId: number, jumlahTerverifikasi: number) {
+    const mhs = await db.query.mahasiswa.findFirst({
+      where: eq(mahasiswa.id, mhsId),
+      columns: { status: true },
+    });
+    if (!mhs) throw new Error('Mahasiswa tidak ditemukan.');
+
+    const statusAkademikValid = ['aktif', 'cuti', 'lulus'].includes(mhs.status);
+    const minKegiatan = Math.max(1, await SystemParameterService.getNumber('skpi_min_kegiatan'));
+    const jumlahTerpenuhi = jumlahTerverifikasi >= minKegiatan;
+    const terpenuhi = statusAkademikValid && jumlahTerpenuhi;
+    const alasan = !statusAkademikValid
+      ? 'Status akademik mahasiswa tidak memenuhi syarat penerbitan SKPI.'
+      : !jumlahTerpenuhi
+        ? `Minimal ${minKegiatan} kegiatan terverifikasi diperlukan untuk menerbitkan SKPI.`
+        : null;
+    return { statusAkademikValid, minKegiatan, jumlahTerverifikasi, terpenuhi, alasan };
+  }
+
+  /** Ringkasan siap cetak: identitas + kegiatan terverifikasi + syarat penerbitan. */
+  static async getDokumen(mhsId: number) {
+    const mhs = await db.query.mahasiswa.findFirst({
+      where: eq(mahasiswa.id, mhsId),
+      columns: { id: true, nim: true, nama: true, status: true, programStudiId: true },
+      with: { programStudi: { columns: { nama: true, jenjang: true } } },
+    });
+    if (!mhs) throw new Error('Mahasiswa tidak ditemukan.');
+
+    const kegiatan = await SkpiService.getKegiatanTerverifikasi(mhsId);
+    const totalPoin = kegiatan.reduce((sum, k) => sum + (k.poin ?? 0), 0);
+    const syarat = await SkpiService.getSyaratPenerbitan(mhsId, kegiatan.length);
+
+    return {
+      mahasiswa: {
+        id: mhs.id,
+        nim: mhs.nim,
+        nama: mhs.nama,
+        status: mhs.status,
+        programStudiId: mhs.programStudiId,
+        prodi: mhs.programStudi?.nama ?? null,
+        jenjang: mhs.programStudi?.jenjang ?? null,
+      },
+      kegiatan,
+      totalKegiatan: kegiatan.length,
+      totalPoin,
+      syarat,
+    };
   }
 
   static async update(id: number, data: UpdateKegiatanSkpiDto) {

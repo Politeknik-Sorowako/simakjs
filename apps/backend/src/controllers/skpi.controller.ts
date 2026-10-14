@@ -1,8 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { dosen, mahasiswa } from '../models/schema';
+import { DocumentSignatureService } from '../services/document-signature.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
 import { SkpiService } from '../services/skpi.service';
 import { db } from '../utils/db';
+import { getVerifyBaseUrl } from '../utils/document-signing';
 import { lampiranFilePath, SKPI_LAMPIRAN_DIR } from '../utils/lampiran-storage';
 import { canAccessAllProdi, hasRole } from '../utils/role';
 import { AuthContext, UserPayload, UserRole } from '../utils/types';
@@ -397,6 +399,108 @@ export class SkpiController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memverifikasi rekaman' };
+    }
+  }
+
+  // ─── Dokumen SKPI (siap cetak + TTE) ───────────────────────────────────────
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getDokumen({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (hasRole(user, ['guest', 'calon_mahasiswa'])) {
+      set.status = 403;
+      return { error: 'Akses ditolak.' };
+    }
+    const mhsId = Number(params.mhsId);
+    if (!Number.isInteger(mhsId) || mhsId < 1) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    if (hasRole(user, ['mahasiswa'])) {
+      const myMhsId = await SkpiController.getMahasiswaIdByEmail(user.email);
+      if (myMhsId !== mhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat melihat dokumen SKPI milik sendiri.' };
+      }
+    } else {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [mhsId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
+    }
+
+    try {
+      const dokumen = await SkpiService.getDokumen(mhsId);
+      const sig = await DocumentSignatureService.getByRef('SKPI', `skpi:${mhsId}`);
+      return {
+        ...dokumen,
+        signature: sig
+          ? {
+              verifyUuid: sig.verifyUuid,
+              verifyUrl: `${getVerifyBaseUrl()}/v/${sig.verifyUuid}`,
+              docHash: sig.docHash,
+              kid: sig.kid,
+              signedAt: sig.signedAt.toISOString(),
+              signerNama: sig.signerNama,
+              signerJabatan: sig.signerJabatan,
+            }
+          : null,
+      };
+    } catch (e: unknown) {
+      set.status = 404;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil dokumen SKPI.' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async signDokumen({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    const mhsId = Number(params.mhsId);
+    if (!Number.isInteger(mhsId) || mhsId < 1) {
+      set.status = 400;
+      return { error: 'ID Mahasiswa tidak valid.' };
+    }
+
+    // PRD §6.3: mahasiswa pemilik; staf admin/prodi/kaprodi dalam scope.
+    // Penandatangan dokumen tetap di-resolve server (Kaprodi → fallback).
+    const isMahasiswa = hasRole(user, ['mahasiswa']);
+    const isSignerStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi']);
+    if (isMahasiswa && !isSignerStaff) {
+      const myMhsId = await SkpiController.getMahasiswaIdByEmail(user.email);
+      if (myMhsId !== mhsId) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Anda hanya dapat menerbitkan SKPI milik sendiri.' };
+      }
+    } else if (isSignerStaff) {
+      try {
+        await ProdiScopeService.assertMahasiswaInScope(user, [mhsId]);
+      } catch (e: unknown) {
+        set.status = 403;
+        return { error: e instanceof Error ? e.message : 'Akses ditolak.' };
+      }
+    } else {
+      set.status = 403;
+      return {
+        error: 'Hanya mahasiswa pemilik atau staf Admin/Prodi/Kaprodi yang dapat menerbitkan tanda tangan SKPI.',
+      };
+    }
+
+    try {
+      return await DocumentSignatureService.signSkpi(mhsId);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menandatangani SKPI.' };
     }
   }
 
