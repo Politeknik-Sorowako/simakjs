@@ -143,8 +143,10 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         '/pelanggaran',
         '/rekap-pelanggaran',
         '/presensi-saya',
-        '/skpi',
-      ])
+      ]) ||
+      // `/skpi` dicocokkan persis agar tidak ikut membuka grup ini saat berada di
+      // `/skpi/verifikasi` (halaman staf yang berada di grup Evaluasi).
+      currentPath === '/skpi'
     ) {
       setIsLayananOpen(true);
     }

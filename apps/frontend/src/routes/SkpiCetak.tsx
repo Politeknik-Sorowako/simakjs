@@ -32,7 +32,15 @@ export default function SkpiCetak() {
       const mhsId = Number(params.mhsId);
       return mhsId ? mhsId : null;
     },
-    async (mhsId): Promise<SkpiDokumen | null> => skpiController.getDokumen(mhsId),
+    async (mhsId): Promise<SkpiDokumen | null> => {
+      // Kegagalan (403/404/5xx) ditelan → `doc()` bernilai null sehingga fallback
+      // "Dokumen tidak dapat dimuat" tampil, bukan lempar ke ErrorBoundary rute.
+      try {
+        return await skpiController.getDokumen(mhsId);
+      } catch {
+        return null;
+      }
+    },
   );
 
   // Profil tambahan (angkatan) untuk kop identitas — kegagalan tidak fatal.
