@@ -11,7 +11,8 @@ export type UserRole =
   | 'guest'
   | 'calon_mahasiswa'
   | 'plp'
-  | 'instruktur';
+  | 'instruktur'
+  | 'kemahasiswaan';
 
 export interface UserPayload {
   id: number;

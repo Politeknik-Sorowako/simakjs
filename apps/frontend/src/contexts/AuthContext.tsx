@@ -33,7 +33,8 @@ export interface User {
     | 'guest'
     | 'calon_mahasiswa'
     | 'plp'
-    | 'instruktur';
+    | 'instruktur'
+    | 'kemahasiswaan';
   roles?: User['role'][];
   mustChangePassword?: boolean;
   theme?: string;
@@ -58,7 +59,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>();
 
 export const SINGLE_ROLE_ONLY: UserRole[] = ['super_admin', 'mahasiswa', 'guest', 'calon_mahasiswa'];
-export const MULTI_ROLE_ALLOWED: UserRole[] = ['admin', 'kaprodi', 'prodi', 'dosen', 'keuangan', 'plp', 'instruktur'];
+export const MULTI_ROLE_ALLOWED: UserRole[] = [
+  'admin',
+  'kaprodi',
+  'prodi',
+  'dosen',
+  'keuangan',
+  'plp',
+  'instruktur',
+  'kemahasiswaan',
+];
 export const ALL_ROLES: UserRole[] = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
 
 const PUBLIC_PATHS = [
