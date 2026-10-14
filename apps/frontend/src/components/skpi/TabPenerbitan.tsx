@@ -3,6 +3,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { prodiController } from '../../controllers/prodiController';
 import { type SkpiPenerbitanItem, skpiController } from '../../controllers/skpiController';
 import { usePagination } from '../../hooks/usePagination';
+import { type ExportColumn, exportToExcel, exportToPDF } from '../../utils/export';
+import { getTodayString } from '../../utils/format';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -67,6 +69,82 @@ export default function TabPenerbitan() {
   const selectedRows = () => rows().filter((r) => selected().has(r.mahasiswaId));
   const selectedSignable = () => selectedRows().filter((r) => r.syarat.terpenuhi && !r.signature);
   const selectedSigned = () => selectedRows().filter((r) => r.signature);
+
+  // ── Ekspor rekap (US-8) — mengikuti filter aktif, seluruh halaman ─────────
+  const [isExporting, setIsExporting] = createSignal(false);
+
+  const exportColumns = (): ExportColumn[] => [
+    { header: 'NIM', accessor: 'nim' },
+    { header: 'Nama Mahasiswa', accessor: 'nama' },
+    { header: 'Program Studi', accessor: 'prodi' },
+    {
+      header: 'Status Akademik',
+      accessor: (r: SkpiPenerbitanItem) => STATUS_AKADEMIK_LABEL[r.statusAkademik] ?? r.statusAkademik,
+    },
+    { header: 'Terverifikasi', accessor: 'diverifikasi' },
+    { header: 'Pending', accessor: 'pending' },
+    { header: 'Ditolak', accessor: 'ditolak' },
+    { header: 'Total Kegiatan', accessor: 'totalKegiatan' },
+    { header: 'Total Poin', accessor: 'totalPoin' },
+    {
+      header: 'Syarat',
+      accessor: (r: SkpiPenerbitanItem) => (r.syarat.terpenuhi ? 'Terpenuhi' : `Belum (${r.syarat.alasan ?? '-'})`),
+    },
+    {
+      header: 'Tanda Tangan',
+      accessor: (r: SkpiPenerbitanItem) =>
+        r.signature ? `Ditandatangani ${fmtTanggalPanjang(r.signature.signedAt)}` : 'Belum',
+    },
+  ];
+
+  const fetchAllFiltered = async (): Promise<SkpiPenerbitanItem[]> => {
+    const all: SkpiPenerbitanItem[] = [];
+    let p = 1;
+    const limitP = 100;
+    for (;;) {
+      const res = await skpiController.getPenerbitan({
+        page: p,
+        limit: limitP,
+        search: pagination.search() || undefined,
+        prodiId: prodiFilter() || undefined,
+        siapTerbit: siapOnly() || undefined,
+      });
+      all.push(...res.data);
+      if (p * limitP >= res.meta.total) break;
+      p += 1;
+      // Batas pengaman 50 halaman (5.000 baris) — data lebih besar disarankan ekspor server-side.
+      if (p > 50) break;
+    }
+    return all;
+  };
+
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    if (isExporting()) return;
+    setIsExporting(true);
+    try {
+      const data = await fetchAllFiltered();
+      if (data.length === 0) {
+        toast.showToast('Tidak ada data untuk diekspor', 'info');
+        return;
+      }
+      const filename = `Rekap_Penerbitan_SKPI_${getTodayString()}`;
+      if (format === 'excel') {
+        exportToExcel(data, exportColumns(), filename);
+        toast.showToast('Rekap penerbitan SKPI berhasil diekspor (.xlsx)', 'success');
+      } else {
+        exportToPDF(data, exportColumns(), filename, 'Rekap Penerbitan SKPI', 'Sistem Informasi Akademik Vokasi', {
+          institusi: 'Politeknik Sorowako',
+          judulDokumen: 'Rekap Penerbitan SKPI',
+          infoLines: [`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, `Jumlah baris: ${data.length}`],
+        });
+        toast.showToast('Rekap penerbitan SKPI berhasil diekspor (.pdf)', 'success');
+      }
+    } catch (e: unknown) {
+      toast.showToast(e instanceof Error ? e.message : 'Gagal mengekspor data', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // ── Terbitkan (tunggal / massal) ───────────────────────────────────────────
   const [signTarget, setSignTarget] = createSignal<SkpiPenerbitanItem[]>([]);
@@ -232,6 +310,14 @@ export default function TabPenerbitan() {
             />
             Hanya siap terbit
           </label>
+          <div class="flex items-center gap-2">
+            <Button variant="secondary" size="sm" disabled={isExporting()} onClick={() => handleExport('excel')}>
+              {isExporting() ? 'Mengunduh...' : 'Ekspor Excel'}
+            </Button>
+            <Button variant="secondary" size="sm" disabled={isExporting()} onClick={() => handleExport('pdf')}>
+              {isExporting() ? '...' : 'Ekspor PDF'}
+            </Button>
+          </div>
           <Show when={prodiFilter() || pagination.search() || siapOnly()}>
             <Button
               variant="secondary"

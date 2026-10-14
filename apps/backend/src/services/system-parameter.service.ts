@@ -60,6 +60,22 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'number',
     description: 'Jumlah minimum kegiatan terverifikasi sebelum SKPI dapat diterbitkan',
   },
+  // Kop & nomor surat dokumen SKPI (PRD §8) — dibaca oleh SkpiService.getDokumen.
+  skpi_kop_nama: {
+    value: 'POLITEKNIK SOROWAKO',
+    type: 'string',
+    description: 'Nama institusi pada kop surat dokumen SKPI',
+  },
+  skpi_kop_alamat: {
+    value: 'Jl. Trans Sulawesi, Morowali, Sulawesi Tengah',
+    type: 'string',
+    description: 'Alamat pada kop surat dokumen SKPI',
+  },
+  skpi_nomor_format: {
+    value: 'SKPI/{tahun}/{nim}',
+    type: 'string',
+    description: 'Format nomor surat SKPI — placeholder {tahun} dan {nim} diganti otomatis',
+  },
   BLOCK_KRS_JIKA_TANGGUNGAN: {
     value: 'false',
     type: 'boolean',

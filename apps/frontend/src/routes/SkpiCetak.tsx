@@ -100,9 +100,14 @@ export default function SkpiCetak() {
     }
   });
 
+  // Kop & nomor surat dari backend (system_settings, PRD §8) — fallback default.
+  const kopNama = () => doc()?.kop?.nama || 'POLITEKNIK SOROWAKO';
+  const kopAlamat = () => doc()?.kop?.alamat || 'Jl. Trans Sulawesi, Morowali, Sulawesi Tengah';
   const nomorSurat = () => {
     const d = doc();
     if (!d) return '-';
+    if (d.nomorSurat) return d.nomorSurat;
+    // Fallback lama bila backend tidak mengirim nomorSurat.
     const tahun = new Date().getFullYear();
     return `SKPI/${tahun}/${d.mahasiswa.nim}`;
   };
@@ -168,8 +173,8 @@ export default function SkpiCetak() {
             <div id="print-area-skpi" class="relative text-secondary-800">
               {/* Kop surat */}
               <div class="border-b-2 border-secondary-800 pb-3 text-center">
-                <h2 class="text-xl font-bold tracking-wider text-secondary-900">POLITEKNIK SOROWAKO</h2>
-                <p class="text-xs text-secondary-600">Jl. Trans Sulawesi, Morowali, Sulawesi Tengah</p>
+                <h2 class="text-xl font-bold tracking-wider text-secondary-900">{kopNama()}</h2>
+                <p class="text-xs text-secondary-600">{kopAlamat()}</p>
                 <h3 class="mt-3 text-sm font-bold uppercase tracking-widest text-secondary-700">
                   Surat Keterangan Pendamping Ijazah (SKPI)
                 </h3>

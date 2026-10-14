@@ -3,7 +3,7 @@
 - **Dokumen**: `docs/015_plan_skpi-pencapaian-kegiatan-20261014.md`
 - **Tanggal**: 14 Oktober 2026
 - **Penulis**: Senior System Analyst
-- **Status**: **Selesai Tahap 1–3** — PR #534 (Tahap 1 backend fondasi), #536 (Tahap 2 dokumen + TTE), #537 (Tahap 3 frontend), #538 (input staf + kelola kategori), #539 (perbaikan UX panel kategori), dan PR follow-up (kolom sertifikat di cetak, filter mahasiswa/prodi, pencarian NIM/nama). Sisa backlog ke tahap berikut: US-8 (ekspor rekap PDF/Excel), mekanisme unverify admin-only, konfigurasi kop/nomor via `system_settings`, serta promosi produksi `development -> main` (lihat `docs/016_uat-skpi-staging.md` untuk gate UAT & runbook).
+- **Status**: **Selesai Tahap 1–7** — PR #534 (Tahap 1 backend fondasi), #536 (Tahap 2 dokumen + TTE), #537 (Tahap 3 frontend), #538 (input staf + kelola kategori), #539 (perbaikan UX panel kategori), #540 (follow-up filter/cetak), #541 (staf-sign, unverify + edit hasil verifikasi, cetak staf), #542 (halaman terpadu tab Rekaman/Verifikasi/Penerbitan, impor CSV, verifikasi massal, terbit/cabut massal, cetak per mahasiswa), dan PR Tahap 7 (US-8 ekspor rekap PDF/Excel mengikuti filter + kop/nomor surat via `system_settings`). **Keputusan final**: self-sign mahasiswa DITUTUP — tanda tangan digital SKPI hanya staf-verifier. Sisa: UAT staging Tahap 7 + promosi produksi `development -> main` (lihat `docs/016_uat-skpi-staging.md` untuk gate UAT & runbook).
 - **Target Implementasi**: Feature branch → PR ke `development` (staging-first) — selesai
 
 ---
@@ -53,6 +53,12 @@
 | US-7 | Sebagai mahasiswa, saya dapat melihat ringkasan poin pencapaian dari kegiatan terverifikasi di halaman SKPI saya. | **Could** |
 | US-8 | Sebagai staf, saya dapat mengekspor rekap kegiatan per prodi/periode (PDF/Excel). | **Could** |
 | US-9 | Sebagai admin, saya dapat menetapkan syarat minimum kegiatan terverifikasi sebelum SKPI dapat diterbitkan. | **Should** |
+| US-10 | Sebagai staf-verifier, saya dapat membatalkan hasil verifikasi (`unverify`) dan mengedit poin/catatan hasil (`hasil-verifikasi`) tanpa mengubah status. | **Should** |
+| US-11 | Sebagai verifikator (staf), saya dapat mengimpor daftar kegiatan mahasiswa via CSV dengan laporan error per baris. | **Must** |
+| US-12 | Sebagai verifikator, saya dapat menyetujui banyak rekaman sekaligus (bulk approve). | **Must** |
+| US-13 | Sebagai staf, saya melihat tab Penerbitan berisi mahasiswa dengan ≥1 rekaman dan dapat menerbitkan/mencabut tanda tangan SKPI satu per satu maupun massal; cetak selalu rekap per mahasiswa. | **Must** |
+
+Catatan prioritas ekspor (US-8): implementasi **frontend-only mengikuti filter aktif** (keputusan produk Tahap 7) — bukan per periode tanggal; "periode" ditafsirkan sebagai filter status/kategori/mahasiswa/prodi yang sedang aktif di tabel.
 
 ---
 
@@ -195,7 +201,7 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 | Method & Path | Aksi | Otorisasi |
 | :-- | :-- | :-- |
 | `GET /skpi/dokumen/:mhsId` | Ambil ringkasan siap cetak (identitas + kegiatan terverifikasi + status signature bila ada) | mahasiswa own / staf scope |
-| `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | **Khusus staf** `super_admin`/`admin`/`prodi`/`kaprodi`/`kemahasiswaan` scope (mahasiswa — termasuk pemilik — TIDAK; keputusan produk tahap berikut) |
+| `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | **Khusus staf** `super_admin`/`admin`/`prodi`/`kaprodi`/`kemahasiswaan` scope — **keputusan final (Tahap 7)**: mahasiswa (termasuk pemilik) TIDAK boleh menandatangani sendiri |
 | `POST /skpi/dokumen/:mhsId/revoke` | **Cabut** signature SKPI (alasan ≥3 karakter); `400` bila belum pernah ditandatangani | idem sign (staf-verifier + scope) — jalur khusus SKPI, **lebih luas** dari `POST /document-signatures/:uuid/revoke` generik yang dibatasi admin/kaprodi |
 | `POST /skpi/dokumen/bulk-sign` | **Terbitkan massal** `{ mahasiswaIds: number[1..50] }` → `{ signedCount, failed[{mahasiswaId,error}] }`; seluruh id wajib scope (403 utuh bila ada luar lingkup); syarat §4.4 dienforce per mahasiswa (gagal → `failed`, bukan membatalkan sisanya); idempoten | idem sign |
 | `POST /skpi/dokumen/bulk-revoke` | **Cabut massal** `{ mahasiswaIds, reason }` → `{ revokedCount, failed[] }`; belum ditandatangani → `failed` per baris; aman re-run | idem sign |

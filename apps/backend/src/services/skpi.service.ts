@@ -13,6 +13,7 @@ import {
   SKPI_LAMPIRAN_MAX_MB,
   saveLampiranFile,
 } from '../utils/lampiran-storage';
+import { getNowDateString } from '../utils/timezone';
 import { SystemParameterService } from './system-parameter.service';
 
 export interface CreateKegiatanSkpiDto {
@@ -340,6 +341,18 @@ export class SkpiService {
     const totalPoin = kegiatan.reduce((sum, k) => sum + (k.poin ?? 0), 0);
     const syarat = await SkpiService.getSyaratPenerbitan(mhsId, kegiatan.length);
 
+    // Kop & nomor surat terkonfigurasi via system_settings (PRD §8, keputusan
+    // produk Tahap 7) — fallback ke default bila parameter belum di-set.
+    const [kopNama, kopAlamat, nomorFormat] = await Promise.all([
+      SystemParameterService.getRaw('skpi_kop_nama'),
+      SystemParameterService.getRaw('skpi_kop_alamat'),
+      SystemParameterService.getRaw('skpi_nomor_format'),
+    ]);
+    const tahun = Number((await getNowDateString()).slice(0, 4));
+    const nomorSurat = (nomorFormat || 'SKPI/{tahun}/{nim}')
+      .replaceAll('{tahun}', String(tahun))
+      .replaceAll('{nim}', mhs.nim);
+
     return {
       mahasiswa: {
         id: mhs.id,
@@ -354,6 +367,11 @@ export class SkpiService {
       totalKegiatan: kegiatan.length,
       totalPoin,
       syarat,
+      kop: {
+        nama: kopNama || 'POLITEKNIK SOROWAKO',
+        alamat: kopAlamat || 'Jl. Trans Sulawesi, Morowali, Sulawesi Tengah',
+      },
+      nomorSurat,
     };
   }
 
