@@ -10,7 +10,8 @@ import {
   skpiController,
 } from '../../controllers/skpiController';
 import { usePagination } from '../../hooks/usePagination';
-import { fmtTanggal } from '../../utils/format';
+import { type ExportColumn, exportToExcel, exportToPDF } from '../../utils/export';
+import { fmtTanggal, getTodayString } from '../../utils/format';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -128,6 +129,74 @@ export default function TabVerifikasi() {
     { value: 0, label: 'Semua Kategori' },
     ...(kategoriList()?.data ?? []).map((k) => ({ value: k.id, label: k.nama })),
   ];
+
+  // ── Ekspor rekap rekaman (US-8) — mengikuti filter aktif, seluruh halaman ─
+  const [isExporting, setIsExporting] = createSignal(false);
+
+  const exportColumns = (): ExportColumn[] => [
+    { header: 'NIM', accessor: (r: SkpiKegiatan) => r.mahasiswa?.nim ?? '-' },
+    { header: 'Nama Mahasiswa', accessor: (r: SkpiKegiatan) => r.mahasiswa?.nama ?? '-' },
+    { header: 'Kategori', accessor: (r: SkpiKegiatan) => r.kategori?.nama ?? '-' },
+    { header: 'Nama Kegiatan', accessor: 'namaKegiatan' },
+    { header: 'Penyelenggara', accessor: 'penyelenggara' },
+    { header: 'Tanggal Mulai', accessor: 'tanggalMulai' },
+    { header: 'Tanggal Selesai', accessor: 'tanggalSelesai' },
+    { header: 'Nomor Sertifikat', accessor: 'nomorSertifikat' },
+    { header: 'Status', accessor: (r: SkpiKegiatan) => STATUS_LABEL[r.status] ?? r.status },
+    { header: 'Poin', accessor: 'poin' },
+    { header: 'Catatan Verifikator', accessor: 'catatanVerifikator' },
+  ];
+
+  const fetchAllFiltered = async (): Promise<SkpiKegiatan[]> => {
+    const all: SkpiKegiatan[] = [];
+    let p = 1;
+    const limitP = 100;
+    for (;;) {
+      const res = await skpiController.getAll({
+        page: p,
+        limit: limitP,
+        status: statusFilter() || undefined,
+        kategoriId: kategoriFilter() || undefined,
+        prodiId: prodiFilter() || undefined,
+        mahasiswaId: mahasiswaFilter() ?? undefined,
+        search: pagination.search() || undefined,
+      });
+      all.push(...res.data);
+      if (p * limitP >= res.meta.total) break;
+      p += 1;
+      // Batas pengaman 50 halaman (5.000 baris).
+      if (p > 50) break;
+    }
+    return all;
+  };
+
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    if (isExporting()) return;
+    setIsExporting(true);
+    try {
+      const data = await fetchAllFiltered();
+      if (data.length === 0) {
+        toast.showToast('Tidak ada data untuk diekspor', 'info');
+        return;
+      }
+      const filename = `Rekap_Verifikasi_SKPI_${getTodayString()}`;
+      if (format === 'excel') {
+        exportToExcel(data, exportColumns(), filename);
+        toast.showToast('Rekap verifikasi SKPI berhasil diekspor (.xlsx)', 'success');
+      } else {
+        exportToPDF(data, exportColumns(), filename, 'Rekap Verifikasi SKPI', 'Sistem Informasi Akademik Vokasi', {
+          institusi: 'Politeknik Sorowako',
+          judulDokumen: 'Rekap Verifikasi SKPI',
+          infoLines: [`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, `Jumlah baris: ${data.length}`],
+        });
+        toast.showToast('Rekap verifikasi SKPI berhasil diekspor (.pdf)', 'success');
+      }
+    } catch (e: unknown) {
+      toast.showToast(e instanceof Error ? e.message : 'Gagal mengekspor data', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // ── Modal detail rekaman ──────────────────────────────────────────────────
   const [detail, setDetail] = createSignal<SkpiKegiatan | null>(null);
@@ -458,6 +527,14 @@ export default function TabVerifikasi() {
                 Reset Filter
               </Button>
             </Show>
+            <div class="flex items-center gap-2 sm:ml-auto">
+              <Button variant="secondary" size="sm" disabled={isExporting()} onClick={() => handleExport('excel')}>
+                {isExporting() ? 'Mengunduh...' : 'Ekspor Excel'}
+              </Button>
+              <Button variant="secondary" size="sm" disabled={isExporting()} onClick={() => handleExport('pdf')}>
+                {isExporting() ? '...' : 'Ekspor PDF'}
+              </Button>
+            </div>
           </div>
 
           <div class="overflow-x-auto">

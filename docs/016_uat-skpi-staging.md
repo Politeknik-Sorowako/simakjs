@@ -121,6 +121,27 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 - [ ] **403**: `POST /skpi/dokumen/bulk-sign` & `bulk-revoke` sebagai M1 → 403; staf out-of-scope → 403 utuh; alasan pendek (`ab`) → 422, spasi saja → 400.
 - [ ] Tombol **Cetak** baris membuka `/skpi/cetak/:mhsId` dan dokumen lengkap dengan tabel riwayat.
 
+### US-8 — Ekspor rekap (Excel/PDF, frontend, mengikuti filter aktif)
+
+**Tab Penerbitan:**
+- [ ] Tanpa filter → **Ekspor Excel** → file `.xlsx` terunduh, jumlah baris = total di tabel, kolom lengkap (NIM, nama, prodi, V/P/D, total poin, syarat, status tanda tangan).
+- [ ] Aktifkan filter (mis. pencarian NIM tertentu / "Hanya siap terbit") → ekspor → **isi file hanya berisi baris yang tampil di tabel** (filter terpenuhi).
+- [ ] **Ekspor PDF** → file `.pdf` dengan kop "Politeknik Sorowako" + judul "Rekap Penerbitan SKPI" + jumlah baris.
+
+**Tab Verifikasi:**
+- [ ] Filter status **pending** → **Ekspor Excel** → hanya baris `pending` yang diekspor; kolom lengkap (NIM, nama, kategori, kegiatan, penyelenggara, tanggal, no. sertifikat, status, poin, catatan).
+- [ ] **Ekspor PDF** → file valid dengan judul "Rekap Verifikasi SKPI".
+- [ ] Reset filter → ekspor lagi → jumlah baris kembali penuh.
+- [ ] Tombol ekspor nonaktif saat proses berlangsung (klik ganda aman); data kosong → toast "Tidak ada data untuk diekspor".
+
+### Kop & Nomor Surat (system_settings)
+
+- [ ] Admin → menu Konfigurasi → Parameter → tiga parameter baru terdaftar: `skpi_kop_nama`, `skpi_kop_alamat`, `skpi_nomor_format`.
+- [ ] Ubah `skpi_kop_nama` & `skpi_kop_alamat` → buka `/skpi/cetak/:mhsId` → **kop surat memakai nilai baru**.
+- [ ] Ubah `skpi_nomor_format` menjadi format lain (mis. `SKPI-PRODI/{tahun}/{nim}`) → nomor surat di cetak mengikuti format baru (`{tahun}` & `{nim}` terganti otomatis).
+- [ ] Kembalikan nilai default → kop & nomor kembali standar.
+- [ ] Parameter tanpa baris di DB (fresh env) → fallback default bawaan kode (tanpa error).
+
 ### Integrasi Halaman Terpadu
 
 - [ ] Buka `/skpi/verifikasi` (bookmark lama) → **redirect** ke `/skpi` tanpa 404.
