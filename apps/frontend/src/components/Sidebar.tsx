@@ -116,7 +116,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan', '/monitoring-bimbingan'])) {
       setIsPelaksanaanOpen(true);
     }
-    if (isMatch(['/khs', '/yudisium'])) {
+    if (isMatch(['/khs', '/yudisium', '/skpi/verifikasi'])) {
       setIsEvaluasiOpen(true);
     }
     if (
@@ -143,6 +143,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         '/pelanggaran',
         '/rekap-pelanggaran',
         '/presensi-saya',
+        '/skpi',
       ])
     ) {
       setIsLayananOpen(true);
@@ -172,6 +173,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const isMahasiswa = () => auth.hasRole(['mahasiswa']);
   const isProdi = () => auth.hasRole(['prodi']);
   const isKeuangan = () => auth.hasRole(['keuangan']);
+  const isKemahasiswaan = () => auth.hasRole(['kemahasiswaan']);
   const isInstruktur = () => auth.hasRole(['instruktur']);
   const isCalonMhs = () => auth.hasRole(['calon_mahasiswa']);
   const isSuperAdmin = () => auth.hasRole(['super_admin']);
@@ -949,6 +951,34 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     Evaluasi Yudisium
                   </A>
                 </Show>
+                <Show
+                  when={
+                    isAdmin() ||
+                    isDosen() ||
+                    isProdi() ||
+                    isKemahasiswaan() ||
+                    isSuperAdmin() ||
+                    auth.hasRole(['kaprodi'])
+                  }
+                >
+                  <A
+                    href="/skpi/verifikasi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    Verifikasi SKPI
+                  </A>
+                </Show>
               </div>
             </Show>
           </div>
@@ -1318,6 +1348,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                       />
                     </svg>
                     Kedisiplinan
+                  </A>
+                </Show>
+                <Show when={isMahasiswa()}>
+                  <A
+                    href="/skpi"
+                    onClick={() => props.onClose()}
+                    activeClass="text-accent-400 font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    SKPI Mahasiswa
                   </A>
                 </Show>
                 <Show when={isMahasiswa()}>
