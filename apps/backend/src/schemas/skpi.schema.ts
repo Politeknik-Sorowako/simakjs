@@ -85,6 +85,7 @@ export const getKegiatanSkpiSchema = {
     status: t.Optional(t.String()),
     kategoriId: t.Optional(t.Numeric()),
     mahasiswaId: t.Optional(t.Numeric()),
+    prodiId: t.Optional(t.Numeric()),
     search: t.Optional(t.String()),
   }),
 };

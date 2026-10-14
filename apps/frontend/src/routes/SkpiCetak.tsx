@@ -214,6 +214,7 @@ export default function SkpiCetak() {
                     <th class="border-r border-secondary-200 p-2">Penyelenggara</th>
                     <th class="border-r border-secondary-200 p-2">Tanggal</th>
                     <th class="border-r border-secondary-200 p-2">Lokasi</th>
+                    <th class="border-r border-secondary-200 p-2">No. Sertifikat</th>
                     <th class="p-2 text-center">Poin</th>
                   </tr>
                 </thead>
@@ -236,13 +237,14 @@ export default function SkpiCetak() {
                           </Show>
                         </td>
                         <td class="border-r border-secondary-200 p-2">{k.lokasi ?? '-'}</td>
+                        <td class="border-r border-secondary-200 p-2">{k.nomorSertifikat ?? '-'}</td>
                         <td class="p-2 text-center font-bold">{k.poin}</td>
                       </tr>
                     )}
                   </For>
                   <Show when={d().kegiatan.length === 0}>
                     <tr>
-                      <td colspan="7" class="p-6 text-center text-secondary-400">
+                      <td colspan="8" class="p-6 text-center text-secondary-400">
                         Belum ada kegiatan terverifikasi.
                       </td>
                     </tr>
@@ -250,7 +252,7 @@ export default function SkpiCetak() {
                 </tbody>
                 <tfoot>
                   <tr class="font-bold text-secondary-800">
-                    <td colspan="6" class="border-t border-secondary-300 p-2 text-right">
+                    <td colspan="7" class="border-t border-secondary-300 p-2 text-right">
                       Total Poin Pencapaian
                     </td>
                     <td class="border-t border-secondary-300 p-2 text-center">{d().totalPoin}</td>

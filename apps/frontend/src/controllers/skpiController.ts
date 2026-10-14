@@ -77,6 +77,7 @@ export interface SkpiDokumenKegiatan {
   tanggalMulai: string;
   tanggalSelesai?: string | null;
   lokasi?: string | null;
+  nomorSertifikat?: string | null;
   poin: number;
   kategori?: { nama: string; jenis: string } | null;
 }
@@ -175,6 +176,7 @@ export const skpiController = {
     status?: string;
     kategoriId?: number;
     mahasiswaId?: number;
+    prodiId?: number;
     search?: string;
   }): Promise<PaginatedResponse<SkpiKegiatan>> {
     const query = new URLSearchParams();
@@ -183,6 +185,7 @@ export const skpiController = {
     if (params?.status) query.set('status', params.status);
     if (params?.kategoriId) query.set('kategoriId', String(params.kategoriId));
     if (params?.mahasiswaId) query.set('mahasiswaId', String(params.mahasiswaId));
+    if (params?.prodiId) query.set('prodiId', String(params.prodiId));
     if (params?.search) query.set('search', params.search);
     const qs = query.toString() ? `?${query.toString()}` : '';
     return fetchApi<PaginatedResponse<SkpiKegiatan>>(`/skpi/kegiatan${qs}`);

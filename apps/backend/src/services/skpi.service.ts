@@ -210,10 +210,20 @@ export class SkpiService {
     if (params.status) conditions.push(eq(kegiatanMahasiswaSkpi.status, params.status));
     if (params.kategoriId) conditions.push(eq(kegiatanMahasiswaSkpi.kategoriKegiatanId, params.kategoriId));
     if (params.search) {
+      const likeSearch = `%${params.search}%`;
+      // Pencarian juga mencocokkan NIM/nama mahasiswa (dua langkah tanpa join
+      // relasi): id kandidat dibatasi agar IN-clause tetap terkendali.
+      const matchingMahasiswa = await db
+        .select({ id: mahasiswa.id })
+        .from(mahasiswa)
+        .where(or(like(mahasiswa.nama, likeSearch), like(mahasiswa.nim, likeSearch)))
+        .limit(200);
+      const mhsIds = matchingMahasiswa.map((m) => m.id);
       conditions.push(
         or(
-          like(kegiatanMahasiswaSkpi.namaKegiatan, `%${params.search}%`),
-          like(kegiatanMahasiswaSkpi.penyelenggara, `%${params.search}%`),
+          like(kegiatanMahasiswaSkpi.namaKegiatan, likeSearch),
+          like(kegiatanMahasiswaSkpi.penyelenggara, likeSearch),
+          mhsIds.length > 0 ? inArray(kegiatanMahasiswaSkpi.mahasiswaId, mhsIds) : undefined,
         )!,
       );
     }
@@ -260,6 +270,7 @@ export class SkpiService {
         tanggalMulai: true,
         tanggalSelesai: true,
         lokasi: true,
+        nomorSertifikat: true,
         poin: true,
       },
       with: { kategori: { columns: { nama: true, jenis: true } } },

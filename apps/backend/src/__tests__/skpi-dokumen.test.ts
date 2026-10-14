@@ -137,11 +137,16 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
   });
 
   /** Input rekaman lalu verifikasi oleh admin; mengembalikan id rekaman. */
-  async function addVerifiedKegiatan(namaKegiatan: string, tanggalMulai = '2026-03-01'): Promise<number> {
+  async function addVerifiedKegiatan(
+    namaKegiatan: string,
+    tanggalMulai = '2026-03-01',
+    nomorSertifikat?: string,
+  ): Promise<number> {
     const created = await api(mhsToken, 'POST', '/skpi/kegiatan', {
       kategoriKegiatanId: kategoriId,
       namaKegiatan,
       tanggalMulai,
+      nomorSertifikat,
     });
     expect(created.status).toBe(201);
     const id = created.data.id as number;
@@ -151,7 +156,7 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
   }
 
   it('GET dokumen: hanya kegiatan terverifikasi (pending tidak ikut) + signature null sebelum ditandatangani', async () => {
-    await addVerifiedKegiatan('Pelatihan Terverifikasi');
+    await addVerifiedKegiatan('Pelatihan Terverifikasi', '2026-03-01', 'SRT/2026/001');
     await api(mhsToken, 'POST', '/skpi/kegiatan', {
       kategoriKegiatanId: kategoriId,
       namaKegiatan: 'Masih Pending',
@@ -163,6 +168,7 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
     const kegiatan = res.data.kegiatan as Array<Record<string, unknown>>;
     expect(kegiatan.length).toBe(1);
     expect(kegiatan[0].namaKegiatan).toBe('Pelatihan Terverifikasi');
+    expect(kegiatan[0].nomorSertifikat).toBe('SRT/2026/001');
     expect(res.data.totalPoin).toBe(10);
     expect((res.data.syarat as Record<string, unknown>).terpenuhi).toBe(true);
     expect(res.data.signature).toBeNull();

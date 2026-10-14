@@ -204,7 +204,9 @@ export default function VerifikasiDokumen() {
                     Nama: res().namaMask || '-',
                     NIM: res().nimMask || '-',
                     'Program Studi': res().prodi || '-',
-                    Periode: res().periodeNama || '-',
+                    // Baris Periode hanya untuk dokumen berperiode (KHS); SKPI tidak
+                    // punya periode sehingga disembunyikan alih-alih tampil "-".
+                    ...(res().periodeNama ? { Periode: res().periodeNama } : {}),
                     Ditandatangani: res().signerNama
                       ? `${res().signerNama}${res().signerJabatan ? ` • ${res().signerJabatan}` : ''}`
                       : '-',
