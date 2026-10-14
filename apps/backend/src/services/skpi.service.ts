@@ -1,5 +1,11 @@
-import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
-import { kategoriKegiatanSkpi, kegiatanMahasiswaSkpi, lampiranKegiatanSkpi, mahasiswa } from '../models/schema';
+import { and, asc, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import {
+  kategoriKegiatanSkpi,
+  kegiatanMahasiswaSkpi,
+  lampiranKegiatanSkpi,
+  mahasiswa,
+  programStudi,
+} from '../models/schema';
 import { db } from '../utils/db';
 import {
   removeLampiranFile,
@@ -47,6 +53,28 @@ export interface KegiatanScopeFilter {
   dosenPaId?: number;
   /** Batasi prodi scope; null = tanpa batas (admin global), [] = tanpa akses. */
   prodiIds?: number[] | null;
+}
+
+/** Baris tab Penerbitan: agregat kegiatan + syarat + status tanda tangan. */
+export interface SkpiPenerbitanItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  statusAkademik: string;
+  programStudiId: number | null;
+  prodi: string | null;
+  pending: number;
+  diverifikasi: number;
+  ditolak: number;
+  totalKegiatan: number;
+  totalPoin: number;
+  syarat: {
+    statusAkademikValid: boolean;
+    minKegiatan: number;
+    jumlahTerverifikasi: number;
+    terpenuhi: boolean;
+    alasan: string | null;
+  };
 }
 
 const kegiatanWithRelations = {
@@ -327,6 +355,113 @@ export class SkpiService {
       totalPoin,
       syarat,
     };
+  }
+
+  // ─── Penerbitan SKPI (tab terpadu) ─────────────────────────────────────────
+
+  /**
+   * Daftar mahasiswa dengan ≥1 rekaman kegiatan (status apa pun) untuk tab
+   * Penerbitan: hitung per status, total poin terverifikasi, syarat, dan siap
+   * di-enrich status tanda tangannya oleh controller (batch, tanpa N+1).
+   * Agregasi satu query grup — bukan N× `getDokumen`.
+   */
+  static async getPenerbitan(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    prodiId?: number;
+    siapTerbit?: boolean;
+    /** null = lintas prodi (admin global); [] = tanpa akses; array = filter scope. */
+    allowedProdiIds: number[] | null;
+  }): Promise<{
+    data: SkpiPenerbitanItem[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> {
+    const page = params.page || 1;
+    const limit = Math.min(100, Math.max(1, params.limit || 10));
+    const offset = (page - 1) * limit;
+
+    if (params.allowedProdiIds && params.allowedProdiIds.length === 0) {
+      return { data: [], meta: { total: 0, page, limit, totalPages: 0 } };
+    }
+
+    const minKegiatan = Math.max(1, await SystemParameterService.getNumber('skpi_min_kegiatan'));
+
+    const conditions = [];
+    if (params.allowedProdiIds) conditions.push(inArray(mahasiswa.programStudiId, params.allowedProdiIds));
+    if (params.prodiId) conditions.push(eq(mahasiswa.programStudiId, params.prodiId));
+    if (params.search) {
+      const likeSearch = `%${params.search}%`;
+      conditions.push(or(ilike(mahasiswa.nim, likeSearch), ilike(mahasiswa.nama, likeSearch)));
+    }
+    if (params.siapTerbit) conditions.push(inArray(mahasiswa.status, ['aktif', 'cuti', 'lulus']));
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // HANYA mahasiswa dengan ≥1 kegiatan; filter "siap terbit" memakai HAVING
+    // agar total paginasi tetap benar (mirpol syarat §4.4).
+    const havingSiapTerbit = sql`count(*) filter (where ${kegiatanMahasiswaSkpi.status} = 'diverifikasi') >= ${minKegiatan}`;
+
+    const groupedRows = db
+      .select({ id: mahasiswa.id })
+      .from(mahasiswa)
+      .innerJoin(kegiatanMahasiswaSkpi, eq(kegiatanMahasiswaSkpi.mahasiswaId, mahasiswa.id))
+      .where(where)
+      .groupBy(mahasiswa.id)
+      .having(params.siapTerbit ? havingSiapTerbit : undefined);
+
+    const totalSub = groupedRows.as('skpi_penerbitan_total');
+    const [{ total }] = await db.select({ total: count() }).from(totalSub);
+
+    const grouped = db
+      .select({
+        mahasiswaId: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        statusAkademik: mahasiswa.status,
+        programStudiId: mahasiswa.programStudiId,
+        prodi: programStudi.nama,
+        pending: sql<number>`count(*) filter (where ${kegiatanMahasiswaSkpi.status} = 'pending')::int`,
+        diverifikasi: sql<number>`count(*) filter (where ${kegiatanMahasiswaSkpi.status} = 'diverifikasi')::int`,
+        ditolak: sql<number>`count(*) filter (where ${kegiatanMahasiswaSkpi.status} = 'ditolak')::int`,
+        totalPoin: sql<number>`coalesce(sum(${kegiatanMahasiswaSkpi.poin}) filter (where ${kegiatanMahasiswaSkpi.status} = 'diverifikasi'), 0)::int`,
+      })
+      .from(mahasiswa)
+      .innerJoin(kegiatanMahasiswaSkpi, eq(kegiatanMahasiswaSkpi.mahasiswaId, mahasiswa.id))
+      .leftJoin(programStudi, eq(programStudi.id, mahasiswa.programStudiId))
+      .where(where)
+      .groupBy(mahasiswa.id, programStudi.nama)
+      .orderBy(asc(mahasiswa.nim), asc(mahasiswa.id));
+
+    const rows = await (params.siapTerbit
+      ? grouped.having(havingSiapTerbit).limit(limit).offset(offset)
+      : grouped.limit(limit).offset(offset));
+
+    const data: SkpiPenerbitanItem[] = rows.map((r) => {
+      const statusAkademikValid = ['aktif', 'cuti', 'lulus'].includes(r.statusAkademik);
+      const jumlahTerpenuhi = r.diverifikasi >= minKegiatan;
+      const terpenuhi = statusAkademikValid && jumlahTerpenuhi;
+      const alasan = !statusAkademikValid
+        ? 'Status akademik mahasiswa tidak memenuhi syarat penerbitan SKPI.'
+        : !jumlahTerpenuhi
+          ? `Minimal ${minKegiatan} kegiatan terverifikasi diperlukan untuk menerbitkan SKPI.`
+          : null;
+      return {
+        mahasiswaId: r.mahasiswaId,
+        nim: r.nim,
+        nama: r.nama,
+        statusAkademik: r.statusAkademik,
+        programStudiId: r.programStudiId,
+        prodi: r.prodi,
+        pending: r.pending,
+        diverifikasi: r.diverifikasi,
+        ditolak: r.ditolak,
+        totalKegiatan: r.pending + r.diverifikasi + r.ditolak,
+        totalPoin: r.totalPoin,
+        syarat: { statusAkademikValid, minKegiatan, jumlahTerverifikasi: r.diverifikasi, terpenuhi, alasan },
+      };
+    });
+
+    return { data, meta: { total, page, limit, totalPages: Math.ceil(total / limit) } };
   }
 
   static async update(id: number, data: UpdateKegiatanSkpiDto) {

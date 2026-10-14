@@ -186,6 +186,8 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 | `POST /skpi/kegiatan/:id/verifikasi` | Body: `action: 'approve' \| 'reject'`, `catatan?`, `poin?` | Dosen PA / `kemahasiswaan` / `admin` / `prodi` / `kaprodi` (prodi scope) |
 | `PUT /skpi/kegiatan/:id/unverify` | Batalkan hasil verifikasi (diverifikasi/ditolak → pending; metadata verifikator dihapus) | `kemahasiswaan` / `admin` / `prodi` / `kaprodi` / `super_admin` (prodi scope) |
 | `PUT /skpi/kegiatan/:id/hasil-verifikasi` | Edit poin & catatan hasil verifikasi rekaman `diverifikasi` (status tetap) | idem unverify |
+| `POST /skpi/kegiatan/import` | **Impor CSV** rekaman kegiatan (multipart field `file`); hasil `pending`; progres per baris (`successCount`/`errors[{line,error}]`) — header wajib `nim,nama_kategori,nama_kegiatan,tanggal_mulai` (+opsional `tanggal_selesai,penyelenggara,lokasi,nomor_sertifikat,deskripsi`); NIM/kategori/scope salah = error per baris, bukan 403 utuh | staf-verifier + scope prodi (baris luar scope → error per baris) |
+| `POST /skpi/kegiatan/verifikasi-bulk` | **Approve massal** `{ ids: number[1..100] }` → `{ approved[], failed[{id,error}] }`; hanya `pending` yang diproses (lain = `failed`); **reject massal TIDAK disediakan** (catatan wajib per rekaman) | Dosen PA pemilik / staf-verifier scope (otorisasi per baris) |
 | `POST /skpi/kegiatan/:id/lampiran` | Upload bukti (`t.File()`, pola `uploadLampiranCutiSchema`) | pemilik / staf scope |
 | `DELETE /skpi/kegiatan/:id/lampiran/:lampiranId` | Hapus lampiran | pemilik / admin |
 
@@ -194,6 +196,10 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 | :-- | :-- | :-- |
 | `GET /skpi/dokumen/:mhsId` | Ambil ringkasan siap cetak (identitas + kegiatan terverifikasi + status signature bila ada) | mahasiswa own / staf scope |
 | `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | **Khusus staf** `super_admin`/`admin`/`prodi`/`kaprodi`/`kemahasiswaan` scope (mahasiswa — termasuk pemilik — TIDAK; keputusan produk tahap berikut) |
+| `POST /skpi/dokumen/:mhsId/revoke` | **Cabut** signature SKPI (alasan ≥3 karakter); `400` bila belum pernah ditandatangani | idem sign (staf-verifier + scope) — jalur khusus SKPI, **lebih luas** dari `POST /document-signatures/:uuid/revoke` generik yang dibatasi admin/kaprodi |
+| `POST /skpi/dokumen/bulk-sign` | **Terbitkan massal** `{ mahasiswaIds: number[1..50] }` → `{ signedCount, failed[{mahasiswaId,error}] }`; seluruh id wajib scope (403 utuh bila ada luar lingkup); syarat §4.4 dienforce per mahasiswa (gagal → `failed`, bukan membatalkan sisanya); idempoten | idem sign |
+| `POST /skpi/dokumen/bulk-revoke` | **Cabut massal** `{ mahasiswaIds, reason }` → `{ revokedCount, failed[] }`; belum ditandatangani → `failed` per baris; aman re-run | idem sign |
+| `GET /skpi/penerbitan` | **Tab Penerbitan**: mahasiswa dengan ≥1 rekaman (status apa pun) + hitung per status + total poin + syarat + status signature (batch); query `page,limit,search,prodiId,siapTerbit`; agregasi 1 query grup (tanpa N+1) | khusus staf-verifier + scope |
 | `GET /document-signatures/verify/:uuid` | **Sudah ada** — verifikasi publik tanpa auth | publik (`PUBLIC_NO_SESSION_PATHS` di `app.ts`) |
 
 **Perubahan integrasi signing**:
@@ -217,10 +223,8 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 ### 7.1 Menu & Routing
 
 **Sidebar** (`apps/frontend/src/components/Sidebar.tsx`):
-- Section **Layanan Mahasiswa** (± baris 1342): item **"SKPI Mahasiswa"** → `/skpi` (tampil untuk `isMahasiswa()`, `isMahasiswaOrMore()`).
-- Section **Evaluasi & Kelulusan** (± baris 933): item **"Verifikasi SKPI"** → `/skpi/verifikasi` (tampil untuk `kemahasiswaan`/`admin`/`prodi`/`kaprodi`).
-- Daftarkan path `/skpi` & `/skpi/verifikasi` di array auto-expand `isMatch([...])` (baris 122-149).
-- Helper predikat baru `isKemahasiswaan()` bila diperlukan (polyfill role union).
+- Section **Layanan Mahasiswa**: item **"SKPI Mahasiswa"** → `/skpi` (`isMahasiswa()`) & item **"SKPI"** → `/skpi` (staf-verifier). Kedua entri memakai `currentPath === '/skpi'` (exact match) pada auto-expand.
+- **Entri "Verifikasi SKPI" dihapus** — verifikasi kini menjadi tab di `/skpi` (keputusan produk tahap ini).
 
 **Routing** (`apps/frontend/src/App.tsx`):
 ```tsx
@@ -228,19 +232,29 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
   <ProtectedRoute allowedRoles={['mahasiswa','admin','prodi','kaprodi','dosen','kemahasiswaan','super_admin']}>
     <Skpi/>
   </ProtectedRoute>} />
-<Route path="/skpi/verifikasi" element={...} />
+{/* Redirect permanen — bookmark/tautan lama tidak 404 */}
+<Route path="/skpi/verifikasi" element={<Navigate href="/skpi" />} />
 <Route path="/skpi/cetak/:mhsId" element={...} />
 ```
 - Lazy import untuk semua halaman baru (pola baris 22-107).
 - **`ProtectedRoute.tsx:8-20`** — tambahkan `'kemahasiswaan'` ke union `allowedRoles`.
 
+**Tab per peran** (shell `routes/Skpi.tsx`):
+| Tab | mahasiswa | dosen (PA) | staf-verifier |
+| :-- | :-- | :-- | :-- |
+| Rekaman | ✅ (milik sendiri) | — | ✅ (scope + impor CSV) |
+| Verifikasi | — | ✅ (bimbingan PA) | ✅ (scope) |
+| Penerbitan | — | — | ✅ |
+
+Tab bar pill (`rounded-full`) hanya ditampilkan bila >1 tab tersedia; tab aktif jatuh ke tab pertama per peran (dosen → Verifikasi).
+
 ### 7.2 Halaman
 
 | Route | File | Fitur |
 | :-- | :-- | :-- |
-| `/skpi` | `routes/Skpi.tsx` | Halaman mahasiswa: daftar rekaman (status badge, poin), form tambah/edit (kategori, nama, penyelenggara, tanggal, deskripsi, nomor sertifikat), upload lampiran, tombol hapus/resubmit (hanya `pending`/`ditolak`), ringkasan poin terverifikasi, **tombol "Unduh/Cetak SKPI"** (aktif bila syarat §4.4 terpenuhi → `/skpi/cetak/:mhsId` di tab baru). Untuk staf: daftar rekaman mahasiswa dalam scope. |
-| `/skpi/verifikasi` | `routes/SkpiVerifikasi.tsx` | Panel verifikator: filter status `pending` (default), prodi, mahasiswa, kategori; detail rekaman + preview lampiran; aksi Approve (opsional ubah poin) / Reject (catatan wajib, modal konfirmasi pola `kompensasi/VerifyModal.tsx`). |
-| `/skpi/cetak/:mhsId` | `routes/SkpiCetak.tsx` | Dokumen cetak — **pola `KhsCetak.tsx`**: `createResource` GET dokumen, regenerasi QR via `QRCode.toDataURL(verifyUrl)`, auto-print setelah siap, tombol Cetak, blok tanda tangan (nama jabatan penandatangan dari `resolveSigner`) + `docHash`/`verifyUuid` di footer, modal konfirmasi satu-satunya jalur penerbitan signature. |
+| `/skpi` | `routes/Skpi.tsx` (shell tab) + `components/skpi/TabRekaman.tsx` + `TabVerifikasi.tsx` + `TabPenerbitan.tsx` | **Shell**: header + tab bar per peran + ringkasan dokumen mahasiswa (total kegiatan/poin/syarat/tanda tangan + **tombol "Unduh/Cetak SKPI"** → `/skpi/cetak/:mhsId`, aktif bila syarat §4.4). **Tab Rekaman**: daftar rekaman + form tambah/edit + lampiran + kelola kategori (staf) — **tanpa tombol Cetak per baris**. **Tab Verifikasi**: filter (search/status/kategori/mahasiswa/prodi), detail + lampiran, Approve/Reject per baris, **checkbox + "Setujui Terpilih" (approve massal)**, Edit Hasil/Batalkan (staff), **tombol "Impor CSV"** (staff) dengan modal format + unduh template + laporan error per baris — **tanpa tombol Cetak per baris**. **Tab Penerbitan** (staff): daftar mahasiswa ≥1 rekaman (semua status) dengan hitung V/P/D, badge syarat + alasan, status tanda tangan; aksi per baris **Cetak (rekap per mahasiswa)** / **Terbitkan** (gate syarat) / **Cabut** (alasan wajib) + seleksi massal **"Terbitkan Terpilih"** / **"Cabut Terpilih"**. |
+| `/skpi/verifikasi` | — (redirect `<Navigate href="/skpi" />`) | Halaman lama digabung sebagai tab — tanpa duplikasi pemeliharaan. |
+| `/skpi/cetak/:mhsId` | `routes/SkpiCetak.tsx` | Dokumen cetak — **pola `KhsCetak.tsx`**: `createResource` GET dokumen, regenerasi QR via `QRCode.toDataURL(verifyUrl)`, auto-print setelah siap, tombol Cetak, blok tanda tangan (nama jabatan penandatangan dari `resolveSigner`) + `docHash`/`verifyUuid` di footer, modal konfirmasi satu-satunya jalur penerbitan signature. **Tombol cetak TIDAK lagi disediakan per entri kegiatan — cetak selalu per mahasiswa (rekap).** |
 
 ### 7.3 Aturan Komponen (DESIGN.md + AGENTS.md)
 - Komponen: `export default function X()` dibungkus `<MainLayout>`.
@@ -293,6 +307,9 @@ Pilihan download: **PDF via print dialog** (Save as PDF) — konsisten dengan KH
 | US-6 | `POST /sign` idempoten untuk payload sama; perubahan daftar kegiatan terverifikasi menyebabkan signature lama revoked dan QR baru valid; verifikasi publik mengembalikan `VALID`; **otorisasi khusus staf** — mahasiswa (termasuk pemilik) menerima 403. |
 | US-9 | Bila jumlah kegiatan terverifikasi < `skpi_min_kegiatan`, tombol cetak disabled dengan pesan; nilai setting dapat diubah admin via system settings. |
 | US-10 | Staff-verifier dalam scope dapat membatalkan hasil verifikasi (`unverify`: diverifikasi/ditolak → pending) dan mengedit hasil (`hasil-verifikasi`: poin/catatan, status tetap); non-staf & luar lingkup menerima 403; hasil cetak SKPI (screen & print) memuat tabel riwayat kegiatan. |
+| US-11 | Verifikator (staf) dapat **mengimpor daftar kegiatan mahasiswa via CSV** (`POST /import`): baris valid masuk `pending`; NIM/kategori/scope salah → laporan error **per baris** tanpa membatalkan baris lain; template CSV tersedia untuk diunduh; non-staf → 403. |
+| US-12 | Verifikator dapat **memverifikasi sekaligus (bulk approve)**: checkbox hanya pada baris `pending`, tombol "Setujui Terpilih" dengan modal konfirmasi; respons melaporkan `approved`/`failed` per id; reject massal tidak tersedia (catatan wajib per rekaman); dosen non-PA/luar lingkup → seluruh baris `failed` tanpa perubahan data. |
+| US-13 | Tab **Penerbitan** (staf): daftar mahasiswa dengan ≥1 rekaman (status apa pun) berisi hitung V/P/D, total poin, badge syarat (+alasan), status tanda tangan; **terbitkan/cabut satu per satu maupun massal** (gate syarat §4.4; cabut wajib alasan ≥3 karakter; belum ditandatangani → `failed` per baris); tombol **Cetak per mahasiswa (rekap)** — **tombol Cetak per entri kegiatan dihapus dari tab Rekaman & Verifikasi**. |
 
 ---
 
@@ -332,6 +349,12 @@ cd apps/frontend && bunx tsc --noEmit
 6. Staff-verifier: Edit Hasil (ubah poin) pada rekaman terverifikasi → status tetap; Batalkan → `pending` lalu verifikasi ulang.
 7. Mahasiswa membuka `/skpi/cetak/:mhsId` → TIDAK ada tombol tanda tangan (hanya cetak); admin/prodi/kemahasiswaan → tombol ada & hasilkan QR `VALID`.
 8. Cetak/Simpan PDF SKPI → tabel riwayat kegiatan + total poin tampil (regresi allowlist print).
+9. Admin → `/skpi` → tab bar (Rekaman/Verifikasi/Penerbitan); dosen PA hanya tab Verifikasi; mahasiswa tanpa tab bar + ringkasan dokumen.
+10. Tab Verifikasi → **Impor CSV** (unduh template, isi 2 baris valid + 1 NIM salah) → 2 masuk `pending`, 1 dilaporkan error per baris; non-staf 403.
+11. Tab Verifikasi → centang 2 baris `pending` → Setujui Terpilih → toast 2 disetujui; baris non-pending/luar otorisasi dilewati & dilaporkan.
+12. Tab Penerbitan → Terbitkan (per baris & massal terpilih) → badge Ditandatangani; Cabut dengan alasan → badge kembali Belum & QR lama `REVOKED`/410; belum ditandatangani pada bulk → `failed` per baris.
+13. Regresi: **tidak ada tombol "Cetak" pada baris tab Rekaman & Verifikasi** — cetak hanya dari tab Penerbitan (per mahasiswa) / tombol Unduh-Cetak mahasiswa.
+14. Buka `/skpi/verifikasi` lama → redirect ke `/skpi` (tanpa 404).
 
 ### CI/CD
 - PR feature → `development` (staging-first); verifikasi staging; promosi `development -> main` via PR terpisah.
@@ -341,10 +364,12 @@ cd apps/frontend && bunx tsc --noEmit
 
 ## Lampiran A: File yang Disentuh Implementasi
 
-**Backend (baru)**: `src/schemas/skpi.schema.ts`, `src/services/skpi.service.ts`, `src/controllers/skpi.controller.ts`, `src/routes/skpi.routes.ts`, `src/__tests__/skpi.test.ts`, `drizzle/0084_skpi_kegiatan_mahasiswa.sql`.
+**Backend (baru)**: `src/schemas/skpi.schema.ts`, `src/services/skpi.service.ts`, `src/controllers/skpi.controller.ts`, `src/routes/skpi.routes.ts`, `src/__tests__/skpi.test.ts`, `src/__tests__/skpi-dokumen.test.ts`, `drizzle/0084_skpi_kegiatan_mahasiswa.sql`.
 
-**Backend (edit)**: `src/models/schema.ts` (3 tabel + relasi + enum role), `src/app.ts` (mount route + storage dir), `src/services/document-signature.service.ts` (`DocType` + `signSkpi`), `src/utils/role.ts` (label role).
+**Backend (edit)**: `src/models/schema.ts` (3 tabel + relasi + enum role), `src/app.ts` (mount route + storage dir), `src/services/document-signature.service.ts` (`DocType` + `signSkpi` + `getActiveByRefs` batch), `src/services/csv-import.service.ts` (`importKegiatanSkpi`), `src/utils/role.ts` (label role).
 
-**Frontend (baru)**: `src/routes/Skpi.tsx`, `src/routes/SkpiVerifikasi.tsx`, `src/routes/SkpiCetak.tsx`, `src/controllers/skpiController.ts`.
+**Frontend (baru)**: `src/routes/Skpi.tsx` (shell tab), `src/components/skpi/TabRekaman.tsx`, `TabVerifikasi.tsx`, `TabPenerbitan.tsx`, `src/routes/SkpiCetak.tsx`, `src/controllers/skpiController.ts`, `tests/skpi-cetak-print.spec.ts`, `tests/skpi-penerbitan.spec.ts`.
 
-**Frontend (edit)**: `src/App.tsx` (lazy + routes), `src/components/Sidebar.tsx` (menu + auto-expand), `src/components/ProtectedRoute.tsx` (union role).
+**Frontend (dihapus)**: `src/routes/SkpiVerifikasi.tsx` (digabung sebagai tab).
+
+**Frontend (edit)**: `src/App.tsx` (lazy + route + redirect `/skpi/verifikasi`), `src/components/Sidebar.tsx` (hapus entri Verifikasi SKPI + auto-expand), `src/components/ProtectedRoute.tsx` (union role).

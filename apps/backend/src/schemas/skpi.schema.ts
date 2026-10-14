@@ -158,6 +158,30 @@ export const verifyKegiatanSkpiSchema = {
   }),
 };
 
+export const verifyBulkKegiatanSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Verifikasi Massal (Approve) Rekaman SKPI',
+    description:
+      'Menyetujui banyak rekaman `pending` sekaligus (maks 100 id per permintaan). Hanya approve — penolakan tetap per rekaman (catatan wajib). Proses per baris: id bukan pending / di luar otorisasi masuk daftar `failed` tanpa membatalkan baris lain.',
+  },
+  body: t.Object({
+    ids: t.Array(t.Numeric({ minimum: 1 }), { minItems: 1, maxItems: 100 }),
+  }),
+};
+
+export const importKegiatanSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Impor Rekaman Kegiatan SKPI (CSV)',
+    description:
+      'Mengimpor daftar rekaman kegiatan mahasiswa dari file CSV (multipart field `file`) oleh staf-verifier; hasil berstatus pending. Header wajib: `nim`, `nama_kategori`, `nama_kegiatan`, `tanggal_mulai` (opsional: `tanggal_selesai`, `penyelenggara`, `lokasi`, `nomor_sertifikat`, `deskripsi`). Proses per baris dengan error individual.',
+  },
+  body: t.Object({
+    file: t.File(),
+  }),
+};
+
 export const unverifyKegiatanSkpiSchema = {
   detail: {
     tags: skpiTags,
@@ -227,4 +251,58 @@ export const signDokumenSkpiSchema = {
       'Menandatangani SKPI idempoten (pola TTE KHS). Otorisasi: khusus staf Admin/Prodi/Kaprodi/Kemahasiswaan dalam scope (mahasiswa TIDAK — termasuk pemilik; keputusan produk Tahap berikut). Ditolak bila syarat §4.4 belum terpenuhi.',
   },
   params: t.Object({ mhsId: t.Numeric({ minimum: 1 }) }),
+};
+
+export const getPenerbitanSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Daftar Penerbitan SKPI per Mahasiswa',
+    description:
+      'Daftar mahasiswa dengan ≥1 rekaman kegiatan (status apa pun) berisi hitung per status, total poin terverifikasi, syarat penerbitan, dan status tanda tangan. Khusus staf-verifier dalam scope prodi. `siapTerbit=true` menyaring hanya mahasiswa yang syaratnya terpenuhi.',
+  },
+  query: t.Object({
+    page: t.Optional(t.Numeric({ default: 1 })),
+    limit: t.Optional(t.Numeric({ default: 10 })),
+    search: t.Optional(t.String()),
+    prodiId: t.Optional(t.Numeric()),
+    siapTerbit: t.Optional(t.String()),
+  }),
+};
+
+export const bulkSignDokumenSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Terbitkan Tanda Tangan SKPI Massal',
+    description:
+      'Menandatangani SKPI banyak mahasiswa sekaligus (maks 50 id). Seluruh id wajib dalam scope (403 utuh bila ada di luar lingkup); per mahasiswa syarat §4.4 dienforce — yang gagal masuk daftar `failed` tanpa membatalkan sisanya. Idempoten.',
+  },
+  body: t.Object({
+    mahasiswaIds: t.Array(t.Numeric({ minimum: 1 }), { minItems: 1, maxItems: 50 }),
+  }),
+};
+
+export const revokeDokumenSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Cabut Tanda Tangan SKPI',
+    description:
+      'Mencabut tanda tangan SKPI satu mahasiswa (alasan wajib ≥3 karakter). Khusus staf-verifier dalam scope prodi — jalur khusus SKPI (lebih luas dari jalur TTE generik yang dibatasi admin/kaprodi).',
+  },
+  params: t.Object({ mhsId: t.Numeric({ minimum: 1 }) }),
+  body: t.Object({
+    reason: t.String({ minLength: 3, maxLength: 500 }),
+  }),
+};
+
+export const bulkRevokeDokumenSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Cabut Tanda Tangan SKPI Massal',
+    description:
+      'Mencabut tanda tangan SKPI banyak mahasiswa (maks 50 id, alasan wajib ≥3 karakter). Seluruh id wajib dalam scope; mahasiswa belum ditandatangani masuk `failed` per baris. Aman di-re-run.',
+  },
+  body: t.Object({
+    mahasiswaIds: t.Array(t.Numeric({ minimum: 1 }), { minItems: 1, maxItems: 50 }),
+    reason: t.String({ minLength: 3, maxLength: 500 }),
+  }),
 };

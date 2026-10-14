@@ -48,7 +48,7 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 
 ### US-3 — Verifikasi (PA / kemahasiswaan / prodi / admin)
 
-- [ ] Login Dosen PA → menu **Verifikasi SKPI** → rekaman M1 terlihat (default filter: pending).
+- [ ] Login Dosen PA → menu **SKPI** (halaman terpadu) → tab **Verifikasi** → rekaman M1 terlihat (default filter: pending).
 - [ ] **Reject** tanpa catatan → ditolak (validasi "catatan wajib").
 - [ ] **Reject** dengan catatan → status **Ditolak**; catatan tampil di daftar M1.
 - [ ] M1 edit rekaman `ditolak` → resubmit → **Menunggu Verifikasi**.
@@ -67,8 +67,8 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 - [ ] Dokumen memuat: kop, identitas, **tabel kegiatan termasuk kolom No. Sertifikat**, rekap poin, pernyataan, blok TTD + QR, footer `verifyUrl`/`UUID`/`Hash`.
 - [ ] Print dialog terbuka otomatis (auto-print) dan via tombol Cetak.
 - [ ] **Simpan sebagai PDF → tabel riwayat kegiatan + Total Poin tampil** (regresi: allowlist print `#print-area-skpi`).
-- [ ] Login admin/prodi → `/skpi` (daftar staf) → tombol **Cetak** per baris → halaman cetak mahasiswa terkait terbuka.
-- [ ] Login admin → `/skpi/verifikasi` → tombol **Cetak** per baris berfungsi.
+- [ ] Login admin/prodi → `/skpi` → tab **Penerbitan** → tombol **Cetak** per baris → halaman cetak mahasiswa terkait terbuka (rekap per mahasiswa).
+- [ ] **Regresi**: tab **Rekaman** & tab **Verifikasi** TIDAK memiliki tombol **Cetak** per baris (cetak hanya per mahasiswa).
 
 ### US-5 — Kelola kategori (admin/kemahasiswaan)
 
@@ -92,6 +92,40 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 
 - [ ] Set `skpi_min_kegiatan` = jumlah besar (mis. `5`) → tombol cetak disabled + pesan alasan.
 - [ ] Kembalikan ke nilai semula → tombol aktif kembali.
+
+### US-11 — Impor CSV (tab Verifikasi, staff-verifier)
+
+- [ ] Login admin → `/skpi` → tab **Verifikasi** → **Impor CSV** → **Unduh template CSV** menghasilkan file berheader benar.
+- [ ] Isi template: 2 baris valid (NIM M1 & M2, kategori aktif) + 1 NIM tidak dikenal + 1 kategori tidak dikenal → Impor → laporan: **2 berhasil, 2 gagal (per baris)**; rekaman baru berstatus **Menunggu Verifikasi** dengan poin kategori.
+- [ ] Kirim CSV tanpa kolom wajib → `successCount` 0 + error baris 1.
+- [ ] **403**: login M1/dosen → upload CSV → 403.
+- [ ] **Error per baris (bukan 403 utuh)**: staf dengan scope prodi mengimpor CSV berisi NIM lintas prodi → baris luar scope gagal, baris dalam scope tetap masuk.
+
+### US-12 — Verifikasi massal (tab Verifikasi)
+
+- [ ] Centang 2+ baris **Menunggu Verifikasi** (header checkbox = pilih semua pending di halaman) → tombol **Setujui Terpilih (n)** → modal konfirmasi → proses → toast jumlah disetujui; status baris → **Terverifikasi**.
+- [ ] Baris non-pending tidak dapat dicentang; bila terpilih paksa via API → masuk `failed`, baris lain tetap diproses.
+- [ ] **Reject massal tidak tersedia** — Tolak tetap per baris dengan catatan wajib.
+- [ ] **403**: login M1 → `POST /skpi/kegiatan/verifikasi-bulk` → 403; dosen non-PA → seluruh baris `failed` (tanpa perubahan data).
+- [ ] **422**: kirim `ids` kosong / >100 id → 422.
+
+### US-13 — Penerbitan (tab Penerbitan, staff-verifier)
+
+- [ ] Tab **Penerbitan** hanya tampil untuk staf; dosen PA hanya tab **Verifikasi**; mahasiswa tanpa tab bar (ringkasan dokumen + Unduh/Cetak tetap ada).
+- [ ] Daftar memuat mahasiswa dengan ≥1 rekaman **status apa pun** — hitung badge `V`/`P`/`D`, total poin, badge **Terpenuhi/Belum terpenuhi** (+alasan), status tanda tangan (**Belum**/**Ditandatangani** + tanggal).
+- [ ] Filter: pencarian NIM/nama, dropdown prodi, checkbox **Hanya siap terbit** hanya menampilkan mahasiswa yang syaratnya terpenuhi; **Reset Filter** bekerja.
+- [ ] **Terbitkan** per baris → modal konfirmasi → badge **Ditandatangani** → verifikasi publik QR dari cetak → `VALID`.
+- [ ] **Terbitkan Terpilih (n)** massal → jumlah berhasil/gagal tampil di toast; mahasiswa di luar syarat masuk `failed` dengan pesan alasan.
+- [ ] **Cabut** per baris → modal wajib **Alasan (min. 3 karakter)** → badge kembali **Belum**; QR lama → `REVOKED` (410).
+- [ ] **Cabut Terpilih (n)** massal → baris belum ditandatangani masuk `failed` per baris; sisanya revoked.
+- [ ] **403**: `POST /skpi/dokumen/bulk-sign` & `bulk-revoke` sebagai M1 → 403; staf out-of-scope → 403 utuh; alasan pendek (`ab`) → 422, spasi saja → 400.
+- [ ] Tombol **Cetak** baris membuka `/skpi/cetak/:mhsId` dan dokumen lengkap dengan tabel riwayat.
+
+### Integrasi Halaman Terpadu
+
+- [ ] Buka `/skpi/verifikasi` (bookmark lama) → **redirect** ke `/skpi` tanpa 404.
+- [ ] Sidebar: entri **"Verifikasi SKPI"** hilang; entri **SKPI** membuka halaman terpadu; grup sidebar auto-expand sesuai (`/skpi` → Layanan; `/khs`,`/yudisium` → Evaluasi).
+- [ ] Tab bar pill hanya tampil bila >1 tab; ganti tab → konten (tabel/filter) ter-mount ulang dengan data benar.
 
 ## 4. Smoke Test Pasca-Deploy (5 menit, jalankan segera setiap deploy staging/produksi)
 

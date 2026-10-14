@@ -114,6 +114,51 @@ export interface SignSkpiResult extends SkpiSignatureMeta {
   qrDataUrl?: string;
 }
 
+export interface SkpiImportResult {
+  successCount: number;
+  skippedCount: number;
+  errors: { line: number; error: string }[];
+}
+
+export interface SkpiVerifyBulkResult {
+  total: number;
+  approvedCount: number;
+  failedCount: number;
+  approved: number[];
+  failed: { id: number; error: string }[];
+}
+
+/** Baris tab Penerbitan — hitung per status + syarat + status tanda tangan. */
+export interface SkpiPenerbitanItem {
+  mahasiswaId: number;
+  nim: string;
+  nama: string;
+  statusAkademik: string;
+  programStudiId?: number | null;
+  prodi?: string | null;
+  pending: number;
+  diverifikasi: number;
+  ditolak: number;
+  totalKegiatan: number;
+  totalPoin: number;
+  syarat: SkpiSyarat;
+  signature: { verifyUuid: string; signedAt: string; signerNama: string | null } | null;
+}
+
+export interface SkpiBulkSignResult {
+  total: number;
+  signedCount: number;
+  failedCount: number;
+  failed: { mahasiswaId: number; error: string }[];
+}
+
+export interface SkpiBulkRevokeResult {
+  total: number;
+  revokedCount: number;
+  failedCount: number;
+  failed: { mahasiswaId: number; error: string }[];
+}
+
 export interface SkpiCreatePayload {
   kategoriKegiatanId: number;
   namaKegiatan: string;
@@ -230,6 +275,59 @@ export const skpiController = {
   getDokumen: (mhsId: number) => fetchApi<SkpiDokumen>(`/skpi/dokumen/${mhsId}`),
 
   signDokumen: (mhsId: number) => fetchApi<SignSkpiResult>(`/skpi/dokumen/${mhsId}/sign`, { method: 'POST' }),
+
+  /** Impor CSV rekaman kegiatan (staf-verifier; hasil pending, error per baris). */
+  importKegiatan: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return fetchApi<SkpiImportResult>('/skpi/kegiatan/import', { method: 'POST', body: formData });
+  },
+
+  /** Approve massal (maks 100 id); non-pending / di luar otorisasi masuk `failed`. */
+  verifyBulk: (ids: number[]) =>
+    fetchApi<SkpiVerifyBulkResult>('/skpi/kegiatan/verifikasi-bulk', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
+
+  getPenerbitan: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    prodiId?: number;
+    siapTerbit?: boolean;
+  }): Promise<{
+    data: SkpiPenerbitanItem[];
+    meta: { total: number; page: number; limit: number; totalPages: number };
+  }> => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.search) query.set('search', params.search);
+    if (params?.prodiId) query.set('prodiId', String(params.prodiId));
+    if (params?.siapTerbit) query.set('siapTerbit', 'true');
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return fetchApi(`/skpi/penerbitan${qs}`);
+  },
+
+  /** Terbitkan tanda tangan massal (maks 50; per mahasiswa dienforce syarat §4.4). */
+  signBulk: (mahasiswaIds: number[]) =>
+    fetchApi<SkpiBulkSignResult>('/skpi/dokumen/bulk-sign', {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaIds }),
+    }),
+
+  revokeDokumen: (mhsId: number, reason: string) =>
+    fetchApi<{ success: boolean; message: string }>(`/skpi/dokumen/${mhsId}/revoke`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  revokeBulk: (mahasiswaIds: number[], reason: string) =>
+    fetchApi<SkpiBulkRevokeResult>('/skpi/dokumen/bulk-revoke', {
+      method: 'POST',
+      body: JSON.stringify({ mahasiswaIds, reason }),
+    }),
 
   listLampiran: (kegiatanId: number) => fetchApi<{ data: SkpiLampiran[] }>(`/skpi/kegiatan/${kegiatanId}/lampiran`),
 
