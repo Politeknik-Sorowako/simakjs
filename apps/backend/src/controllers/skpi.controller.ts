@@ -415,6 +415,72 @@ export class SkpiController {
     }
   }
 
+  /**
+   * Membatalkan hasil verifikasi (diverifikasi/ditolak → pending). Koreksi
+   * pasca-verifikasi: khusus staff-verifier dalam scope (admin global).
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async unverify({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    const kegiatan = await SkpiService.getById(params.id);
+    if (!kegiatan) {
+      set.status = 404;
+      return { error: 'Rekaman kegiatan tidak ditemukan.' };
+    }
+    if (!SkpiController.isStaffVerifier(user)) {
+      set.status = 403;
+      return { error: 'Hanya staf Admin/Prodi/Kaprodi/Kemahasiswaan yang dapat membatalkan hasil verifikasi.' };
+    }
+    try {
+      const inScope = await ProdiScopeService.canAccessProdi(user, kegiatan.mahasiswa?.programStudiId);
+      if (!inScope) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Mahasiswa berada di luar lingkup prodi Anda.' };
+      }
+      return await SkpiService.unverify(params.id);
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal membatalkan hasil verifikasi.' };
+    }
+  }
+
+  /**
+   * Mengedit hasil verifikasi (poin & catatan) rekaman `diverifikasi` tanpa
+   * mengubah status. Khusus staff-verifier dalam scope (admin global).
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async editHasilVerifikasi({ params, body, set, getCurrentUser }: AuthContext): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    const kegiatan = await SkpiService.getById(params.id);
+    if (!kegiatan) {
+      set.status = 404;
+      return { error: 'Rekaman kegiatan tidak ditemukan.' };
+    }
+    if (!SkpiController.isStaffVerifier(user)) {
+      set.status = 403;
+      return { error: 'Hanya staf Admin/Prodi/Kaprodi/Kemahasiswaan yang dapat mengedit hasil verifikasi.' };
+    }
+    try {
+      const inScope = await ProdiScopeService.canAccessProdi(user, kegiatan.mahasiswa?.programStudiId);
+      if (!inScope) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Mahasiswa berada di luar lingkup prodi Anda.' };
+      }
+      return await SkpiService.updateHasilVerifikasi(params.id, { poin: body.poin, catatan: body.catatan });
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengedit hasil verifikasi.' };
+    }
+  }
+
   // ─── Dokumen SKPI (siap cetak + TTE) ───────────────────────────────────────
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -485,17 +551,11 @@ export class SkpiController {
       return { error: 'ID Mahasiswa tidak valid.' };
     }
 
-    // PRD §6.3: mahasiswa pemilik; staf admin/prodi/kaprodi dalam scope.
+    // Keputusan produk (Tahap berikut): penerbitan tanda tangan khusus
+    // staff-verifier (super_admin/admin/prodi/kaprodi/kemahasiswaan, admin
+    // global). Mahasiswa TIDAK menerbitkan sendiri — termasuk pemilik.
     // Penandatangan dokumen tetap di-resolve server (Kaprodi → fallback).
-    const isMahasiswa = hasRole(user, ['mahasiswa']);
-    const isSignerStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi']);
-    if (isMahasiswa && !isSignerStaff) {
-      const myMhsId = await SkpiController.getMahasiswaIdByEmail(user.email);
-      if (myMhsId !== mhsId) {
-        set.status = 403;
-        return { error: 'Akses ditolak. Anda hanya dapat menerbitkan SKPI milik sendiri.' };
-      }
-    } else if (isSignerStaff) {
+    if (SkpiController.isStaffVerifier(user)) {
       try {
         await ProdiScopeService.assertMahasiswaInScope(user, [mhsId]);
       } catch (e: unknown) {
@@ -505,7 +565,7 @@ export class SkpiController {
     } else {
       set.status = 403;
       return {
-        error: 'Hanya mahasiswa pemilik atau staf Admin/Prodi/Kaprodi yang dapat menerbitkan tanda tangan SKPI.',
+        error: 'Penerbitan tanda tangan SKPI hanya untuk staf Admin/Prodi/Kaprodi/Kemahasiswaan.',
       };
     }
 

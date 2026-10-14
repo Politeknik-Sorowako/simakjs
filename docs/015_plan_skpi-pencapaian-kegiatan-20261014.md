@@ -79,8 +79,8 @@ flowchart TD
 | State | Aksi yang boleh | Penanggung jawab |
 | :-- | :-- | :-- |
 | `pending` | edit, hapus, submit verifikasi | Pemilik (mahasiswa/staf input) |
-| `diverifikasi` | tidak bisa diedit (freeze data cetak) | Verifikator (approve) |
-| `ditolak` | edit, resubmit ke `pending`, hapus | Verifikator (reject + catatan wajib) |
+| `diverifikasi` | tidak bisa diedit (freeze data cetak); koreksi oleh staf: `unverify` (→ pending) & `edit hasil` (poin/catatan, status tetap) | Verifikator (approve); koreksi staff-verifier |
+| `ditolak` | edit, resubmit ke `pending`, hapus; koreksi oleh staf: `unverify` (→ pending) | Verifikator (reject + catatan wajib); koreksi staff-verifier |
 
 Aturan transisi (mengikuti pola `CutiService.approve` — `apps/backend/src/services/cuti.service.ts:241-302`):
 - `pending → diverifikasi` / `pending → ditolak` oleh verifikator berwenang.
@@ -184,6 +184,8 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 | `PUT /skpi/kegiatan/:id` | Edit (hanya `pending`/`ditolak`) | pemilik atau admin |
 | `DELETE /skpi/kegiatan/:id` | Hapus (hanya `pending`/`ditolak`) | pemilik atau admin |
 | `POST /skpi/kegiatan/:id/verifikasi` | Body: `action: 'approve' \| 'reject'`, `catatan?`, `poin?` | Dosen PA / `kemahasiswaan` / `admin` / `prodi` / `kaprodi` (prodi scope) |
+| `PUT /skpi/kegiatan/:id/unverify` | Batalkan hasil verifikasi (diverifikasi/ditolak → pending; metadata verifikator dihapus) | `kemahasiswaan` / `admin` / `prodi` / `kaprodi` / `super_admin` (prodi scope) |
+| `PUT /skpi/kegiatan/:id/hasil-verifikasi` | Edit poin & catatan hasil verifikasi rekaman `diverifikasi` (status tetap) | idem unverify |
 | `POST /skpi/kegiatan/:id/lampiran` | Upload bukti (`t.File()`, pola `uploadLampiranCutiSchema`) | pemilik / staf scope |
 | `DELETE /skpi/kegiatan/:id/lampiran/:lampiranId` | Hapus lampiran | pemilik / admin |
 
@@ -191,7 +193,7 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 | Method & Path | Aksi | Otorisasi |
 | :-- | :-- | :-- |
 | `GET /skpi/dokumen/:mhsId` | Ambil ringkasan siap cetak (identitas + kegiatan terverifikasi + status signature bila ada) | mahasiswa own / staf scope |
-| `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | mahasiswa own; staf `admin`/`prodi`/`kaprodi` scope |
+| `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | **Khusus staf** `super_admin`/`admin`/`prodi`/`kaprodi`/`kemahasiswaan` scope (mahasiswa — termasuk pemilik — TIDAK; keputusan produk tahap berikut) |
 | `GET /document-signatures/verify/:uuid` | **Sudah ada** — verifikasi publik tanpa auth | publik (`PUBLIC_NO_SESSION_PATHS` di `app.ts`) |
 
 **Perubahan integrasi signing**:
@@ -288,8 +290,9 @@ Pilihan download: **PDF via print dialog** (Save as PDF) — konsisten dengan KH
 | US-3 | Verifikator berwenang melihat antrean `pending`; approve memerlukan konfirmasi; reject mewajibkan catatan; verifikator di luar cakupan (dosen non-PA, mahasiswa lain) menerima 403. |
 | US-4 | Tombol "Unduh/Cetak SKPI" menghasilkan halaman cetak berisi identitas + tabel kegiatan terverifikasi + QR + blok tanda tangan; hanya kegiatan `diverifikasi` yang tampil; memicu `window.print()`. |
 | US-5 | Admin/kemahasiswaan dapat CRUD kategori; menonaktifkan kategori tidak menghapus riwayat rekaman lama; kategori non-aktif tidak muncul di form input baru. |
-| US-6 | `POST /sign` idempoten untuk payload sama; perubahan daftar kegiatan terverifikasi menyebabkan signature lama revoked dan QR baru valid; verifikasi publik mengembalikan `VALID`. |
+| US-6 | `POST /sign` idempoten untuk payload sama; perubahan daftar kegiatan terverifikasi menyebabkan signature lama revoked dan QR baru valid; verifikasi publik mengembalikan `VALID`; **otorisasi khusus staf** — mahasiswa (termasuk pemilik) menerima 403. |
 | US-9 | Bila jumlah kegiatan terverifikasi < `skpi_min_kegiatan`, tombol cetak disabled dengan pesan; nilai setting dapat diubah admin via system settings. |
+| US-10 | Staff-verifier dalam scope dapat membatalkan hasil verifikasi (`unverify`: diverifikasi/ditolak → pending) dan mengedit hasil (`hasil-verifikasi`: poin/catatan, status tetap); non-staf & luar lingkup menerima 403; hasil cetak SKPI (screen & print) memuat tabel riwayat kegiatan. |
 
 ---
 
@@ -323,9 +326,12 @@ cd apps/frontend && bunx tsc --noEmit
 ### Uji Manual Flow
 1. Mahasiswa login → input kegiatan + lampiran → cek status `pending`.
 2. Dosen PA login → verifikasi panel → approve → rekaman masuk dokumen.
-3. Mahasiswa → menu SKPI → Unduh/Cetak → QR tampil → scan/verify → `VALID`.
+3. Mahasiswa → menu SKPI → Unduh/Cetak → QR tampil (diterbitkan staf) → scan/verify → `VALID`.
 4. Verifikator lain (non-PA, non-scope) → 403.
 5. Admin ubah kategori non-aktif → form baru tidak menawarkan kategori tsb.
+6. Staff-verifier: Edit Hasil (ubah poin) pada rekaman terverifikasi → status tetap; Batalkan → `pending` lalu verifikasi ulang.
+7. Mahasiswa membuka `/skpi/cetak/:mhsId` → TIDAK ada tombol tanda tangan (hanya cetak); admin/prodi/kemahasiswaan → tombol ada & hasilkan QR `VALID`.
+8. Cetak/Simpan PDF SKPI → tabel riwayat kegiatan + total poin tampil (regresi allowlist print).
 
 ### CI/CD
 - PR feature → `development` (staging-first); verifikasi staging; promosi `development -> main` via PR terpisah.
