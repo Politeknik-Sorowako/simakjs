@@ -1,14 +1,21 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { mahasiswaController } from '../controllers/mahasiswaController';
-import { type SkpiKategori, type SkpiKegiatan, type SkpiStatus, skpiController } from '../controllers/skpiController';
+import {
+  type SkpiKategori,
+  type SkpiKategoriPayload,
+  type SkpiKegiatan,
+  type SkpiStatus,
+  skpiController,
+} from '../controllers/skpiController';
 import { usePagination } from '../hooks/usePagination';
 import { fmtTanggal, getTodayString } from '../utils/format';
 
@@ -31,12 +38,27 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'ditolak', label: 'Ditolak' },
 ];
 
+/** Opsi jenis kategori — mencerminkan enum backend `skpi.schema.ts`. */
+const JENIS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'pelatihan', label: 'Pelatihan' },
+  { value: 'seminar', label: 'Seminar' },
+  { value: 'organisasi', label: 'Organisasi' },
+  { value: 'prestasi', label: 'Prestasi' },
+  { value: 'lainnya', label: 'Lainnya' },
+];
+
 export default function Skpi() {
   const auth = useAuth();
   const toast = useToast();
 
   const isMahasiswaView = () => auth.hasRole(['mahasiswa']);
   const isAdminView = () => auth.hasRole(['super_admin', 'admin']);
+  // Staff yang boleh menginput rekaman atas nama mahasiswa (dicerminkan backend
+  // `STAFF_VERIFIER_ROLES` — create juga mewajibkan lolos prodi-scope).
+  const isStaffInput = () => auth.hasRole(['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan']);
+  const canManageKategori = () => isStaffInput();
+  const canDeleteKategori = () => auth.hasRole(['super_admin', 'admin']);
+  const showInputUi = () => isMahasiswaView() || isStaffInput();
 
   // ── Profil mahasiswa pemilik (untuk ringkasan poin & tautan cetak) ─────────
   const [mhsProfile] = createResource(
@@ -58,7 +80,11 @@ export default function Skpi() {
   const [statusFilter, setStatusFilter] = createSignal('');
   const [kategoriFilter, setKategoriFilter] = createSignal(0);
 
-  const [kategoriList] = createResource(() => skpiController.getKategori());
+  // Staf memuat semua kategori (termasuk non-aktif) untuk kelola; mahasiswa hanya aktif.
+  const [kategoriList, { refetch: refetchKategori }] = createResource(
+    () => (isStaffInput() ? 'all' : 'aktif'),
+    (mode) => skpiController.getKategori(mode === 'all'),
+  );
 
   const [list, { refetch }] = createResource(
     () => ({
@@ -80,7 +106,9 @@ export default function Skpi() {
 
   const kategoriOptions = () => [
     { value: 0, label: 'Semua Kategori' },
-    ...(kategoriList()?.data ?? []).map((k) => ({ value: k.id, label: k.nama })),
+    ...(kategoriList()?.data ?? [])
+      .filter((k: SkpiKategori) => k.isAktif)
+      .map((k: SkpiKategori) => ({ value: k.id, label: k.nama })),
   ];
 
   // ── Form tambah / edit ─────────────────────────────────────────────────────
@@ -97,8 +125,39 @@ export default function Skpi() {
   const [isSaving, setIsSaving] = createSignal(false);
   const [errorMsg, setErrorMsg] = createSignal('');
 
+  // ── Pemilih mahasiswa untuk input staf ────────────────────────────────────
+  // Pencarian di-debounce lalu memuat opsi via `mahasiswaController` (pola
+  // TabPembayaran). Backend tetap menegakkan prodi-scope saat create.
+  const [formMahasiswaId, setFormMahasiswaId] = createSignal<number | null>(null);
+  const [mhsSearch, setMhsSearch] = createSignal('');
+  const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
+  const [mhsSearching, setMhsSearching] = createSignal(false);
+  let mhsTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(mhsTimer));
+
+  const searchMahasiswa = (q: string) => {
+    setMhsSearch(q);
+    clearTimeout(mhsTimer);
+    setMhsSearching(true);
+    mhsTimer = setTimeout(async () => {
+      try {
+        const res = await mahasiswaController.getAll(q || undefined, 1, 25, undefined, { allStudents: true });
+        setMhsOptions(
+          res.data.map((m) => ({
+            value: m.id,
+            label: `${m.nim} — ${m.nama}${m.programStudi?.nama ? ` (${m.programStudi.nama})` : ''}`,
+          })),
+        );
+      } catch {
+        setMhsOptions([]);
+      } finally {
+        setMhsSearching(false);
+      }
+    }, 300);
+  };
+
   const resetForm = () => {
-    setKategoriId(kategoriList()?.data?.[0]?.id ?? 0);
+    setKategoriId(kategoriList()?.data?.filter((k: SkpiKategori) => k.isAktif)?.[0]?.id ?? 0);
     setNamaKegiatan('');
     setPenyelenggara('');
     setTanggalMulai(getTodayString());
@@ -107,6 +166,9 @@ export default function Skpi() {
     setDeskripsi('');
     setNomorSertifikat('');
     setErrorMsg('');
+    setFormMahasiswaId(null);
+    setMhsSearch('');
+    setMhsOptions([]);
   };
 
   const openAddModal = () => {
@@ -131,6 +193,12 @@ export default function Skpi() {
 
   const handleSave = async (e: Event) => {
     e.preventDefault();
+    // Input staf (create) wajib memilih mahasiswa target; backend juga mewajibkan
+    // `mahasiswaId` + lolos prodi-scope untuk staf.
+    if (isStaffInput() && !editingId() && !formMahasiswaId()) {
+      setErrorMsg('Pilih mahasiswa terlebih dahulu.');
+      return;
+    }
     if (!kategoriId()) {
       setErrorMsg('Kategori kegiatan wajib dipilih.');
       return;
@@ -160,6 +228,9 @@ export default function Skpi() {
         lokasi: lokasi().trim() || null,
         deskripsi: deskripsi().trim() || null,
         nomorSertifikat: nomorSertifikat().trim() || null,
+        // Hanya create oleh staf yang menyertakan target mahasiswa; edit tidak
+        // memindahkan kepemilikan rekaman (`SkpiUpdatePayload` tanpa mahasiswaId).
+        mahasiswaId: !editingId() && isStaffInput() ? (formMahasiswaId() ?? undefined) : undefined,
       };
       if (editingId()) {
         await skpiController.update(editingId() as number, payload);
@@ -244,6 +315,102 @@ export default function Skpi() {
     }
   };
 
+  // ── Kelola kategori (khusus staff-verifier) ────────────────────────────────
+  // Backend: create/update untuk semua staff-verifier; delete hanya super_admin/
+  // admin; kategori terpakai rekaman tidak dapat dihapus (error dari server).
+  const [showKategoriModal, setShowKategoriModal] = createSignal(false);
+  const [editingKatId, setEditingKatId] = createSignal<number | null>(null);
+  const [katNama, setKatNama] = createSignal('');
+  const [katJenis, setKatJenis] = createSignal('lainnya');
+  const [katPoin, setKatPoin] = createSignal(0);
+  const [katAktif, setKatAktif] = createSignal(true);
+  const [katError, setKatError] = createSignal('');
+  const [katSaving, setKatSaving] = createSignal(false);
+
+  const resetKatForm = () => {
+    setEditingKatId(null);
+    setKatNama('');
+    setKatJenis('lainnya');
+    setKatPoin(0);
+    setKatAktif(true);
+    setKatError('');
+  };
+
+  const openKategoriAdd = () => {
+    resetKatForm();
+    setShowKategoriModal(true);
+  };
+
+  const openKategoriEdit = (row: SkpiKategori) => {
+    setEditingKatId(row.id);
+    setKatNama(row.nama);
+    setKatJenis(row.jenis);
+    setKatPoin(row.poinDefault);
+    setKatAktif(row.isAktif);
+    setKatError('');
+    setShowKategoriModal(true);
+  };
+
+  const handleKategoriSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!katNama().trim()) {
+      setKatError('Nama kategori wajib diisi.');
+      return;
+    }
+    if (katPoin() < 0) {
+      setKatError('Poin default tidak boleh negatif.');
+      return;
+    }
+    setKatSaving(true);
+    setKatError('');
+    const payload: SkpiKategoriPayload = {
+      nama: katNama().trim(),
+      jenis: katJenis(),
+      poinDefault: katPoin(),
+      isAktif: katAktif(),
+    };
+    try {
+      if (editingKatId()) {
+        await skpiController.updateKategori(editingKatId() as number, payload);
+        toast.showToast('Kategori kegiatan diperbarui', 'success');
+      } else {
+        await skpiController.createKategori(payload);
+        toast.showToast('Kategori kegiatan ditambahkan', 'success');
+      }
+      await refetchKategori();
+      setShowKategoriModal(false);
+      resetKatForm();
+    } catch (err: unknown) {
+      setKatError(err instanceof Error ? err.message : 'Gagal menyimpan kategori kegiatan.');
+    } finally {
+      setKatSaving(false);
+    }
+  };
+
+  const handleKategoriToggle = async (row: SkpiKategori) => {
+    try {
+      await skpiController.updateKategori(row.id, { isAktif: !row.isAktif });
+      toast.showToast(
+        row.isAktif ? `Kategori "${row.nama}" dinonaktifkan` : `Kategori "${row.nama}" diaktifkan`,
+        'success',
+      );
+      await refetchKategori();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal mengubah status kategori.', 'error');
+    }
+  };
+
+  const handleKategoriDelete = async (row: SkpiKategori) => {
+    if (!window.confirm(`Hapus kategori "${row.nama}"?`)) return;
+    try {
+      await skpiController.deleteKategori(row.id);
+      toast.showToast('Kategori kegiatan dihapus', 'success');
+      await refetchKategori();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal menghapus kategori.', 'error');
+    }
+  };
+
   // Rekaman pending/ditolak boleh diedit/dihapus/diunggah lampirannya.
   const isEditable = (row: SkpiKegiatan) => row.status !== 'diverifikasi';
   // Hapus hanya pemilik (mahasiswa) atau admin (dicek ulang backend).
@@ -281,11 +448,16 @@ export default function Skpi() {
                 </Show>
               </p>
             </div>
-            <Show when={isMahasiswaView()}>
-              <div class="flex items-center gap-3">
+            <Show when={showInputUi()}>
+              <div class="flex flex-wrap items-center gap-3">
                 <Button variant="secondary" onClick={() => refetch()}>
                   Muat Ulang
                 </Button>
+                <Show when={canManageKategori()}>
+                  <Button variant="secondary" onClick={openKategoriAdd}>
+                    Kelola Kategori
+                  </Button>
+                </Show>
                 <Button variant="primary" onClick={openAddModal}>
                   + Tambah Kegiatan
                 </Button>
@@ -518,6 +690,34 @@ export default function Skpi() {
             </div>
           </Show>
 
+          {/* Input staf (create): pilih mahasiswa target. Backend mewajibkan
+              mahasiswaId + prodi-scope untuk staf. */}
+          <Show when={isStaffInput() && !editingId()}>
+            <SearchableSelect
+              label="Mahasiswa"
+              placeholder="Ketik NIM / nama untuk mencari..."
+              options={mhsOptions()}
+              value={formMahasiswaId()}
+              onSearch={searchMahasiswa}
+              isLoading={mhsSearching()}
+              onChange={(v) => setFormMahasiswaId(Number(v))}
+              required
+            />
+          </Show>
+
+          {/* Tampilan pemilik saat edit — rekaman tidak dapat dipindahkan. */}
+          <Show when={editingId()}>
+            <div class="p-3 rounded-xl bg-secondary-50 border border-secondary-100 text-xs dark:bg-secondary-800/60 dark:border-secondary-700">
+              <span class="text-secondary-400 font-semibold uppercase tracking-wider">Mahasiswa:</span>{' '}
+              <span class="font-bold text-secondary-800 dark:text-white">
+                {list()?.data?.find((r) => r.id === editingId())?.mahasiswa?.nama ?? '-'}
+              </span>{' '}
+              <span class="text-secondary-400">
+                ({list()?.data?.find((r) => r.id === editingId())?.mahasiswa?.nim ?? '-'})
+              </span>
+            </div>
+          </Show>
+
           <Input
             label="Kategori Kegiatan"
             isSelect
@@ -602,6 +802,120 @@ export default function Skpi() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal kelola kategori kegiatan (staff-verifier) */}
+      <Modal
+        show={showKategoriModal()}
+        onClose={() => {
+          setShowKategoriModal(false);
+          resetKatForm();
+        }}
+        title={editingKatId() ? 'Edit Kategori Kegiatan' : 'Kelola Kategori Kegiatan'}
+        maxWidth="lg"
+      >
+        <form onSubmit={handleKategoriSubmit} class="flex flex-col gap-4">
+          <Show when={katError()}>
+            <div class="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+              {katError()}
+            </div>
+          </Show>
+
+          <Input
+            label="Nama Kategori"
+            placeholder="Contoh: Pelatihan Jaringan, Seminar Nasional..."
+            value={katNama()}
+            onInput={(e) => setKatNama(e.currentTarget.value)}
+            maxLength={100}
+            required
+          />
+
+          <Input
+            label="Jenis"
+            isSelect
+            selectOptions={JENIS_OPTIONS}
+            value={katJenis()}
+            onChange={(e) => setKatJenis(e.currentTarget.value)}
+          />
+
+          <Input
+            label="Poin Default"
+            type="number"
+            min={0}
+            value={katPoin()}
+            onInput={(e) => setKatPoin(Math.max(0, Number(e.currentTarget.value) || 0))}
+          />
+
+          <label class="flex items-center gap-2 text-xs font-semibold text-secondary-600 dark:text-secondary-300">
+            <input
+              type="checkbox"
+              checked={katAktif()}
+              onChange={(e) => setKatAktif(e.currentTarget.checked)}
+              class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+            />
+            Kategori aktif (dapat dipilih pada form kegiatan)
+          </label>
+
+          <div class="flex justify-end gap-3 border-t pt-4 mt-1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setShowKategoriModal(false);
+                resetKatForm();
+              }}
+            >
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={katSaving()}>
+              {katSaving() ? 'Menyimpan...' : editingKatId() ? 'Simpan Perubahan' : 'Tambah Kategori'}
+            </Button>
+          </div>
+        </form>
+
+        {/* Daftar kategori (termasuk non-aktif) */}
+        <div class="mt-5 border-t border-secondary-100 pt-4 dark:border-secondary-800">
+          <h4 class="text-caption font-bold uppercase tracking-wider text-secondary-500 dark:text-secondary-300">
+            Daftar Kategori
+          </h4>
+          <div class="mt-2 max-h-64 overflow-y-auto divide-y divide-secondary-100 rounded-xl border border-secondary-100 dark:divide-secondary-800 dark:border-secondary-800">
+            <For
+              each={kategoriList()?.data ?? []}
+              fallback={<p class="p-4 text-center text-xs text-secondary-400">Belum ada kategori.</p>}
+            >
+              {(kat) => (
+                <div class="p-3 flex flex-wrap items-center justify-between gap-2 bg-white dark:bg-secondary-900">
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-xs font-bold text-secondary-800 dark:text-white">{kat.nama}</span>
+                    <span class="text-[11px] text-secondary-400 capitalize">
+                      {kat.jenis} · {kat.poinDefault} poin
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <Badge variant={kat.isAktif ? 'success' : 'default'} size="sm">
+                      {kat.isAktif ? 'Aktif' : 'Nonaktif'}
+                    </Badge>
+                    <Button variant="secondary" size="sm" onClick={() => openKategoriEdit(kat)}>
+                      Edit
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => handleKategoriToggle(kat)}>
+                      {kat.isAktif ? 'Nonaktifkan' : 'Aktifkan'}
+                    </Button>
+                    <Show when={canDeleteKategori()}>
+                      <Button variant="danger" size="sm" onClick={() => handleKategoriDelete(kat)}>
+                        Hapus
+                      </Button>
+                    </Show>
+                  </div>
+                </div>
+              )}
+            </For>
+          </div>
+          <p class="mt-2 text-[11px] text-secondary-400">
+            Kategori yang masih dipakai rekaman kegiatan tidak dapat dihapus — nonaktifkan saja agar tidak dipilih pada
+            form baru.
+          </p>
+        </div>
       </Modal>
     </MainLayout>
   );
