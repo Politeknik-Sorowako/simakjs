@@ -6,11 +6,13 @@ import {
   createKegiatanSkpiSchema,
   deleteKategoriSkpiSchema,
   deleteKegiatanSkpiSchema,
+  getDokumenSkpiSchema,
   getKategoriSkpiSchema,
   getKegiatanByIdSkpiSchema,
   getKegiatanSkpiSchema,
   lampiranSkpiParamsSchema,
   listLampiranSkpiSchema,
+  signDokumenSkpiSchema,
   updateKategoriSkpiSchema,
   updateKegiatanSkpiSchema,
   uploadLampiranSkpiSchema,
@@ -31,6 +33,9 @@ export const skpiRoutes = new Elysia({ prefix: '/skpi' })
   .put('/kegiatan/:id', SkpiController.update, updateKegiatanSkpiSchema)
   .delete('/kegiatan/:id', SkpiController.delete, deleteKegiatanSkpiSchema)
   .put('/kegiatan/:id/verifikasi', SkpiController.verify, verifyKegiatanSkpiSchema)
+  // Dokumen SKPI (siap cetak + TTE / QR)
+  .get('/dokumen/:mhsId', SkpiController.getDokumen, getDokumenSkpiSchema)
+  .post('/dokumen/:mhsId/sign', SkpiController.signDokumen, signDokumenSkpiSchema)
   // Lampiran sertifikat
   .get('/kegiatan/:id/lampiran', SkpiController.listLampiran, listLampiranSkpiSchema)
   .post('/kegiatan/:id/lampiran', SkpiController.uploadLampiran, uploadLampiranSkpiSchema)

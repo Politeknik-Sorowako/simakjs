@@ -181,3 +181,25 @@ export const lampiranSkpiParamsSchema = {
   detail: { tags: skpiTags, summary: 'Unduh / Hapus Lampiran Kegiatan SKPI' },
   params: t.Object({ id: t.Numeric(), lampiranId: t.Numeric() }),
 };
+
+// ─── Dokumen SKPI (TTE / QR) ────────────────────────────────────────────────
+
+export const getDokumenSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Ringkasan Dokumen SKPI Siap Cetak',
+    description:
+      'Identitas mahasiswa + daftar kegiatan terverifikasi + syarat penerbitan + status tanda tangan (bila ada). Mahasiswa own / staf scope prodi.',
+  },
+  params: t.Object({ mhsId: t.Numeric({ minimum: 1 }) }),
+};
+
+export const signDokumenSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Terbitkan Tanda Tangan SKPI (QR Signed-Hash)',
+    description:
+      'Menandatangani SKPI idempoten (pola TTE KHS). Otorisasi: mahasiswa pemilik atau staf admin/prodi/kaprodi dalam scope. Ditolak bila syarat §4.4 belum terpenuhi.',
+  },
+  params: t.Object({ mhsId: t.Numeric({ minimum: 1 }) }),
+};
