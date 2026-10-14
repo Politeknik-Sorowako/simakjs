@@ -21,7 +21,16 @@ export function getRoles(user: UserPayload | null | undefined): UserRole[] {
 export const SINGLE_ROLE_ONLY: UserRole[] = ['super_admin', 'mahasiswa', 'guest', 'calon_mahasiswa'];
 
 /** Roles that MAY be combined with others (multi-role users). */
-export const MULTI_ROLE_ALLOWED: UserRole[] = ['admin', 'kaprodi', 'prodi', 'dosen', 'keuangan', 'plp', 'instruktur'];
+export const MULTI_ROLE_ALLOWED: UserRole[] = [
+  'admin',
+  'kaprodi',
+  'prodi',
+  'dosen',
+  'keuangan',
+  'plp',
+  'instruktur',
+  'kemahasiswaan',
+];
 
 export const VALID_ROLE_COMBINATIONS: Record<UserRole, { single: boolean }> = Object.fromEntries(
   [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED].map((r) => [r, { single: SINGLE_ROLE_ONLY.includes(r) }]),
@@ -59,7 +68,16 @@ export function isAdminOrProdiOrDosen(user: { role: UserRole } | null | undefine
   return hasRole(user, ['admin', 'prodi', 'dosen']);
 }
 
-export const STAFF_ROLES: UserRole[] = ['super_admin', 'admin', 'kaprodi', 'prodi', 'dosen', 'plp', 'instruktur'];
+export const STAFF_ROLES: UserRole[] = [
+  'super_admin',
+  'admin',
+  'kaprodi',
+  'prodi',
+  'dosen',
+  'plp',
+  'instruktur',
+  'kemahasiswaan',
+];
 
 export function isStaff(user: { role: UserRole } | null | undefined): boolean {
   return hasRole(user, STAFF_ROLES);
@@ -87,4 +105,5 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   keuangan: 'Keuangan',
   guest: 'Guest',
   calon_mahasiswa: 'Calon Mahasiswa',
+  kemahasiswaan: 'Kemahasiswaan',
 };

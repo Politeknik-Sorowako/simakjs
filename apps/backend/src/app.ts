@@ -58,6 +58,7 @@ import { rbacRoutes } from './routes/rbac.routes';
 import { rombelPraktikumPublicRoutes, rombelPraktikumRoutes } from './routes/rombel-praktikum.routes';
 import { rpsRoutes } from './routes/rps.routes';
 import { settingsRoutes } from './routes/settings.routes';
+import { skpiRoutes } from './routes/skpi.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { systemRoutes } from './routes/system.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
@@ -113,6 +114,7 @@ mkdirSync(process.env.SURAT_UPLOAD_DIR || 'uploads/surat-izin-sakit', { recursiv
 mkdirSync(join(process.cwd(), 'storage', 'bimbingan-attachments'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'sk-prodi'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'status-mahasiswa'), { recursive: true });
+mkdirSync(join(process.cwd(), 'storage', 'skpi'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'pengumuman'), { recursive: true });
 
 export const app = new Elysia()
@@ -466,6 +468,7 @@ export const app = new Elysia()
   .use(kategoriBimbinganRoutes)
   .use(bkdRoutes)
   .use(settingsRoutes)
+  .use(skpiRoutes)
   .use(pasalPelanggaranRoutes)
   .use(pelanggaranRoutes)
   .use(pengumumanRoutes)

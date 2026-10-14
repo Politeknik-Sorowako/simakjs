@@ -11,17 +11,18 @@ import {
   maskNim,
   sha256Hex,
 } from '../utils/document-signing';
-import { formatDateTimeInTimezone } from '../utils/timezone';
+import { formatDateTimeInTimezone, getNowDateString } from '../utils/timezone';
 import type { UserPayload } from '../utils/types';
 import { KhsService } from './khs.service';
 import { MahasiswaService } from './mahasiswa.service';
 import { PelanggaranService } from './pelanggaran.service';
 import { PeriodeAkademikService } from './periode-akademik.service';
 import { ProdiScopeService } from './prodi-scope.service';
+import { SkpiService } from './skpi.service';
 
 export const TENANT_SIMAK = 'simak';
 
-export type DocType = 'KHS' | 'TRANSKRIP';
+export type DocType = 'KHS' | 'TRANSKRIP' | 'SKPI';
 
 export interface SignKhsInput {
   mhsId: number;
@@ -176,12 +177,79 @@ export class DocumentSignatureService {
       audit: { repository: TENANT_SIMAK },
     };
 
+    return DocumentSignatureService.persistSignedSnapshot({ docType: 'KHS', refId, payload, signer, withQr });
+  }
+
+  /**
+   * Menandatangani SKPI (Surat Keterangan Pendamping Ijazah) secara idempoten.
+   * Snapshot berisi identitas mahasiswa + daftar kegiatan terverifikasi +
+   * poin total + tahun terbit; field volatil (mis. pemanggil) tidak di-hash
+   * (aturan TTE Fase 1). `refId` = `skpi:<mhsId>` — satu SKPI per mahasiswa.
+   */
+  static async signSkpi(mhsId: number, opts: { withQr?: boolean } = {}): Promise<SignResult> {
+    const withQr = opts.withQr ?? true;
+    const refId = `skpi:${mhsId}`;
+
+    const mhs = await MahasiswaService.getById(mhsId);
+    if (!mhs) throw new Error('Mahasiswa tidak ditemukan.');
+
+    const kegiatan = await SkpiService.getKegiatanTerverifikasi(mhsId);
+    const syarat = await SkpiService.getSyaratPenerbitan(mhsId, kegiatan.length);
+    if (!syarat.terpenuhi) {
+      throw new Error(syarat.alasan ?? 'Syarat penerbitan SKPI belum terpenuhi.');
+    }
+
+    const totalPoin = kegiatan.reduce((sum, k) => sum + (k.poin ?? 0), 0);
+    const signer = await DocumentSignatureService.resolveSigner(mhs.programStudiId);
+    const tahunTerbit = Number(getNowDateString().slice(0, 4));
+
+    const payload: Record<string, unknown> = {
+      tenant: TENANT_SIMAK,
+      docType: 'SKPI',
+      refId,
+      mhsId,
+      nim: mhs.nim,
+      nama: mhs.nama,
+      programStudiId: mhs.programStudiId ?? null,
+      prodi: mhs.programStudi?.nama ?? null,
+      jenjang: mhs.programStudi?.jenjang ?? null,
+      tahunTerbit,
+      totalPoin,
+      totalKegiatan: kegiatan.length,
+      kegiatan: kegiatan.map((k) => ({
+        namaKegiatan: k.namaKegiatan,
+        kategori: k.kategori?.nama ?? null,
+        tanggalMulai: k.tanggalMulai,
+        tanggalSelesai: k.tanggalSelesai ?? null,
+        penyelenggara: k.penyelenggara ?? null,
+        nomorSertifikat: k.nomorSertifikat ?? null,
+        poin: k.poin ?? 0,
+      })),
+      signer: { nama: signer.nama, jabatan: signer.jabatan },
+      audit: { repository: TENANT_SIMAK },
+    };
+
+    return DocumentSignatureService.persistSignedSnapshot({ docType: 'SKPI', refId, payload, signer, withQr });
+  }
+
+  /**
+   * Persistensi snapshot ter-sign: idempoten bila docHash identik (verifyUuid
+   * stabil), atau revoke lama + insert baru bila snapshot berubah.
+   */
+  private static async persistSignedSnapshot(opts: {
+    docType: DocType;
+    refId: string;
+    payload: Record<string, unknown>;
+    signer: ResolvedSigner;
+    withQr: boolean;
+  }): Promise<SignResult> {
+    const { docType, refId, payload, signer, withQr } = opts;
     const { activeKid, keys } = getSigningKeyConfig();
     const docHash = sha256Hex(canonicalJson(payload));
 
     // Idempotensi: bila snapshot identik dengan tanda tangan aktif terbaru,
     // pakai ulang baris yang sama (verifyUuid stabil).
-    const existing = await DocumentSignatureService.getByRef('KHS', refId);
+    const existing = await DocumentSignatureService.getByRef(docType, refId);
     if (existing && existing.docHash === docHash) {
       return DocumentSignatureService.toSignResult(existing, withQr);
     }
@@ -190,7 +258,7 @@ export class DocumentSignatureService {
     if (existing) {
       await db
         .update(documentSignatures)
-        .set({ revokedAt: new Date(), revokeReason: 'Digantikan oleh snapshot KHS terbaru.' })
+        .set({ revokedAt: new Date(), revokeReason: `Digantikan oleh snapshot ${docType} terbaru.` })
         .where(eq(documentSignatures.id, existing.id));
     }
 
@@ -199,7 +267,7 @@ export class DocumentSignatureService {
       .insert(documentSignatures)
       .values({
         tenant: TENANT_SIMAK,
-        docType: 'KHS',
+        docType,
         refId,
         docHash,
         signature,
@@ -375,8 +443,38 @@ export class DocumentSignatureService {
   }
 
   /**
+   * Signature AKTIF (belum dicabut) terbaru per `refId` dalam satu query —
+   * dipakai tab Penerbitan SKPI untuk menampilkan status tanda tangan massal
+   * tanpa N+1. Mengembalikan Map `refId → baris` (terbaru menang).
+   */
+  static async getActiveByRefs(
+    docType: DocType,
+    refIds: string[],
+  ): Promise<Map<string, typeof documentSignatures.$inferSelect>> {
+    const unique = [...new Set(refIds)];
+    const result = new Map<string, typeof documentSignatures.$inferSelect>();
+    if (unique.length === 0) return result;
+    const rows = await db
+      .select()
+      .from(documentSignatures)
+      .where(
+        and(
+          eq(documentSignatures.tenant, TENANT_SIMAK),
+          eq(documentSignatures.docType, docType),
+          isNull(documentSignatures.revokedAt),
+          inArray(documentSignatures.refId, unique),
+        ),
+      )
+      .orderBy(desc(documentSignatures.signedAt), desc(documentSignatures.id));
+    for (const row of rows) {
+      if (!result.has(row.refId)) result.set(row.refId, row);
+    }
+    return result;
+  }
+
+  /**
    * Tegakkan scope prodi pemanggil atas sejumlah `verifyUuid` SEBELUM aksi tulis.
-   * Gagal-dituju (fail-closed): refId non-KHS, atau refId yang tidak merujuk
+   * Gagal-dituju (fail-closed): refId non-KHS/SKPI, atau refId yang tidak merujuk
    * mahasiswa valid, dianggap di luar lingkup. Admin/super_admin lolos tanpa
    * query (via `getUserAccessibleProdiIds` → null = global). `uuid` yang tidak
    * ditemukan TIDAK ikut dicek (agar kasus tak-dikenal tetap jatuh ke 400/failed
@@ -386,9 +484,9 @@ export class DocumentSignatureService {
     const rows = await DocumentSignatureService.getManyByUuids(uuids);
     const mhsIds: number[] = [];
     for (const r of rows) {
-      const m = /^khs:(\d+):/.exec(r.refId);
+      const m = /^khs:(\d+):/.exec(r.refId) ?? /^skpi:(\d+)$/.exec(r.refId);
       if (!m) {
-        throw new Error('Akses ditolak. Hanya dokumen KHS yang dapat dicabut pada jalur ini.');
+        throw new Error('Akses ditolak. Hanya dokumen KHS/SKPI yang dapat dicabut pada jalur ini.');
       }
       mhsIds.push(Number(m[1]));
     }
