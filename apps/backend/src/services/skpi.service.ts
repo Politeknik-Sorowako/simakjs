@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, like, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 import { kategoriKegiatanSkpi, kegiatanMahasiswaSkpi, lampiranKegiatanSkpi, mahasiswa } from '../models/schema';
 import { db } from '../utils/db';
 import {
@@ -211,19 +211,21 @@ export class SkpiService {
     if (params.kategoriId) conditions.push(eq(kegiatanMahasiswaSkpi.kategoriKegiatanId, params.kategoriId));
     if (params.search) {
       const likeSearch = `%${params.search}%`;
-      // Pencarian juga mencocokkan NIM/nama mahasiswa (dua langkah tanpa join
-      // relasi): id kandidat dibatasi agar IN-clause tetap terkendali.
-      const matchingMahasiswa = await db
-        .select({ id: mahasiswa.id })
-        .from(mahasiswa)
-        .where(or(like(mahasiswa.nama, likeSearch), like(mahasiswa.nim, likeSearch)))
-        .limit(200);
-      const mhsIds = matchingMahasiswa.map((m) => m.id);
+      // Pencarian juga mencocokkan NIM/nama mahasiswa via subquery (pola yang
+      // sama dengan filter prodi/dosen di atas) — tanpa batas IN-clause yang
+      // bisa memotong hasil pada dataset besar. `ilike` agar tidak
+      // case-sensitive (konsisten dengan MahasiswaService).
       conditions.push(
         or(
-          like(kegiatanMahasiswaSkpi.namaKegiatan, likeSearch),
-          like(kegiatanMahasiswaSkpi.penyelenggara, likeSearch),
-          mhsIds.length > 0 ? inArray(kegiatanMahasiswaSkpi.mahasiswaId, mhsIds) : undefined,
+          ilike(kegiatanMahasiswaSkpi.namaKegiatan, likeSearch),
+          ilike(kegiatanMahasiswaSkpi.penyelenggara, likeSearch),
+          inArray(
+            kegiatanMahasiswaSkpi.mahasiswaId,
+            db
+              .select({ id: mahasiswa.id })
+              .from(mahasiswa)
+              .where(or(ilike(mahasiswa.nama, likeSearch), ilike(mahasiswa.nim, likeSearch))),
+          ),
         )!,
       );
     }

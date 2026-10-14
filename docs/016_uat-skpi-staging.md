@@ -121,7 +121,7 @@ Promosi `development -> main` **hanya** setelah:
    ./scripts/rollback.sh backup-YYYYMMDD-HHMMSS      # restore ke backup terpilih
    ```
 
-3. **Kembalikan kode** bila bug aplikasi (bukan data): PR revert commit terkait ke `main` (ikuti proteksi cabang).
+3. **Kembalikan kode** bila bug aplikasi (bukan data) — tetap ikuti alur staging-first (AGENTS.md §1): buat **PR revert/hotfix ke `development`** (branch baru, bukan push langsung), verifikasi di staging, lalu promosikan `development -> main` via PR terpisah. Jangan push/revert langsung ke `main`.
 4. **Catatan penting**:
    - Rollback DB = **restore backup**, bukan revert migrasi (migrasi SKPI tidak punya down-script; tabel baru bersifat inkremental dan aman ditinggalkan).
    - Setelah restore, restart backend agar koneksi DB bersih: `docker compose restart backend` (atau sesuai compose file env).
