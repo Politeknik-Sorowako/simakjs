@@ -111,9 +111,29 @@ export default function Skpi() {
       .map((k: SkpiKategori) => ({ value: k.id, label: k.nama })),
   ];
 
+  // Opsi kategori pada form rekaman: hanya kategori aktif, tetapi tetap
+  // sertakan kategori rekaman yang sedang diedit meski sudah dinonaktifkan
+  // agar nilainya tidak tampil kosong dan diam-diam tak bisa diubah.
+  const formKategoriOptions = () => {
+    const all = kategoriList()?.data ?? [];
+    const options = all
+      .filter((k: SkpiKategori) => k.isAktif)
+      .map((k: SkpiKategori) => ({ value: k.id, label: `${k.nama} (${k.poinDefault} poin)` }));
+    const currentId = kategoriId();
+    if (currentId && !options.some((o) => o.value === currentId)) {
+      // Staf memuat semua kategori; mahasiswa hanya aktif — untuk mahasiswa,
+      // nama diambil dari rekaman yang sedang diedit.
+      const fromList = all.find((k: SkpiKategori) => k.id === currentId);
+      const nama = fromList?.nama ?? editingKategoriNama();
+      if (nama) options.push({ value: currentId, label: `${nama} (Nonaktif)` });
+    }
+    return options;
+  };
+
   // ── Form tambah / edit ─────────────────────────────────────────────────────
   const [showModal, setShowModal] = createSignal(false);
   const [editingId, setEditingId] = createSignal<number | null>(null);
+  const [editingKategoriNama, setEditingKategoriNama] = createSignal<string | null>(null);
   const [kategoriId, setKategoriId] = createSignal(0);
   const [namaKegiatan, setNamaKegiatan] = createSignal('');
   const [penyelenggara, setPenyelenggara] = createSignal('');
@@ -129,14 +149,12 @@ export default function Skpi() {
   // Pencarian di-debounce lalu memuat opsi via `mahasiswaController` (pola
   // TabPembayaran). Backend tetap menegakkan prodi-scope saat create.
   const [formMahasiswaId, setFormMahasiswaId] = createSignal<number | null>(null);
-  const [mhsSearch, setMhsSearch] = createSignal('');
   const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
   const [mhsSearching, setMhsSearching] = createSignal(false);
   let mhsTimer: ReturnType<typeof setTimeout> | undefined;
   onCleanup(() => clearTimeout(mhsTimer));
 
   const searchMahasiswa = (q: string) => {
-    setMhsSearch(q);
     clearTimeout(mhsTimer);
     setMhsSearching(true);
     mhsTimer = setTimeout(async () => {
@@ -158,6 +176,7 @@ export default function Skpi() {
 
   const resetForm = () => {
     setKategoriId(kategoriList()?.data?.filter((k: SkpiKategori) => k.isAktif)?.[0]?.id ?? 0);
+    setEditingKategoriNama(null);
     setNamaKegiatan('');
     setPenyelenggara('');
     setTanggalMulai(getTodayString());
@@ -167,7 +186,6 @@ export default function Skpi() {
     setNomorSertifikat('');
     setErrorMsg('');
     setFormMahasiswaId(null);
-    setMhsSearch('');
     setMhsOptions([]);
   };
 
@@ -180,6 +198,7 @@ export default function Skpi() {
   const openEditModal = (row: SkpiKegiatan) => {
     setEditingId(row.id);
     setKategoriId(row.kategoriKegiatanId);
+    setEditingKategoriNama(row.kategori?.nama ?? null);
     setNamaKegiatan(row.namaKegiatan);
     setPenyelenggara(row.penyelenggara ?? '');
     setTanggalMulai(row.tanggalMulai);
@@ -394,6 +413,12 @@ export default function Skpi() {
         row.isAktif ? `Kategori "${row.nama}" dinonaktifkan` : `Kategori "${row.nama}" diaktifkan`,
         'success',
       );
+      // Kategori yang baru dinonaktifkan hilang dari opsi filter; reset agar
+      // select filter tidak kehilangan nilai tanpa terlihat.
+      if (row.isAktif && kategoriFilter() === row.id) {
+        setKategoriFilter(0);
+        pagination.resetPage();
+      }
       await refetchKategori();
     } catch (err: unknown) {
       toast.showToast(err instanceof Error ? err.message : 'Gagal mengubah status kategori.', 'error');
@@ -405,6 +430,10 @@ export default function Skpi() {
     try {
       await skpiController.deleteKategori(row.id);
       toast.showToast('Kategori kegiatan dihapus', 'success');
+      if (kategoriFilter() === row.id) {
+        setKategoriFilter(0);
+        pagination.resetPage();
+      }
       await refetchKategori();
     } catch (err: unknown) {
       toast.showToast(err instanceof Error ? err.message : 'Gagal menghapus kategori.', 'error');
@@ -721,9 +750,7 @@ export default function Skpi() {
           <Input
             label="Kategori Kegiatan"
             isSelect
-            selectOptions={(kategoriList()?.data ?? [])
-              .filter((k: SkpiKategori) => k.isAktif)
-              .map((k: SkpiKategori) => ({ value: k.id, label: `${k.nama} (${k.poinDefault} poin)` }))}
+            selectOptions={formKategoriOptions()}
             value={kategoriId()}
             onChange={(e) => setKategoriId(Number(e.currentTarget.value))}
             required
