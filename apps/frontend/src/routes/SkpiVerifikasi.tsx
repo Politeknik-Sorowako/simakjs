@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
+import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
@@ -33,7 +34,11 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 ];
 
 export default function SkpiVerifikasi() {
+  const auth = useAuth();
   const toast = useToast();
+  // Koreksi pasca-verifikasi (Batalkan & Edit Hasil) + cetak: staff-verifier
+  // saja; dosen PA tetap hanya verifikasi (pola backend).
+  const isStaffVerifier = () => auth.hasRole(['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan']);
 
   const pagination = usePagination(10);
   const [statusFilter, setStatusFilter] = createSignal('pending');
@@ -179,6 +184,63 @@ export default function SkpiVerifikasi() {
     const sizes = ['B', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${(bytes / k ** i).toFixed(1)} ${sizes[i]}`;
+  };
+
+  // ── Koreksi pasca-verifikasi (staff-verifier) ─────────────────────────────
+  const [unverifyTarget, setUnverifyTarget] = createSignal<SkpiKegiatan | null>(null);
+  const [unverifyBusy, setUnverifyBusy] = createSignal(false);
+
+  const handleUnverify = async () => {
+    const row = unverifyTarget();
+    if (!row) return;
+    setUnverifyBusy(true);
+    try {
+      await skpiController.unverify(row.id);
+      toast.showToast('Hasil verifikasi dibatalkan — rekaman kembali menunggu verifikasi', 'success');
+      setUnverifyTarget(null);
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal membatalkan hasil verifikasi.', 'error');
+    } finally {
+      setUnverifyBusy(false);
+    }
+  };
+
+  const [editHasilTarget, setEditHasilTarget] = createSignal<SkpiKegiatan | null>(null);
+  const [editPoin, setEditPoin] = createSignal(0);
+  const [editCatatan, setEditCatatan] = createSignal('');
+  const [editHasilBusy, setEditHasilBusy] = createSignal(false);
+  const [editHasilError, setEditHasilError] = createSignal('');
+
+  const openEditHasil = (row: SkpiKegiatan) => {
+    setEditHasilTarget(row);
+    setEditPoin(row.poin);
+    setEditCatatan(row.catatanVerifikator ?? '');
+    setEditHasilError('');
+  };
+
+  const handleEditHasilSave = async (e: Event) => {
+    e.preventDefault();
+    const row = editHasilTarget();
+    if (!row) return;
+    if (editPoin() < 0) {
+      setEditHasilError('Poin tidak boleh negatif.');
+      return;
+    }
+    setEditHasilBusy(true);
+    setEditHasilError('');
+    try {
+      // `catatan` selalu dikirim (string kosong → null di backend) agar
+      // pengosongan catatan berlaku, bukan diabaikan.
+      await skpiController.editHasilVerifikasi(row.id, { poin: editPoin(), catatan: editCatatan().trim() });
+      toast.showToast('Hasil verifikasi diperbarui', 'success');
+      setEditHasilTarget(null);
+      refetch();
+    } catch (err: unknown) {
+      setEditHasilError(err instanceof Error ? err.message : 'Gagal mengedit hasil verifikasi.');
+    } finally {
+      setEditHasilBusy(false);
+    }
   };
 
   return (
@@ -354,6 +416,27 @@ export default function SkpiVerifikasi() {
                               </Button>
                               <Button variant="danger" size="sm" onClick={() => openAction(row, 'reject')}>
                                 Tolak
+                              </Button>
+                            </Show>
+                            <Show when={isStaffVerifier() && row.status === 'diverifikasi'}>
+                              <Button variant="secondary" size="sm" onClick={() => openEditHasil(row)}>
+                                Edit Hasil
+                              </Button>
+                            </Show>
+                            <Show
+                              when={isStaffVerifier() && (row.status === 'diverifikasi' || row.status === 'ditolak')}
+                            >
+                              <Button variant="secondary" size="sm" onClick={() => setUnverifyTarget(row)}>
+                                Batalkan
+                              </Button>
+                            </Show>
+                            <Show when={isStaffVerifier()}>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => window.open(`/skpi/cetak/${row.mahasiswaId}`, '_blank')}
+                              >
+                                Cetak
                               </Button>
                             </Show>
                           </div>
@@ -537,6 +620,82 @@ export default function SkpiVerifikasi() {
             </Button>
             <Button type="submit" variant={actionType() === 'approve' ? 'success' : 'danger'} disabled={isSubmitting()}>
               {isSubmitting() ? 'Memproses...' : actionType() === 'approve' ? 'Setujui Rekaman' : 'Tolak Rekaman'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal konfirmasi batalkan hasil verifikasi */}
+      <Modal show={unverifyTarget() !== null} onClose={() => setUnverifyTarget(null)} title="Batalkan Hasil Verifikasi">
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-secondary-600 dark:text-secondary-300">
+            Rekaman akan kembali berstatus <b>Menunggu Verifikasi</b>; catatan &amp; metadata verifikator dihapus.
+            Dokumen SKPI yang sudah ditandatangani akan diganti saat penerbitan ulang.
+            <br />
+            <b>{unverifyTarget()?.namaKegiatan}</b> — {unverifyTarget()?.mahasiswa?.nama} (
+            {unverifyTarget()?.mahasiswa?.nim})
+          </p>
+          <div class="flex justify-end gap-3 border-t pt-4">
+            <Button variant="secondary" onClick={() => setUnverifyTarget(null)} disabled={unverifyBusy()}>
+              Batal
+            </Button>
+            <Button variant="danger" onClick={handleUnverify} disabled={unverifyBusy()}>
+              {unverifyBusy() ? 'Memproses...' : 'Ya, Batalkan Verifikasi'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal edit hasil verifikasi (poin & catatan) */}
+      <Modal show={editHasilTarget() !== null} onClose={() => setEditHasilTarget(null)} title="Edit Hasil Verifikasi">
+        <form onSubmit={handleEditHasilSave} class="flex flex-col gap-4">
+          <p class="text-sm text-secondary-600 dark:text-secondary-300">
+            <b>{editHasilTarget()?.namaKegiatan}</b> — {editHasilTarget()?.mahasiswa?.nama} (
+            {editHasilTarget()?.mahasiswa?.nim})
+            <br />
+            Status tetap <b>Terverifikasi</b>; perubahan poin dapat memicu penerbitan ulang tanda tangan.
+          </p>
+
+          <Input
+            label="Poin"
+            type="number"
+            min={0}
+            value={editPoin()}
+            onInput={(e) => setEditPoin(Math.max(0, Number(e.currentTarget.value) || 0))}
+          />
+
+          <div class="flex flex-col gap-1">
+            <label class="text-caption font-semibold uppercase tracking-wider text-secondary-600 dark:text-secondary-400">
+              Catatan Verifikator (opsional)
+            </label>
+            <textarea
+              rows="3"
+              placeholder="Kosongkan bila tidak ada catatan..."
+              value={editCatatan()}
+              onInput={(e) => setEditCatatan(e.currentTarget.value)}
+              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+            />
+          </div>
+
+          <Show when={editHasilError()}>
+            {(err) => (
+              <div class="p-3 bg-rose-50 text-rose-600 rounded-xl text-xs font-semibold border border-rose-100 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                {err()}
+              </div>
+            )}
+          </Show>
+
+          <div class="flex justify-end gap-3 border-t pt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditHasilTarget(null)}
+              disabled={editHasilBusy()}
+            >
+              Batal
+            </Button>
+            <Button type="submit" variant="primary" disabled={editHasilBusy()}>
+              {editHasilBusy() ? 'Menyimpan...' : 'Simpan Perubahan'}
             </Button>
           </div>
         </form>

@@ -158,6 +158,30 @@ export const verifyKegiatanSkpiSchema = {
   }),
 };
 
+export const unverifyKegiatanSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Batalkan Hasil Verifikasi Rekaman SKPI',
+    description:
+      'Koreksi pasca-verifikasi: diverifikasi/ditolak → pending (metadata verifikator dihapus). Staf Admin/Prodi/Kaprodi/Kemahasiswaan dalam scope.',
+  },
+  params: t.Object({ id: t.Numeric() }),
+};
+
+export const editHasilVerifikasiSkpiSchema = {
+  detail: {
+    tags: skpiTags,
+    summary: 'Edit Hasil Verifikasi Rekaman SKPI',
+    description:
+      'Mengubah poin & catatan hasil verifikasi rekaman TERVERIFIKASI tanpa mengubah status. Staf Admin/Prodi/Kaprodi/Kemahasiswaan dalam scope.',
+  },
+  params: t.Object({ id: t.Numeric() }),
+  body: t.Object({
+    poin: t.Optional(t.Numeric({ minimum: 0 })),
+    catatan: t.Optional(t.String({ maxLength: 1000 })),
+  }),
+};
+
 // ─── Lampiran Sertifikat ─────────────────────────────────────────────────────
 
 export const listLampiranSkpiSchema = {
@@ -200,7 +224,7 @@ export const signDokumenSkpiSchema = {
     tags: skpiTags,
     summary: 'Terbitkan Tanda Tangan SKPI (QR Signed-Hash)',
     description:
-      'Menandatangani SKPI idempoten (pola TTE KHS). Otorisasi: mahasiswa pemilik atau staf admin/prodi/kaprodi dalam scope. Ditolak bila syarat §4.4 belum terpenuhi.',
+      'Menandatangani SKPI idempoten (pola TTE KHS). Otorisasi: khusus staf Admin/Prodi/Kaprodi/Kemahasiswaan dalam scope (mahasiswa TIDAK — termasuk pemilik; keputusan produk Tahap berikut). Ditolak bila syarat §4.4 belum terpenuhi.',
   },
   params: t.Object({ mhsId: t.Numeric({ minimum: 1 }) }),
 };

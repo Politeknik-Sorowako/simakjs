@@ -446,6 +446,54 @@ export class SkpiService {
     return updated;
   }
 
+  /**
+   * Membatalkan hasil verifikasi (koreksi pasca-verifikasi, keputusan produk
+   * Tahap berikut): diverifikasi/ditolak → pending. Metadata verifikator
+   * dihapus; poin dipertahankan (bisa disesuaikan saat verifikasi ulang).
+   * Otorisasi (staff-verifier + scope) divalidasi di controller.
+   */
+  static async unverify(id: number) {
+    const kegiatan = await this.getById(id);
+    if (!kegiatan) throw new Error('Rekaman kegiatan tidak ditemukan.');
+    if (kegiatan.status === 'pending') {
+      throw new Error('Rekaman sudah berstatus pending; tidak ada hasil verifikasi untuk dibatalkan.');
+    }
+    const [updated] = await db
+      .update(kegiatanMahasiswaSkpi)
+      .set({
+        status: 'pending',
+        verifiedById: null,
+        verifiedAt: null,
+        catatanVerifikator: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(kegiatanMahasiswaSkpi.id, id))
+      .returning();
+    return updated;
+  }
+
+  /**
+   * Mengedit hasil verifikasi rekaman yang sudah `diverifikasi` (poin &
+   * catatan) tanpa mengubah status maupun metadata verifikator.
+   */
+  static async updateHasilVerifikasi(id: number, data: { poin?: number; catatan?: string }) {
+    const kegiatan = await this.getById(id);
+    if (!kegiatan) throw new Error('Rekaman kegiatan tidak ditemukan.');
+    if (kegiatan.status !== 'diverifikasi') {
+      throw new Error('Hanya rekaman berstatus TERVERIFIKASI yang hasil verifikasinya dapat diedit.');
+    }
+    const [updated] = await db
+      .update(kegiatanMahasiswaSkpi)
+      .set({
+        poin: data.poin ?? kegiatan.poin,
+        catatanVerifikator: data.catatan?.trim() || null,
+        updatedAt: new Date(),
+      })
+      .where(eq(kegiatanMahasiswaSkpi.id, id))
+      .returning();
+    return updated;
+  }
+
   // ─── Lampiran Sertifikat ───────────────────────────────────────────────────
 
   static async listLampiran(kegiatanId: number) {

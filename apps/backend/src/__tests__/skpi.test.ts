@@ -434,4 +434,103 @@ describe('Modul SKPI — Rekaman Kegiatan Mahasiswa', () => {
     expect(adminAny.status).toBe(200);
     expect((adminAny.data.data as unknown[]).length).toBe(1);
   });
+
+  /** Buat rekaman pending + approve, kembalikan id. */
+  async function createAndVerify(namaKegiatan: string): Promise<number> {
+    const created = await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan,
+      tanggalMulai: '2026-03-01',
+    });
+    const id = created.data.id as number;
+    const verified = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/verifikasi`, { action: 'approve', poin: 10 });
+    expect(verified.status).toBe(200);
+    return id;
+  }
+
+  it('Unverify: admin membatalkan hasil verifikasi (diverifikasi & ditolak → pending, metadata nol)', async () => {
+    const id = await createAndVerify('Akan Dibatalkan');
+    const unverified = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/unverify`);
+    expect(unverified.status).toBe(200);
+    expect(unverified.data.status).toBe('pending');
+    expect(unverified.data.verifiedById).toBeNull();
+    expect(unverified.data.verifiedAt).toBeNull();
+    expect(unverified.data.catatanVerifikator).toBeNull();
+
+    // Rekaman pending bisa diverifikasi ulang.
+    const reVerify = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/verifikasi`, { action: 'approve' });
+    expect(reVerify.status).toBe(200);
+
+    // Unverify lagi (→ pending) lalu reject dari pending; ditolak lalu
+    // dibatalkan juga bisa.
+    const unverifyAgain = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/unverify`);
+    expect(unverifyAgain.status).toBe(200);
+    const reject = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/verifikasi`, {
+      action: 'reject',
+      catatan: 'salah',
+    });
+    expect(reject.status).toBe(200);
+    const unverifyRejected = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/unverify`);
+    expect(unverifyRejected.status).toBe(200);
+    expect(unverifyRejected.data.status).toBe('pending');
+  });
+
+  it('Unverify: pending → 400; bukan staff-verifier → 403; staf di luar lingkup → 403', async () => {
+    const created = await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Masih Pending',
+      tanggalMulai: '2026-03-01',
+    });
+    const pendingId = created.data.id as number;
+
+    const onPending = await api(adminToken, 'PUT', `/skpi/kegiatan/${pendingId}/unverify`);
+    expect(onPending.status).toBe(400);
+
+    const id = await createAndVerify('Untuk Uji Otorisasi');
+    const byPa = await api(paToken, 'PUT', `/skpi/kegiatan/${id}/unverify`);
+    expect(byPa.status).toBe(403);
+    const byMhs = await api(mhsToken, 'PUT', `/skpi/kegiatan/${id}/unverify`);
+    expect(byMhs.status).toBe(403);
+
+    // Prodi di-scope prodiId (in-scope) → boleh; kemahasiswaan di otherProdiId → 403.
+    const byProdi = await api(prodiToken, 'PUT', `/skpi/kegiatan/${id}/unverify`);
+    expect(byProdi.status).toBe(200);
+
+    const id2 = await createAndVerify('Untuk Uji Scope');
+    const kemaOut = await api(kemaToken, 'PUT', `/skpi/kegiatan/${id2}/unverify`);
+    expect(kemaOut.status).toBe(403);
+  });
+
+  it('Edit hasil verifikasi: admin mengubah poin & catatan tanpa mengubah status; pending → 400; non-staf → 403', async () => {
+    const id = await createAndVerify('Hasil Dievaluasi Ulang');
+
+    const edited = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/hasil-verifikasi`, {
+      poin: 25,
+      catatan: 'Poin disesuaikan hasil peninjauan.',
+    });
+    expect(edited.status).toBe(200);
+    expect(edited.data.status).toBe('diverifikasi');
+    expect(edited.data.poin).toBe(25);
+    expect(edited.data.catatanVerifikator).toBe('Poin disesuaikan hasil peninjauan.');
+
+    // Kosongkan catatan → null.
+    const cleared = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/hasil-verifikasi`, { catatan: '   ' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.data.catatanVerifikator).toBeNull();
+
+    const created = await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Pending Tidak Boleh',
+      tanggalMulai: '2026-03-01',
+    });
+    const onPending = await api(adminToken, 'PUT', `/skpi/kegiatan/${created.data.id as number}/hasil-verifikasi`, {
+      poin: 5,
+    });
+    expect(onPending.status).toBe(400);
+
+    const byMhs = await api(mhsToken, 'PUT', `/skpi/kegiatan/${id}/hasil-verifikasi`, { poin: 1 });
+    expect(byMhs.status).toBe(403);
+    const byPa = await api(paToken, 'PUT', `/skpi/kegiatan/${id}/hasil-verifikasi`, { poin: 1 });
+    expect(byPa.status).toBe(403);
+  });
 });

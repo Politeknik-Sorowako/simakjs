@@ -17,12 +17,16 @@ import {
   cpmk,
   cpmkCpl,
   documentRequirements,
+  documentSignatures,
   dosen,
   dosenPengajarKelas,
+  kategoriKegiatanSkpi,
+  kegiatanMahasiswaSkpi,
   kelasKuliah,
   kompensasiBayar,
   komponenNilai,
   krs,
+  lampiranKegiatanSkpi,
   mahasiswa,
   mataKuliah,
   mataKuliahBahanKajian,
@@ -97,6 +101,12 @@ export const e2eRoutes = new Elysia({ prefix: '/e2e' }).use(authMiddleware).post
       await db.delete(dosenPengajarKelas);
       await db.delete(kelasKuliah);
       await db.delete(mataKuliah);
+      // SKPI + tanda tangan (FK ke mahasiswa; SKPI belum dicatat di reset
+      // awal sehingga pernah memicu FK violation saat reset pasca-data SKPI).
+      await db.delete(lampiranKegiatanSkpi);
+      await db.delete(kegiatanMahasiswaSkpi);
+      await db.delete(kategoriKegiatanSkpi);
+      await db.delete(documentSignatures);
       await db.delete(mahasiswa);
       await db.delete(dosen);
       await db.delete(periodeAkademik);

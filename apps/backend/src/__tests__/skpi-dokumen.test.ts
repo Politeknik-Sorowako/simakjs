@@ -193,10 +193,14 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
     expect(prodiId).not.toBe(otherProdiId);
   });
 
-  it('mahasiswa menandatangani SKPI-nya → QR + verifyUrl, verifikasi publik VALID dengan identitas ter-mask', async () => {
+  it('staf admin menandatangani SKPI → QR + verifyUrl, verifikasi publik VALID ter-mask; mahasiswa ditolak 403', async () => {
     await addVerifiedKegiatan('Pelatihan Jaringan');
 
-    const sign = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    // Keputusan produk: mahasiswa TIDAK menerbitkan sendiri — termasuk pemilik.
+    const byMhs = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    expect(byMhs.status).toBe(403);
+
+    const sign = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(sign.status).toBe(200);
     const verifyUuid = sign.data.verifyUuid as string;
     expect(verifyUuid).toBeTruthy();
@@ -212,13 +216,13 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
     expect(v.nimMask).toContain('***');
   });
 
-  it('idempoten lintas pemanggil: mahasiswa lalu admin menghasilkan verifyUuid & docHash stabil', async () => {
+  it('idempoten lintas pemanggil staf: admin lalu prodi menghasilkan verifyUuid & docHash stabil', async () => {
     await addVerifiedKegiatan('Kegiatan Idempoten');
 
-    const sign1 = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    const sign1 = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(sign1.status).toBe(200);
 
-    const sign2 = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    const sign2 = await api(prodiToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(sign2.status).toBe(200);
     expect(sign2.data.verifyUuid).toBe(sign1.data.verifyUuid);
     expect(sign2.data.docHash).toBe(sign1.data.docHash);
@@ -226,12 +230,12 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
 
   it('re-sign setelah kegiatan bertambah → docHash baru & QR lama REVOKED (410)', async () => {
     await addVerifiedKegiatan('Kegiatan Pertama');
-    const sign1 = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    const sign1 = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(sign1.status).toBe(200);
     const uuid1 = sign1.data.verifyUuid as string;
 
     await addVerifiedKegiatan('Kegiatan Kedua', '2026-03-05');
-    const sign2 = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    const sign2 = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(sign2.status).toBe(200);
     expect(sign2.data.verifyUuid).not.toBe(uuid1);
     expect(sign2.data.docHash).not.toBe(sign1.data.docHash);
@@ -251,21 +255,26 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
     expect(syarat.minKegiatan).toBe(2);
     expect(syarat.terpenuhi).toBe(false);
 
-    const sign = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    const sign = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(sign.status).toBe(400);
     expect(await DocumentSignatureService.getByRef('SKPI', `skpi:${mhsId}`)).toBeNull();
   });
 
-  it('kemahasiswaan & dosen PA tidak berwenang menerbitkan (403)', async () => {
+  it('mahasiswa & dosen PA tidak berwenang menerbitkan (403); kemahasiswaan in-scope berwenang (200)', async () => {
     await addVerifiedKegiatan('Kegiatan Otorisasi');
 
-    const byKema = await api(kemaToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
-    expect(byKema.status).toBe(403);
+    const byMhs = await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    expect(byMhs.status).toBe(403);
 
     const byPa = await api(paToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(byPa.status).toBe(403);
 
-    expect(await DocumentSignatureService.getByRef('SKPI', `skpi:${mhsId}`)).toBeNull();
+    // Kemahasiswaan di-scope ke prodi mahasiswa → berwenang menerbitkan.
+    const [kemaUser] = await db.select().from(users).where(eq(users.email, 'kema@test.com'));
+    await db.delete(userProdiScopes).where(eq(userProdiScopes.userId, kemaUser.id));
+    await db.insert(userProdiScopes).values({ userId: kemaUser.id, programStudiId: prodiId });
+    const byKema = await api(kemaToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    expect(byKema.status).toBe(200);
   });
 
   it('staf admin in-scope boleh menerbitkan; admin prodi lain ditolak 403', async () => {

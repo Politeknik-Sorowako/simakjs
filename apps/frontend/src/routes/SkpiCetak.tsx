@@ -68,9 +68,9 @@ export default function SkpiCetak() {
   /**
    * Halaman cetak HANYA MEMBACA baris tanda tangan — TIDAK PERNAH menerbitkan
    * sendiri saat dibuka. Penerbitan hanya lewat modal konfirmasi di halaman ini.
-   * Backend menegakkan otorisasi (mahasiswa own; staf admin/prodi/kaprodi scope).
+   * Keputusan produk: khusus staff-verifier (backend menegakkan scope).
    */
-  const canSign = () => auth.hasRole(['super_admin', 'admin', 'prodi', 'kaprodi', 'mahasiswa']);
+  const canSign = () => auth.hasRole(['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan']);
 
   const [showSignConfirm, setShowSignConfirm] = createSignal(false);
   const [signBusy, setSignBusy] = createSignal(false);
@@ -132,6 +132,11 @@ export default function SkpiCetak() {
           >
             Tandatangani & Terbitkan QR
           </button>
+        </Show>
+        <Show when={!doc()?.signature && !canSign()}>
+          <p class="self-center text-xs text-secondary-500">
+            Penandatanganan & penerbitan QR dilakukan oleh staf (Admin/Prodi/Kaprodi/Kemahasiswaan).
+          </p>
         </Show>
         <button
           type="button"

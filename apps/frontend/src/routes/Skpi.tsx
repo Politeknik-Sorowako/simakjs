@@ -742,6 +742,17 @@ export default function Skpi() {
                         </td>
                         <td class="p-3">
                           <div class="flex items-center justify-center gap-1.5">
+                            {/* Cetak SKPI per mahasiswa — staf verifier (backend
+                                mengizinkan cetak & penerbitan dalam scope). */}
+                            <Show when={isStaffInput()}>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => window.open(`/skpi/cetak/${row.mahasiswaId}`, '_blank')}
+                              >
+                                Cetak
+                              </Button>
+                            </Show>
                             <Show when={isEditable(row)}>
                               <Button variant="secondary" size="sm" onClick={() => openEditModal(row)}>
                                 Edit

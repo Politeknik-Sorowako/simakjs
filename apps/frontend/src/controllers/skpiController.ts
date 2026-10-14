@@ -216,6 +216,17 @@ export const skpiController = {
       body: JSON.stringify(payload),
     }),
 
+  unverify: (id: number) =>
+    fetchApi<SkpiKegiatan>(`/skpi/kegiatan/${id}/unverify`, {
+      method: 'PUT',
+    }),
+
+  editHasilVerifikasi: (id: number, payload: { poin?: number; catatan?: string }) =>
+    fetchApi<SkpiKegiatan>(`/skpi/kegiatan/${id}/hasil-verifikasi`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
   getDokumen: (mhsId: number) => fetchApi<SkpiDokumen>(`/skpi/dokumen/${mhsId}`),
 
   signDokumen: (mhsId: number) => fetchApi<SignSkpiResult>(`/skpi/dokumen/${mhsId}/sign`, { method: 'POST' }),

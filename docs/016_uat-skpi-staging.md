@@ -57,12 +57,18 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 - [ ] **403**: login Dosen non-PA → `PUT /skpi/kegiatan/:id/verifikasi` (via curl/Postman) → 403.
 - [ ] **403**: login M2 → akses `GET /skpi/dokumen/:mhsId` M1 → 403.
 - [ ] **403**: staf dengan prodi berbeda → filter `prodiId` di luar lingkup → 403.
+- [ ] **Edit Hasil** (staff-verifier): ubah poin rekaman terverifikasi → status tetap **Terverifikasi**, poin & catatan ter-update.
+- [ ] **Batalkan** (staff-verifier): rekaman terverifikasi → status **Menunggu Verifikasi**, metadata verifikator hilang; verifikasi ulang berhasil.
+- [ ] **403**: Dosen PA / mahasiswa → `PUT .../unverify` atau `.../hasil-verifikasi` → 403.
 
-### US-4 — Unduh/Cetak SKPI (Mahasiswa)
+### US-4 — Unduh/Cetak SKPI (Mahasiswa & Staf)
 
 - [ ] Login M1 → `/skpi` → tombol **Unduh/Cetak SKPI** aktif (syarat terpenuhi) → buka di tab baru.
 - [ ] Dokumen memuat: kop, identitas, **tabel kegiatan termasuk kolom No. Sertifikat**, rekap poin, pernyataan, blok TTD + QR, footer `verifyUrl`/`UUID`/`Hash`.
 - [ ] Print dialog terbuka otomatis (auto-print) dan via tombol Cetak.
+- [ ] **Simpan sebagai PDF → tabel riwayat kegiatan + Total Poin tampil** (regresi: allowlist print `#print-area-skpi`).
+- [ ] Login admin/prodi → `/skpi` (daftar staf) → tombol **Cetak** per baris → halaman cetak mahasiswa terkait terbuka.
+- [ ] Login admin → `/skpi/verifikasi` → tombol **Cetak** per baris berfungsi.
 
 ### US-5 — Kelola kategori (admin/kemahasiswaan)
 
@@ -72,10 +78,11 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 
 ### US-6 — Tanda tangan + verifikasi publik
 
-- [ ] M1 (atau admin) → cetak SKPI → modal konfirmasi → tandatangani → QR tampil.
+- [ ] **Otorisasi**: login M1 (pemilik) → cetak SKPI → **TIDAK ada tombol** "Tandatangani & Terbitkan QR" (hanya info bahwa staf yang menandatangani); `POST /skpi/dokumen/:mhsId/sign` sebagai M1 via curl → 403.
+- [ ] Login admin/prodi/kemahasiswaan (in-scope) → cetak SKPI → modal konfirmasi → **Tandatangani & Terbitkan QR** → QR tampil (signer = Kaprodi hasil `resolveSigner`).
 - [ ] Scan/buka QR → halaman verifikasi publik **VALID** (tanpa login); baris **Periode** tidak tampil untuk SKPI.
 - [ ] Sign ulang tanpa perubahan data → `verifyUuid` **stabil** (idempoten).
-- [ ] Setelah ada perubahan kegiatan terverifikasi → sign ulang → QR lama menampilkan **DICABUT/REVOKED**, QR baru **VALID**.
+- [ ] Setelah ada perubahan kegiatan terverifikasi / Edit Hasil poin → sign ulang → QR lama menampilkan **DICABUT/REVOKED**, QR baru **VALID**.
 
 ### US-7 — Ringkasan poin
 
