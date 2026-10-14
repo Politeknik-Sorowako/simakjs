@@ -222,6 +222,7 @@ export class DocumentSignatureService {
         tanggalMulai: k.tanggalMulai,
         tanggalSelesai: k.tanggalSelesai ?? null,
         penyelenggara: k.penyelenggara ?? null,
+        nomorSertifikat: k.nomorSertifikat ?? null,
         poin: k.poin ?? 0,
       })),
       signer: { nama: signer.nama, jabatan: signer.jabatan },

@@ -3,8 +3,8 @@
 - **Dokumen**: `docs/015_plan_skpi-pencapaian-kegiatan-20261014.md`
 - **Tanggal**: 14 Oktober 2026
 - **Penulis**: Senior System Analyst
-- **Status**: Draft — Menunggu Review
-- **Target Implementasi**: Feature branch → PR ke `development` (staging-first)
+- **Status**: **Selesai Tahap 1–3** — PR #534 (Tahap 1 backend fondasi), #536 (Tahap 2 dokumen + TTE), #537 (Tahap 3 frontend), #538 (input staf + kelola kategori), #539 (perbaikan UX panel kategori), dan PR follow-up (kolom sertifikat di cetak, filter mahasiswa/prodi, pencarian NIM/nama). Sisa backlog ke tahap berikut: US-8 (ekspor rekap PDF/Excel), mekanisme unverify admin-only, konfigurasi kop/nomor via `system_settings`, serta promosi produksi `development -> main` (lihat `docs/016_uat-skpi-staging.md` untuk gate UAT & runbook).
+- **Target Implementasi**: Feature branch → PR ke `development` (staging-first) — selesai
 
 ---
 

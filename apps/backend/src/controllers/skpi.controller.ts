@@ -204,6 +204,19 @@ export class SkpiController {
       scope = { ...scope, mahasiswaId: query.mahasiswaId, dosenPaId: undefined };
     }
 
+    // Filter prodi: staf wajib dalam lingkup prodi terkait; untuk peran lain
+    // filter ini hanya mempersempit data yang memang sudah terbatas (own/bimbingan).
+    if (query?.prodiId) {
+      if (SkpiController.isStaffVerifier(user)) {
+        const allowed = await ProdiScopeService.canAccessProdi(user, query.prodiId);
+        if (!allowed) {
+          set.status = 403;
+          return { error: 'Prodi di luar lingkup akses Anda.' };
+        }
+      }
+      scope = { ...scope, prodiIds: [query.prodiId] };
+    }
+
     return await SkpiService.getAll({
       page: query?.page,
       limit: query?.limit,

@@ -1,11 +1,14 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
 import { useToast } from '../contexts/ToastContext';
+import { mahasiswaController } from '../controllers/mahasiswaController';
+import { prodiController } from '../controllers/prodiController';
 import { type SkpiKegiatan, type SkpiStatus, skpiController } from '../controllers/skpiController';
 import { usePagination } from '../hooks/usePagination';
 import { fmtTanggal } from '../utils/format';
@@ -35,8 +38,36 @@ export default function SkpiVerifikasi() {
   const pagination = usePagination(10);
   const [statusFilter, setStatusFilter] = createSignal('pending');
   const [kategoriFilter, setKategoriFilter] = createSignal(0);
+  const [prodiFilter, setProdiFilter] = createSignal(0);
+  const [mahasiswaFilter, setMahasiswaFilter] = createSignal<number | null>(null);
+  const [mhsOptions, setMhsOptions] = createSignal<SelectOption[]>([]);
+  const [mhsSearching, setMhsSearching] = createSignal(false);
+  let mhsTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(mhsTimer));
+
+  const searchMahasiswa = (q: string) => {
+    clearTimeout(mhsTimer);
+    setMhsSearching(true);
+    mhsTimer = setTimeout(async () => {
+      try {
+        const res = await mahasiswaController.getAll(q || undefined, 1, 25, undefined, { allStudents: true });
+        setMhsOptions(
+          res.data.map((m) => ({
+            value: m.id,
+            label: `${m.nim} — ${m.nama}${m.programStudi?.nama ? ` (${m.programStudi.nama})` : ''}`,
+          })),
+        );
+      } catch {
+        setMhsOptions([]);
+      } finally {
+        setMhsSearching(false);
+      }
+    }, 300);
+  };
 
   const [kategoriList] = createResource(() => skpiController.getKategori());
+  // Daftar prodi untuk filter; hanya ditampilkan bila >1 (staf satu prodi tidak terganggu).
+  const [prodiList] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
   const [list, { refetch }] = createResource(
     () => ({
@@ -44,6 +75,8 @@ export default function SkpiVerifikasi() {
       limit: pagination.limit(),
       status: statusFilter(),
       kategoriId: kategoriFilter(),
+      prodiId: prodiFilter(),
+      mahasiswaId: mahasiswaFilter(),
       search: pagination.search(),
     }),
     (p) =>
@@ -52,6 +85,8 @@ export default function SkpiVerifikasi() {
         limit: p.limit,
         status: p.status || undefined,
         kategoriId: p.kategoriId || undefined,
+        prodiId: p.prodiId || undefined,
+        mahasiswaId: p.mahasiswaId ?? undefined,
         search: p.search || undefined,
       }),
   );
@@ -163,7 +198,7 @@ export default function SkpiVerifikasi() {
               <span class="absolute left-3.5 top-2.5 text-secondary-400">🔍</span>
               <input
                 type="text"
-                placeholder="Cari nama kegiatan / penyelenggara..."
+                placeholder="Cari nama kegiatan / penyelenggara / NIM / nama mahasiswa..."
                 class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={pagination.search()}
                 onInput={(e) => {
@@ -192,6 +227,50 @@ export default function SkpiVerifikasi() {
             >
               <For each={kategoriOptions()}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
             </select>
+          </div>
+
+          {/* Filter per mahasiswa & prodi — backend memvalidasi lingkup per peran. */}
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+            <div class="sm:w-80">
+              <SearchableSelect
+                label="Mahasiswa"
+                placeholder="Ketik NIM / nama untuk mencari..."
+                options={mhsOptions()}
+                value={mahasiswaFilter()}
+                onSearch={searchMahasiswa}
+                isLoading={mhsSearching()}
+                onChange={(v) => {
+                  setMahasiswaFilter(Number(v));
+                  pagination.resetPage();
+                }}
+              />
+            </div>
+            <Show when={(prodiList()?.data?.length ?? 0) > 1}>
+              <select
+                value={prodiFilter()}
+                onChange={(e) => {
+                  setProdiFilter(Number(e.currentTarget.value));
+                  pagination.resetPage();
+                }}
+                class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-xs text-secondary-700 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200"
+              >
+                <option value={0}>Semua Prodi</option>
+                <For each={prodiList()?.data ?? []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+              </select>
+            </Show>
+            <Show when={mahasiswaFilter() || prodiFilter()}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setMahasiswaFilter(null);
+                  setProdiFilter(0);
+                  pagination.resetPage();
+                }}
+              >
+                Reset Filter
+              </Button>
+            </Show>
           </div>
 
           <div class="overflow-x-auto">

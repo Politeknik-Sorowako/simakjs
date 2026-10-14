@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, like, or } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or } from 'drizzle-orm';
 import { kategoriKegiatanSkpi, kegiatanMahasiswaSkpi, lampiranKegiatanSkpi, mahasiswa } from '../models/schema';
 import { db } from '../utils/db';
 import {
@@ -210,10 +210,22 @@ export class SkpiService {
     if (params.status) conditions.push(eq(kegiatanMahasiswaSkpi.status, params.status));
     if (params.kategoriId) conditions.push(eq(kegiatanMahasiswaSkpi.kategoriKegiatanId, params.kategoriId));
     if (params.search) {
+      const likeSearch = `%${params.search}%`;
+      // Pencarian juga mencocokkan NIM/nama mahasiswa via subquery (pola yang
+      // sama dengan filter prodi/dosen di atas) — tanpa batas IN-clause yang
+      // bisa memotong hasil pada dataset besar. `ilike` agar tidak
+      // case-sensitive (konsisten dengan MahasiswaService).
       conditions.push(
         or(
-          like(kegiatanMahasiswaSkpi.namaKegiatan, `%${params.search}%`),
-          like(kegiatanMahasiswaSkpi.penyelenggara, `%${params.search}%`),
+          ilike(kegiatanMahasiswaSkpi.namaKegiatan, likeSearch),
+          ilike(kegiatanMahasiswaSkpi.penyelenggara, likeSearch),
+          inArray(
+            kegiatanMahasiswaSkpi.mahasiswaId,
+            db
+              .select({ id: mahasiswa.id })
+              .from(mahasiswa)
+              .where(or(ilike(mahasiswa.nama, likeSearch), ilike(mahasiswa.nim, likeSearch))),
+          ),
         )!,
       );
     }
@@ -260,6 +272,7 @@ export class SkpiService {
         tanggalMulai: true,
         tanggalSelesai: true,
         lokasi: true,
+        nomorSertifikat: true,
         poin: true,
       },
       with: { kategori: { columns: { nama: true, jenis: true } } },

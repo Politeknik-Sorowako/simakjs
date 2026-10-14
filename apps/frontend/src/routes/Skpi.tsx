@@ -9,6 +9,7 @@ import { SearchableSelect, type SelectOption } from '../components/ui/Searchable
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { mahasiswaController } from '../controllers/mahasiswaController';
+import { prodiController } from '../controllers/prodiController';
 import {
   type SkpiKategori,
   type SkpiKategoriPayload,
@@ -79,12 +80,42 @@ export default function Skpi() {
   const pagination = usePagination(10);
   const [statusFilter, setStatusFilter] = createSignal('');
   const [kategoriFilter, setKategoriFilter] = createSignal(0);
+  // Filter mahasiswa & prodi khusus tampilan staf/dosen — signal terpisah dari
+  // picker form input agar tidak saling mengganggu.
+  const [filterMahasiswaId, setFilterMahasiswaId] = createSignal<number | null>(null);
+  const [filterProdiId, setFilterProdiId] = createSignal(0);
+  const [filterMhsOptions, setFilterMhsOptions] = createSignal<SelectOption[]>([]);
+  const [filterMhsSearching, setFilterMhsSearching] = createSignal(false);
+  let filterMhsTimer: ReturnType<typeof setTimeout> | undefined;
+  onCleanup(() => clearTimeout(filterMhsTimer));
+
+  const searchFilterMahasiswa = (q: string) => {
+    clearTimeout(filterMhsTimer);
+    setFilterMhsSearching(true);
+    filterMhsTimer = setTimeout(async () => {
+      try {
+        const res = await mahasiswaController.getAll(q || undefined, 1, 25, undefined, { allStudents: true });
+        setFilterMhsOptions(
+          res.data.map((m) => ({
+            value: m.id,
+            label: `${m.nim} — ${m.nama}${m.programStudi?.nama ? ` (${m.programStudi.nama})` : ''}`,
+          })),
+        );
+      } catch {
+        setFilterMhsOptions([]);
+      } finally {
+        setFilterMhsSearching(false);
+      }
+    }, 300);
+  };
 
   // Staf memuat semua kategori (termasuk non-aktif) untuk kelola; mahasiswa hanya aktif.
   const [kategoriList, { refetch: refetchKategori }] = createResource(
     () => (isStaffInput() ? 'all' : 'aktif'),
     (mode) => skpiController.getKategori(mode === 'all'),
   );
+  // Daftar prodi untuk filter; hanya ditampilkan bila >1 (staf satu prodi tidak terganggu).
+  const [prodiList] = createResource(() => prodiController.getAll(undefined, 1, 100));
 
   const [list, { refetch }] = createResource(
     () => ({
@@ -92,6 +123,8 @@ export default function Skpi() {
       limit: pagination.limit(),
       status: statusFilter(),
       kategoriId: kategoriFilter(),
+      prodiId: filterProdiId(),
+      mahasiswaId: filterMahasiswaId(),
       search: pagination.search(),
     }),
     (p) =>
@@ -100,6 +133,8 @@ export default function Skpi() {
         limit: p.limit,
         status: p.status || undefined,
         kategoriId: p.kategoriId || undefined,
+        prodiId: p.prodiId || undefined,
+        mahasiswaId: p.mahasiswaId ?? undefined,
         search: p.search || undefined,
       }),
   );
@@ -549,7 +584,7 @@ export default function Skpi() {
               <span class="absolute left-3.5 top-2.5 text-secondary-400">🔍</span>
               <input
                 type="text"
-                placeholder="Cari nama kegiatan / penyelenggara..."
+                placeholder="Cari nama kegiatan / penyelenggara / NIM / nama mahasiswa..."
                 class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={pagination.search()}
                 onInput={(e) => {
@@ -579,6 +614,53 @@ export default function Skpi() {
               <For each={kategoriOptions()}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
             </select>
           </div>
+
+          {/* Filter per mahasiswa & prodi — hanya tampilan staf/dosen; backend
+              memvalidasi lingkup per peran. */}
+          <Show when={!isMahasiswaView()}>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+              <div class="sm:w-80">
+                <SearchableSelect
+                  label="Mahasiswa"
+                  placeholder="Ketik NIM / nama untuk mencari..."
+                  options={filterMhsOptions()}
+                  value={filterMahasiswaId()}
+                  onSearch={searchFilterMahasiswa}
+                  isLoading={filterMhsSearching()}
+                  onChange={(v) => {
+                    setFilterMahasiswaId(Number(v));
+                    pagination.resetPage();
+                  }}
+                />
+              </div>
+              <Show when={(prodiList()?.data?.length ?? 0) > 1}>
+                <select
+                  value={filterProdiId()}
+                  onChange={(e) => {
+                    setFilterProdiId(Number(e.currentTarget.value));
+                    pagination.resetPage();
+                  }}
+                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-xs text-secondary-700 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200"
+                >
+                  <option value={0}>Semua Prodi</option>
+                  <For each={prodiList()?.data ?? []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+                </select>
+              </Show>
+              <Show when={filterMahasiswaId() || filterProdiId()}>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setFilterMahasiswaId(null);
+                    setFilterProdiId(0);
+                    pagination.resetPage();
+                  }}
+                >
+                  Reset Filter
+                </Button>
+              </Show>
+            </div>
+          </Show>
 
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">

@@ -381,4 +381,57 @@ describe('Modul SKPI — Rekaman Kegiatan Mahasiswa', () => {
     const second = await api(adminToken, 'PUT', `/skpi/kegiatan/${id}/verifikasi`, { action: 'reject', catatan: 'x' });
     expect(second.status).toBe(400);
   });
+
+  it('Search mencocokkan NIM/nama mahasiswa, bukan hanya nama kegiatan/penyelenggara', async () => {
+    await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Seminar Nasional XYZ',
+      tanggalMulai: '2026-03-01',
+    });
+    await api(mhs2Token, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Workshop Lain',
+      tanggalMulai: '2026-03-02',
+    });
+
+    // Cari pakai NIM mhs (20240001) → hanya rekaman milik mhs.
+    const byNim = await api(prodiToken, 'GET', '/skpi/kegiatan?search=20240001');
+    expect(byNim.status).toBe(200);
+    const rowsNim = byNim.data.data as Array<Record<string, unknown>>;
+    expect(rowsNim.length).toBe(1);
+    expect((rowsNim[0].mahasiswa as Record<string, unknown>).nim).toBe('20240001');
+
+    // Cari pakai nama mahasiswa mhs2 ("Mahasiswa Dua") → hanya rekaman milik mhs2.
+    const byNama = await api(prodiToken, 'GET', '/skpi/kegiatan?search=Mahasiswa%20Dua');
+    expect(byNama.status).toBe(200);
+    const rowsNama = byNama.data.data as Array<Record<string, unknown>>;
+    expect(rowsNama.length).toBe(1);
+    expect((rowsNama[0].mahasiswa as Record<string, unknown>).nama).toBe('Mahasiswa Dua');
+  });
+
+  it('Filter prodiId: staf in-scope 200 terfilter; di luar lingkup 403; admin global 200', async () => {
+    await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Kegiatan Prodi IF',
+      tanggalMulai: '2026-03-01',
+    });
+
+    // Prodi (scope = prodiId) memfilter prodiId miliknya → 200 dengan data.
+    const inScope = await api(prodiToken, 'GET', `/skpi/kegiatan?prodiId=${prodiId}`);
+    expect(inScope.status).toBe(200);
+    expect((inScope.data.data as unknown[]).length).toBe(1);
+
+    // Prodi memfilter prodi di luar lingkupnya → 403.
+    const outScope = await api(prodiToken, 'GET', `/skpi/kegiatan?prodiId=${otherProdiId}`);
+    expect(outScope.status).toBe(403);
+
+    // Kemahasiswaan (scope = otherProdiId) memfilter prodiId test → 403.
+    const kemaOut = await api(kemaToken, 'GET', `/skpi/kegiatan?prodiId=${prodiId}`);
+    expect(kemaOut.status).toBe(403);
+
+    // Admin global memfilter prodi mana pun → 200.
+    const adminAny = await api(adminToken, 'GET', `/skpi/kegiatan?prodiId=${prodiId}`);
+    expect(adminAny.status).toBe(200);
+    expect((adminAny.data.data as unknown[]).length).toBe(1);
+  });
 });
