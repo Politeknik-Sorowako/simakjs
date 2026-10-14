@@ -94,7 +94,6 @@ const VerifikasiDokumen = lazy(() => import('./routes/VerifikasiDokumen'));
 const Rps = lazy(() => import('./routes/Rps'));
 const Skpi = lazy(() => import('./routes/Skpi'));
 const SkpiCetak = lazy(() => import('./routes/SkpiCetak'));
-const SkpiVerifikasi = lazy(() => import('./routes/SkpiVerifikasi'));
 const LaporanAkademik = lazy(() => import('./routes/reports/LaporanAkademik'));
 const LaporanBKD = lazy(() => import('./routes/reports/LaporanBKD'));
 const BkdCetak = lazy(() => import('./routes/BkdCetak'));
@@ -482,14 +481,9 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/skpi/verifikasi"
-            element={
-              <ProtectedRoute allowedRoles={['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan', 'dosen']}>
-                <SkpiVerifikasi />
-              </ProtectedRoute>
-            }
-          />
+          {/* Halaman verifikasi kini menjadi tab di /skpi — redirect permanen
+              agar bookmark / tautan lama tidak 404. */}
+          <Route path="/skpi/verifikasi" element={<Navigate href="/skpi" />} />
           <Route
             path="/skpi/cetak/:mhsId"
             element={

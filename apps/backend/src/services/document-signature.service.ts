@@ -443,6 +443,36 @@ export class DocumentSignatureService {
   }
 
   /**
+   * Signature AKTIF (belum dicabut) terbaru per `refId` dalam satu query —
+   * dipakai tab Penerbitan SKPI untuk menampilkan status tanda tangan massal
+   * tanpa N+1. Mengembalikan Map `refId → baris` (terbaru menang).
+   */
+  static async getActiveByRefs(
+    docType: DocType,
+    refIds: string[],
+  ): Promise<Map<string, typeof documentSignatures.$inferSelect>> {
+    const unique = [...new Set(refIds)];
+    const result = new Map<string, typeof documentSignatures.$inferSelect>();
+    if (unique.length === 0) return result;
+    const rows = await db
+      .select()
+      .from(documentSignatures)
+      .where(
+        and(
+          eq(documentSignatures.tenant, TENANT_SIMAK),
+          eq(documentSignatures.docType, docType),
+          isNull(documentSignatures.revokedAt),
+          inArray(documentSignatures.refId, unique),
+        ),
+      )
+      .orderBy(desc(documentSignatures.signedAt), desc(documentSignatures.id));
+    for (const row of rows) {
+      if (!result.has(row.refId)) result.set(row.refId, row);
+    }
+    return result;
+  }
+
+  /**
    * Tegakkan scope prodi pemanggil atas sejumlah `verifyUuid` SEBELUM aksi tulis.
    * Gagal-dituju (fail-closed): refId non-KHS/SKPI, atau refId yang tidak merujuk
    * mahasiswa valid, dianggap di luar lingkup. Admin/super_admin lolos tanpa

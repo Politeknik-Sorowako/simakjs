@@ -19,6 +19,20 @@ async function api(token: string, method: string, path: string, body?: unknown) 
   return { status: response.status, data: (await response.json()) as Record<string, unknown> };
 }
 
+/** Kirim CSV via multipart/form-data (field `file`, pola upload lampiran). */
+async function apiForm(token: string, path: string, csv: string, fileName = 'kegiatan.csv') {
+  const form = new FormData();
+  form.append('file', new File([csv], fileName, { type: 'text/csv' }));
+  const response = await app.handle(
+    new Request(`http://localhost${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    }),
+  );
+  return { status: response.status, data: (await response.json()) as Record<string, unknown> };
+}
+
 describe('Modul SKPI — Rekaman Kegiatan Mahasiswa', () => {
   let adminToken: string;
   let mhsToken: string;
@@ -532,5 +546,195 @@ describe('Modul SKPI — Rekaman Kegiatan Mahasiswa', () => {
     expect(byMhs.status).toBe(403);
     const byPa = await api(paToken, 'PUT', `/skpi/kegiatan/${id}/hasil-verifikasi`, { poin: 1 });
     expect(byPa.status).toBe(403);
+  });
+
+  // ── Impor CSV (staf-verifier) ───────────────────────────────────────────────
+
+  it('Impor CSV: baris valid → pending; NIM/kategori salah → error per baris; header wajib', async () => {
+    const csv = [
+      'nim,nama_kategori,nama_kegiatan,tanggal_mulai,tanggal_selesai,penyelenggara,lokasi,nomor_sertifikat',
+      '20240001,Pelatihan,Impor Pelatihan Jaringan,2026-04-01,2026-04-02,Poltek,Aula,SRT-01',
+      '20240002,Pelatihan,Impor Seminar Dasar,2026-04-05,,,',
+      '99999999,Pelatihan,Kegiatan NIM Salah,2026-04-06,,,',
+      '20240001,Kategori Hilang,Kegiatan Salah Kategori,2026-04-07,,,',
+    ].join('\n');
+
+    const res = await apiForm(adminToken, '/skpi/kegiatan/import', csv);
+    expect(res.status).toBe(200);
+    expect(res.data.successCount).toBe(2);
+    expect(res.data.skippedCount).toBe(0);
+    const errors = res.data.errors as Array<{ line: number; error: string }>;
+    expect(errors.length).toBe(2);
+    expect(errors[0].error).toContain('99999999');
+    expect(errors[1].error).toContain('Kategori Hilang');
+
+    // Hasil impor berstatus pending & poin mengikuti kategori (10).
+    const list = await api(adminToken, 'GET', '/skpi/kegiatan?limit=50');
+    expect((list.data.meta as Record<string, unknown>).total).toBe(2);
+    const rows = list.data.data as Array<Record<string, unknown>>;
+    expect(rows.every((r) => r.status === 'pending' && r.poin === 10)).toBe(true);
+
+    // Header salah → sukses 0 + error baris 1.
+    const badHeader = await apiForm(adminToken, '/skpi/kegiatan/import', 'foo,bar\n1,2');
+    expect(badHeader.status).toBe(200);
+    expect(badHeader.data.successCount).toBe(0);
+    expect((badHeader.data.errors as Array<{ line: number }>)[0].line).toBe(1);
+  });
+
+  it('Impor CSV: hanya staf; kategori nonaktif & NIM di luar scope jadi error per baris; file wajib', async () => {
+    // Bukan staf → 403.
+    const byMhs = await apiForm(mhsToken, '/skpi/kegiatan/import', 'nim,nama_kategori,nama_kegiatan,tanggal_mulai');
+    expect(byMhs.status).toBe(403);
+
+    // Kategori dinonaktifkan → barisnya gagal.
+    const kat = await api(adminToken, 'POST', '/skpi/kategori', { nama: 'Webinar', jenis: 'seminar', poinDefault: 5 });
+    expect(kat.status).toBe(201);
+    await api(adminToken, 'PUT', `/skpi/kategori/${kat.data.id as number}`, { isAktif: false });
+    const inactive = await apiForm(
+      adminToken,
+      '/skpi/kegiatan/import',
+      ['nim,nama_kategori,nama_kegiatan,tanggal_mulai', '20240001,Webinar,Webinar Batal,2026-04-01'].join('\n'),
+    );
+    expect(inactive.data.successCount).toBe(0);
+    expect((inactive.data.errors as Array<{ error: string }>)[0].error).toContain('nonaktif');
+
+    // Kemahasiswaan out-of-scope: baris mahasiswa prodi IF tetap masuk per-baris error, bukan 403 utuh.
+    const byKema = await apiForm(
+      kemaToken,
+      '/skpi/kegiatan/import',
+      ['nim,nama_kategori,nama_kegiatan,tanggal_mulai', '20240001,Pelatihan,Lintas Scope,2026-04-01'].join('\n'),
+    );
+    expect(byKema.status).toBe(200);
+    expect(byKema.data.successCount).toBe(0);
+    expect((byKema.data.errors as Array<{ error: string }>)[0].error).toContain('luar lingkup');
+
+    // Tanpa field file → validasi schema 422.
+    const empty = new FormData();
+    const noFile = await app.handle(
+      new Request('http://localhost/skpi/kegiatan/import', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+        body: empty,
+      }),
+    );
+    expect(noFile.status).toBe(422);
+  });
+
+  // ── Verifikasi massal ───────────────────────────────────────────────────────
+
+  it('Verifikasi massal: approve pending sekaligus; non-pending & id tak dikenal masuk failed', async () => {
+    const ids: number[] = [];
+    for (const nama of ['Bulk A', 'Bulk B', 'Bulk C']) {
+      const created = await api(mhsToken, 'POST', '/skpi/kegiatan', {
+        kategoriKegiatanId: kategoriId,
+        namaKegiatan: nama,
+        tanggalMulai: '2026-03-01',
+      });
+      expect(created.status).toBe(201);
+      ids.push(created.data.id as number);
+    }
+    // Rekaman C diverifikasi tunggal lebih dulu (bukan pending lagi).
+    const preApprove = await api(adminToken, 'PUT', `/skpi/kegiatan/${ids[2]}/verifikasi`, { action: 'approve' });
+    expect(preApprove.status).toBe(200);
+
+    const res = await api(adminToken, 'POST', '/skpi/kegiatan/verifikasi-bulk', {
+      ids: [...ids, 999999],
+    });
+    expect(res.status).toBe(200);
+    expect(res.data.approvedCount).toBe(2);
+    expect(res.data.failedCount).toBe(2);
+    expect(res.data.approved).toEqual([ids[0], ids[1]]);
+    const failed = res.data.failed as Array<{ id: number; error: string }>;
+    expect(failed.find((f) => f.id === ids[2])?.error).toContain('PENDING');
+    expect(failed.find((f) => f.id === 999999)?.error).toContain('tidak ditemukan');
+
+    const verified = await api(adminToken, 'GET', '/skpi/kegiatan?status=diverifikasi&limit=50');
+    expect((verified.data.meta as Record<string, unknown>).total).toBe(3);
+  });
+
+  it('Verifikasi massal: mahasiswa 403; dosen non-PA seluruh baris gagal otorisasi', async () => {
+    const created = await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Untuk Bulk Otorisasi',
+      tanggalMulai: '2026-03-01',
+    });
+    const id = created.data.id as number;
+
+    const byMhs = await api(mhsToken, 'POST', '/skpi/kegiatan/verifikasi-bulk', { ids: [id] });
+    expect(byMhs.status).toBe(403);
+
+    // Dosen non-PA lolos cek role, tetapi barisnya ditolak authorizeVerify.
+    const byOther = await api(otherDosenToken, 'POST', '/skpi/kegiatan/verifikasi-bulk', { ids: [id] });
+    expect(byOther.status).toBe(200);
+    expect(byOther.data.approvedCount).toBe(0);
+    expect(byOther.data.failedCount).toBe(1);
+    expect((byOther.data.failed as Array<{ error: string }>)[0].error).toContain('Dosen Pendamping');
+
+    // Rekaman tetap pending (tidak ada yang lolos).
+    const pending = await api(adminToken, 'GET', '/skpi/kegiatan?status=pending');
+    expect((pending.data.meta as Record<string, unknown>).total).toBe(1);
+  });
+
+  it('Verifikasi massal: validasi schema — lebih dari 100 id & array kosong ditolak 422', async () => {
+    const tooMany = Array.from({ length: 101 }, (_, i) => i + 1);
+    const res1 = await api(adminToken, 'POST', '/skpi/kegiatan/verifikasi-bulk', { ids: tooMany });
+    expect(res1.status).toBe(422);
+    const res2 = await api(adminToken, 'POST', '/skpi/kegiatan/verifikasi-bulk', { ids: [] });
+    expect(res2.status).toBe(422);
+  });
+
+  // ── Tab Penerbitan ──────────────────────────────────────────────────────────
+
+  it('Penerbitan: agregat ≥1 item per mahasiswa, gate siapTerbit, otorisasi peran & scope', async () => {
+    // mhsId: 1 terverifikasi + 1 pending; mhs2Id: 1 pending saja (di luar syarat min=1).
+    const v = await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Sudah Diverifikasi',
+      tanggalMulai: '2026-03-01',
+    });
+    await api(adminToken, 'PUT', `/skpi/kegiatan/${v.data.id as number}/verifikasi`, { action: 'approve' });
+    await api(mhsToken, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Masih Pending Mhs 1',
+      tanggalMulai: '2026-03-02',
+    });
+    await api(mhs2Token, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Pending Saja Mhs 2',
+      tanggalMulai: '2026-03-03',
+    });
+
+    const res = await api(adminToken, 'GET', '/skpi/penerbitan');
+    expect(res.status).toBe(200);
+    const data = res.data.data as Array<Record<string, unknown>>;
+    expect(data.length).toBe(2);
+    const row1 = data.find((d) => d.mahasiswaId === mhsId) as Record<string, unknown>;
+    const row2 = data.find((d) => d.mahasiswaId === mhs2Id) as Record<string, unknown>;
+    expect(row1.diverifikasi).toBe(1);
+    expect(row1.pending).toBe(1);
+    expect(row1.totalKegiatan).toBe(2);
+    expect(row1.totalPoin).toBe(10);
+    expect((row1.syarat as Record<string, unknown>).terpenuhi).toBe(true);
+    expect((row2.syarat as Record<string, unknown>).terpenuhi).toBe(false);
+    expect(row1.signature).toBeNull();
+
+    // Gate siap terbit: hanya mahasiswa yang syaratnya terpenuhi.
+    const siap = await api(adminToken, 'GET', '/skpi/penerbitan?siapTerbit=true');
+    const siapData = siap.data.data as Array<Record<string, unknown>>;
+    expect(siapData.length).toBe(1);
+    expect(siapData[0].mahasiswaId).toBe(mhsId);
+
+    // Search NIM.
+    const search = await api(adminToken, 'GET', `/skpi/penerbitan?search=${row2.nim as string}`);
+    expect((search.data.data as Array<Record<string, unknown>>).length).toBe(1);
+
+    // Otorisasi: mahasiswa & dosen ditolak; staf out-of-scope pada filter prodi ditolak 403.
+    expect((await api(mhsToken, 'GET', '/skpi/penerbitan')).status).toBe(403);
+    expect((await api(paToken, 'GET', '/skpi/penerbitan')).status).toBe(403);
+    expect((await api(kemaToken, 'GET', `/skpi/penerbitan?prodiId=${prodiId}`)).status).toBe(403);
+    expect((await api(prodiToken, 'GET', '/skpi/penerbitan')).status).toBe(200);
+    // Kemahasiswaan (scope prodi lain) tidak melihat mahasiswa prodi IF.
+    const scopedOut = await api(kemaToken, 'GET', '/skpi/penerbitan');
+    expect((scopedOut.data.data as unknown[]).length).toBe(0);
   });
 });

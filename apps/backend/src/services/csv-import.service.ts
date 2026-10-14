@@ -2,6 +2,8 @@ import { and, eq, sql } from 'drizzle-orm';
 import {
   dosen,
   dosenPengajarKelas,
+  kategoriKegiatanSkpi,
+  kegiatanMahasiswaSkpi,
   kelasKuliah,
   ketidakhadiranMahasiswa,
   kompensasiBayar,
@@ -1890,6 +1892,148 @@ export class CsvImportService {
         result.errors.push({
           line: lineNum,
           error: `Gagal menyimpan MK "${kodeVal}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Impor daftar rekaman kegiatan mahasiswa (SKPI) dari CSV oleh staf-verifier.
+   * Baris diproses satu per satu dengan penanganan error individual (bukan satu
+   * transaksi besar) — sesuai standar impor repo. Hasil impor berstatus
+   * `pending` dan menunggu verifikasi.
+   *
+   * Header wajib (case-insensitive): `nim`, `nama_kategori`, `nama_kegiatan`,
+   * `tanggal_mulai`. Opsional: `tanggal_selesai`, `penyelenggara`, `lokasi`,
+   * `nomor_sertifikat`, `deskripsi`.
+   * `allowedProdiIds`: null = lintas prodi (admin global); array = hanya prodi
+   * dalam lingkup — baris di luar lingkup menjadi error per-baris, bukan 403
+   * utuh agar satu baris buruk tidak membatalkan impor yang valid.
+   */
+  static async importKegiatanSkpi(
+    csvText: string,
+    opts: { createdById: number; allowedProdiIds: number[] | null },
+  ): Promise<ImportResult> {
+    const rows = this.parseCsvLines(csvText);
+    const result: ImportResult = { successCount: 0, skippedCount: 0, errors: [] };
+    if (rows.length <= 1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV kosong atau hanya berisi baris header.' }],
+      };
+    }
+
+    const headers = rows[0].map((h) => h.toLowerCase().replace(/\s+/g, '_'));
+    const col = (name: string) => headers.indexOf(name);
+    const idxNim = col('nim');
+    const idxKategori = col('nama_kategori');
+    const idxNama = col('nama_kegiatan');
+    const idxMulai = col('tanggal_mulai');
+    const idxSelesai = col('tanggal_selesai');
+    const idxPenyelenggara = col('penyelenggara');
+    const idxLokasi = col('lokasi');
+    const idxSertifikat = col('nomor_sertifikat');
+    const idxDeskripsi = col('deskripsi');
+
+    if (idxNim === -1 || idxKategori === -1 || idxNama === -1 || idxMulai === -1) {
+      return {
+        successCount: 0,
+        skippedCount: 0,
+        errors: [{ line: 1, error: 'CSV harus memiliki kolom: nim, nama_kategori, nama_kegiatan, tanggal_mulai' }],
+      };
+    }
+
+    // Cache kategori AKTIF (map nama lowercase → baris) untuk lookup cepat.
+    const kategoriRows = await db.select().from(kategoriKegiatanSkpi).where(eq(kategoriKegiatanSkpi.isAktif, true));
+    const kategoriMap = new Map(kategoriRows.map((k) => [k.nama.toLowerCase(), k]));
+
+    // Cache NIM mahasiswa agar impor banyak baris per mahasiswa tidak N+1.
+    const mhsCache = new Map<string, { id: number; programStudiId: number | null } | null>();
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const lineNum = i + 1;
+      const cell = (idx: number) => (idx >= 0 ? (row[idx] ?? '').trim() : '');
+
+      try {
+        const nim = cell(idxNim);
+        const namaKategori = cell(idxKategori);
+        const namaKegiatan = cell(idxNama);
+        const tanggalMulai = cell(idxMulai);
+        if (!nim || !namaKategori || !namaKegiatan || !tanggalMulai) {
+          result.errors.push({
+            line: lineNum,
+            error: 'NIM, nama_kategori, nama_kegiatan, dan tanggal_mulai wajib diisi.',
+          });
+          continue;
+        }
+        if (!dateRe.test(tanggalMulai)) {
+          result.errors.push({
+            line: lineNum,
+            error: `Format tanggal_mulai harus YYYY-MM-DD (dapat "${tanggalMulai}").`,
+          });
+          continue;
+        }
+        const tanggalSelesai = cell(idxSelesai) || null;
+        if (tanggalSelesai && (!dateRe.test(tanggalSelesai) || tanggalSelesai < tanggalMulai)) {
+          result.errors.push({
+            line: lineNum,
+            error: `tanggal_selesai tidak valid atau sebelum tanggal_mulai (dapat "${tanggalSelesai}").`,
+          });
+          continue;
+        }
+
+        const kategori = kategoriMap.get(namaKategori.toLowerCase());
+        if (!kategori) {
+          result.errors.push({ line: lineNum, error: `Kategori "${namaKategori}" tidak ditemukan atau nonaktif.` });
+          continue;
+        }
+
+        let mhs: { id: number; programStudiId: number | null } | null | undefined = mhsCache.get(nim);
+        if (mhs === undefined) {
+          const [found] = await db
+            .select({ id: mahasiswa.id, programStudiId: mahasiswa.programStudiId })
+            .from(mahasiswa)
+            .where(eq(mahasiswa.nim, nim))
+            .limit(1);
+          mhs = found ?? null;
+          mhsCache.set(nim, mhs);
+        }
+        if (!mhs) {
+          result.errors.push({ line: lineNum, error: `NIM "${nim}" tidak ditemukan.` });
+          continue;
+        }
+        if (
+          opts.allowedProdiIds !== null &&
+          (mhs.programStudiId == null || !opts.allowedProdiIds.includes(mhs.programStudiId))
+        ) {
+          result.errors.push({ line: lineNum, error: `NIM "${nim}" di luar lingkup prodi Anda.` });
+          continue;
+        }
+
+        await db.insert(kegiatanMahasiswaSkpi).values({
+          mahasiswaId: mhs.id,
+          kategoriKegiatanId: kategori.id,
+          namaKegiatan,
+          penyelenggara: cell(idxPenyelenggara) || null,
+          tanggalMulai,
+          tanggalSelesai,
+          lokasi: cell(idxLokasi) || null,
+          deskripsi: cell(idxDeskripsi) || null,
+          nomorSertifikat: cell(idxSertifikat) || null,
+          poin: kategori.poinDefault,
+          status: 'pending',
+          createdById: opts.createdById,
+        });
+        result.successCount++;
+      } catch (err: unknown) {
+        result.errors.push({
+          line: lineNum,
+          error: `Gagal menyimpan rekaman baris ${lineNum}: ${err instanceof Error ? err.message : 'Unknown error'}`,
         });
       }
     }

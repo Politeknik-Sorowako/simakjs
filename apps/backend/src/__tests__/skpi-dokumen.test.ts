@@ -306,4 +306,116 @@ describe('Modul SKPI — Dokumen & Tanda Tangan (TTE)', () => {
     const byDropOut = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
     expect(byDropOut.status).toBe(400);
   });
+
+  // ── Tab Penerbitan (agregat + signature batch) ─────────────────────────────
+
+  it('Penerbitan: signature tampil per baris (batch) & siapTerbit menyaring yang belum syarat', async () => {
+    await addVerifiedKegiatan('Kegiatan Terbit');
+    const sign = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    expect(sign.status).toBe(200);
+
+    // mhs2: hanya pending → tampil (≥1 item, status apa pun) tetapi di luar syarat.
+    const pending2 = await api(mhs2Token, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Pending Mhs Dua',
+      tanggalMulai: '2026-03-01',
+    });
+    expect(pending2.status).toBe(201);
+
+    const all = await api(adminToken, 'GET', '/skpi/penerbitan');
+    expect(all.status).toBe(200);
+    const data = all.data.data as Array<Record<string, unknown>>;
+    expect(data.length).toBe(2);
+    const row1 = data.find((d) => d.mahasiswaId === mhsId) as Record<string, unknown>;
+    const row2 = data.find((d) => d.mahasiswaId === mhs2Id) as Record<string, unknown>;
+    expect((row1.signature as Record<string, unknown> | null)?.verifyUuid).toBe(sign.data.verifyUuid);
+    expect(row2.signature).toBeNull();
+    expect((row2.syarat as Record<string, unknown>).terpenuhi).toBe(false);
+
+    const siap = await api(adminToken, 'GET', '/skpi/penerbitan?siapTerbit=true');
+    expect((siap.data.data as unknown[]).length).toBe(1);
+    expect((siap.data.data as Array<Record<string, unknown>>)[0].mahasiswaId).toBe(mhsId);
+  });
+
+  it('bulk-sign: siap ditandatangani sukses, belum syarat masuk failed, idempoten; authz staf-only + scope', async () => {
+    await addVerifiedKegiatan('Siap Terbit Satu');
+    const pending2 = await api(mhs2Token, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Pending Dua',
+      tanggalMulai: '2026-03-01',
+    });
+    expect(pending2.status).toBe(201);
+
+    // Authz: mahasiswa & staf out-of-scope → 403 utuh sebelum diproses.
+    expect((await api(mhsToken, 'POST', '/skpi/dokumen/bulk-sign', { mahasiswaIds: [mhsId] })).status).toBe(403);
+    expect((await api(kemaToken, 'POST', '/skpi/dokumen/bulk-sign', { mahasiswaIds: [mhsId] })).status).toBe(403);
+
+    const res = await api(adminToken, 'POST', '/skpi/dokumen/bulk-sign', { mahasiswaIds: [mhsId, mhs2Id] });
+    expect(res.status).toBe(200);
+    expect(res.data.signedCount).toBe(1);
+    expect(res.data.failedCount).toBe(1);
+    const failed = res.data.failed as Array<{ mahasiswaId: number; error: string }>;
+    expect(failed[0].mahasiswaId).toBe(mhs2Id);
+    expect(failed[0].error).toContain('Minimal');
+
+    // Idempoten: verifyUuid mhs1 stabil walau bulk dijalankan ulang.
+    const doc1 = await api(adminToken, 'GET', `/skpi/dokumen/${mhsId}`);
+    const uuid1 = (doc1.data.signature as Record<string, unknown>).verifyUuid;
+
+    await api(adminToken, 'PUT', `/skpi/kegiatan/${pending2.data.id as number}/verifikasi`, { action: 'approve' });
+    const res2 = await api(adminToken, 'POST', '/skpi/dokumen/bulk-sign', { mahasiswaIds: [mhsId, mhs2Id] });
+    expect(res2.data.signedCount).toBe(2);
+    expect(res2.data.failedCount).toBe(0);
+    const doc1After = await api(adminToken, 'GET', `/skpi/dokumen/${mhsId}`);
+    expect((doc1After.data.signature as Record<string, unknown>).verifyUuid).toBe(uuid1);
+  });
+
+  it('Cabut SKPI: tunggal staf in-scope & massal; alasan wajib; belum ditandatangani → failed per baris', async () => {
+    await addVerifiedKegiatan('Akan Dicabut Satu');
+    const c2 = await api(mhs2Token, 'POST', '/skpi/kegiatan', {
+      kategoriKegiatanId: kategoriId,
+      namaKegiatan: 'Akan Dicabut Dua',
+      tanggalMulai: '2026-03-01',
+    });
+    await api(adminToken, 'PUT', `/skpi/kegiatan/${c2.data.id as number}/verifikasi`, { action: 'approve' });
+
+    // Mahasiswa (termasuk pemilik) & staf out-of-scope → 403.
+    expect(
+      (await api(mhsToken, 'POST', `/skpi/dokumen/${mhsId}/revoke`, { reason: 'Mahasiswa Tidak Boleh' })).status,
+    ).toBe(403);
+    expect(
+      (await api(kemaToken, 'POST', `/skpi/dokumen/${mhsId}/revoke`, { reason: 'Lintas Prodi Saja' })).status,
+    ).toBe(403);
+
+    const sign = await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/sign`);
+    expect(sign.status).toBe(200);
+
+    // Alasan: 2 karakter → 422 (schema); spasi saja → 400 (trim).
+    expect((await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/revoke`, { reason: 'ab' })).status).toBe(422);
+    expect((await api(adminToken, 'POST', `/skpi/dokumen/${mhsId}/revoke`, { reason: '   ' })).status).toBe(400);
+
+    // Prodi in-scope boleh mencabut via jalur khusus SKPI (berbeda dengan TTE generik).
+    const rev = await api(prodiToken, 'POST', `/skpi/dokumen/${mhsId}/revoke`, { reason: 'Koreksi data SKPI' });
+    expect(rev.status).toBe(200);
+    const doc = await api(adminToken, 'GET', `/skpi/dokumen/${mhsId}`);
+    expect(doc.data.signature).toBeNull();
+    // Mencabut ulang saat tidak ada tanda tangan aktif → 400.
+    expect(
+      (await api(prodiToken, 'POST', `/skpi/dokumen/${mhsId}/revoke`, { reason: 'Cabut Kedua Kali' })).status,
+    ).toBe(400);
+
+    // Massal: mhsId (sudah dicabut → failed per baris) + mhs2 (aktif → revoked).
+    const sign2 = await api(adminToken, 'POST', `/skpi/dokumen/${mhs2Id}/sign`);
+    expect(sign2.status).toBe(200);
+    const bulk = await api(adminToken, 'POST', '/skpi/dokumen/bulk-revoke', {
+      mahasiswaIds: [mhsId, mhs2Id],
+      reason: 'Tarik massal SKPI',
+    });
+    expect(bulk.status).toBe(200);
+    expect(bulk.data.revokedCount).toBe(1);
+    expect(bulk.data.failedCount).toBe(1);
+    expect((bulk.data.failed as Array<{ mahasiswaId: number }>)[0].mahasiswaId).toBe(mhsId);
+    const doc2 = await api(adminToken, 'GET', `/skpi/dokumen/${mhs2Id}`);
+    expect(doc2.data.signature).toBeNull();
+  });
 });

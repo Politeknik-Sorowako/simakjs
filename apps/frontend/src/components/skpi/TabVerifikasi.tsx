@@ -1,18 +1,22 @@
-import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
-import { MainLayout } from '../components/MainLayout';
-import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Modal } from '../components/ui/Modal';
-import { Pagination } from '../components/ui/Pagination';
-import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
-import { useAuth } from '../contexts/AuthContext';
-import { useToast } from '../contexts/ToastContext';
-import { mahasiswaController } from '../controllers/mahasiswaController';
-import { prodiController } from '../controllers/prodiController';
-import { type SkpiKegiatan, type SkpiStatus, skpiController } from '../controllers/skpiController';
-import { usePagination } from '../hooks/usePagination';
-import { fmtTanggal } from '../utils/format';
+import { createResource, createSignal, For, Index, onCleanup, Show } from 'solid-js';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { mahasiswaController } from '../../controllers/mahasiswaController';
+import { prodiController } from '../../controllers/prodiController';
+import {
+  type SkpiImportResult,
+  type SkpiKegiatan,
+  type SkpiStatus,
+  skpiController,
+} from '../../controllers/skpiController';
+import { usePagination } from '../../hooks/usePagination';
+import { fmtTanggal } from '../../utils/format';
+import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Modal } from '../ui/Modal';
+import { Pagination } from '../ui/Pagination';
+import { SearchableSelect, type SelectOption } from '../ui/SearchableSelect';
 
 const STATUS_LABEL: Record<SkpiStatus, string> = {
   pending: 'Menunggu Verifikasi',
@@ -33,12 +37,36 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: 'Semua Status' },
 ];
 
-export default function SkpiVerifikasi() {
+export default function TabVerifikasi() {
   const auth = useAuth();
   const toast = useToast();
-  // Koreksi pasca-verifikasi (Batalkan & Edit Hasil) + cetak: staff-verifier
+  // Koreksi pasca-verifikasi (Batalkan & Edit Hasil) + impor CSV: staff-verifier
   // saja; dosen PA tetap hanya verifikasi (pola backend).
   const isStaffVerifier = () => auth.hasRole(['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan']);
+
+  // ── Seleksi massal (approve) — baris pending saja yang bisa dicentang ──────
+  const [selectedIds, setSelectedIds] = createSignal<Set<number>>(new Set());
+  const pendingRows = () => (list()?.data ?? []).filter((r) => r.status === 'pending');
+  const toggleSelect = (id: number) => {
+    const next = new Set(selectedIds());
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+  const toggleSelectAllPending = () => {
+    const pending = pendingRows();
+    const allSelected = pending.length > 0 && pending.every((r) => selectedIds().has(r.id));
+    const next = new Set(selectedIds());
+    for (const r of pending) {
+      if (allSelected) next.delete(r.id);
+      else next.add(r.id);
+    }
+    setSelectedIds(next);
+  };
+  const allPendingSelected = () => {
+    const pending = pendingRows();
+    return pending.length > 0 && pending.every((r) => selectedIds().has(r.id));
+  };
 
   const pagination = usePagination(10);
   const [statusFilter, setStatusFilter] = createSignal('pending');
@@ -243,15 +271,112 @@ export default function SkpiVerifikasi() {
     }
   };
 
+  // ── Approve massal (checkbox + Setujui Terpilih) ──────────────────────────
+  // Penolakan massal tidak disediakan: reject mewajibkan catatan per rekaman.
+  // Poin mengikuti nilai rekaman saat ini; koreksi poin bisa via Edit Hasil.
+  const [showBulkModal, setShowBulkModal] = createSignal(false);
+  const [bulkBusy, setBulkBusy] = createSignal(false);
+
+  const handleBulkApprove = async () => {
+    const ids = [...selectedIds()];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const res = await skpiController.verifyBulk(ids);
+      setSelectedIds(new Set<number>());
+      setShowBulkModal(false);
+      toast.showToast(
+        res.failedCount > 0
+          ? `${res.approvedCount} rekaman disetujui, ${res.failedCount} dilewati`
+          : `${res.approvedCount} rekaman disetujui`,
+        res.failedCount > 0 ? 'info' : 'success',
+      );
+      if (res.failedCount > 0 && res.failed.length > 0) {
+        toast.showToast(res.failed[0].error, 'error');
+      }
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal memverifikasi massal.', 'error');
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  // ── Impor CSV daftar kegiatan (staff-verifier; hasil pending) ─────────────
+  const [showImportModal, setShowImportModal] = createSignal(false);
+  const [importFile, setImportFile] = createSignal<File | null>(null);
+  const [importBusy, setImportBusy] = createSignal(false);
+  const [importResult, setImportResult] = createSignal<SkpiImportResult | null>(null);
+  let importInputRef: HTMLInputElement | undefined;
+
+  const downloadTemplate = () => {
+    const kategoriNama = kategoriList()?.data?.find((k) => k.isAktif)?.nama ?? 'Pelatihan';
+    const csv = [
+      'nim,nama_kategori,nama_kegiatan,tanggal_mulai,tanggal_selesai,penyelenggara,lokasi,nomor_sertifikat,deskripsi',
+      `20240001,${kategoriNama},Contoh Pelatihan Jaringan,2026-03-01,2026-03-02,Politeknik Sorowako,Aula,SRT-001,Uraian singkat`,
+    ].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'template-impor-kegiatan-skpi.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async () => {
+    const file = importFile();
+    if (!file) return;
+    setImportBusy(true);
+    setImportResult(null);
+    try {
+      const res = await skpiController.importKegiatan(file);
+      setImportResult(res);
+      setImportFile(null);
+      if (importInputRef) importInputRef.value = '';
+      toast.showToast(
+        `Impor selesai: ${res.successCount} rekaman masuk (menunggu verifikasi)`,
+        res.errors.length > 0 ? 'info' : 'success',
+      );
+      refetch();
+    } catch (err: unknown) {
+      toast.showToast(err instanceof Error ? err.message : 'Gagal mengimpor CSV.', 'error');
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
+  const openImportModal = () => {
+    setImportFile(null);
+    setImportResult(null);
+    setShowImportModal(true);
+  };
+
   return (
-    <MainLayout>
+    <>
       <div class="flex flex-col gap-6">
         <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
-          <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Verifikasi SKPI</h1>
-          <p class="text-sm text-secondary-500">
-            Setujui atau tolak rekaman pencapaian kegiatan mahasiswa. Rekaman yang disetujui menjadi isi dokumen SKPI
-            yang dapat dicetak dan ditandatangani.
-          </p>
+          <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div>
+              <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Verifikasi SKPI</h1>
+              <p class="text-sm text-secondary-500">
+                Setujui atau tolak rekaman pencapaian kegiatan mahasiswa. Rekaman yang disetujui menjadi isi dokumen
+                SKPI yang dapat dicetak dan ditandatangani.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <Show when={isStaffVerifier()}>
+                <Button variant="secondary" onClick={openImportModal}>
+                  Impor CSV
+                </Button>
+              </Show>
+              <Show when={selectedIds().size > 0}>
+                <Button variant="success" onClick={() => setShowBulkModal(true)}>
+                  Setujui Terpilih ({selectedIds().size})
+                </Button>
+              </Show>
+            </div>
+          </div>
         </div>
 
         <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
@@ -339,6 +464,15 @@ export default function SkpiVerifikasi() {
             <table class="w-full text-left text-xs border-collapse">
               <thead>
                 <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                  <th class="p-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPendingSelected()}
+                      onChange={toggleSelectAllPending}
+                      class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                      title="Pilih semua rekaman menunggu verifikasi di halaman ini"
+                    />
+                  </th>
                   <th class="p-3">Mahasiswa</th>
                   <th class="p-3">Kegiatan</th>
                   <th class="p-3">Tanggal</th>
@@ -353,7 +487,7 @@ export default function SkpiVerifikasi() {
                   when={!list.loading}
                   fallback={
                     <tr>
-                      <td colspan={7} class="p-8 text-center text-secondary-400">
+                      <td colspan={8} class="p-8 text-center text-secondary-400">
                         Memuat data...
                       </td>
                     </tr>
@@ -363,7 +497,7 @@ export default function SkpiVerifikasi() {
                     each={list()?.data ?? []}
                     fallback={
                       <tr>
-                        <td colspan={7} class="p-8 text-center text-secondary-400">
+                        <td colspan={8} class="p-8 text-center text-secondary-400">
                           Tidak ada rekaman untuk difilter.
                         </td>
                       </tr>
@@ -371,6 +505,20 @@ export default function SkpiVerifikasi() {
                   >
                     {(row) => (
                       <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                        <td class="p-3">
+                          <Show
+                            when={row.status === 'pending'}
+                            fallback={<span class="inline-block w-4 h-4" aria-hidden />}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedIds().has(row.id)}
+                              onChange={() => toggleSelect(row.id)}
+                              class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                              aria-label={`Pilih rekaman ${row.namaKegiatan}`}
+                            />
+                          </Show>
+                        </td>
                         <td class="p-3">
                           <p class="font-bold text-secondary-800 dark:text-white">{row.mahasiswa?.nama ?? '-'}</p>
                           <p class="text-[11px] text-secondary-400">
@@ -428,15 +576,6 @@ export default function SkpiVerifikasi() {
                             >
                               <Button variant="secondary" size="sm" onClick={() => setUnverifyTarget(row)}>
                                 Batalkan
-                              </Button>
-                            </Show>
-                            <Show when={isStaffVerifier()}>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => window.open(`/skpi/cetak/${row.mahasiswaId}`, '_blank')}
-                              >
-                                Cetak
                               </Button>
                             </Show>
                           </div>
@@ -700,6 +839,93 @@ export default function SkpiVerifikasi() {
           </div>
         </form>
       </Modal>
-    </MainLayout>
+
+      {/* Modal konfirmasi approve massal */}
+      <Modal
+        show={showBulkModal()}
+        onClose={() => !bulkBusy() && setShowBulkModal(false)}
+        title="Setujui Rekaman Terpilih"
+      >
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-secondary-600 dark:text-secondary-300">
+            <b>{selectedIds().size} rekaman</b> akan disetujui sekaligus dan menjadi bagian dokumen SKPI mahasiswa
+            masing-masing. Poin mengikuti nilai rekaman saat ini — koreksi poin dapat dilakukan lewat <b>Edit Hasil</b>{' '}
+            setelahnya. Rekaman yang bukan <b>Menunggu Verifikasi</b> akan dilewati.
+          </p>
+          <div class="flex justify-end gap-3 border-t pt-4">
+            <Button variant="secondary" onClick={() => setShowBulkModal(false)} disabled={bulkBusy()}>
+              Batal
+            </Button>
+            <Button variant="success" onClick={handleBulkApprove} disabled={bulkBusy()}>
+              {bulkBusy() ? 'Memproses...' : `Ya, Setujui ${selectedIds().size} Rekaman`}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal impor CSV daftar kegiatan */}
+      <Modal
+        show={showImportModal()}
+        onClose={() => !importBusy() && setShowImportModal(false)}
+        title="Impor Kegiatan (CSV)"
+        maxWidth="lg"
+      >
+        <div class="flex flex-col gap-4">
+          <p class="text-sm text-secondary-600 dark:text-secondary-300">
+            Unggah file CSV berisi daftar kegiatan mahasiswa. Baris yang valid masuk sebagai rekaman{' '}
+            <b>Menunggu Verifikasi</b>; baris yang tidak valid dilaporkan per baris tanpa membatalkan baris lain.
+          </p>
+
+          <div class="rounded-xl bg-secondary-50 border border-secondary-100 p-3 text-xs text-secondary-500 dark:bg-secondary-800/60 dark:border-secondary-700">
+            <p class="font-bold text-secondary-700 dark:text-secondary-300">Kolom wajib</p>
+            <p class="mt-1 font-mono">nim, nama_kategori, nama_kegiatan, tanggal_mulai (YYYY-MM-DD)</p>
+            <p class="mt-1 font-mono">Opsional: tanggal_selesai, penyelenggara, lokasi, nomor_sertifikat, deskripsi</p>
+            <p class="mt-2">
+              <button type="button" onClick={downloadTemplate} class="text-brand-600 hover:underline font-semibold">
+                Unduh template CSV
+              </button>
+            </p>
+          </div>
+
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            class="block w-full text-xs text-secondary-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-secondary-300"
+            onChange={(e) => setImportFile(e.currentTarget.files?.[0] ?? null)}
+          />
+
+          <Show when={importResult()}>
+            {(result) => (
+              <div class="rounded-xl border border-secondary-200 p-3 text-xs dark:border-secondary-700">
+                <p class="font-bold text-secondary-700 dark:text-secondary-300">
+                  Hasil impor: {result().successCount} berhasil, {result().errors.length} gagal
+                </p>
+                <Show when={result().errors.length > 0}>
+                  <ul class="mt-2 max-h-40 overflow-y-auto space-y-1 text-danger-600 dark:text-danger-400">
+                    <Index each={result().errors}>
+                      {(err) => (
+                        <li>
+                          Baris {err().line}: {err().error}
+                        </li>
+                      )}
+                    </Index>
+                  </ul>
+                </Show>
+              </div>
+            )}
+          </Show>
+
+          <div class="flex justify-end gap-3 border-t pt-4">
+            <Button variant="secondary" onClick={() => setShowImportModal(false)} disabled={importBusy()}>
+              Tutup
+            </Button>
+            <Button variant="primary" onClick={handleImportFile} disabled={!importFile() || importBusy()}>
+              {importBusy() ? 'Mengimpor...' : 'Impor'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }
