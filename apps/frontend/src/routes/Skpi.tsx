@@ -397,7 +397,9 @@ export default function Skpi() {
         toast.showToast('Kategori kegiatan ditambahkan', 'success');
       }
       await refetchKategori();
-      setShowKategoriModal(false);
+      // Panel sengaja dibiarkan terbuka agar admin bisa menambah/mengedit
+      // beberapa kategori sekaligus tanpa membuka-menutup panel berulang.
+      // Form kembali ke mode tambah kosong.
       resetKatForm();
     } catch (err: unknown) {
       setKatError(err instanceof Error ? err.message : 'Gagal menyimpan kategori kegiatan.');
