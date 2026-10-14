@@ -29,6 +29,7 @@ export const roleEnum = pgEnum('user_role', [
   'calon_mahasiswa',
   'plp',
   'instruktur',
+  'kemahasiswaan',
 ]);
 
 export const applicationStatusEnum = pgEnum('application_status', [
@@ -3290,5 +3291,113 @@ export const pengumumanDibacaRelations = relations(pengumumanDibaca, ({ one }) =
   user: one(users, {
     fields: [pengumumanDibaca.userId],
     references: [users.id],
+  }),
+}));
+
+// ─── SKPI — PENCAPIAIAN KEGIATAN MAHASISWA ──────────────────────────────────
+// Basis data rekaman kegiatan (pelatihan/seminar/organisasi/prestasi) sebagai
+// bahan penyusunan Surat Keterangan Pendamping Ijazah (SKPI). Rekaman diinput
+// mahasiswa/staf, diverifikasi Dosen PA / kemahasiswaan / admin / prodi, lalu
+// masuk ke dokumen SKPI bertanda tangan digital (document_signatures).
+
+export const kategoriKegiatanSkpi = pgTable('kategori_kegiatan_skpi', {
+  id: serial('id').primaryKey(),
+  nama: varchar('nama', { length: 100 }).notNull().unique(),
+  // 'pelatihan', 'seminar', 'organisasi', 'prestasi', 'lainnya'
+  jenis: varchar('jenis', { length: 20 }).notNull().default('lainnya'),
+  poinDefault: integer('poin_default').notNull().default(0),
+  isAktif: boolean('is_aktif').notNull().default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at')
+    .defaultNow()
+    .notNull()
+    .$onUpdate(() => new Date()),
+});
+
+export const kegiatanMahasiswaSkpi = pgTable(
+  'kegiatan_mahasiswa_skpi',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    kategoriKegiatanId: integer('kategori_kegiatan_id')
+      .notNull()
+      .references(() => kategoriKegiatanSkpi.id, { onDelete: 'restrict' }),
+    namaKegiatan: varchar('nama_kegiatan', { length: 255 }).notNull(),
+    penyelenggara: varchar('penyelenggara', { length: 255 }),
+    // Calendar date 'YYYY-MM-DD' (mode string) — jangan new Date().toISOString()
+    tanggalMulai: date('tanggal_mulai', { mode: 'string' }).notNull(),
+    tanggalSelesai: date('tanggal_selesai', { mode: 'string' }),
+    lokasi: varchar('lokasi', { length: 255 }),
+    deskripsi: text('deskripsi'),
+    nomorSertifikat: varchar('nomor_sertifikat', { length: 100 }),
+    poin: integer('poin').notNull().default(0),
+    // 'pending', 'diverifikasi', 'ditolak'
+    status: varchar('status', { length: 20 }).notNull().default('pending'),
+    catatanVerifikator: text('catatan_verifikator'),
+    verifiedById: integer('verified_by_id').references(() => users.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at'),
+    createdById: integer('created_by_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index('idx_skpi_kegiatan_mahasiswa_status').on(table.mahasiswaId, table.status),
+    index('idx_skpi_kegiatan_status').on(table.status),
+  ],
+);
+
+export const lampiranKegiatanSkpi = pgTable(
+  'lampiran_kegiatan_skpi',
+  {
+    id: serial('id').primaryKey(),
+    kegiatanId: integer('kegiatan_id')
+      .notNull()
+      .references(() => kegiatanMahasiswaSkpi.id, { onDelete: 'cascade' }),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    storageKey: varchar('storage_key', { length: 255 }).notNull(),
+    mimeType: varchar('mime_type', { length: 100 }).notNull(),
+    fileSize: integer('file_size').notNull(),
+    keterangan: varchar('keterangan', { length: 255 }),
+    uploadedById: integer('uploaded_by_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [index('idx_skpi_lampiran_kegiatan').on(table.kegiatanId)],
+);
+
+export const kategoriKegiatanSkpiRelations = relations(kategoriKegiatanSkpi, ({ many }) => ({
+  kegiatan: many(kegiatanMahasiswaSkpi),
+}));
+
+export const kegiatanMahasiswaSkpiRelations = relations(kegiatanMahasiswaSkpi, ({ one, many }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [kegiatanMahasiswaSkpi.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  kategori: one(kategoriKegiatanSkpi, {
+    fields: [kegiatanMahasiswaSkpi.kategoriKegiatanId],
+    references: [kategoriKegiatanSkpi.id],
+  }),
+  verifiedBy: one(users, {
+    fields: [kegiatanMahasiswaSkpi.verifiedById],
+    references: [users.id],
+  }),
+  createdBy: one(users, {
+    fields: [kegiatanMahasiswaSkpi.createdById],
+    references: [users.id],
+  }),
+  lampiran: many(lampiranKegiatanSkpi),
+}));
+
+export const lampiranKegiatanSkpiRelations = relations(lampiranKegiatanSkpi, ({ one }) => ({
+  kegiatan: one(kegiatanMahasiswaSkpi, {
+    fields: [lampiranKegiatanSkpi.kegiatanId],
+    references: [kegiatanMahasiswaSkpi.id],
   }),
 }));

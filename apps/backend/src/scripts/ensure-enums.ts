@@ -14,6 +14,7 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'user_role', value: 'kaprodi', before: 'prodi' },
   { name: 'user_role', value: 'plp' },
   { name: 'user_role', value: 'instruktur', before: 'guest' },
+  { name: 'user_role', value: 'kemahasiswaan', before: 'guest' },
   { name: 'user_role', value: 'guest' },
   { name: 'user_role', value: 'calon_mahasiswa', before: 'guest' },
   { name: 'presensi_status', value: 'terlambat' },

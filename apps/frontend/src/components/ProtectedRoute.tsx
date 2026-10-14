@@ -17,6 +17,7 @@ interface ProtectedRouteProps {
     | 'calon_mahasiswa'
     | 'plp'
     | 'instruktur'
+    | 'kemahasiswaan'
   )[];
 }
 
