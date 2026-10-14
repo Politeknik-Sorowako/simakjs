@@ -92,6 +92,9 @@ const ProtocolHandler = lazy(() => import('./routes/ProtocolHandler'));
 const RombelEnroll = lazy(() => import('./routes/RombelEnroll'));
 const VerifikasiDokumen = lazy(() => import('./routes/VerifikasiDokumen'));
 const Rps = lazy(() => import('./routes/Rps'));
+const Skpi = lazy(() => import('./routes/Skpi'));
+const SkpiCetak = lazy(() => import('./routes/SkpiCetak'));
+const SkpiVerifikasi = lazy(() => import('./routes/SkpiVerifikasi'));
 const LaporanAkademik = lazy(() => import('./routes/reports/LaporanAkademik'));
 const LaporanBKD = lazy(() => import('./routes/reports/LaporanBKD'));
 const BkdCetak = lazy(() => import('./routes/BkdCetak'));
@@ -466,6 +469,32 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
                 <KhsCetak />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/skpi"
+            element={
+              <ProtectedRoute
+                allowedRoles={['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan', 'dosen', 'mahasiswa']}
+              >
+                <Skpi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/skpi/verifikasi"
+            element={
+              <ProtectedRoute allowedRoles={['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan', 'dosen']}>
+                <SkpiVerifikasi />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/skpi/cetak/:mhsId"
+            element={
+              <ProtectedRoute allowedRoles={['super_admin', 'admin', 'prodi', 'kaprodi', 'kemahasiswaan', 'mahasiswa']}>
+                <SkpiCetak />
               </ProtectedRoute>
             }
           />
