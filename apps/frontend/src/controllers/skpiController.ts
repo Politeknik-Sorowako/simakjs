@@ -126,6 +126,15 @@ export interface SkpiCreatePayload {
   mahasiswaId?: number;
 }
 
+export interface SkpiKategoriPayload {
+  nama: string;
+  jenis: string;
+  poinDefault?: number;
+  isAktif?: boolean;
+}
+
+export type SkpiKategoriUpdatePayload = Partial<SkpiKategoriPayload>;
+
 export interface SkpiUpdatePayload {
   kategoriKegiatanId?: number;
   namaKegiatan?: string;
@@ -142,6 +151,23 @@ export const skpiController = {
     const qs = semua ? '?semua=true' : '';
     return fetchApi<{ data: SkpiKategori[] }>(`/skpi/kategori${qs}`);
   },
+
+  createKategori: (data: SkpiKategoriPayload) =>
+    fetchApi<SkpiKategori>('/skpi/kategori', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateKategori: (id: number, data: SkpiKategoriUpdatePayload) =>
+    fetchApi<SkpiKategori>(`/skpi/kategori/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  deleteKategori: (id: number) =>
+    fetchApi<{ message: string }>(`/skpi/kategori/${id}`, {
+      method: 'DELETE',
+    }),
 
   async getAll(params?: {
     page?: number;
