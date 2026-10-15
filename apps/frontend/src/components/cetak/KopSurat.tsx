@@ -35,39 +35,43 @@ export default function KopSurat(props: { kop: KopSurat }) {
   );
 
   return (
-    <div class="flex items-center gap-5 border-b-2 border-secondary-900 pb-3 print:gap-4">
-      <Show when={props.kop.tampilkanLogo && logoSrc() !== null}>
-        <img
-          src={logoSrc() ?? logoBawaan}
-          alt={`Logo ${props.kop.nama}`}
-          class="h-20 w-20 shrink-0 object-contain"
-          onError={(e) => {
-            // Logo kustom gagal dimuat → fallback logo bawaan.
-            if (e.currentTarget.src !== logoBawaan) e.currentTarget.src = logoBawaan;
-          }}
-        />
-      </Show>
-      <div class="flex-1 text-center text-secondary-900">
-        <h2 class="text-2xl font-bold tracking-wide">{props.kop.nama}</h2>
-        <For each={props.kop.alamat}>{(baris) => <p class="text-sm leading-snug">{baris}</p>}</For>
-        <Show when={props.kop.kontak}>
-          <p class="text-sm leading-snug">{props.kop.kontak}</p>
+    <div class="table w-full border-b-2 border-secondary-900 pb-3">
+      <div class="table-row">
+        <Show when={props.kop.tampilkanLogo && logoSrc() !== null}>
+          <div class="table-cell w-24 pr-5 align-middle">
+            <img
+              src={logoSrc() ?? logoBawaan}
+              alt={`Logo ${props.kop.nama}`}
+              class="h-20 w-20 object-contain"
+              onError={(e) => {
+                // Logo kustom gagal dimuat → fallback logo bawaan.
+                if (e.currentTarget.src !== logoBawaan) e.currentTarget.src = logoBawaan;
+              }}
+            />
+          </div>
         </Show>
-        <Show when={props.kop.website}>
-          <p class="text-sm leading-snug">
-            <a href={props.kop.website} class="text-blue-700 underline" target="_blank" rel="noreferrer">
-              {props.kop.website}
-            </a>
-          </p>
-        </Show>
-        <Show when={props.kop.email}>
-          <p class="text-sm leading-snug">
-            Email:{' '}
-            <a href={`mailto:${props.kop.email}`} class="text-blue-700 underline">
-              {props.kop.email}
-            </a>
-          </p>
-        </Show>
+        <div class="table-cell align-middle text-center text-secondary-900">
+          <h2 class="text-2xl font-bold tracking-wide">{props.kop.nama}</h2>
+          <For each={props.kop.alamat}>{(baris) => <p class="text-sm leading-snug">{baris}</p>}</For>
+          <Show when={props.kop.kontak}>
+            <p class="text-sm leading-snug">{props.kop.kontak}</p>
+          </Show>
+          <Show when={props.kop.website}>
+            <p class="text-sm leading-snug">
+              <a href={props.kop.website} class="text-blue-700 underline" target="_blank" rel="noreferrer">
+                {props.kop.website}
+              </a>
+            </p>
+          </Show>
+          <Show when={props.kop.email}>
+            <p class="text-sm leading-snug">
+              Email:{' '}
+              <a href={`mailto:${props.kop.email}`} class="text-blue-700 underline">
+                {props.kop.email}
+              </a>
+            </p>
+          </Show>
+        </div>
       </div>
     </div>
   );
