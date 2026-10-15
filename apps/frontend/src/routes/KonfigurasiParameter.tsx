@@ -92,6 +92,7 @@ function TabParameter() {
     setSavingKey(p.key);
     try {
       await systemController.updateParameter(p.key, valueFor(p));
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next[p.key];
@@ -115,13 +116,13 @@ function TabParameter() {
     setSavingKey('KRS_MANDIRI_ENABLED');
     try {
       await systemController.updateParameter('KRS_MANDIRI_ENABLED', krsMandiriEnabled() ? 'true' : 'false');
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next.KRS_MANDIRI_ENABLED;
         return next;
       });
       setNotice('Pengaturan KRS mandiri berhasil diperbarui.');
-      refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : 'Gagal memperbarui pengaturan KRS mandiri.');
     } finally {
@@ -142,13 +143,13 @@ function TabParameter() {
     setSavingKey(key);
     try {
       await systemController.updateParameter(key, enabled() ? 'true' : 'false');
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next[key];
         return next;
       });
       setNotice(`${label} berhasil diperbarui.`);
-      refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : `Gagal memperbarui ${label}.`);
     } finally {
@@ -169,13 +170,13 @@ function TabParameter() {
     setSavingKey('SESSION_DURATION_MINUTES');
     try {
       await systemController.updateParameter('SESSION_DURATION_MINUTES', sessionValue());
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next.SESSION_DURATION_MINUTES;
         return next;
       });
       setNotice('Durasi sesi login berhasil diperbarui. Berlaku untuk login/refresh token berikutnya.');
-      refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : 'Gagal memperbarui durasi sesi login.');
     } finally {
