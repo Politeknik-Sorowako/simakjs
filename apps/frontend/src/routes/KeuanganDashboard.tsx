@@ -1,4 +1,5 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { PieChart, StatCard } from '../components/charts';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -11,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { systemController } from '../controllers/systemController';
 import { SkemaTarif, Tagihan, TransaksiPembayaran, tagihanController } from '../controllers/tagihanController';
 import { usePagination } from '../hooks/usePagination';
 
@@ -18,6 +20,8 @@ export default function KeuanganDashboard() {
   const toast = useToast();
   const auth = useAuth();
   const role = () => auth.user()?.role;
+  // Kop surat global — modal cetak Invoice & Receipt.
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
 
   const [search, setSearch] = createSignal('');
   const [debouncedSearch, setDebouncedSearch] = createSignal('');
@@ -885,9 +889,9 @@ export default function KeuanganDashboard() {
                 </button>
               </div>
               <div class="flex flex-col gap-4 text-secondary-900 dark:text-white" id="print-area-invoice">
-                <div class="text-center border-b pb-3 flex flex-col gap-1">
-                  <h2 class="text-lg font-bold text-brand-700">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-caption font-bold text-secondary-550 uppercase tracking-widest">
+                <div class="flex flex-col gap-1">
+                  <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+                  <h3 class="mt-3 text-center text-caption font-bold text-secondary-550 uppercase tracking-widest">
                     INVOICE / TAGIHAN BIAYA PENDIDIKAN
                   </h3>
                 </div>
@@ -992,9 +996,9 @@ export default function KeuanganDashboard() {
                 </button>
               </div>
               <div class="flex flex-col gap-4 text-secondary-900 dark:text-white" id="print-area-receipt">
-                <div class="text-center border-b pb-3 flex flex-col gap-1">
-                  <h2 class="text-lg font-bold text-accent-700">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-caption font-bold text-secondary-550 uppercase tracking-widest">
+                <div class="flex flex-col gap-1">
+                  <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+                  <h3 class="mt-3 text-center text-caption font-bold text-secondary-550 uppercase tracking-widest">
                     BUKTI RESMI PEMBAYARAN SPP (RECEIPT)
                   </h3>
                 </div>

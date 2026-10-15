@@ -1,11 +1,13 @@
 import { useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import type { KelasKuliah } from '../controllers/kelasKuliahController';
 import { kelasKuliahController } from '../controllers/kelasKuliahController';
 import type { Krs } from '../controllers/krsController';
 import { krsController } from '../controllers/krsController';
 import type { Mahasiswa } from '../controllers/mahasiswaController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
+import { systemController } from '../controllers/systemController';
 
 interface PrintData {
   profile: Mahasiswa;
@@ -23,6 +25,7 @@ const dosenPengajarLabel = (kelas: KelasKuliah | null | undefined) =>
 export default function KrsCetak() {
   const [searchParams] = useSearchParams();
   const [hasPrinted, setHasPrinted] = createSignal(false);
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
 
   const [printData] = createResource(
     () => {
@@ -92,8 +95,9 @@ export default function KrsCetak() {
         >
           {(data) => (
             <div id="print-area-krs" class="text-secondary-800">
-              <div class="border-b border-secondary-200 pb-3 text-center">
-                <h2 class="text-xl font-bold tracking-wider text-brand-700">POLITEKNIK SOROWAKO</h2>
+              {/* Kop surat global — judul & periode di bawah garis kop */}
+              <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+              <div class="mt-3 text-center">
                 <h3 class="text-base font-bold uppercase tracking-widest text-secondary-600">
                   Kartu Rencana Studi (KRS)
                 </h3>

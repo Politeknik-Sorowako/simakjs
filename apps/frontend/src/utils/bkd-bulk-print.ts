@@ -22,6 +22,8 @@ interface KopOptions {
   orientasi: 'portrait' | 'landscape';
   judul: string;
   rekap: BkdRekap;
+  /** Kop surat global (`surat_kop_global`) — opsional; fallback gaya lama. */
+  kop?: { nama: string; alamat: string[] };
 }
 
 function formatTanggalBulan(tanggal: string): string {
@@ -37,12 +39,16 @@ function gambarKop(doc: jsPDF, opts: KopOptions): { startY: number } {
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 14;
 
+  const kopNama = opts.kop?.nama || 'POLITEKNIK SOROWAKO';
+  const kopAlamat =
+    (opts.kop?.alamat ?? []).filter(Boolean).join(' · ') || 'Pendidikan Vokasi · Sorowako, Sulawesi Selatan';
+
   doc.setFontSize(14);
   doc.setTextColor(31, 41, 55);
-  doc.text('POLITEKNIK SOROWAKO', pageWidth / 2, 14, { align: 'center' });
+  doc.text(kopNama, pageWidth / 2, 14, { align: 'center' });
   doc.setFontSize(9);
   doc.setTextColor(107, 114, 128);
-  doc.text('Pendidikan Vokasi · Sorowako, Sulawesi Selatan', pageWidth / 2, 20, { align: 'center' });
+  doc.text(kopAlamat, pageWidth / 2, 20, { align: 'center' });
 
   doc.setFontSize(12);
   doc.setTextColor(31, 41, 55);
@@ -132,11 +138,11 @@ export function filterRombelBerpresensi(rekap: BkdRekapPresensiRombel[]): BkdRek
   return rekap.filter((r) => r.mahasiswa.length > 0);
 }
 
-export function exportBapBulkPDF(rekap: BkdRekap) {
+export function exportBapBulkPDF(rekap: BkdRekap, kop?: KopOptions['kop']) {
   const doc = new jsPDF('p', 'mm', 'a4');
   const margin = 14;
 
-  const { startY } = gambarKop(doc, { orientasi: 'portrait', judul: 'Berita Acara Perkuliahan (BAP)', rekap });
+  const { startY } = gambarKop(doc, { orientasi: 'portrait', judul: 'Berita Acara Perkuliahan (BAP)', rekap, kop });
 
   filterKelasBerBap(rekap.mengajar).forEach((mk, idx) => {
     if (idx > 0) doc.addPage();
@@ -179,11 +185,11 @@ export function exportBapBulkPDF(rekap: BkdRekap) {
   doc.save(`BAP-Bulk-${rekap.dosen.nama || 'Dosen'}-${rekap.periode.nama || ''}.pdf`);
 }
 
-export function exportPresensiBulkPDF(rekap: BkdRekap) {
+export function exportPresensiBulkPDF(rekap: BkdRekap, kop?: KopOptions['kop']) {
   const doc = new jsPDF('l', 'mm', 'a4');
   const margin = 14;
 
-  const { startY } = gambarKop(doc, { orientasi: 'landscape', judul: 'Rekap Presensi Perkuliahan', rekap });
+  const { startY } = gambarKop(doc, { orientasi: 'landscape', judul: 'Rekap Presensi Perkuliahan', rekap, kop });
 
   // Map kelasId -> pertemuan (dari BkdMengajar) untuk tabel ringkas per sesi.
   const pertemuanByKelas = new Map<number, BkdMengajar['pertemuan']>();
@@ -296,7 +302,7 @@ export function exportPresensiBulkPDF(rekap: BkdRekap) {
   doc.save(`Rekap-Presensi-${rekap.dosen.nama || 'Dosen'}-${rekap.periode.nama || ''}.pdf`);
 }
 
-export function exportBapPraktikumBulkPDF(rekap: BkdRekap) {
+export function exportBapPraktikumBulkPDF(rekap: BkdRekap, kop?: KopOptions['kop']) {
   const doc = new jsPDF('p', 'mm', 'a4');
   const margin = 14;
 
@@ -304,6 +310,7 @@ export function exportBapPraktikumBulkPDF(rekap: BkdRekap) {
     orientasi: 'portrait',
     judul: 'Berita Acara Praktikum (BAP Praktikum)',
     rekap,
+    kop,
   });
 
   filterRombelBerBap(rekap.mengajarPraktikum || []).forEach((mk, idx) => {
@@ -347,11 +354,11 @@ export function exportBapPraktikumBulkPDF(rekap: BkdRekap) {
   doc.save(`BAP-Praktikum-Bulk-${rekap.dosen.nama || 'Dosen'}-${rekap.periode.nama || ''}.pdf`);
 }
 
-export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap) {
+export function exportPresensiPraktikumBulkPDF(rekap: BkdRekap, kop?: KopOptions['kop']) {
   const doc = new jsPDF('l', 'mm', 'a4');
   const margin = 14;
 
-  const { startY } = gambarKop(doc, { orientasi: 'landscape', judul: 'Rekap Presensi Praktikum', rekap });
+  const { startY } = gambarKop(doc, { orientasi: 'landscape', judul: 'Rekap Presensi Praktikum', rekap, kop });
 
   // Map rombelId -> pertemuan (dari BkdMengajarPraktikum) untuk tabel ringkas per sesi.
   const pertemuanByRombel = new Map<number, BkdMengajarPraktikum['pertemuan']>();

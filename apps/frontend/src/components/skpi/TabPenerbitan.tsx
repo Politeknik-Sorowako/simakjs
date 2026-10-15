@@ -2,6 +2,7 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { useToast } from '../../contexts/ToastContext';
 import { prodiController } from '../../controllers/prodiController';
 import { type SkpiPenerbitanItem, skpiController } from '../../controllers/skpiController';
+import { systemController } from '../../controllers/systemController';
 import { usePagination } from '../../hooks/usePagination';
 import { type ExportColumn, exportToExcel, exportToPDF } from '../../utils/export';
 import { getTodayString } from '../../utils/format';
@@ -127,13 +128,15 @@ export default function TabPenerbitan() {
         toast.showToast('Tidak ada data untuk diekspor', 'info');
         return;
       }
+      const kopGlobal = await systemController.getKop().catch(() => null);
       const filename = `Rekap_Penerbitan_SKPI_${getTodayString()}`;
       if (format === 'excel') {
         exportToExcel(data, exportColumns(), filename);
         toast.showToast('Rekap penerbitan SKPI berhasil diekspor (.xlsx)', 'success');
       } else {
         exportToPDF(data, exportColumns(), filename, 'Rekap Penerbitan SKPI', 'Sistem Informasi Akademik Vokasi', {
-          institusi: 'Politeknik Sorowako',
+          institusi: kopGlobal?.nama || 'POLITEKNIK SOROWAKO',
+          alamat: kopGlobal?.alamat?.[0],
           judulDokumen: 'Rekap Penerbitan SKPI',
           infoLines: [`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, `Jumlah baris: ${data.length}`],
         });

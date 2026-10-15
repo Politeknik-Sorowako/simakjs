@@ -341,13 +341,10 @@ export class SkpiService {
     const totalPoin = kegiatan.reduce((sum, k) => sum + (k.poin ?? 0), 0);
     const syarat = await SkpiService.getSyaratPenerbitan(mhsId, kegiatan.length);
 
-    // Kop & nomor surat terkonfigurasi via system_settings (PRD §8, keputusan
-    // produk Tahap 7) — fallback ke default bila parameter belum di-set.
-    const [kopNama, kopAlamat, nomorFormat] = await Promise.all([
-      SystemParameterService.getRaw('skpi_kop_nama'),
-      SystemParameterService.getRaw('skpi_kop_alamat'),
-      SystemParameterService.getRaw('skpi_nomor_format'),
-    ]);
+    // Kop memakai kop surat GLOBAL (`surat_kop_global` — dipakai semua dokumen);
+    // nomor surat SKPI tetap dari `skpi_nomor_format` (PRD §8).
+    const kop = await SystemParameterService.getKopSurat();
+    const nomorFormat = await SystemParameterService.getRaw('skpi_nomor_format');
     const tahun = Number((await getNowDateString()).slice(0, 4));
     const nomorSurat = (nomorFormat || 'SKPI/{tahun}/{nim}')
       .replaceAll('{tahun}', String(tahun))
@@ -367,10 +364,7 @@ export class SkpiService {
       totalKegiatan: kegiatan.length,
       totalPoin,
       syarat,
-      kop: {
-        nama: kopNama || 'POLITEKNIK SOROWAKO',
-        alamat: kopAlamat || 'Jl. Trans Sulawesi, Morowali, Sulawesi Tengah',
-      },
+      kop,
       nomorSurat,
     };
   }

@@ -7,6 +7,32 @@ const CACHE_TTL_MS = 10_000;
 
 type ParamType = 'string' | 'number' | 'boolean';
 
+/** Konfigurasi kop surat global semua dokumen cetak (kunci `surat_kop_global`). */
+export interface KopSuratConfig {
+  nama: string;
+  alamat: string[];
+  kontak: string;
+  website: string;
+  email: string;
+  tampilkanLogo: boolean;
+  /** true = memakai logo unggahan admin (storage/kop/logo.*); false = logo bawaan. */
+  logoCustom: boolean;
+}
+
+/** Default kop global — desain standar kampus (lihat docs/015 §8b). */
+export const DEFAULT_KOP_SURAT: KopSuratConfig = {
+  nama: 'POLITEKNIK SOROWAKO',
+  alamat: [
+    'Jl. Sumantri Brojonegoro no. 1 Sorowako, Kode Pos 92984',
+    'Kabupaten Luwu Timur – Propinsi Sulawesi Selatan',
+  ],
+  kontak: 'Telepon [021] 5249100 ext. 3816, 3818, 3819, 3820 • Fax [021] 5249589',
+  website: 'https://www.politekniksorowako.ac.id',
+  email: 'info@politekniksorowako.ac.id',
+  tampilkanLogo: true,
+  logoCustom: false,
+};
+
 const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; description: string }> = {
   TIMEZONE: {
     value: 'Asia/Makassar',
@@ -60,21 +86,19 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'number',
     description: 'Jumlah minimum kegiatan terverifikasi sebelum SKPI dapat diterbitkan',
   },
-  // Kop & nomor surat dokumen SKPI (PRD §8) — dibaca oleh SkpiService.getDokumen.
-  skpi_kop_nama: {
-    value: 'POLITEKNIK SOROWAKO',
-    type: 'string',
-    description: 'Nama institusi pada kop surat dokumen SKPI',
-  },
-  skpi_kop_alamat: {
-    value: 'Jl. Trans Sulawesi, Morowali, Sulawesi Tengah',
-    type: 'string',
-    description: 'Alamat pada kop surat dokumen SKPI',
-  },
+  // Nomor surat SKPI — kop/kontak memakai `surat_kop_global` (kunci di bawah).
   skpi_nomor_format: {
     value: 'SKPI/{tahun}/{nim}',
     type: 'string',
     description: 'Format nomor surat SKPI — placeholder {tahun} dan {nim} diganti otomatis',
+  },
+  // Kop surat GLOBAL semua dokumen (KHS, SKPI, BKD, KRS, Peringatan, dst) —
+  // format sesuai desain standar kampus (logo kiri + blok info tengah + garis).
+  // JSON string; divalidasi & di-merge oleh SystemParameterService.getKopSurat().
+  surat_kop_global: {
+    value: JSON.stringify(DEFAULT_KOP_SURAT),
+    type: 'string',
+    description: 'Kop surat global semua dokumen cetak (JSON: nama, alamat, kontak, website, email, logo)',
   },
   BLOCK_KRS_JIKA_TANGGUNGAN: {
     value: 'false',
@@ -154,6 +178,39 @@ export class SystemParameterService {
 
   static async getTimezone(): Promise<string> {
     return (await SystemParameterService.getRaw('TIMEZONE')) || 'Asia/Makassar';
+  }
+
+  /**
+   * Konfigurasi kop surat global semua dokumen cetak. Di-merge dengan default
+   * per field agar nilai korup/hilang tidak membuat kop kosong (fail-safe —
+   * kop tampil di dokumen resmi).
+   */
+  static async getKopSurat(): Promise<KopSuratConfig> {
+    const fallback: KopSuratConfig = { ...DEFAULT_KOP_SURAT, alamat: [...DEFAULT_KOP_SURAT.alamat] };
+    const raw = await SystemParameterService.getRaw('surat_kop_global');
+    if (!raw) return fallback;
+    try {
+      const p = JSON.parse(raw) as Partial<KopSuratConfig>;
+      const str = (v: unknown, def: string, max: number) =>
+        typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : def;
+      const alamat = Array.isArray(p.alamat)
+        ? p.alamat
+            .filter((a): a is string => typeof a === 'string' && a.trim().length > 0)
+            .map((a) => a.trim().slice(0, 200))
+            .slice(0, 4)
+        : fallback.alamat;
+      return {
+        nama: str(p.nama, fallback.nama, 120),
+        alamat: alamat.length > 0 ? alamat : fallback.alamat,
+        kontak: typeof p.kontak === 'string' ? p.kontak.trim().slice(0, 300) : fallback.kontak,
+        website: str(p.website, fallback.website, 200),
+        email: str(p.email, fallback.email, 200),
+        tampilkanLogo: typeof p.tampilkanLogo === 'boolean' ? p.tampilkanLogo : true,
+        logoCustom: typeof p.logoCustom === 'boolean' ? p.logoCustom : false,
+      };
+    } catch {
+      return fallback;
+    }
   }
 
   /** Durasi sesi login (idle timeout) dalam menit, diklamp ke rentang 15–10080. */

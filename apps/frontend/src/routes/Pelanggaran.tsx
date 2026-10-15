@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { IconActionButton } from '../components/ui/IconActionButton';
@@ -20,6 +21,7 @@ import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaControll
 import { pasalController } from '../controllers/pasalController';
 import { PeriodeAkademik, periodeAkademikController } from '../controllers/periodeAkademikController';
 import { Prodi, prodiController } from '../controllers/prodiController';
+import { systemController } from '../controllers/systemController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn, exportToExcel, exportToPDF } from '../utils/export';
 import { fmtTanggal, getTodayString } from '../utils/format';
@@ -29,6 +31,12 @@ export default function Pelanggaran() {
   const toast = useToast();
   const user = () => auth.user();
   const isStaff = () => auth.hasRole(['admin', 'dosen', 'prodi', 'instruktur', 'super_admin']);
+  // Kop surat global — dipakai modal SP & popup cetak SP.
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
+  const [kopLogoSrc] = createResource(
+    () => kop(),
+    (k) => (k ? systemController.kopLogoObjectUrl(k) : null),
+  );
 
   // Student Profile (if logged in as student)
   const [mhsProfile] = createResource(
@@ -415,6 +423,16 @@ export default function Pelanggaran() {
     const isTertulis = item.jenisSanksi === 4;
     const tanggal = new Date(item.tanggal).toLocaleDateString('id-ID', { dateStyle: 'full' });
 
+    // Kop surat global (HTML string) — baris kementerian dipertahankan pada judul.
+    const kg = kop() ?? KOPI_FALLBACK;
+    const kopBlock = `${kg.tampilkanLogo && kopLogoSrc() ? `<img src="${kopLogoSrc()}" alt="" style="height:64px;float:left;margin:0 16px 8px 0;object-fit:contain" />` : ''}
+<p style="text-align:center;margin:0;font-size:16px;font-weight:bold">${escapeHtml(kg.nama)}</p>
+${kg.alamat.map((a) => `<p style="text-align:center;margin:0;font-size:12px">${escapeHtml(a)}</p>`).join('\n')}
+${kg.kontak ? `<p style="text-align:center;margin:0;font-size:12px">${escapeHtml(kg.kontak)}</p>` : ''}
+${kg.website ? `<p style="text-align:center;margin:0;font-size:12px"><a href="${escapeHtml(kg.website)}">${escapeHtml(kg.website)}</a></p>` : ''}
+${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a href="mailto:${escapeHtml(kg.email)}">${escapeHtml(kg.email)}</a></p>` : ''}
+<div style="clear:both;border-bottom:2px solid #000;margin:8px 0 14px"></div>`;
+
     const namaMahasiswa = escapeHtml(item.namaMahasiswa || '-');
     const nim = escapeHtml(item.nim || '-');
     const prodiNama = escapeHtml(item.prodiNama || '-');
@@ -425,12 +443,9 @@ export default function Pelanggaran() {
 
     const body = `
       <div id="printable-sp" class="sp-doc">
-        <div class="kop">
-          <h2>KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI</h2>
-          <h3>POLITEKNIK SOROWAKO</h3>
-          <p>Jl. Sorowako Raya No. 1, Luwu Timur, Sulawesi Selatan | SIMAK Kedisiplinan Mahasiswa</p>
-        </div>
+        ${kopBlock}
         <div class="judul">
+          <p style="margin:0 0 4px;font-size:13px;letter-spacing:1px">KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI</p>
           <h4>SURAT PERINGATAN KEDISIPLINAN ${isTertulis ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}</h4>
           <p>Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28</p>
         </div>
@@ -2116,21 +2131,14 @@ export default function Pelanggaran() {
                     id="printable-sp"
                     class="p-6 bg-white border border-secondary-200 rounded-xl shadow-sm text-secondary-900 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
                   >
-                    {/* Kop Surat Politeknik Sorowako */}
-                    <div class="text-center border-b-2 border-secondary-800 dark:border-white pb-3 mb-4">
-                      <h2 class="text-base font-bold uppercase tracking-wider">
-                        KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI
-                      </h2>
-                      <h3 class="text-lg font-bold uppercase text-brand-700 dark:text-brand-400">
-                        POLITEKNIK SOROWAKO
-                      </h3>
-                      <p class="text-fine text-secondary-500 dark:text-secondary-400">
-                        Jl. Sorowako Raya No. 1, Luwu Timur, Sulawesi Selatan | SIMAK Kedisiplinan Mahasiswa
-                      </p>
-                    </div>
+                    {/* Kop surat global + baris kementerian pada judul */}
+                    <KopSurat kop={kop() ?? KOPI_FALLBACK} />
 
                     {/* Judul Surat */}
                     <div class="text-center my-3">
+                      <p class="text-fine font-semibold tracking-widest text-secondary-600 dark:text-secondary-300">
+                        KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI
+                      </p>
                       <h4 class="text-base font-bold underline uppercase">
                         SURAT PERINGATAN KEDISIPLINAN {isTertulis() ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}
                       </h4>
