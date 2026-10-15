@@ -30,7 +30,7 @@ export default function KopSurat(props: { kop: KopSurat }) {
     () => `${props.kop.logoCustom ? 'custom' : 'default'}:${props.kop.logoUrl ?? ''}`,
     async () => {
       if (!props.kop.tampilkanLogo) return null;
-      return systemController.kopLogoObjectUrl(props.kop) ?? logoBawaan;
+      return (await systemController.kopLogoObjectUrl(props.kop)) ?? logoBawaan;
     },
   );
 
