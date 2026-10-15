@@ -25,6 +25,7 @@ import { periodeAkademikController } from '../controllers/periodeAkademikControl
 import { type Prodi, prodiController } from '../controllers/prodiController';
 import { rombelPraktikumController } from '../controllers/rombelPraktikumController';
 import { rpsController } from '../controllers/rpsController';
+import { systemController } from '../controllers/systemController';
 import { isHeaderRow } from '../utils/csv';
 import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets, exportToPDF } from '../utils/export';
 
@@ -1169,6 +1170,7 @@ export default function InputNilai() {
       const data = (await khsController.getNilaiMahasiswa(kelasId)) || [];
       const kelas = selectedClassDetails();
       const logoDataUrl = await loadPdfLogoDataUrl();
+      const kopGlobal = await systemController.getKop().catch(() => null);
       const periode = kelas?.periodeId || selectedPeriodeId() || '-';
       const pengampu = (kelas?.dosenPengajarKelas || [])
         .map((d) => d.dosen?.nama)
@@ -1183,8 +1185,8 @@ export default function InputNilai() {
         undefined,
         {
           logoDataUrl: logoDataUrl ?? undefined,
-          institusi: 'POLITEKNIK SOROWAKO',
-          alamat: 'Program Pendidikan Vokasi',
+          institusi: kopGlobal?.nama || 'POLITEKNIK SOROWAKO',
+          alamat: kopGlobal?.alamat?.[0] || 'Program Pendidikan Vokasi',
           judulDokumen: 'DAFTAR NILAI UJIAN',
           infoLines: [
             `Mata Kuliah: ${kelas?.mataKuliah?.nama || '-'} (${kelas?.mataKuliah?.kode || '-'})`,

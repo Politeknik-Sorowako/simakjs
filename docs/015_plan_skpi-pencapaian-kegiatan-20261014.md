@@ -3,7 +3,7 @@
 - **Dokumen**: `docs/015_plan_skpi-pencapaian-kegiatan-20261014.md`
 - **Tanggal**: 14 Oktober 2026
 - **Penulis**: Senior System Analyst
-- **Status**: **Selesai Tahap 1–3** — PR #534 (Tahap 1 backend fondasi), #536 (Tahap 2 dokumen + TTE), #537 (Tahap 3 frontend), #538 (input staf + kelola kategori), #539 (perbaikan UX panel kategori), dan PR follow-up (kolom sertifikat di cetak, filter mahasiswa/prodi, pencarian NIM/nama). Sisa backlog ke tahap berikut: US-8 (ekspor rekap PDF/Excel), mekanisme unverify admin-only, konfigurasi kop/nomor via `system_settings`, serta promosi produksi `development -> main` (lihat `docs/016_uat-skpi-staging.md` untuk gate UAT & runbook).
+- **Status**: **Selesai Tahap 1–7** — PR #534 (Tahap 1 backend fondasi), #536 (Tahap 2 dokumen + TTE), #537 (Tahap 3 frontend), #538 (input staf + kelola kategori), #539 (perbaikan UX panel kategori), #540 (follow-up filter/cetak), #541 (staf-sign, unverify + edit hasil verifikasi, cetak staf), #542 (halaman terpadu tab Rekaman/Verifikasi/Penerbitan, impor CSV, verifikasi massal, terbit/cabut massal, cetak per mahasiswa), dan PR Tahap 7 (US-8 ekspor rekap PDF/Excel mengikuti filter + kop/nomor surat via `system_settings`). **Keputusan final**: self-sign mahasiswa DITUTUP — tanda tangan digital SKPI hanya staf-verifier. Sisa: UAT staging Tahap 7 + promosi produksi `development -> main` (lihat `docs/016_uat-skpi-staging.md` untuk gate UAT & runbook).
 - **Target Implementasi**: Feature branch → PR ke `development` (staging-first) — selesai
 
 ---
@@ -53,6 +53,12 @@
 | US-7 | Sebagai mahasiswa, saya dapat melihat ringkasan poin pencapaian dari kegiatan terverifikasi di halaman SKPI saya. | **Could** |
 | US-8 | Sebagai staf, saya dapat mengekspor rekap kegiatan per prodi/periode (PDF/Excel). | **Could** |
 | US-9 | Sebagai admin, saya dapat menetapkan syarat minimum kegiatan terverifikasi sebelum SKPI dapat diterbitkan. | **Should** |
+| US-10 | Sebagai staf-verifier, saya dapat membatalkan hasil verifikasi (`unverify`) dan mengedit poin/catatan hasil (`hasil-verifikasi`) tanpa mengubah status. | **Should** |
+| US-11 | Sebagai verifikator (staf), saya dapat mengimpor daftar kegiatan mahasiswa via CSV dengan laporan error per baris. | **Must** |
+| US-12 | Sebagai verifikator, saya dapat menyetujui banyak rekaman sekaligus (bulk approve). | **Must** |
+| US-13 | Sebagai staf, saya melihat tab Penerbitan berisi mahasiswa dengan ≥1 rekaman dan dapat menerbitkan/mencabut tanda tangan SKPI satu per satu maupun massal; cetak selalu rekap per mahasiswa. | **Must** |
+
+Catatan prioritas ekspor (US-8): implementasi **frontend-only mengikuti filter aktif** (keputusan produk Tahap 7) — bukan per periode tanggal; "periode" ditafsirkan sebagai filter status/kategori/mahasiswa/prodi yang sedang aktif di tabel.
 
 ---
 
@@ -195,7 +201,7 @@ Prefix route: `/skpi`, semua endpoint terproteksi `authMiddleware` kecuali verif
 | Method & Path | Aksi | Otorisasi |
 | :-- | :-- | :-- |
 | `GET /skpi/dokumen/:mhsId` | Ambil ringkasan siap cetak (identitas + kegiatan terverifikasi + status signature bila ada) | mahasiswa own / staf scope |
-| `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | **Khusus staf** `super_admin`/`admin`/`prodi`/`kaprodi`/`kemahasiswaan` scope (mahasiswa — termasuk pemilik — TIDAK; keputusan produk tahap berikut) |
+| `POST /skpi/dokumen/:mhsId/sign` | Terbitkan signature (idempoten, pola `signKhs`) | **Khusus staf** `super_admin`/`admin`/`prodi`/`kaprodi`/`kemahasiswaan` scope — **keputusan final (Tahap 7)**: mahasiswa (termasuk pemilik) TIDAK boleh menandatangani sendiri |
 | `POST /skpi/dokumen/:mhsId/revoke` | **Cabut** signature SKPI (alasan ≥3 karakter); `400` bila belum pernah ditandatangani | idem sign (staf-verifier + scope) — jalur khusus SKPI, **lebih luas** dari `POST /document-signatures/:uuid/revoke` generik yang dibatasi admin/kaprodi |
 | `POST /skpi/dokumen/bulk-sign` | **Terbitkan massal** `{ mahasiswaIds: number[1..50] }` → `{ signedCount, failed[{mahasiswaId,error}] }`; seluruh id wajib scope (403 utuh bila ada luar lingkup); syarat §4.4 dienforce per mahasiswa (gagal → `failed`, bukan membatalkan sisanya); idempoten | idem sign |
 | `POST /skpi/dokumen/bulk-revoke` | **Cabut massal** `{ mahasiswaIds, reason }` → `{ revokedCount, failed[] }`; belum ditandatangani → `failed` per baris; aman re-run | idem sign |
@@ -269,7 +275,7 @@ Tab bar pill (`rounded-full`) hanya ditampilkan bila >1 tab tersedia; tab aktif 
 ## 8. Dokumen SKPI — Komponen Cetak
 
 Struktur dokumen (A4 portrait, HTML + `window.print()`):
-1. **Kop surat** kampus (polo surat institusi).
+1. **Kop surat** global (`surat_kop_global` di `system_settings`, diedit via tab **Kop Surat** pada Pengaturan Sistem; identik untuk semua dokumen cetak — KHS, SKPI, BKD, KRS, Surat Peringatan, Invoice/Bukti Bayar, dst.). Judul SKPI + Nomor Surat tetap di **bawah** garis kop.
 2. **Judul**: "SURAT KETERANGAN PENDAMPING IJAZAH (SKPI)" + nomor (auto, format internal).
 3. **Identitas mahasiswa**: NIM, nama lengkap, program studi, jenjang, tahun akademik masuk/akhir, status kelulusan.
 4. **Daftar kegiatan terverifikasi** (tabel, diurut `tanggalMulai` asc): No., Nama Kegiatan, Jenis/Kategori, Penyelenggara, Tanggal, Lokasi, Nomor Sertifikat.
@@ -321,7 +327,7 @@ Pilihan download: **PDF via print dialog** (Save as PDF) — konsisten dengan KH
 | `ALTER TYPE ... ADD VALUE` tidak dalam transaksi | Ikuti pola migrasi enum pasti di repo; jalankan via `db:safe-migrate` dengan backup |
 | Data kegiatan berubah setelah SKPI ditandatangani → dokumen cetak tidak konsisten dengan snapshot | Idempotent re-sign: snapshot hash berubah → revoke + insert baru (pola KHS); QR lama tampil `REVOKED` |
 | Pemalsuan upload sertifikat | Verifikator wajib memeriksa lampiran; catatan verifikasi tercatat; audit log penuh; skala manual trust institution |
-| Dokumen SKPI format institusi bervariasi antar kampus | Kop, nomor surat, dan paragraf pembuka dikonfigurasi (opsional `system_settings`) agar mudah disesuaikan tanpa perubahan kode |
+| Dokumen SKPI format institusi bervariasi antar kampus | Kop global (`surat_kop_global`, tab Kop Surat), nomor surat (`skpi_nomor_format`), dan paragraf pembuka dikonfigurasi (opsional `system_settings`) agar mudah disesuaikan tanpa perubahan kode |
 | Flaky integration test seeding berat | Test file skpi dijalankan scoped (`bun test apps/backend/src/__tests__/skpi*.test.ts --timeout 15000`) |
 
 ---
@@ -373,3 +379,9 @@ cd apps/frontend && bunx tsc --noEmit
 **Frontend (dihapus)**: `src/routes/SkpiVerifikasi.tsx` (digabung sebagai tab).
 
 **Frontend (edit)**: `src/App.tsx` (lazy + route + redirect `/skpi/verifikasi`), `src/components/Sidebar.tsx` (hapus entri Verifikasi SKPI + auto-expand), `src/components/ProtectedRoute.tsx` (union role).
+
+**Fitur Kop Surat Global (lintas dokumen, PR terpisah)**:
+- **Backend (baru)**: `src/utils/kop-storage.ts` (logo: simpan/hapus/cari di `storage/kop/`), `src/__tests__/settings-kop.test.ts` (6 skenario).
+- **Backend (edit)**: `src/services/system-parameter.service.ts` (`KopSuratConfig` + `DEFAULT_KOP_SURAT` + key `surat_kop_global` + `getKopSurat()`; parameter `skpi_kop_nama`/`skpi_kop_alamat` dihapus, `skpi_nomor_format` dipertahankan), `src/controllers/settings.controller.ts` (`getKop`, `updateKop`, `uploadKopLogo`, `deleteKopLogo`, `getKopLogo`), `src/routes/settings.routes.ts` (5 route; baca semua role, tulis admin/super_admin), `src/services/skpi.service.ts` (`getDokumen` → kop global + `nomorSurat`), `src/app.ts` (mkdir `storage/kop/`).
+- **Frontend (baru)**: `src/components/cetak/KopSurat.tsx` (komponen kop bersama + `KOPI_FALLBACK`), `src/components/konfigurasi/TabKopSurat.tsx` (editor + live preview + upload/reset logo).
+- **Frontend (edit)**: `src/controllers/systemController.ts` (tipe & method kop), `src/routes/KonfigurasiParameter.tsx` (shell 2 tab Parameter/Kop Surat), `src/controllers/skpiController.ts` (`SkpiDokumen.kop`), `src/routes/SkpiCetak.tsx`, `KhsCetak.tsx`, `KrsCetak.tsx`, `BkdCetak.tsx`, `Khs.tsx`, `Pelanggaran.tsx`, `KeuanganDashboard.tsx`, `InputNilai.tsx`, `reports/LaporanBKD.tsx`, `src/utils/bkd-bulk-print.ts` (jsPDF), `src/components/skpi/TabPenerbitan.tsx` + `TabVerifikasi.tsx` (ekspor PDF mengikuti kop global).

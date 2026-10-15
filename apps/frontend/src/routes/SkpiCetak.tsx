@@ -1,6 +1,7 @@
 import { useParams } from '@solidjs/router';
 import QRCode from 'qrcode';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
@@ -100,9 +101,13 @@ export default function SkpiCetak() {
     }
   });
 
+  // Nomor surat dari backend (`skpi_nomor_format`); judul & nomor selalu di
+  // BAWAH garis kop (keputusan produk tahap kop global).
   const nomorSurat = () => {
     const d = doc();
     if (!d) return '-';
+    if (d.nomorSurat) return d.nomorSurat;
+    // Fallback lama bila backend tidak mengirim nomorSurat.
     const tahun = new Date().getFullYear();
     return `SKPI/${tahun}/${d.mahasiswa.nim}`;
   };
@@ -166,11 +171,10 @@ export default function SkpiCetak() {
         >
           {(d) => (
             <div id="print-area-skpi" class="relative text-secondary-800">
-              {/* Kop surat */}
-              <div class="border-b-2 border-secondary-800 pb-3 text-center">
-                <h2 class="text-xl font-bold tracking-wider text-secondary-900">POLITEKNIK SOROWAKO</h2>
-                <p class="text-xs text-secondary-600">Jl. Trans Sulawesi, Morowali, Sulawesi Tengah</p>
-                <h3 class="mt-3 text-sm font-bold uppercase tracking-widest text-secondary-700">
+              {/* Kop surat global (logo + info) lalu judul & nomor di bawah garisnya */}
+              <KopSurat kop={d().kop ?? KOPI_FALLBACK} />
+              <div class="mt-3 text-center">
+                <h3 class="text-sm font-bold uppercase tracking-widest text-secondary-700">
                   Surat Keterangan Pendamping Ijazah (SKPI)
                 </h3>
                 <p class="text-xs text-secondary-500">Nomor: {nomorSurat()}</p>

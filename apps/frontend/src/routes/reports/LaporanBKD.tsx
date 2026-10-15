@@ -12,6 +12,7 @@ import {
 } from '../../controllers/bkdController';
 import { dosenController } from '../../controllers/dosenController';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
+import { systemController } from '../../controllers/systemController';
 import {
   exportBapBulkPDF,
   exportBapPraktikumBulkPDF,
@@ -49,6 +50,9 @@ export default function LaporanBKD() {
 
   const [periodes] = createResource(() => periodeAkademikController.getAll('', 1, 100));
   const [dosens] = createResource(() => dosenController.getAll('', 1, 1000));
+  // Kop surat global — diteruskan ke ekspor PDF bulk BKD.
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
+  const kopArg = () => kop() ?? undefined;
 
   const [rekap] = createResource(
     () => ({ dosenId: selectedDosen(), periodeId: selectedPeriode() }),
@@ -101,7 +105,7 @@ export default function LaporanBKD() {
       return;
     }
     try {
-      exportBapBulkPDF(data);
+      exportBapBulkPDF(data, kopArg());
       toast.showToast('PDF BAP berhasil diunduh', 'success');
     } catch {
       toast.showToast('Gagal membuat PDF BAP', 'error');
@@ -119,7 +123,7 @@ export default function LaporanBKD() {
       return;
     }
     try {
-      exportPresensiBulkPDF(data);
+      exportPresensiBulkPDF(data, kopArg());
       toast.showToast('PDF rekap presensi berhasil diunduh', 'success');
     } catch {
       toast.showToast('Gagal membuat PDF rekap presensi', 'error');
@@ -137,7 +141,7 @@ export default function LaporanBKD() {
       return;
     }
     try {
-      exportBapPraktikumBulkPDF(data);
+      exportBapPraktikumBulkPDF(data, kopArg());
       toast.showToast('PDF BAP praktikum berhasil diunduh', 'success');
     } catch {
       toast.showToast('Gagal membuat PDF BAP praktikum', 'error');
@@ -155,7 +159,7 @@ export default function LaporanBKD() {
       return;
     }
     try {
-      exportPresensiPraktikumBulkPDF(data);
+      exportPresensiPraktikumBulkPDF(data, kopArg());
       toast.showToast('PDF rekap presensi praktikum berhasil diunduh', 'success');
     } catch {
       toast.showToast('Gagal membuat PDF rekap presensi praktikum', 'error');

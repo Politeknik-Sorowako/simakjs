@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import TabKopSurat from '../components/konfigurasi/TabKopSurat';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -71,7 +72,8 @@ function ToggleCard(props: ToggleCardProps) {
   );
 }
 
-export default function KonfigurasiParameter() {
+/** Tab "Parameter" — isi pengaturan parameter (dulu seluruh isi halaman). */
+function TabParameter() {
   const [params, { refetch }] = createResource(() => systemController.getParameters());
   const [edits, setEdits] = createSignal<Record<string, string>>({});
   const [savingKey, setSavingKey] = createSignal<string | null>(null);
@@ -90,6 +92,7 @@ export default function KonfigurasiParameter() {
     setSavingKey(p.key);
     try {
       await systemController.updateParameter(p.key, valueFor(p));
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next[p.key];
@@ -113,13 +116,13 @@ export default function KonfigurasiParameter() {
     setSavingKey('KRS_MANDIRI_ENABLED');
     try {
       await systemController.updateParameter('KRS_MANDIRI_ENABLED', krsMandiriEnabled() ? 'true' : 'false');
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next.KRS_MANDIRI_ENABLED;
         return next;
       });
       setNotice('Pengaturan KRS mandiri berhasil diperbarui.');
-      refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : 'Gagal memperbarui pengaturan KRS mandiri.');
     } finally {
@@ -140,13 +143,13 @@ export default function KonfigurasiParameter() {
     setSavingKey(key);
     try {
       await systemController.updateParameter(key, enabled() ? 'true' : 'false');
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next[key];
         return next;
       });
       setNotice(`${label} berhasil diperbarui.`);
-      refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : `Gagal memperbarui ${label}.`);
     } finally {
@@ -167,13 +170,13 @@ export default function KonfigurasiParameter() {
     setSavingKey('SESSION_DURATION_MINUTES');
     try {
       await systemController.updateParameter('SESSION_DURATION_MINUTES', sessionValue());
+      await refetch();
       setEdits((prev) => {
         const next = { ...prev };
         delete next.SESSION_DURATION_MINUTES;
         return next;
       });
       setNotice('Durasi sesi login berhasil diperbarui. Berlaku untuk login/refresh token berikutnya.');
-      refetch();
     } catch (e: unknown) {
       setNotice(e instanceof Error ? e.message : 'Gagal memperbarui durasi sesi login.');
     } finally {
@@ -214,266 +217,328 @@ export default function KonfigurasiParameter() {
   };
 
   return (
+    <>
+      <div class="mb-6">
+        <p class="text-sm text-secondary-500 dark:text-secondary-400">
+          Aturan dinamis sistem Vokasi. Nilai diinjeksikan ke layanan kompensasi secara langsung, tanpa hardcode.
+        </p>
+      </div>
+
+      <Show when={notice()}>
+        <div class="mb-4 rounded-xl bg-success-50 border border-success-200 dark:bg-success-900/30 dark:border-success-800 px-4 py-3 text-sm text-success-700 dark:text-success-400">
+          {notice()}
+        </div>
+      </Show>
+
+      {/* Kontrol KRS Mandiri */}
+      <div class="mb-6">
+        <Card>
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                  Kontrol KRS Mandiri
+                </span>
+                <Badge variant={krsMandiriEnabled() ? 'success' : 'warning'}>
+                  {krsMandiriEnabled() ? 'Aktif' : 'Nonaktif'}
+                </Badge>
+              </div>
+              <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                Jika nonaktif, mahasiswa tidak dapat melakukan pengisian KRS mandiri (tombol Kontrak KRS disembunyikan).
+                Staff (admin/dosen/prodi) tidak terpengaruh.
+              </p>
+              <p class="mt-0.5 text-xs text-secondary-400 font-mono">KRS_MANDIRI_ENABLED</p>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <select
+                value={krsMandiriEnabled() ? 'true' : 'false'}
+                onChange={(e) => setField('KRS_MANDIRI_ENABLED', e.currentTarget.value)}
+                class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+              >
+                <option value="true">Ya — Izinkan</option>
+                <option value="false">Tidak — Nonaktifkan</option>
+              </select>
+              <Button size="sm" loading={savingKey() === 'KRS_MANDIRI_ENABLED'} onClick={saveKrsMandiri}>
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Kontrol Blocking KHS & KRS karena tunggakan */}
+      <div class="mb-6 space-y-3">
+        <ToggleCard
+          title="Pendaftaran Akun Baru"
+          parameterKey="REGISTRATION_ENABLED"
+          description="Jika aktif, tombol 'Daftar' tampil di halaman login dan pengguna baru dapat mendaftarkan akun. Jika nonaktif, registrasi mandiri ditutup."
+          enabled={registrationEnabled()}
+          saving={savingKey() === 'REGISTRATION_ENABLED'}
+          onToggle={(val) => setField('REGISTRATION_ENABLED', val)}
+          onSave={() => saveBoolParam('REGISTRATION_ENABLED', 'Pendaftaran Akun Baru', registrationEnabled)}
+        />
+        <ToggleCard
+          title="Verifikasi Turnstile pada Login"
+          parameterKey="LOGIN_TURNSTILE_ENABLED"
+          description="Jika aktif, form login menampilkan captcha Cloudflare Turnstile. Pastikan TURNSTILE_SECRET_KEY (backend) dan VITE_TURNSTILE_SITE_KEY (build frontend) sudah terisi — tanpa secret, login di production ditolak. Efek berlaku ±10 detik setelah disimpan."
+          enabled={loginTurnstileEnabled()}
+          saving={savingKey() === 'LOGIN_TURNSTILE_ENABLED'}
+          onToggle={(val) => setField('LOGIN_TURNSTILE_ENABLED', val)}
+          onSave={() =>
+            saveBoolParam('LOGIN_TURNSTILE_ENABLED', 'Verifikasi Turnstile pada Login', loginTurnstileEnabled)
+          }
+          trueLabel="Ya — Wajibkan"
+          falseLabel="Tidak — Nonaktifkan"
+        />
+        <ToggleCard
+          title="Pemblokiran KHS karena Tunggakan"
+          parameterKey="BLOCK_KHS_JIKA_TANGGUNGAN"
+          description="Jika aktif, mahasiswa tidak dapat melihat KHS saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
+          enabled={khsBlockEnabled()}
+          saving={savingKey() === 'BLOCK_KHS_JIKA_TANGGUNGAN'}
+          onToggle={(val) => setField('BLOCK_KHS_JIKA_TANGGUNGAN', val)}
+          onSave={() => saveBoolParam('BLOCK_KHS_JIKA_TANGGUNGAN', 'Pemblokiran KHS', khsBlockEnabled)}
+        />
+        <ToggleCard
+          title="Pemblokiran KRS karena Tunggakan"
+          parameterKey="BLOCK_KRS_JIKA_TANGGUNGAN"
+          description="Jika aktif, mahasiswa tidak dapat melakukan pengisian KRS mandiri saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
+          enabled={krsBlockEnabled()}
+          saving={savingKey() === 'BLOCK_KRS_JIKA_TANGGUNGAN'}
+          onToggle={(val) => setField('BLOCK_KRS_JIKA_TANGGUNGAN', val)}
+          onSave={() => saveBoolParam('BLOCK_KRS_JIKA_TANGGUNGAN', 'Pemblokiran KRS', krsBlockEnabled)}
+        />
+      </div>
+
+      {/* Durasi Sesi Login (Idle Timeout) */}
+      <div class="mb-6">
+        <Card>
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                  Durasi Sesi Login (Idle Timeout)
+                </span>
+                <Badge variant="info">SESSION_DURATION_MINUTES</Badge>
+              </div>
+              <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                Mengatur berapa lama pengguna harus login kembali setelah tidak ada aktivitas. Sesi berakhir jika
+                pengguna tidak beraktivitas selama durasi ini (idle). Berlaku efektif untuk login/refresh token
+                berikutnya.
+              </p>
+              <p class="mt-0.5 text-xs text-secondary-400">Rentang: 15 – 10080 menit. Default: 480 menit (8 jam).</p>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <select
+                value={sessionIsPreset() ? sessionValue() : 'custom'}
+                onChange={(e) => {
+                  const v = e.currentTarget.value;
+                  if (v === 'custom') return;
+                  setField('SESSION_DURATION_MINUTES', v);
+                }}
+                class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+              >
+                <For each={SESSION_PRESETS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
+                <option value="custom">Lainnya (custom)</option>
+              </select>
+              <Show when={!sessionIsPreset()}>
+                <Input
+                  type="number"
+                  min={15}
+                  max={10080}
+                  value={sessionValue()}
+                  onInput={(e) => setField('SESSION_DURATION_MINUTES', e.currentTarget.value)}
+                  class="w-28"
+                />
+              </Show>
+              <Button
+                size="sm"
+                loading={savingKey() === 'SESSION_DURATION_MINUTES'}
+                disabled={!sessionHasChanges()}
+                onClick={saveSessionDuration}
+              >
+                Simpan
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Paksa Logout Semua Sesi (Kill-Switch) */}
+      <div class="mb-6">
+        <Card>
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                  Paksa Logout Semua Sesi
+                </span>
+                <Badge variant="danger">SESSION_EPOCH</Badge>
+              </div>
+              <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
+                Memaksa semua pengguna yang sedang login untuk login ulang (kill-switch). Gunakan setelah mengubah
+                durasi sesi atau saat terjadi insiden keamanan. Token yang diterbitkan sebelum epoch ini langsung
+                ditolak pada request berikutnya.
+              </p>
+              <p class="mt-0.5 text-xs text-secondary-400">
+                Epoch sesi saat ini: <span class="font-mono">{epochParam()?.value ?? '1'}</span>
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant={confirmBump() ? 'danger' : 'secondary'}
+                loading={bumping()}
+                onClick={bumpSessionEpoch}
+              >
+                {confirmBump() ? 'Yakin? Klik lagi untuk konfirmasi' : 'Paksa Logout Semua Sesi'}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div class="space-y-3">
+        <For
+          each={(params() || []).filter(
+            (p) =>
+              p.key !== 'KRS_MANDIRI_ENABLED' &&
+              p.key !== 'REGISTRATION_ENABLED' &&
+              p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
+              p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
+              p.key !== 'SESSION_DURATION_MINUTES' &&
+              p.key !== 'SESSION_EPOCH' &&
+              // Parameter boolean/string ber-UI khusus (toggle khusus / tab Kop Surat).
+              p.key !== 'LOGIN_TURNSTILE_ENABLED' &&
+              p.key !== 'surat_kop_global',
+          )}
+        >
+          {(p) => (
+            <Card>
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                      {p.key}
+                    </span>
+                    <Badge variant="info">{TYPE_LABEL[p.paramType] || p.paramType}</Badge>
+                  </div>
+                  <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">{p.description}</p>
+                  <p class="mt-0.5 text-xs text-secondary-400">Default: {p.defaultValue || '—'}</p>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                  <Show
+                    when={p.paramType === 'boolean'}
+                    fallback={
+                      <Show
+                        when={p.key === 'TIMEZONE'}
+                        fallback={
+                          <Show
+                            when={p.paramType === 'string'}
+                            fallback={
+                              <Input
+                                type="number"
+                                value={valueFor(p)}
+                                onInput={(e) => setField(p.key, e.currentTarget.value)}
+                                class="w-28"
+                              />
+                            }
+                          >
+                            <Input
+                              type="text"
+                              value={valueFor(p)}
+                              onInput={(e) => setField(p.key, e.currentTarget.value)}
+                              class="w-64"
+                            />
+                          </Show>
+                        }
+                      >
+                        <select
+                          value={valueFor(p)}
+                          onChange={(e) => setField(p.key, e.currentTarget.value)}
+                          class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+                        >
+                          <For each={TIMEZONE_OPTIONS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
+                        </select>
+                      </Show>
+                    }
+                  >
+                    <select
+                      value={valueFor(p)}
+                      onChange={(e) => setField(p.key, e.currentTarget.value)}
+                      class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+                    >
+                      <option value="true">Ya</option>
+                      <option value="false">Tidak</option>
+                    </select>
+                  </Show>
+                  <Button
+                    size="sm"
+                    loading={savingKey() === p.key}
+                    disabled={p.paramType !== 'boolean' && !hasChanges(p)}
+                    onClick={() => save(p)}
+                  >
+                    Simpan
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </For>
+      </div>
+    </>
+  );
+}
+
+const TABS: { key: 'parameter' | 'kop'; label: string; desc: string }[] = [
+  { key: 'parameter', label: 'Parameter', desc: 'Parameter dinamis sistem (kompensasi, akademik, sesi, dst.)' },
+  { key: 'kop', label: 'Kop Surat', desc: 'Kop surat global semua dokumen cetak (KHS, SKPI, BKD, dst.)' },
+];
+
+/**
+ * Halaman Pengaturan Sistem — shell dua tab:
+ * Parameter (isi lama) + Kop Surat (desain kop global terpusat).
+ */
+export default function KonfigurasiParameter() {
+  const [tab, setTab] = createSignal<'parameter' | 'kop'>('parameter');
+
+  return (
     <MainLayout>
       <div class="max-w-3xl mx-auto">
         <div class="mb-6">
-          <h1 class="text-2xl font-bold text-secondary-800 dark:text-secondary-100">Parameter Kompensasi & Akademik</h1>
+          <h1 class="text-2xl font-bold text-secondary-800 dark:text-secondary-100">Pengaturan Sistem</h1>
           <p class="text-sm text-secondary-500 dark:text-secondary-400">
-            Aturan dinamis sistem Vokasi. Nilai diinjeksikan ke layanan kompensasi secara langsung, tanpa hardcode.
+            Konfigurasi parameter dinamis & tampilan dokumen resmi institusi.
           </p>
         </div>
 
-        <Show when={notice()}>
-          <div class="mb-4 rounded-xl bg-success-50 border border-success-200 dark:bg-success-900/30 dark:border-success-800 px-4 py-3 text-sm text-success-700 dark:text-success-400">
-            {notice()}
-          </div>
-        </Show>
-
-        {/* Kontrol KRS Mandiri */}
-        <div class="mb-6">
-          <Card>
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
-                    Kontrol KRS Mandiri
-                  </span>
-                  <Badge variant={krsMandiriEnabled() ? 'success' : 'warning'}>
-                    {krsMandiriEnabled() ? 'Aktif' : 'Nonaktif'}
-                  </Badge>
-                </div>
-                <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
-                  Jika nonaktif, mahasiswa tidak dapat melakukan pengisian KRS mandiri (tombol Kontrak KRS
-                  disembunyikan). Staff (admin/dosen/prodi) tidak terpengaruh.
-                </p>
-                <p class="mt-0.5 text-xs text-secondary-400 font-mono">KRS_MANDIRI_ENABLED</p>
-              </div>
-
-              <div class="flex items-center gap-2 shrink-0">
-                <select
-                  value={krsMandiriEnabled() ? 'true' : 'false'}
-                  onChange={(e) => setField('KRS_MANDIRI_ENABLED', e.currentTarget.value)}
-                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                >
-                  <option value="true">Ya — Izinkan</option>
-                  <option value="false">Tidak — Nonaktifkan</option>
-                </select>
-                <Button size="sm" loading={savingKey() === 'KRS_MANDIRI_ENABLED'} onClick={saveKrsMandiri}>
-                  Simpan
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Kontrol Blocking KHS & KRS karena tunggakan */}
-        <div class="mb-6 space-y-3">
-          <ToggleCard
-            title="Pendaftaran Akun Baru"
-            parameterKey="REGISTRATION_ENABLED"
-            description="Jika aktif, tombol 'Daftar' tampil di halaman login dan pengguna baru dapat mendaftarkan akun. Jika nonaktif, registrasi mandiri ditutup."
-            enabled={registrationEnabled()}
-            saving={savingKey() === 'REGISTRATION_ENABLED'}
-            onToggle={(val) => setField('REGISTRATION_ENABLED', val)}
-            onSave={() => saveBoolParam('REGISTRATION_ENABLED', 'Pendaftaran Akun Baru', registrationEnabled)}
-          />
-          <ToggleCard
-            title="Verifikasi Turnstile pada Login"
-            parameterKey="LOGIN_TURNSTILE_ENABLED"
-            description="Jika aktif, form login menampilkan captcha Cloudflare Turnstile. Pastikan TURNSTILE_SECRET_KEY (backend) dan VITE_TURNSTILE_SITE_KEY (build frontend) sudah terisi — tanpa secret, login di production ditolak. Efek berlaku ±10 detik setelah disimpan."
-            enabled={loginTurnstileEnabled()}
-            saving={savingKey() === 'LOGIN_TURNSTILE_ENABLED'}
-            onToggle={(val) => setField('LOGIN_TURNSTILE_ENABLED', val)}
-            onSave={() =>
-              saveBoolParam('LOGIN_TURNSTILE_ENABLED', 'Verifikasi Turnstile pada Login', loginTurnstileEnabled)
-            }
-            trueLabel="Ya — Wajibkan"
-            falseLabel="Tidak — Nonaktifkan"
-          />
-          <ToggleCard
-            title="Pemblokiran KHS karena Tunggakan"
-            parameterKey="BLOCK_KHS_JIKA_TANGGUNGAN"
-            description="Jika aktif, mahasiswa tidak dapat melihat KHS saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
-            enabled={khsBlockEnabled()}
-            saving={savingKey() === 'BLOCK_KHS_JIKA_TANGGUNGAN'}
-            onToggle={(val) => setField('BLOCK_KHS_JIKA_TANGGUNGAN', val)}
-            onSave={() => saveBoolParam('BLOCK_KHS_JIKA_TANGGUNGAN', 'Pemblokiran KHS', khsBlockEnabled)}
-          />
-          <ToggleCard
-            title="Pemblokiran KRS karena Tunggakan"
-            parameterKey="BLOCK_KRS_JIKA_TANGGUNGAN"
-            description="Jika aktif, mahasiswa tidak dapat melakukan pengisian KRS mandiri saat masih memiliki tunggakan SPP/kompensasi. Staff tidak terpengaruh."
-            enabled={krsBlockEnabled()}
-            saving={savingKey() === 'BLOCK_KRS_JIKA_TANGGUNGAN'}
-            onToggle={(val) => setField('BLOCK_KRS_JIKA_TANGGUNGAN', val)}
-            onSave={() => saveBoolParam('BLOCK_KRS_JIKA_TANGGUNGAN', 'Pemblokiran KRS', krsBlockEnabled)}
-          />
-        </div>
-
-        {/* Durasi Sesi Login (Idle Timeout) */}
-        <div class="mb-6">
-          <Card>
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
-                    Durasi Sesi Login (Idle Timeout)
-                  </span>
-                  <Badge variant="info">SESSION_DURATION_MINUTES</Badge>
-                </div>
-                <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
-                  Mengatur berapa lama pengguna harus login kembali setelah tidak ada aktivitas. Sesi berakhir jika
-                  pengguna tidak beraktivitas selama durasi ini (idle). Berlaku efektif untuk login/refresh token
-                  berikutnya.
-                </p>
-                <p class="mt-0.5 text-xs text-secondary-400">Rentang: 15 – 10080 menit. Default: 480 menit (8 jam).</p>
-              </div>
-
-              <div class="flex items-center gap-2 shrink-0">
-                <select
-                  value={sessionIsPreset() ? sessionValue() : 'custom'}
-                  onChange={(e) => {
-                    const v = e.currentTarget.value;
-                    if (v === 'custom') return;
-                    setField('SESSION_DURATION_MINUTES', v);
-                  }}
-                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                >
-                  <For each={SESSION_PRESETS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
-                  <option value="custom">Lainnya (custom)</option>
-                </select>
-                <Show when={!sessionIsPreset()}>
-                  <Input
-                    type="number"
-                    min={15}
-                    max={10080}
-                    value={sessionValue()}
-                    onInput={(e) => setField('SESSION_DURATION_MINUTES', e.currentTarget.value)}
-                    class="w-28"
-                  />
-                </Show>
-                <Button
-                  size="sm"
-                  loading={savingKey() === 'SESSION_DURATION_MINUTES'}
-                  disabled={!sessionHasChanges()}
-                  onClick={saveSessionDuration}
-                >
-                  Simpan
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Paksa Logout Semua Sesi (Kill-Switch) */}
-        <div class="mb-6">
-          <Card>
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2">
-                  <span class="text-sm font-semibold text-secondary-800 dark:text-secondary-100">
-                    Paksa Logout Semua Sesi
-                  </span>
-                  <Badge variant="danger">SESSION_EPOCH</Badge>
-                </div>
-                <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">
-                  Memaksa semua pengguna yang sedang login untuk login ulang (kill-switch). Gunakan setelah mengubah
-                  durasi sesi atau saat terjadi insiden keamanan. Token yang diterbitkan sebelum epoch ini langsung
-                  ditolak pada request berikutnya.
-                </p>
-                <p class="mt-0.5 text-xs text-secondary-400">
-                  Epoch sesi saat ini: <span class="font-mono">{epochParam()?.value ?? '1'}</span>
-                </p>
-              </div>
-
-              <div class="flex items-center gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  variant={confirmBump() ? 'danger' : 'secondary'}
-                  loading={bumping()}
-                  onClick={bumpSessionEpoch}
-                >
-                  {confirmBump() ? 'Yakin? Klik lagi untuk konfirmasi' : 'Paksa Logout Semua Sesi'}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <div class="space-y-3">
-          <For
-            each={(params() || []).filter(
-              (p) =>
-                p.key !== 'KRS_MANDIRI_ENABLED' &&
-                p.key !== 'REGISTRATION_ENABLED' &&
-                p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
-                p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
-                p.key !== 'SESSION_DURATION_MINUTES' &&
-                p.key !== 'SESSION_EPOCH',
-            )}
-          >
-            {(p) => (
-              <Card>
-                <div class="flex items-start justify-between gap-4">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2">
-                      <span class="font-mono text-sm font-semibold text-secondary-800 dark:text-secondary-100">
-                        {p.key}
-                      </span>
-                      <Badge variant="info">{TYPE_LABEL[p.paramType] || p.paramType}</Badge>
-                    </div>
-                    <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">{p.description}</p>
-                    <p class="mt-0.5 text-xs text-secondary-400">Default: {p.defaultValue || '—'}</p>
-                  </div>
-
-                  <div class="flex items-center gap-2 shrink-0">
-                    <Show
-                      when={p.paramType === 'boolean'}
-                      fallback={
-                        <Show
-                          when={p.key === 'TIMEZONE'}
-                          fallback={
-                            <Input
-                              type="number"
-                              value={valueFor(p)}
-                              onInput={(e) => setField(p.key, e.currentTarget.value)}
-                              class="w-28"
-                            />
-                          }
-                        >
-                          <select
-                            value={valueFor(p)}
-                            onChange={(e) => setField(p.key, e.currentTarget.value)}
-                            class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                          >
-                            <For each={TIMEZONE_OPTIONS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
-                          </select>
-                        </Show>
-                      }
-                    >
-                      <select
-                        value={valueFor(p)}
-                        onChange={(e) => setField(p.key, e.currentTarget.value)}
-                        class="rounded-xl border border-secondary-200 bg-white px-3 py-2.5 text-sm text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                      >
-                        <option value="true">Ya</option>
-                        <option value="false">Tidak</option>
-                      </select>
-                    </Show>
-                    <Button
-                      size="sm"
-                      loading={savingKey() === p.key}
-                      disabled={p.paramType !== 'boolean' && !hasChanges(p)}
-                      onClick={() => save(p)}
-                    >
-                      Simpan
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+        {/* Tab bar pill */}
+        <div class="mb-6 inline-flex rounded-full border border-secondary-200 bg-secondary-100/60 p-1 dark:border-secondary-700 dark:bg-secondary-900">
+          <For each={TABS}>
+            {(t) => (
+              <button
+                type="button"
+                onClick={() => setTab(t.key)}
+                class={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                  tab() === t.key
+                    ? 'bg-white text-brand-600 shadow-sm dark:bg-secondary-800 dark:text-brand-400'
+                    : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400'
+                }`}
+                title={t.desc}
+              >
+                {t.label}
+              </button>
             )}
           </For>
         </div>
+
+        <Show when={tab() === 'parameter'} fallback={<TabKopSurat />}>
+          <TabParameter />
+        </Show>
       </div>
     </MainLayout>
   );

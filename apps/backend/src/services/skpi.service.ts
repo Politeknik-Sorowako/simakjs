@@ -13,6 +13,7 @@ import {
   SKPI_LAMPIRAN_MAX_MB,
   saveLampiranFile,
 } from '../utils/lampiran-storage';
+import { getNowDateString } from '../utils/timezone';
 import { SystemParameterService } from './system-parameter.service';
 
 export interface CreateKegiatanSkpiDto {
@@ -340,6 +341,15 @@ export class SkpiService {
     const totalPoin = kegiatan.reduce((sum, k) => sum + (k.poin ?? 0), 0);
     const syarat = await SkpiService.getSyaratPenerbitan(mhsId, kegiatan.length);
 
+    // Kop memakai kop surat GLOBAL (`surat_kop_global` — dipakai semua dokumen);
+    // nomor surat SKPI tetap dari `skpi_nomor_format` (PRD §8).
+    const kop = await SystemParameterService.getKopSurat();
+    const nomorFormat = await SystemParameterService.getRaw('skpi_nomor_format');
+    const tahun = Number((await getNowDateString()).slice(0, 4));
+    const nomorSurat = (nomorFormat || 'SKPI/{tahun}/{nim}')
+      .replaceAll('{tahun}', String(tahun))
+      .replaceAll('{nim}', mhs.nim);
+
     return {
       mahasiswa: {
         id: mhs.id,
@@ -354,6 +364,8 @@ export class SkpiService {
       totalKegiatan: kegiatan.length,
       totalPoin,
       syarat,
+      kop,
+      nomorSurat,
     };
   }
 

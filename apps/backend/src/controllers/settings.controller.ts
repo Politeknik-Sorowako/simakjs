@@ -1,5 +1,6 @@
 import { SettingsService } from '../services/settings.service';
-import { SystemParameterService } from '../services/system-parameter.service';
+import { type KopSuratConfig, SystemParameterService } from '../services/system-parameter.service';
+import { findKopLogoFile, removeKopLogo, saveKopLogo } from '../utils/kop-storage';
 import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
@@ -122,5 +123,134 @@ export class SettingsController {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memperbarui konfigurasi akses feedback' };
     }
+  }
+
+  // ─── Kop surat global (semua dokumen cetak) ────────────────────────────────
+
+  /** Helper: gabung patch ke konfigurasi kop lalu simpan (atomic 1 baris). */
+  private static async patchKop(patch: Partial<KopSuratConfig>): Promise<KopSuratConfig> {
+    const current = await SystemParameterService.getKopSurat();
+    const next: KopSuratConfig = {
+      ...current,
+      ...patch,
+      alamat: patch.alamat ?? current.alamat,
+    };
+    await SystemParameterService.set('surat_kop_global', JSON.stringify(next));
+    return next;
+  }
+
+  /**
+   * Ambil konfigurasi kop surat global — semua role terautentikasi (kop tampil
+   * di dokumen cetak milik mahasiswa/dosen; tidak bersifat sensitif).
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getKop({ getCurrentUser, set }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    try {
+      const kop = await SystemParameterService.getKopSurat();
+      const logo = kop.logoCustom ? await findKopLogoFile() : null;
+      return { data: { ...kop, logoUrl: logo ? `/settings/kop-logo?v=${Math.floor(logo.mtimeMs)}` : null } };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil konfigurasi kop surat' };
+    }
+  }
+
+  /** Simpan konfigurasi kop surat global — khusus admin. */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async updateKop({ getCurrentUser, body, set }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Hanya Admin/Super Admin yang dapat mengubah kop surat global.' };
+    }
+    try {
+      // Body tervalidasi TypeBox di route; merge ke nilai saat ini (field opsional
+      // yang tidak dikirim tidak menimpa).
+      const saved = await SettingsController.patchKop(body as Partial<KopSuratConfig>);
+      return { message: 'Kop surat global berhasil diperbarui', data: saved };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memperbarui kop surat global' };
+    }
+  }
+
+  /** Unggah logo kop kustom (PNG/JPG ≤2MB) — khusus admin. */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async uploadKopLogo({ getCurrentUser, body, set }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Hanya Admin/Super Admin yang dapat mengubah logo kop surat.' };
+    }
+    const file = body?.file;
+    if (!(file instanceof File)) {
+      set.status = 400;
+      return { error: 'File logo tidak ditemukan (field "file").' };
+    }
+    try {
+      const { storageKey, updatedAt } = await saveKopLogo(file);
+      const saved = await SettingsController.patchKop({ logoCustom: true });
+      return {
+        message: 'Logo kop surat berhasil diunggah',
+        data: { storageKey, updatedAt, ...saved },
+      };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengunggah logo kop surat' };
+    }
+  }
+
+  /** Kembalikan ke logo bawaan (hapus unggahan) — khusus admin. */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async deleteKopLogo({ getCurrentUser, set }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    if (!hasRole(user, ['admin', 'super_admin'])) {
+      set.status = 403;
+      return { error: 'Hanya Admin/Super Admin yang dapat mengubah logo kop surat.' };
+    }
+    try {
+      await removeKopLogo();
+      const saved = await SettingsController.patchKop({ logoCustom: false });
+      return { message: 'Logo kustom dihapus — memakai logo bawaan', data: saved };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghapus logo kop surat' };
+    }
+  }
+
+  /** Sajikan berkas logo kop kustom (semua role login; 404 bila belum ada). */
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getKopLogo({ getCurrentUser, set }: AuthContext<any>): Promise<any> {
+    const user = await getCurrentUser();
+    if (!user) {
+      set.status = 401;
+      return { error: 'Silakan login terlebih dahulu' };
+    }
+    const logo = await findKopLogoFile();
+    if (!logo) {
+      set.status = 404;
+      return { error: 'Logo kustom tidak ditemukan.' };
+    }
+    const file = Bun.file(logo.path);
+    set.headers['Content-Type'] = logo.ext === '.png' ? 'image/png' : 'image/jpeg';
+    set.headers['Cache-Control'] = 'private, max-age=300';
+    return file;
   }
 }

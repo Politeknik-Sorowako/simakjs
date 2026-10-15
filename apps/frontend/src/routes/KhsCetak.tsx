@@ -1,6 +1,7 @@
 import { useParams } from '@solidjs/router';
 import QRCode from 'qrcode';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +9,7 @@ import { documentSignatureController, type SignKhsResult } from '../controllers/
 import { type KhsResponse, khsController } from '../controllers/khsController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
+import { systemController } from '../controllers/systemController';
 
 interface PrintData {
   nim: string;
@@ -35,6 +37,7 @@ export default function KhsCetak() {
   const auth = useAuth();
   const params = useParams();
   const [hasPrinted, setHasPrinted] = createSignal(false);
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
 
   const [printData] = createResource(
     () => {
@@ -224,8 +227,9 @@ export default function KhsCetak() {
                 </div>
               </Show>
 
-              <div class="border-b border-secondary-200 pb-3 text-center">
-                <h2 class="text-xl font-bold tracking-wider text-brand-700">POLITEKNIK SOROWAKO</h2>
+              {/* Kop surat global — judul & periode tetap di bawah garis kop */}
+              <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+              <div class="mt-3 text-center">
                 <h3 class="text-base font-bold uppercase tracking-widest text-secondary-600">
                   Kartu Hasil Studi (KHS) — Semester
                 </h3>

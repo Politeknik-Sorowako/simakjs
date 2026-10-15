@@ -1,4 +1,5 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { TtdMassalTable } from '../components/khs/TtdMassalTable';
 import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
@@ -12,6 +13,7 @@ import { type KonversiRekap, type KonversiRekapRule, khsController } from '../co
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
+import { systemController } from '../controllers/systemController';
 
 export default function Khs() {
   const auth = useAuth();
@@ -19,6 +21,8 @@ export default function Khs() {
   const workspace = useWorkspace();
   const user = () => auth.user();
   const role = () => user()?.role;
+  // Kop surat global — dipakai modal cetak Kartu Ujian, KHS, & Transkrip.
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
 
   const [activeTab, setActiveTab] = createSignal<'khs' | 'transkrip' | 'konversi' | 'ttd'>('khs');
   const [selectedPeriode, setSelectedPeriode] = createSignal(''); // Dynamic Period selection
@@ -1426,12 +1430,12 @@ export default function Khs() {
               </div>
 
               <div class="flex flex-col gap-4 text-secondary-800" id="print-area-ujian">
-                <div class="text-center border-b pb-3 flex flex-col gap-1">
-                  <h2 class="text-xl font-bold text-brand-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-base font-bold text-secondary-600 uppercase tracking-widest">
+                <div class="flex flex-col gap-1">
+                  <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+                  <h3 class="mt-3 text-center text-base font-bold text-secondary-600 uppercase tracking-widest">
                     KARTU UJIAN MAHASISWA (UTS/UAS)
                   </h3>
-                  <p class="text-caption text-secondary-400 dark:text-secondary-300">
+                  <p class="text-center text-caption text-secondary-400 dark:text-secondary-300">
                     Periode Akademik: {periodeNama()}
                   </p>
                 </div>
@@ -1548,12 +1552,12 @@ export default function Khs() {
               </div>
 
               <div class="flex flex-col gap-4 text-secondary-800" id="print-area-khs">
-                <div class="text-center border-b pb-3 flex flex-col gap-1">
-                  <h2 class="text-xl font-bold text-brand-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-base font-bold text-secondary-600 uppercase tracking-widest">
+                <div class="flex flex-col gap-1">
+                  <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+                  <h3 class="mt-3 text-center text-base font-bold text-secondary-600 uppercase tracking-widest">
                     KARTU HASIL STUDI (KHS) SEMESTER
                   </h3>
-                  <p class="text-caption text-secondary-400 dark:text-secondary-300">
+                  <p class="text-center text-caption text-secondary-400 dark:text-secondary-300">
                     Periode Akademik: {periodeNama()}
                   </p>
                 </div>
@@ -1662,9 +1666,9 @@ export default function Khs() {
               </div>
 
               <div class="flex flex-col gap-4 text-secondary-800" id="print-area-transkrip">
-                <div class="text-center border-b pb-3 flex flex-col gap-1">
-                  <h2 class="text-xl font-bold text-brand-700 tracking-wider">POLITEKNIK SOROWAKO</h2>
-                  <h3 class="text-base font-bold text-secondary-600 uppercase tracking-widest">
+                <div class="flex flex-col gap-1">
+                  <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+                  <h3 class="mt-3 text-center text-base font-bold text-secondary-600 uppercase tracking-widest">
                     TRANSKRIP NILAI AKADEMIK KUMULATIF
                   </h3>
                 </div>

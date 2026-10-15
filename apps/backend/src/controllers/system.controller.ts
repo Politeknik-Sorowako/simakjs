@@ -47,15 +47,36 @@ export class SystemController {
     }
     const rows = await SystemParameterService.getAll();
     const defaults = SystemParameterService.descriptions();
-    const meta = rows.map((r) => ({
-      key: r.key,
-      value: r.value,
-      paramType: r.paramType || 'string',
-      description: r.description || defaults[r.key]?.description || '',
-      defaultValue: defaults[r.key]?.defaultValue ?? '',
-      updatedAt: r.updatedAt,
-      updatedBy: r.updatedBy ?? null,
-    }));
+    const byKey = new Map(rows.map((r) => [r.key, r]));
+    // Tampilkan SEMUA parameter terdefinisi (nilai default bila baris DB belum
+    // ada) agar admin dapat mengubahnya tanpa penyemaian migrasi manual.
+    const meta = Object.entries(defaults)
+      .map(([key, def]) => {
+        const r = byKey.get(key);
+        return {
+          key,
+          value: r?.value ?? def.defaultValue,
+          paramType: r?.paramType || def.type || 'string',
+          description: r?.description || def.description || '',
+          defaultValue: def.defaultValue ?? '',
+          updatedAt: r?.updatedAt ?? null,
+          updatedBy: r?.updatedBy ?? null,
+        };
+      })
+      .sort((a, b) => a.key.localeCompare(b.key));
+    // Baris DB yang tidak terdaftar di DEFAULT_PARAMS tetap disertakan (defensif).
+    for (const r of rows) {
+      if (defaults[r.key]) continue;
+      meta.push({
+        key: r.key,
+        value: r.value,
+        paramType: r.paramType || 'string',
+        description: r.description || '',
+        defaultValue: '',
+        updatedAt: r.updatedAt,
+        updatedBy: r.updatedBy ?? null,
+      });
+    }
     return { data: meta };
   }
 
@@ -77,9 +98,9 @@ export class SystemController {
       set.status = 400;
       return { error: 'key dan value wajib diisi' };
     }
-    if (!/^[A-Z0-9_]+$/.test(key)) {
+    if (!/^[A-Za-z0-9_]+$/.test(key)) {
       set.status = 400;
-      return { error: 'key hanya boleh mengandung huruf besar, angka, dan underscore' };
+      return { error: 'key hanya boleh mengandung huruf, angka, dan underscore' };
     }
     if (key === 'SESSION_DURATION_MINUTES') {
       const minutes = Number(value);

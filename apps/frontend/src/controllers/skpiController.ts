@@ -107,6 +107,9 @@ export interface SkpiDokumen {
   totalPoin: number;
   syarat: SkpiSyarat;
   signature: SkpiSignatureMeta | null;
+  /** Kop surat global (kunci `surat_kop_global`) + nomor SKPI dari `skpi_nomor_format`. */
+  kop?: import('./systemController').KopSurat | null;
+  nomorSurat?: string | null;
 }
 
 export interface SignSkpiResult extends SkpiSignatureMeta {
