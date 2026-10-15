@@ -37,126 +37,126 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 
 ### US-1 — Input rekaman + lampiran (Mahasiswa)
 
-- [ ] Login M1 → menu **SKPI Mahasiswa** → **+ Tambah Kegiatan** → isi kategori/nama/tanggal → Simpan. Status: **Menunggu Verifikasi**.
-- [ ] Unggah lampiran sertifikat (PDF/JPG/PNG ≤5 MB) → tombol **Lihat** muncul & berfungsi.
-- [ ] Uji batas: unggah >5 MB → ditolak dengan pesan jelas.
+- [x] Login M1 → menu **SKPI Mahasiswa** → **+ Tambah Kegiatan** → isi kategori/nama/tanggal → Simpan. Status: **Menunggu Verifikasi**.
+- [x] Unggah lampiran sertifikat (PDF/JPG/PNG ≤5 MB) → tombol **Lihat** muncul & berfungsi.
+- [x] Uji batas: unggah >5 MB → ditolak dengan pesan jelas.
 
 ### US-2 — Edit/hapus `pending`/`ditolak`
 
-- [ ] Edit rekaman `pending` → Simpan → status kembali **Menunggu Verifikasi**.
-- [ ] Hapus rekaman `pending` milik sendiri → hilang dari daftar.
+- [x] Edit rekaman `pending` → Simpan → status kembali **Menunggu Verifikasi**.
+- [x] Hapus rekaman `pending` milik sendiri → hilang dari daftar.
 
 ### US-3 — Verifikasi (PA / kemahasiswaan / prodi / admin)
 
-- [ ] Login Dosen PA → menu **SKPI** (halaman terpadu) → tab **Verifikasi** → rekaman M1 terlihat (default filter: pending).
-- [ ] **Reject** tanpa catatan → ditolak (validasi "catatan wajib").
-- [ ] **Reject** dengan catatan → status **Ditolak**; catatan tampil di daftar M1.
-- [ ] M1 edit rekaman `ditolak` → resubmit → **Menunggu Verifikasi**.
-- [ ] **Approve** (opsional ubah poin) → status **Terverifikasi**.
-- [ ] Filter baru: pencarian NIM/nama mahasiswa menemukan rekaman M1; dropdown **Mahasiswa** & **Prodi** berfungsi; **Reset Filter** mengembalikan tampilan penuh.
-- [ ] **403**: login Dosen non-PA → `PUT /skpi/kegiatan/:id/verifikasi` (via curl/Postman) → 403.
-- [ ] **403**: login M2 → akses `GET /skpi/dokumen/:mhsId` M1 → 403.
-- [ ] **403**: staf dengan prodi berbeda → filter `prodiId` di luar lingkup → 403.
-- [ ] **Edit Hasil** (staff-verifier): ubah poin rekaman terverifikasi → status tetap **Terverifikasi**, poin & catatan ter-update.
-- [ ] **Batalkan** (staff-verifier): rekaman terverifikasi → status **Menunggu Verifikasi**, metadata verifikator hilang; verifikasi ulang berhasil.
-- [ ] **403**: Dosen PA / mahasiswa → `PUT .../unverify` atau `.../hasil-verifikasi` → 403.
+- [x] Login Dosen PA → menu **SKPI** (halaman terpadu) → tab **Verifikasi** → rekaman M1 terlihat (default filter: pending).
+- [x] **Reject** tanpa catatan → ditolak (validasi "catatan wajib").
+- [x] **Reject** dengan catatan → status **Ditolak**; catatan tampil di daftar M1.
+- [x] M1 edit rekaman `ditolak` → resubmit → **Menunggu Verifikasi**.
+- [x] **Approve** (opsional ubah poin) → status **Terverifikasi**.
+- [x] Filter baru: pencarian NIM/nama mahasiswa menemukan rekaman M1; dropdown **Mahasiswa** & **Prodi** berfungsi; **Reset Filter** mengembalikan tampilan penuh.
+- [x] **403**: login Dosen non-PA → `PUT /skpi/kegiatan/:id/verifikasi` (via curl/Postman) → 403.
+- [x] **403**: login M2 → akses `GET /skpi/dokumen/:mhsId` M1 → 403.
+- [x] **403**: staf dengan prodi berbeda → filter `prodiId` di luar lingkup → 403.
+- [x] **Edit Hasil** (staff-verifier): ubah poin rekaman terverifikasi → status tetap **Terverifikasi**, poin & catatan ter-update.
+- [x] **Batalkan** (staff-verifier): rekaman terverifikasi → status **Menunggu Verifikasi**, metadata verifikator hilang; verifikasi ulang berhasil.
+- [x] **403**: Dosen PA / mahasiswa → `PUT .../unverify` atau `.../hasil-verifikasi` → 403.
 
 ### US-4 — Unduh/Cetak SKPI (Mahasiswa & Staf)
 
-- [ ] Login M1 → `/skpi` → tombol **Unduh/Cetak SKPI** aktif (syarat terpenuhi) → buka di tab baru.
-- [ ] Dokumen memuat: kop, identitas, **tabel kegiatan termasuk kolom No. Sertifikat**, rekap poin, pernyataan, blok TTD + QR, footer `verifyUrl`/`UUID`/`Hash`.
-- [ ] Print dialog terbuka otomatis (auto-print) dan via tombol Cetak.
-- [ ] **Simpan sebagai PDF → tabel riwayat kegiatan + Total Poin tampil** (regresi: allowlist print `#print-area-skpi`).
-- [ ] Login admin/prodi → `/skpi` → tab **Penerbitan** → tombol **Cetak** per baris → halaman cetak mahasiswa terkait terbuka (rekap per mahasiswa).
-- [ ] **Regresi**: tab **Rekaman** & tab **Verifikasi** TIDAK memiliki tombol **Cetak** per baris (cetak hanya per mahasiswa).
+- [x] Login M1 → `/skpi` → tombol **Unduh/Cetak SKPI** aktif (syarat terpenuhi) → buka di tab baru.
+- [x] Dokumen memuat: kop, identitas, **tabel kegiatan termasuk kolom No. Sertifikat**, rekap poin, pernyataan, blok TTD + QR, footer `verifyUrl`/`UUID`/`Hash`.
+- [x] Print dialog terbuka otomatis (auto-print) dan via tombol Cetak.
+- [x] **Simpan sebagai PDF → tabel riwayat kegiatan + Total Poin tampil** (regresi: allowlist print `#print-area-skpi`).
+- [x] Login admin/prodi → `/skpi` → tab **Penerbitan** → tombol **Cetak** per baris → halaman cetak mahasiswa terkait terbuka (rekap per mahasiswa).
+- [x] **Regresi**: tab **Rekaman** & tab **Verifikasi** TIDAK memiliki tombol **Cetak** per baris (cetak hanya per mahasiswa).
 
 ### US-5 — Kelola kategori (admin/kemahasiswaan)
 
-- [ ] Tambah kategori baru → panel tetap terbuka, kategori muncul di select form input.
-- [ ] Nonaktifkan kategori → hilang dari select form input, tetap terlihat di panel kelola.
-- [ ] Hapus kategori terpakai rekaman → error jelas dari server; tombol Hapus tidak muncul untuk prodi/kaprodi/kemahasiswaan.
+- [x] Tambah kategori baru → panel tetap terbuka, kategori muncul di select form input.
+- [x] Nonaktifkan kategori → hilang dari select form input, tetap terlihat di panel kelola.
+- [x] Hapus kategori terpakai rekaman → error jelas dari server; tombol Hapus tidak muncul untuk prodi/kaprodi/kemahasiswaan.
 
 ### US-6 — Tanda tangan + verifikasi publik
 
-- [ ] **Otorisasi**: login M1 (pemilik) → cetak SKPI → **TIDAK ada tombol** "Tandatangani & Terbitkan QR" (hanya info bahwa staf yang menandatangani); `POST /skpi/dokumen/:mhsId/sign` sebagai M1 via curl → 403.
-- [ ] Login admin/prodi/kemahasiswaan (in-scope) → cetak SKPI → modal konfirmasi → **Tandatangani & Terbitkan QR** → QR tampil (signer = Kaprodi hasil `resolveSigner`).
-- [ ] Scan/buka QR → halaman verifikasi publik **VALID** (tanpa login); baris **Periode** tidak tampil untuk SKPI.
-- [ ] Sign ulang tanpa perubahan data → `verifyUuid` **stabil** (idempoten).
-- [ ] Setelah ada perubahan kegiatan terverifikasi / Edit Hasil poin → sign ulang → QR lama menampilkan **DICABUT/REVOKED**, QR baru **VALID**.
+- [x] **Otorisasi**: login M1 (pemilik) → cetak SKPI → **TIDAK ada tombol** "Tandatangani & Terbitkan QR" (hanya info bahwa staf yang menandatangani); `POST /skpi/dokumen/:mhsId/sign` sebagai M1 via curl → 403.
+- [x] Login admin/prodi/kemahasiswaan (in-scope) → cetak SKPI → modal konfirmasi → **Tandatangani & Terbitkan QR** → QR tampil (signer = Kaprodi hasil `resolveSigner`).
+- [x] Scan/buka QR → halaman verifikasi publik **VALID** (tanpa login); baris **Periode** tidak tampil untuk SKPI.
+- [x] Sign ulang tanpa perubahan data → `verifyUuid` **stabil** (idempoten).
+- [x] Setelah ada perubahan kegiatan terverifikasi / Edit Hasil poin → sign ulang → QR lama menampilkan **DICABUT/REVOKED**, QR baru **VALID**.
 
 ### US-7 — Ringkasan poin
 
-- [ ] `/skpi` M1 menampilkan kartu: kegiatan terverifikasi, total poin, syarat, status tanda tangan.
+- [x] `/skpi` M1 menampilkan kartu: kegiatan terverifikasi, total poin, syarat, status tanda tangan.
 
 ### US-9 — Gate minimum kegiatan
 
-- [ ] Set `skpi_min_kegiatan` = jumlah besar (mis. `5`) → tombol cetak disabled + pesan alasan.
-- [ ] Kembalikan ke nilai semula → tombol aktif kembali.
+- [x] Set `skpi_min_kegiatan` = jumlah besar (mis. `5`) → tombol cetak disabled + pesan alasan.
+- [x] Kembalikan ke nilai semula → tombol aktif kembali.
 
 ### US-11 — Impor CSV (tab Verifikasi, staff-verifier)
 
-- [ ] Login admin → `/skpi` → tab **Verifikasi** → **Impor CSV** → **Unduh template CSV** menghasilkan file berheader benar.
-- [ ] Isi template: 2 baris valid (NIM M1 & M2, kategori aktif) + 1 NIM tidak dikenal + 1 kategori tidak dikenal → Impor → laporan: **2 berhasil, 2 gagal (per baris)**; rekaman baru berstatus **Menunggu Verifikasi** dengan poin kategori.
-- [ ] Kirim CSV tanpa kolom wajib → `successCount` 0 + error baris 1.
-- [ ] **403**: login M1/dosen → upload CSV → 403.
-- [ ] **Error per baris (bukan 403 utuh)**: staf dengan scope prodi mengimpor CSV berisi NIM lintas prodi → baris luar scope gagal, baris dalam scope tetap masuk.
+- [x] Login admin → `/skpi` → tab **Verifikasi** → **Impor CSV** → **Unduh template CSV** menghasilkan file berheader benar.
+- [x] Isi template: 2 baris valid (NIM M1 & M2, kategori aktif) + 1 NIM tidak dikenal + 1 kategori tidak dikenal → Impor → laporan: **2 berhasil, 2 gagal (per baris)**; rekaman baru berstatus **Menunggu Verifikasi** dengan poin kategori.
+- [x] Kirim CSV tanpa kolom wajib → `successCount` 0 + error baris 1.
+- [x] **403**: login M1/dosen → upload CSV → 403.
+- [x] **Error per baris (bukan 403 utuh)**: staf dengan scope prodi mengimpor CSV berisi NIM lintas prodi → baris luar scope gagal, baris dalam scope tetap masuk.
 
 ### US-12 — Verifikasi massal (tab Verifikasi)
 
-- [ ] Centang 2+ baris **Menunggu Verifikasi** (header checkbox = pilih semua pending di halaman) → tombol **Setujui Terpilih (n)** → modal konfirmasi → proses → toast jumlah disetujui; status baris → **Terverifikasi**.
-- [ ] Baris non-pending tidak dapat dicentang; bila terpilih paksa via API → masuk `failed`, baris lain tetap diproses.
-- [ ] **Reject massal tidak tersedia** — Tolak tetap per baris dengan catatan wajib.
-- [ ] **403**: login M1 → `POST /skpi/kegiatan/verifikasi-bulk` → 403; dosen non-PA → seluruh baris `failed` (tanpa perubahan data).
-- [ ] **422**: kirim `ids` kosong / >100 id → 422.
+- [x] Centang 2+ baris **Menunggu Verifikasi** (header checkbox = pilih semua pending di halaman) → tombol **Setujui Terpilih (n)** → modal konfirmasi → proses → toast jumlah disetujui; status baris → **Terverifikasi**.
+- [x] Baris non-pending tidak dapat dicentang; bila terpilih paksa via API → masuk `failed`, baris lain tetap diproses.
+- [x] **Reject massal tidak tersedia** — Tolak tetap per baris dengan catatan wajib.
+- [x] **403**: login M1 → `POST /skpi/kegiatan/verifikasi-bulk` → 403; dosen non-PA → seluruh baris `failed` (tanpa perubahan data).
+- [x] **422**: kirim `ids` kosong / >100 id → 422.
 
 ### US-13 — Penerbitan (tab Penerbitan, staff-verifier)
 
-- [ ] Tab **Penerbitan** hanya tampil untuk staf; dosen PA hanya tab **Verifikasi**; mahasiswa tanpa tab bar (ringkasan dokumen + Unduh/Cetak tetap ada).
-- [ ] Daftar memuat mahasiswa dengan ≥1 rekaman **status apa pun** — hitung badge `V`/`P`/`D`, total poin, badge **Terpenuhi/Belum terpenuhi** (+alasan), status tanda tangan (**Belum**/**Ditandatangani** + tanggal).
-- [ ] Filter: pencarian NIM/nama, dropdown prodi, checkbox **Hanya siap terbit** hanya menampilkan mahasiswa yang syaratnya terpenuhi; **Reset Filter** bekerja.
-- [ ] **Terbitkan** per baris → modal konfirmasi → badge **Ditandatangani** → verifikasi publik QR dari cetak → `VALID`.
-- [ ] **Terbitkan Terpilih (n)** massal → jumlah berhasil/gagal tampil di toast; mahasiswa di luar syarat masuk `failed` dengan pesan alasan.
-- [ ] **Cabut** per baris → modal wajib **Alasan (min. 3 karakter)** → badge kembali **Belum**; QR lama → `REVOKED` (410).
-- [ ] **Cabut Terpilih (n)** massal → baris belum ditandatangani masuk `failed` per baris; sisanya revoked.
-- [ ] **403**: `POST /skpi/dokumen/bulk-sign` & `bulk-revoke` sebagai M1 → 403; staf out-of-scope → 403 utuh; alasan pendek (`ab`) → 422, spasi saja → 400.
-- [ ] Tombol **Cetak** baris membuka `/skpi/cetak/:mhsId` dan dokumen lengkap dengan tabel riwayat.
+- [x] Tab **Penerbitan** hanya tampil untuk staf; dosen PA hanya tab **Verifikasi**; mahasiswa tanpa tab bar (ringkasan dokumen + Unduh/Cetak tetap ada).
+- [x] Daftar memuat mahasiswa dengan ≥1 rekaman **status apa pun** — hitung badge `V`/`P`/`D`, total poin, badge **Terpenuhi/Belum terpenuhi** (+alasan), status tanda tangan (**Belum**/**Ditandatangani** + tanggal).
+- [x] Filter: pencarian NIM/nama, dropdown prodi, checkbox **Hanya siap terbit** hanya menampilkan mahasiswa yang syaratnya terpenuhi; **Reset Filter** bekerja.
+- [x] **Terbitkan** per baris → modal konfirmasi → badge **Ditandatangani** → verifikasi publik QR dari cetak → `VALID`.
+- [x] **Terbitkan Terpilih (n)** massal → jumlah berhasil/gagal tampil di toast; mahasiswa di luar syarat masuk `failed` dengan pesan alasan.
+- [x] **Cabut** per baris → modal wajib **Alasan (min. 3 karakter)** → badge kembali **Belum**; QR lama → `REVOKED` (410).
+- [x] **Cabut Terpilih (n)** massal → baris belum ditandatangani masuk `failed` per baris; sisanya revoked.
+- [x] **403**: `POST /skpi/dokumen/bulk-sign` & `bulk-revoke` sebagai M1 → 403; staf out-of-scope → 403 utuh; alasan pendek (`ab`) → 422, spasi saja → 400.
+- [x] Tombol **Cetak** baris membuka `/skpi/cetak/:mhsId` dan dokumen lengkap dengan tabel riwayat.
 
 ### US-8 — Ekspor rekap (Excel/PDF, frontend, mengikuti filter aktif)
 
 **Tab Penerbitan:**
-- [ ] Tanpa filter → **Ekspor Excel** → file `.xlsx` terunduh, jumlah baris = total di tabel, kolom lengkap (NIM, nama, prodi, V/P/D, total poin, syarat, status tanda tangan).
-- [ ] Aktifkan filter (mis. pencarian NIM tertentu / "Hanya siap terbit") → ekspor → **isi file hanya berisi baris yang tampil di tabel** (filter terpenuhi).
-- [ ] **Ekspor PDF** → file `.pdf` dengan kop global (default "POLITEKNIK SOROWAKO" + alamat) + judul "Rekap Penerbitan SKPI" + jumlah baris; ubah kop → ekspor ulang → judul kop mengikuti nilai baru.
+- [x] Tanpa filter → **Ekspor Excel** → file `.xlsx` terunduh, jumlah baris = total di tabel, kolom lengkap (NIM, nama, prodi, V/P/D, total poin, syarat, status tanda tangan).
+- [x] Aktifkan filter (mis. pencarian NIM tertentu / "Hanya siap terbit") → ekspor → **isi file hanya berisi baris yang tampil di tabel** (filter terpenuhi).
+- [x] **Ekspor PDF** → file `.pdf` dengan kop global (default "POLITEKNIK SOROWAKO" + alamat) + judul "Rekap Penerbitan SKPI" + jumlah baris; ubah kop → ekspor ulang → judul kop mengikuti nilai baru.
 
 **Tab Verifikasi:**
-- [ ] Filter status **pending** → **Ekspor Excel** → hanya baris `pending` yang diekspor; kolom lengkap (NIM, nama, kategori, kegiatan, penyelenggara, tanggal, no. sertifikat, status, poin, catatan).
-- [ ] **Ekspor PDF** → file valid dengan judul "Rekap Verifikasi SKPI".
-- [ ] Reset filter → ekspor lagi → jumlah baris kembali penuh.
-- [ ] Tombol ekspor nonaktif saat proses berlangsung (klik ganda aman); data kosong → toast "Tidak ada data untuk diekspor".
+- [x] Filter status **pending** → **Ekspor Excel** → hanya baris `pending` yang diekspor; kolom lengkap (NIM, nama, kategori, kegiatan, penyelenggara, tanggal, no. sertifikat, status, poin, catatan).
+- [x] **Ekspor PDF** → file valid dengan judul "Rekap Verifikasi SKPI".
+- [x] Reset filter → ekspor lagi → jumlah baris kembali penuh.
+- [x] Tombol ekspor nonaktif saat proses berlangsung (klik ganda aman); data kosong → toast "Tidak ada data untuk diekspor".
 
 ### Kop Surat Global & Nomor Surat SKPI
 
-- [ ] Admin → **Pengaturan Sistem → tab Kop Surat** → ubah nama, alamat (maks 4 baris), kontak, website, email → Simpan → buka ulang → nilai tersimpan; **live preview** mencerminkan form.
-- [ ] Cetak **SKPI** (`/skpi/cetak/:mhsId`), **KHS**, **KRS**, **BKD**, **Surat Peringatan**, **Invoice/Bukti Bayar** → semua memakai kop global terbaru (logo + nama + alamat/kontak/website/email + garis bawah); judul & nomor SKPI tetap **di bawah** garis kop.
-- [ ] Upload logo kustom (PNG/JPG ≤ 2MB) → logo baru muncul di semua cetakan; file > 2MB / bukan gambar → ditolak dengan toast error; **Kembalikan Logo Bawaan** → logo default kembali.
-- [ ] Ekspor PDF BKD (`/reports/bkd`) & Ekspor PDF di Input Nilai → kop PDF memakai nama global.
-- [ ] Non-admin (mis. dosen) → `GET /settings/kop` 200; `PUT /settings/kop` / upload/hapus logo → 403.
-- [ ] Ubah `skpi_nomor_format` menjadi format lain (mis. `SKPI-PRODI/{tahun}/{nim}`) → nomor surat di cetak SKPI mengikuti format baru (`{tahun}` & `{nim}` terganti otomatis).
-- [ ] Kembalikan nilai default → kop & nomor kembali standar.
-- [ ] Parameter tanpa baris di DB (fresh env) → fallback default bawaan kode (tanpa error).
+- [x] Admin → **Pengaturan Sistem → tab Kop Surat** → ubah nama, alamat (maks 4 baris), kontak, website, email → Simpan → buka ulang → nilai tersimpan; **live preview** mencerminkan form.
+- [x] Cetak **SKPI** (`/skpi/cetak/:mhsId`), **KHS**, **KRS**, **BKD**, **Surat Peringatan**, **Invoice/Bukti Bayar** → semua memakai kop global terbaru (logo + nama + alamat/kontak/website/email + garis bawah); judul & nomor SKPI tetap **di bawah** garis kop.
+- [x] Upload logo kustom (PNG/JPG ≤ 2MB) → logo baru muncul di semua cetakan; file > 2MB / bukan gambar → ditolak dengan toast error; **Kembalikan Logo Bawaan** → logo default kembali.
+- [x] Ekspor PDF BKD (`/reports/bkd`) & Ekspor PDF di Input Nilai → kop PDF memakai nama global.
+- [x] Non-admin (mis. dosen) → `GET /settings/kop` 200; `PUT /settings/kop` / upload/hapus logo → 403.
+- [x] Ubah `skpi_nomor_format` menjadi format lain (mis. `SKPI-PRODI/{tahun}/{nim}`) → nomor surat di cetak SKPI mengikuti format baru (`{tahun}` & `{nim}` terganti otomatis).
+- [x] Kembalikan nilai default → kop & nomor kembali standar.
+- [x] Parameter tanpa baris di DB (fresh env) → fallback default bawaan kode (tanpa error).
 
 ### Integrasi Halaman Terpadu
 
-- [ ] Buka `/skpi/verifikasi` (bookmark lama) → **redirect** ke `/skpi` tanpa 404.
-- [ ] Sidebar: entri **"Verifikasi SKPI"** hilang; entri **SKPI** membuka halaman terpadu; grup sidebar auto-expand sesuai (`/skpi` → Layanan; `/khs`,`/yudisium` → Evaluasi).
-- [ ] Tab bar pill hanya tampil bila >1 tab; ganti tab → konten (tabel/filter) ter-mount ulang dengan data benar.
+- [x] Buka `/skpi/verifikasi` (bookmark lama) → **redirect** ke `/skpi` tanpa 404.
+- [x] Sidebar: entri **"Verifikasi SKPI"** hilang; entri **SKPI** membuka halaman terpadu; grup sidebar auto-expand sesuai (`/skpi` → Layanan; `/khs`,`/yudisium` → Evaluasi).
+- [x] Tab bar pill hanya tampil bila >1 tab; ganti tab → konten (tabel/filter) ter-mount ulang dengan data benar.
 
 ## 4. Smoke Test Pasca-Deploy (5 menit, jalankan segera setiap deploy staging/produksi)
 
-- [ ] `GET /health` → 200.
-- [ ] Buka halaman verifikasi publik tanpa login: `/v/<uuid-sah>` (dari QR langkah US-6) → memuat hasil.
-- [ ] Login admin → `/skpi` → daftar termuat tanpa error konsol.
-- [ ] Buat 1 rekaman uji cepat → verifikasi → hapus kembali (data staging boleh dibersihkan).
+- [x] `GET /health` → 200.
+- [x] Buka halaman verifikasi publik tanpa login: `/v/<uuid-sah>` (dari QR langkah US-6) → memuat hasil.
+- [x] Login admin → `/skpi` → daftar termuat tanpa error konsol.
+- [x] Buat 1 rekaman uji cepat → verifikasi → hapus kembali (data staging boleh dibersihkan).
 
 ## 5. Gate Rilis — Promosi ke Produksi
 
@@ -197,6 +197,22 @@ Promosi `development -> main` **hanya** setelah:
 
 | Peran | Nama | Tanggal | Hasil (Pass/Fail) | Catatan |
 | :-- | :-- | :-- | :-- | :-- |
-| Pengujian UAT | | | | |
-| Reviewer kode | | | | |
-| Penerima rilis (prod) | | | | |
+| Pengujian UAT | _(diisi manual)_ | 2026-10-15 | **Pass** | Seluruh checklist §3 dimulai dari US-1 s.d. US-13 + Kop Surat + Integrasi; 5 temuan diperbaiki (lihat §8) |
+| Reviewer kode | _(diisi manual)_ | 2026-10-15 | **Pass** | Perbaikan temuan UAT di-review & di-merge ke `development` (#548–#553) |
+| Penerima rilis (prod) | _(diisi manual)_ | | | Belum — menunggu promosi `development -> main` |
+
+---
+
+## 8. Hasil UAT & Temuan (2026-10-15)
+
+Seluruh Acceptance Criteria §3 dinyatakan **Pass** di staging (`https://staging-simak.politekniksorowako.ac.id`). Lima temuan muncul saat eksekusi dan diperbaiki di `development`, lalu diuji ulang (Pass):
+
+| # | Temuan saat UAT | Perbaikan (PR) |
+| :-- | :-- | :-- |
+| 1 | Role `kemahasiswaan` tidak dapat dipasang ke user: endpoint plural/singular menolak + opsi tidak ada di UI | #548, #549 |
+| 2 | Dosen PA tidak punya menu **SKPI** di sidebar (tak bisa buka tab Verifikasi) | #550 |
+| 3 | Kolom pencarian `/skpi` kehilangan fokus setelah 1 ketikan (resource re-fetch me-remount layout via Suspense rute) | #550 |
+| 4 | `skpi_min_kegiatan` tidak muncul di Parameter Sistem; menyimpan gagal ("key hanya boleh huruf besar…") | #551, #552 |
+| 5 | Nilai parameter tidak langsung ter-update setelah simpan (perlu refresh) | #553 |
+
+Catatan implementasi: verifikasi publik dokumen diimplementasikan sebagai **`POST /document-signatures/verify`** (body `{ uuid }`, tanpa sesi, terdaftar di `PUBLIC_NO_SESSION_PATHS`), bukan `GET /document-signatures/verify/:uuid` sebagaimana tertulis di PRD/`CODEBASE_CONTEXT.md`. Halaman `/v/:uuid` memanggil endpoint POST tersebut.
