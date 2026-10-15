@@ -126,7 +126,7 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 **Tab Penerbitan:**
 - [ ] Tanpa filter → **Ekspor Excel** → file `.xlsx` terunduh, jumlah baris = total di tabel, kolom lengkap (NIM, nama, prodi, V/P/D, total poin, syarat, status tanda tangan).
 - [ ] Aktifkan filter (mis. pencarian NIM tertentu / "Hanya siap terbit") → ekspor → **isi file hanya berisi baris yang tampil di tabel** (filter terpenuhi).
-- [ ] **Ekspor PDF** → file `.pdf` dengan kop "Politeknik Sorowako" + judul "Rekap Penerbitan SKPI" + jumlah baris.
+- [ ] **Ekspor PDF** → file `.pdf` dengan kop global (default "POLITEKNIK SOROWAKO" + alamat) + judul "Rekap Penerbitan SKPI" + jumlah baris; ubah kop → ekspor ulang → judul kop mengikuti nilai baru.
 
 **Tab Verifikasi:**
 - [ ] Filter status **pending** → **Ekspor Excel** → hanya baris `pending` yang diekspor; kolom lengkap (NIM, nama, kategori, kegiatan, penyelenggara, tanggal, no. sertifikat, status, poin, catatan).
@@ -134,11 +134,14 @@ Tandai Pass/Fail per baris. Catat bukti (screenshot/log) bila Fail.
 - [ ] Reset filter → ekspor lagi → jumlah baris kembali penuh.
 - [ ] Tombol ekspor nonaktif saat proses berlangsung (klik ganda aman); data kosong → toast "Tidak ada data untuk diekspor".
 
-### Kop & Nomor Surat (system_settings)
+### Kop Surat Global & Nomor Surat SKPI
 
-- [ ] Admin → menu Konfigurasi → Parameter → tiga parameter baru terdaftar: `skpi_kop_nama`, `skpi_kop_alamat`, `skpi_nomor_format`.
-- [ ] Ubah `skpi_kop_nama` & `skpi_kop_alamat` → buka `/skpi/cetak/:mhsId` → **kop surat memakai nilai baru**.
-- [ ] Ubah `skpi_nomor_format` menjadi format lain (mis. `SKPI-PRODI/{tahun}/{nim}`) → nomor surat di cetak mengikuti format baru (`{tahun}` & `{nim}` terganti otomatis).
+- [ ] Admin → **Pengaturan Sistem → tab Kop Surat** → ubah nama, alamat (maks 4 baris), kontak, website, email → Simpan → buka ulang → nilai tersimpan; **live preview** mencerminkan form.
+- [ ] Cetak **SKPI** (`/skpi/cetak/:mhsId`), **KHS**, **KRS**, **BKD**, **Surat Peringatan**, **Invoice/Bukti Bayar** → semua memakai kop global terbaru (logo + nama + alamat/kontak/website/email + garis bawah); judul & nomor SKPI tetap **di bawah** garis kop.
+- [ ] Upload logo kustom (PNG/JPG ≤ 2MB) → logo baru muncul di semua cetakan; file > 2MB / bukan gambar → ditolak dengan toast error; **Kembalikan Logo Bawaan** → logo default kembali.
+- [ ] Ekspor PDF BKD (`/reports/bkd`) & Ekspor PDF di Input Nilai → kop PDF memakai nama global.
+- [ ] Non-admin (mis. dosen) → `GET /settings/kop` 200; `PUT /settings/kop` / upload/hapus logo → 403.
+- [ ] Ubah `skpi_nomor_format` menjadi format lain (mis. `SKPI-PRODI/{tahun}/{nim}`) → nomor surat di cetak SKPI mengikuti format baru (`{tahun}` & `{nim}` terganti otomatis).
 - [ ] Kembalikan nilai default → kop & nomor kembali standar.
 - [ ] Parameter tanpa baris di DB (fresh env) → fallback default bawaan kode (tanpa error).
 

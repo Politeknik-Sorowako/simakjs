@@ -116,6 +116,8 @@ mkdirSync(join(process.cwd(), 'storage', 'sk-prodi'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'status-mahasiswa'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'skpi'), { recursive: true });
 mkdirSync(join(process.cwd(), 'storage', 'pengumuman'), { recursive: true });
+// Logo kop surat global (satu berkas logo.<ext> untuk semua dokumen cetak).
+mkdirSync(join(process.cwd(), 'storage', 'kop'), { recursive: true });
 
 export const app = new Elysia()
   .use(

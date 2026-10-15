@@ -107,8 +107,8 @@ export interface SkpiDokumen {
   totalPoin: number;
   syarat: SkpiSyarat;
   signature: SkpiSignatureMeta | null;
-  /** Kop & nomor surat terkonfigurasi via system_settings (PRD §8). */
-  kop?: { nama: string; alamat: string } | null;
+  /** Kop surat global (kunci `surat_kop_global`) + nomor SKPI dari `skpi_nomor_format`. */
+  kop?: import('./systemController').KopSurat | null;
   nomorSurat?: string | null;
 }
 

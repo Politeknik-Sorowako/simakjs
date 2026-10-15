@@ -1,5 +1,6 @@
 import { useSearchParams } from '@solidjs/router';
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
+import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { useAuth } from '../contexts/AuthContext';
 import {
   type BkdPertemuanPraktikum,
@@ -8,6 +9,7 @@ import {
   type BkdRiwayatPraktikumRow,
   bkdController,
 } from '../controllers/bkdController';
+import { systemController } from '../controllers/systemController';
 import {
   filterKelasBerBap,
   filterKelasBerpresensi,
@@ -31,6 +33,12 @@ export default function BkdCetak() {
   const isDosenRole = () => auth.hasRole(['dosen']);
   const [searchParams] = useSearchParams();
   const [hasPrinted, setHasPrinted] = createSignal(false);
+  // Kop surat global — untuk popup print string & print-area JSX.
+  const [kop] = createResource(() => systemController.getKop().catch(() => null));
+  const [kopLogoSrc] = createResource(
+    () => kop(),
+    (k) => (k ? systemController.kopLogoObjectUrl(k) : null),
+  );
 
   const [rekap] = createResource(
     () => {
@@ -380,6 +388,16 @@ export default function BkdCetak() {
   };
 
   const openPrintWindow = (title: string, heading: string, data: NonNullable<BkdRekap>, bodyHtml: string) => {
+    // Kop surat global dalam bentuk HTML string (popup print) — logo opsional
+    // bila objectURL kustom sudah termuat.
+    const k = kop() ?? KOPI_FALLBACK;
+    const kopBlock = `${k.tampilkanLogo && kopLogoSrc() ? `<img src="${kopLogoSrc()}" alt="" style="height:64px;float:left;margin:0 16px 8px 0;object-fit:contain" />` : ''}
+<h2 style="margin:0">${escapeHtml(k.nama)}</h2>
+${k.alamat.map((a) => `<p class="sub" style="margin:0">${escapeHtml(a)}</p>`).join('\n')}
+${k.kontak ? `<p class="sub" style="margin:0">${escapeHtml(k.kontak)}</p>` : ''}
+${k.website ? `<p class="sub" style="margin:0"><a href="${escapeHtml(k.website)}">${escapeHtml(k.website)}</a></p>` : ''}
+${k.email ? `<p class="sub" style="margin:0">Email: <a href="mailto:${escapeHtml(k.email)}">${escapeHtml(k.email)}</a></p>` : ''}
+<div style="clear:both;border-bottom:2px solid #000;margin:8px 0 14px"></div>`;
     const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -405,7 +423,7 @@ export default function BkdCetak() {
   </style>
 </head>
 <body>
-  <h2>POLITEKNIK SOROWAKO</h2>
+  ${kopBlock}
   <h2>${escapeHtml(heading)}</h2>
   <p class="meta">Periode Akademik: ${escapeHtml(data.periode.nama)} · Dosen: ${escapeHtml(data.dosen.nama)} (NIP: ${escapeHtml(data.dosen.nip)} · NUPTK: ${escapeHtml(data.dosen.nuptk || data.dosen.nidn || '-')})</p>
   ${bodyHtml}
@@ -484,8 +502,9 @@ export default function BkdCetak() {
         >
           {(data) => (
             <div id="print-area-bkd" class="text-secondary-800">
-              <div class="border-b border-secondary-200 pb-3 text-center">
-                <h2 class="text-xl font-bold tracking-wider text-brand-700">POLITEKNIK SOROWAKO</h2>
+              {/* Kop surat global — judul BKD & periode di bawah garis kop */}
+              <KopSurat kop={kop() ?? KOPI_FALLBACK} />
+              <div class="mt-3 text-center">
                 <h3 class="text-base font-bold uppercase tracking-widest text-secondary-600">
                   Laporan Beban Kerja Dosen (BKD)
                 </h3>

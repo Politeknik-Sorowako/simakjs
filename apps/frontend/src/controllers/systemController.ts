@@ -45,6 +45,22 @@ export interface ChangelogSection {
   groups: ChangelogGroup[];
 }
 
+/** Konfigurasi kop surat global (backend: `surat_kop_global`). */
+export interface KopSurat {
+  nama: string;
+  alamat: string[];
+  kontak: string;
+  website: string;
+  email: string;
+  tampilkanLogo: boolean;
+  logoCustom: boolean;
+  /** Path relatif logo kustom (`/settings/kop-logo?v=...`); null = logo bawaan. */
+  logoUrl: string | null;
+}
+
+// Cache objectURL logo kustom (satu sesi browser) agar tiap kop tidak fetch ulang.
+let kopLogoObjectUrl: string | null = null;
+
 type SystemParamsEden = Promise<{ data?: { data: SystemParameter[] } | null; error?: unknown }>;
 
 export const systemController = {
@@ -85,5 +101,72 @@ export const systemController = {
     return fetchApi<{ message: string; sessionEpoch: number }>('/system/session-epoch/bump', {
       method: 'POST',
     });
+  },
+
+  // ─── Kop surat global ─────────────────────────────────────────────────────
+
+  async getKop(): Promise<KopSurat> {
+    const res = await fetchApi<{ data: KopSurat }>('/settings/kop');
+    return res.data;
+  },
+
+  async updateKop(kop: {
+    nama: string;
+    alamat: string[];
+    kontak: string;
+    website: string;
+    email: string;
+    tampilkanLogo: boolean;
+  }): Promise<{ message: string }> {
+    return fetchApi<{ message: string }>('/settings/kop', {
+      method: 'PUT',
+      body: JSON.stringify(kop),
+    });
+  },
+
+  async uploadKopLogo(file: File): Promise<{ message: string }> {
+    const { API_URL } = await import('../utils/api');
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_URL}/settings/kop-logo`, {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error || 'Gagal mengunggah logo kop surat');
+    }
+    systemController.invalidateKopLogoCache();
+    return res.json() as Promise<{ message: string }>;
+  },
+
+  async deleteKopLogo(): Promise<{ message: string }> {
+    const out = await fetchApi<{ message: string }>('/settings/kop-logo', { method: 'DELETE' });
+    systemController.invalidateKopLogoCache();
+    return out;
+  },
+
+  /** Bersihkan cache objectURL logo (dipanggil setelah upload/hapus). */
+  invalidateKopLogoCache(): void {
+    if (kopLogoObjectUrl) {
+      URL.revokeObjectURL(kopLogoObjectUrl);
+      kopLogoObjectUrl = null;
+    }
+  },
+
+  /**
+   * Sumber gambar logo kustom: blob objectURL bila `logoCustom` (di-cache),
+   * null bila logo bawaan — pemanggil pakai logo statis repo sebagai fallback.
+   */
+  async kopLogoObjectUrl(kop: KopSurat): Promise<string | null> {
+    if (!kop.logoCustom || !kop.logoUrl) return null;
+    if (kopLogoObjectUrl) return kopLogoObjectUrl;
+    const { API_URL } = await import('../utils/api');
+    const res = await fetch(`${API_URL}${kop.logoUrl}`, { credentials: 'include' });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    kopLogoObjectUrl = URL.createObjectURL(blob);
+    return kopLogoObjectUrl;
   },
 };
