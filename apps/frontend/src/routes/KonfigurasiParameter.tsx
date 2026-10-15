@@ -409,7 +409,9 @@ function TabParameter() {
               p.key !== 'BLOCK_KHS_JIKA_TANGGUNGAN' &&
               p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
               p.key !== 'SESSION_DURATION_MINUTES' &&
-              p.key !== 'SESSION_EPOCH',
+              p.key !== 'SESSION_EPOCH' &&
+              // Parameter string ber-UI khusus (JSON kop diedit via tab Kop Surat).
+              p.key !== 'surat_kop_global',
           )}
         >
           {(p) => (
@@ -433,12 +435,24 @@ function TabParameter() {
                       <Show
                         when={p.key === 'TIMEZONE'}
                         fallback={
-                          <Input
-                            type="number"
-                            value={valueFor(p)}
-                            onInput={(e) => setField(p.key, e.currentTarget.value)}
-                            class="w-28"
-                          />
+                          <Show
+                            when={p.paramType === 'string'}
+                            fallback={
+                              <Input
+                                type="number"
+                                value={valueFor(p)}
+                                onInput={(e) => setField(p.key, e.currentTarget.value)}
+                                class="w-28"
+                              />
+                            }
+                          >
+                            <Input
+                              type="text"
+                              value={valueFor(p)}
+                              onInput={(e) => setField(p.key, e.currentTarget.value)}
+                              class="w-64"
+                            />
+                          </Show>
                         }
                       >
                         <select

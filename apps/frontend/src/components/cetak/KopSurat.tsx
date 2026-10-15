@@ -27,7 +27,8 @@ export const KOPI_FALLBACK: KopSurat = {
 export default function KopSurat(props: { kop: KopSurat }) {
   // Kunci resource memakai logoUrl+flag agar berubah saat admin ganti logo.
   const [logoSrc] = createResource(
-    () => `${props.kop.logoCustom ? 'custom' : 'default'}:${props.kop.logoUrl ?? ''}`,
+    () =>
+      `${props.kop.tampilkanLogo ? 'on' : 'off'}:${props.kop.logoCustom ? 'custom' : 'default'}:${props.kop.logoUrl ?? ''}`,
     async () => {
       if (!props.kop.tampilkanLogo) return null;
       return (await systemController.kopLogoObjectUrl(props.kop)) ?? logoBawaan;
