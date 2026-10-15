@@ -1343,7 +1343,16 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     SKPI Mahasiswa
                   </A>
                 </Show>
-                <Show when={isSuperAdmin() || isAdmin() || isProdi() || auth.hasRole(['kaprodi']) || isKemahasiswaan()}>
+                <Show
+                  when={
+                    isSuperAdmin() ||
+                    isAdmin() ||
+                    isProdi() ||
+                    isDosen() ||
+                    auth.hasRole(['kaprodi']) ||
+                    isKemahasiswaan()
+                  }
+                >
                   <A
                     href="/skpi"
                     onClick={() => props.onClose()}

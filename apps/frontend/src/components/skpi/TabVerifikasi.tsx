@@ -48,7 +48,7 @@ export default function TabVerifikasi() {
 
   // ── Seleksi massal (approve) — baris pending saja yang bisa dicentang ──────
   const [selectedIds, setSelectedIds] = createSignal<Set<number>>(new Set());
-  const pendingRows = () => (list()?.data ?? []).filter((r) => r.status === 'pending');
+  const pendingRows = () => (list.latest?.data ?? []).filter((r) => r.status === 'pending');
   const toggleSelect = (id: number) => {
     const next = new Set(selectedIds());
     if (next.has(id)) next.delete(id);
@@ -668,7 +668,7 @@ export default function TabVerifikasi() {
             </table>
           </div>
 
-          <Show when={list()}>
+          <Show when={list.latest}>
             {(page) => (
               <Pagination
                 currentPage={page().meta.page}

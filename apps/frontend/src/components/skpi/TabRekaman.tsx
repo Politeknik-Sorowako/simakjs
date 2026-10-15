@@ -682,7 +682,7 @@ export default function TabRekaman(props: TabRekamanProps) {
             </table>
           </div>
 
-          <Show when={list()}>
+          <Show when={list.latest}>
             {(page) => (
               <Pagination
                 currentPage={page().meta.page}
@@ -740,10 +740,10 @@ export default function TabRekaman(props: TabRekamanProps) {
             <div class="p-3 rounded-xl bg-secondary-50 border border-secondary-100 text-xs dark:bg-secondary-800/60 dark:border-secondary-700">
               <span class="text-secondary-400 font-semibold uppercase tracking-wider">Mahasiswa:</span>{' '}
               <span class="font-bold text-secondary-800 dark:text-white">
-                {list()?.data?.find((r) => r.id === editingId())?.mahasiswa?.nama ?? '-'}
+                {list.latest?.data?.find((r) => r.id === editingId())?.mahasiswa?.nama ?? '-'}
               </span>{' '}
               <span class="text-secondary-400">
-                ({list()?.data?.find((r) => r.id === editingId())?.mahasiswa?.nim ?? '-'})
+                ({list.latest?.data?.find((r) => r.id === editingId())?.mahasiswa?.nim ?? '-'})
               </span>
             </div>
           </Show>

@@ -60,7 +60,7 @@ export default function TabPenerbitan() {
 
   // ── Seleksi massal ─────────────────────────────────────────────────────────
   const [selected, setSelected] = createSignal<Set<number>>(new Set());
-  const rows = () => list()?.data ?? [];
+  const rows = () => list.latest?.data ?? [];
   const toggleSelect = (mhsId: number) => {
     const next = new Set(selected());
     if (next.has(mhsId)) next.delete(mhsId);
@@ -470,7 +470,7 @@ export default function TabPenerbitan() {
           </table>
         </div>
 
-        <Show when={list()}>
+        <Show when={list.latest}>
           {(page) => (
             <Pagination
               currentPage={page().meta.page}
