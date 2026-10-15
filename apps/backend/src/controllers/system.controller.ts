@@ -98,9 +98,9 @@ export class SystemController {
       set.status = 400;
       return { error: 'key dan value wajib diisi' };
     }
-    if (!/^[A-Z0-9_]+$/.test(key)) {
+    if (!/^[A-Za-z0-9_]+$/.test(key)) {
       set.status = 400;
-      return { error: 'key hanya boleh mengandung huruf besar, angka, dan underscore' };
+      return { error: 'key hanya boleh mengandung huruf, angka, dan underscore' };
     }
     if (key === 'SESSION_DURATION_MINUTES') {
       const minutes = Number(value);
