@@ -177,6 +177,27 @@ describe('RBAC Multi-Role (union semantics)', () => {
       expect(updated.role).toBe('dosen');
     });
 
+    it('accepts the kemahasiswaan role (regression: VALID_ROLES allowlist)', async () => {
+      const adminToken = await getAuthToken('admin-kema@test.com', 'admin');
+      const hashed = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
+      const [target] = await db
+        .insert(users)
+        .values({ email: 'target-kema@test.com', password: hashed, nama: 'Target', role: 'dosen', isActive: true })
+        .returning();
+
+      const response = await app.handle(
+        new Request(`http://localhost/users/${target.id}/roles`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roles: ['kemahasiswaan'] }),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const rows = await db.select().from(userRoles).where(eq(userRoles.userId, target.id));
+      expect(rows.map((r) => r.role)).toEqual(['kemahasiswaan']);
+    });
+
     it('forbids a non-super_admin from granting super_admin', async () => {
       const adminToken = await getAuthToken('admin-grant@test.com', 'admin');
       const hashed = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
