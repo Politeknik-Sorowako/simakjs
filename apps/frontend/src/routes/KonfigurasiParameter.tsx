@@ -410,7 +410,8 @@ function TabParameter() {
               p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
               p.key !== 'SESSION_DURATION_MINUTES' &&
               p.key !== 'SESSION_EPOCH' &&
-              // Parameter string ber-UI khusus (JSON kop diedit via tab Kop Surat).
+              // Parameter boolean/string ber-UI khusus (toggle khusus / tab Kop Surat).
+              p.key !== 'LOGIN_TURNSTILE_ENABLED' &&
               p.key !== 'surat_kop_global',
           )}
         >
