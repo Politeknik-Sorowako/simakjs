@@ -300,6 +300,7 @@ export class UserController {
         'keuangan',
         'plp',
         'instruktur',
+        'kemahasiswaan',
         'mahasiswa',
         'guest',
         'calon_mahasiswa',

@@ -589,7 +589,13 @@
       "when": 1789886663000,
       "tag": "0084_skpi_kegiatan_mahasiswa",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1789886664000,
+      "tag": "0085_kemahasiswaan_user_role",
+      "breakpoints": true
     }
   ]
 }
-
