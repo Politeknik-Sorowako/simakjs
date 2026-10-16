@@ -236,7 +236,49 @@ describe('Pengumuman Service & API Lifecycle', () => {
     await db.delete(pengumuman).where(eq(pengumuman.id, published.id));
   });
 
-  it('9. endpoint storage pengumuman menolak path traversal dan berkas non-eksis', async () => {
+  it('9. sortBy=publishedAt menaruh draft tanpa tanggal terbit di akhir (NULLS LAST)', async () => {
+    const tag = `SORTTEST-${Date.now()}`;
+    const draft = await PengumumanService.saveDraft(adminUser, {
+      judul: `${tag} Draft Tanpa Terbit`,
+      konten: 'Draft tanpa published_at.',
+    });
+    const published = await PengumumanService.publish(adminUser, {
+      judul: `${tag} Sudah Terbit`,
+      konten: 'Sudah memiliki published_at.',
+      targetRole: 'semua',
+      targetProdiType: 'semua',
+      targetScopeType: 'umum',
+      publishMode: 'now',
+    });
+
+    try {
+      const descRes = await PengumumanService.getManageList(adminUser, {
+        search: tag,
+        sortBy: 'publishedAt',
+        sortOrder: 'desc',
+        limit: 50,
+      });
+      const descIds = descRes.data.map((p) => p.id);
+      expect(descIds).toHaveLength(2);
+      expect(descIds[0]).toBe(published.id);
+      expect(descIds[descIds.length - 1]).toBe(draft.id);
+
+      const ascRes = await PengumumanService.getManageList(adminUser, {
+        search: tag,
+        sortBy: 'publishedAt',
+        sortOrder: 'asc',
+        limit: 50,
+      });
+      const ascIds = ascRes.data.map((p) => p.id);
+      expect(ascIds[0]).toBe(published.id);
+      expect(ascIds[ascIds.length - 1]).toBe(draft.id);
+    } finally {
+      await db.delete(pengumuman).where(eq(pengumuman.id, draft.id!));
+      await db.delete(pengumuman).where(eq(pengumuman.id, published.id));
+    }
+  });
+
+  it('10. endpoint storage pengumuman menolak path traversal dan berkas non-eksis', async () => {
     // Path traversal attempt
     const resTraversal = await app.handle(new Request('http://localhost/storage/pengumuman/..%2F..%2Fpackage.json'));
     expect(resTraversal.status).toBe(404);
@@ -246,7 +288,7 @@ describe('Pengumuman Service & API Lifecycle', () => {
     expect(resNonExistent.status).toBe(404);
   });
 
-  it('10. endpoint storage pengumuman dapat diakses publik tanpa token & menyajikan header cache', async () => {
+  it('11. endpoint storage pengumuman dapat diakses publik tanpa token & menyajikan header cache', async () => {
     const storageDir = join(process.cwd(), 'storage', 'pengumuman');
     await mkdir(storageDir, { recursive: true });
     const testFileName = `test-img-${Date.now()}.png`;
