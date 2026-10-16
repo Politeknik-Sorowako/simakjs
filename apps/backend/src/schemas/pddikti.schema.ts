@@ -30,6 +30,36 @@ export const getPddiktiStatsSchema = {
   },
 };
 
+export const testFeederConnectionSchema = {
+  body: t.Optional(
+    t.Object({
+      url: t.Optional(t.String()),
+      username: t.Optional(t.String()),
+      password: t.Optional(t.String()),
+    }),
+  ),
+  response: {
+    200: t.Object({
+      ok: t.Boolean(),
+      url: t.String(),
+      username: t.String(),
+      latencyMs: t.Number(),
+      profilKode: t.Optional(t.String()),
+      profilNama: t.Optional(t.String()),
+      error: t.Optional(t.String()),
+      checkedAt: t.String(),
+    }),
+    403: t.Object({
+      error: t.String({ default: 'Akses ditolak. Hanya Admin atau Super Admin.' }),
+    }),
+  },
+  detail: {
+    tags: ['PDDIKTI'],
+    summary: 'Uji Koneksi Neo Feeder PDDIKTI',
+    description: 'Memvalidasi alamat & kredensial Web Service Feeder dengan memanggil GetToken + GetProfilPT.',
+  },
+};
+
 export const syncPddiktiSchema = {
   response: {
     200: t.Object({

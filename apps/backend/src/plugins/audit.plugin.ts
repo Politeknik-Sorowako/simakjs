@@ -400,6 +400,10 @@ export async function auditBeforeHandle(ctx: AuditHookContext): Promise<void> {
   if (path.includes('/document-signatures/verify')) {
     return;
   }
+  // Uji koneksi Feeder: POST diagnostik (bukan mutasi) — jangan banjiri audit log.
+  if (path.includes('/pddikti/test-connection')) {
+    return;
+  }
   // Resolve entity before the mutation (so DELETE still has the row).
   const info = await resolveEntity(module, rawEntityId);
   entityCache.set(request, info);
@@ -425,6 +429,11 @@ export async function auditAfterResponse(ctx: AuditHookContext): Promise<void> {
 
   // Verifikasi publik TTE (POST baca) — tidak dicatat agar audit log tidak banjir.
   if (path.includes('/document-signatures/verify')) {
+    return;
+  }
+
+  // Uji koneksi Feeder (POST diagnostik baca) — tidak dicatat.
+  if (path.includes('/pddikti/test-connection')) {
     return;
   }
 

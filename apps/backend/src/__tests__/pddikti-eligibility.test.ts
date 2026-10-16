@@ -232,6 +232,94 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
     });
   });
 
+  describe('Feeder Configuration (PDDIKTI)', () => {
+    const getParams = async (token: string) => {
+      const res = await app.handle(
+        new Request('http://localhost/system/parameters', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: Array<Record<string, unknown>> };
+      return body.data;
+    };
+
+    const putParam = (token: string, key: string, value: string) =>
+      app.handle(
+        new Request(`http://localhost/system/parameters/${key}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value }),
+        }),
+      );
+
+    it('masks FEEDER_PASSWORD, keeps it on empty update, and validates values', async () => {
+      // Defaults terisi otomatis (tanpa migrasi manual).
+      const initial = await getParams(adminToken);
+      const url0 = initial.find((p) => p.key === 'FEEDER_URL');
+      const user0 = initial.find((p) => p.key === 'FEEDER_USERNAME');
+      const pw0 = initial.find((p) => p.key === 'FEEDER_PASSWORD');
+      expect(url0?.value).toBe('https://feeder.politekniksorowako.ac.id/ws/live2.php');
+      expect(user0?.value).toBe('darmawaty@politekniksorowako.ac.id');
+      expect(pw0?.value).toBe('');
+      expect(pw0?.hasValue).toBe(false);
+
+      // Set password → respons tidak membocorkan nilainya.
+      const setRes = await putParam(adminToken, 'FEEDER_PASSWORD', 'rahasia123');
+      expect(setRes.status).toBe(200);
+      expect(((await setRes.json()) as { value: string }).value).toBe('');
+
+      const afterSet = await getParams(adminToken);
+      const pw1 = afterSet.find((p) => p.key === 'FEEDER_PASSWORD');
+      expect(pw1?.value).toBe('');
+      expect(pw1?.masked).toBe(true);
+      expect(pw1?.hasValue).toBe(true);
+
+      // Update password dengan nilai kosong = pertahankan password lama.
+      const keepRes = await putParam(adminToken, 'FEEDER_PASSWORD', '');
+      expect(keepRes.status).toBe(200);
+      const afterKeep = await getParams(adminToken);
+      expect(afterKeep.find((p) => p.key === 'FEEDER_PASSWORD')?.hasValue).toBe(true);
+
+      // Validasi rentang & format.
+      expect((await putParam(adminToken, 'FEEDER_URL', 'bukan-url')).status).toBe(400);
+      expect((await putParam(adminToken, 'FEEDER_TIMEOUT_MS', '1000')).status).toBe(400);
+      expect((await putParam(adminToken, 'FEEDER_PAGE_SIZE', '1000')).status).toBe(400);
+      expect((await putParam(adminToken, 'FEEDER_TIMEOUT_MS', '30000')).status).toBe(200);
+      expect((await putParam(adminToken, 'FEEDER_URL', 'https://feeder.example.ac.id/ws/live2.php')).status).toBe(200);
+    });
+
+    it('legacy GET /settings masks FEEDER_PASSWORD too', async () => {
+      // Regresi: /settings lama mengembalikan seluruh baris system_settings ke role
+      // non-admin (mis. prodi) — parameter rahasia wajib tetap termasking di sana.
+      expect((await putParam(adminToken, 'FEEDER_PASSWORD', 'rahasia123')).status).toBe(200);
+
+      const res = await app.handle(
+        new Request('http://localhost/settings', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: Array<{ key: string; value: string | null }> };
+      const pw = body.data.find((s) => s.key === 'FEEDER_PASSWORD');
+      expect(pw).toBeDefined();
+      expect(pw?.value).toBe('');
+    });
+
+    it('rejects test-connection for non-admin users', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/pddikti/test-connection', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        }),
+      );
+      expect(res.status).toBe(403);
+    });
+  });
+
   describe('PDDIKTI Sync Simulation', () => {
     it('should execute PDDIKTI Sync and return statistics', async () => {
       // 1. Get initial stats

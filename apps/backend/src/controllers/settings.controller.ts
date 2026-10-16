@@ -1,5 +1,5 @@
 import { SettingsService } from '../services/settings.service';
-import { type KopSuratConfig, SystemParameterService } from '../services/system-parameter.service';
+import { type KopSuratConfig, SECRET_PARAM_KEYS, SystemParameterService } from '../services/system-parameter.service';
 import { findKopLogoFile, removeKopLogo, saveKopLogo } from '../utils/kop-storage';
 import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
@@ -48,7 +48,10 @@ export class SettingsController {
       }
 
       const settings = await SettingsService.getAll();
-      return { data: settings };
+      // Parameter rahasia (mis. FEEDER_PASSWORD) tidak pernah dikembalikan mentah,
+      // selaras dengan /system/parameters & /system/settings.
+      const data = settings.map((s) => (SECRET_PARAM_KEYS.has(s.key) ? { ...s, value: '' } : s));
+      return { data };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal mengambil pengaturan sistem' };
