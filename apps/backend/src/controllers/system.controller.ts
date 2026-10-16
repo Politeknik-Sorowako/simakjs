@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
 import { ChangelogService } from '../services/changelog.service';
-import { SystemParameterService } from '../services/system-parameter.service';
+import { SECRET_PARAM_KEYS, SystemParameterService } from '../services/system-parameter.service';
 import { VersionService } from '../services/version.service';
 import { db } from '../utils/db';
 import { isSuperAdminOrAdmin } from '../utils/role';
@@ -77,7 +77,14 @@ export class SystemController {
         updatedBy: r.updatedBy ?? null,
       });
     }
-    return { data: meta };
+    // Parameter rahasia (mis. password Feeder) tidak pernah dikembalikan mentah —
+    // hanya menandai apakah nilainya sudah terisi (`hasValue`).
+    const data = meta.map((m) =>
+      SECRET_PARAM_KEYS.has(m.key)
+        ? { ...m, value: '', hasValue: String(m.value ?? '').length > 0, masked: true }
+        : { ...m, masked: false },
+    );
+    return { data };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -114,9 +121,59 @@ export class SystemController {
       set.status = 400;
       return { error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
     }
+    if (key === 'FEEDER_URL') {
+      const trimmed = value.trim();
+      if (!/^https?:\/\/\S+$/i.test(trimmed)) {
+        set.status = 400;
+        return { error: 'Alamat Feeder harus berupa URL http(s) yang valid' };
+      }
+      if (trimmed.length > 500) {
+        set.status = 400;
+        return { error: 'Alamat Feeder terlalu panjang (maks 500 karakter)' };
+      }
+      value = trimmed;
+    }
+    if (key === 'FEEDER_USERNAME') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        set.status = 400;
+        return { error: 'Username Feeder wajib diisi' };
+      }
+      if (trimmed.length > 200) {
+        set.status = 400;
+        return { error: 'Username Feeder terlalu panjang (maks 200 karakter)' };
+      }
+      value = trimmed;
+    }
+    if (key === 'FEEDER_PASSWORD') {
+      // Nilai kosong = pertahankan password lama (form tidak menampilkan nilai tersimpan).
+      if (value.trim() === '') {
+        return { key, value: '' };
+      }
+      if (value.length > 200) {
+        set.status = 400;
+        return { error: 'Password Feeder terlalu panjang (maks 200 karakter)' };
+      }
+    }
+    if (key === 'FEEDER_TIMEOUT_MS') {
+      const ms = Number(value);
+      if (!Number.isFinite(ms) || ms < 5000 || ms > 60000) {
+        set.status = 400;
+        return { error: 'Timeout Feeder harus berupa angka antara 5000 dan 60000 ms' };
+      }
+      value = String(Math.floor(ms));
+    }
+    if (key === 'FEEDER_PAGE_SIZE') {
+      const size = Number(value);
+      if (!Number.isFinite(size) || size < 50 || size > 500) {
+        set.status = 400;
+        return { error: 'Page size Feeder harus berupa angka antara 50 dan 500' };
+      }
+      value = String(Math.floor(size));
+    }
     try {
       const row = await SystemParameterService.set(key, String(value), user.id, description);
-      return { key: row.key, value: row.value };
+      return { key: row.key, value: SECRET_PARAM_KEYS.has(key) ? '' : row.value };
     } catch (e: unknown) {
       set.status = 500;
       return { error: e instanceof Error ? e.message : 'Gagal memperbarui parameter' };
@@ -159,7 +216,12 @@ export class SystemController {
       })
       .from(systemSettings)
       .orderBy(systemSettings.key);
-    return { data: rows };
+    const data = rows.map((r) =>
+      SECRET_PARAM_KEYS.has(r.key)
+        ? { ...r, value: '', hasValue: String(r.value ?? '').length > 0, masked: true }
+        : { ...r, masked: false },
+    );
+    return { data };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

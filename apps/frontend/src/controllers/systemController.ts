@@ -27,6 +27,21 @@ export interface SystemParameter {
   defaultValue: string | number | boolean;
   updatedAt?: string;
   updatedBy?: number | null;
+  /** Parameter rahasia (mis. password Feeder) — nilainya tidak pernah dikirim. */
+  masked?: boolean;
+  /** Khusus parameter rahasia: apakah nilainya sudah terisi di server. */
+  hasValue?: boolean;
+}
+
+export interface FeederTestResult {
+  ok: boolean;
+  url: string;
+  username: string;
+  latencyMs: number;
+  profilKode?: string;
+  profilNama?: string;
+  error?: string;
+  checkedAt: string;
 }
 
 export interface ChangelogItem {
@@ -100,6 +115,21 @@ export const systemController = {
   async bumpSessionEpoch(): Promise<{ message: string; sessionEpoch: number }> {
     return fetchApi<{ message: string; sessionEpoch: number }>('/system/session-epoch/bump', {
       method: 'POST',
+    });
+  },
+
+  /**
+   * Uji koneksi Web Service Neo Feeder PDDIKTI. Override opsional (url/username/
+   * password) memungkinkan admin mengetes sebelum menyimpan.
+   */
+  async testFeederConnection(override?: {
+    url?: string;
+    username?: string;
+    password?: string;
+  }): Promise<FeederTestResult> {
+    return fetchApi<FeederTestResult>('/pddikti/test-connection', {
+      method: 'POST',
+      body: JSON.stringify(override ?? {}),
     });
   },
 

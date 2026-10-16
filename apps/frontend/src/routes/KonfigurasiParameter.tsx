@@ -1,4 +1,5 @@
 import { createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import TabFeeder from '../components/konfigurasi/TabFeeder';
 import TabKopSurat from '../components/konfigurasi/TabKopSurat';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
@@ -413,7 +414,14 @@ function TabParameter() {
               p.key !== 'SESSION_EPOCH' &&
               // Parameter boolean/string ber-UI khusus (toggle khusus / tab Kop Surat).
               p.key !== 'LOGIN_TURNSTILE_ENABLED' &&
-              p.key !== 'surat_kop_global',
+              p.key !== 'surat_kop_global' &&
+              // Parameter Feeder ber-UI khusus (tab Feeder PDDIKTI).
+              p.key !== 'FEEDER_URL' &&
+              p.key !== 'FEEDER_USERNAME' &&
+              p.key !== 'FEEDER_PASSWORD' &&
+              p.key !== 'FEEDER_TIMEOUT_MS' &&
+              p.key !== 'FEEDER_PAGE_SIZE' &&
+              p.key !== 'FEEDER_AUTO_APPROVE_KRS',
           )}
         >
           {(p) => (
@@ -494,17 +502,18 @@ function TabParameter() {
   );
 }
 
-const TABS: { key: 'parameter' | 'kop'; label: string; desc: string }[] = [
+const TABS: { key: 'parameter' | 'feeder' | 'kop'; label: string; desc: string }[] = [
   { key: 'parameter', label: 'Parameter', desc: 'Parameter dinamis sistem (kompensasi, akademik, sesi, dst.)' },
+  { key: 'feeder', label: 'Feeder PDDIKTI', desc: 'Alamat & kredensial Web Service Neo Feeder PDDIKTI' },
   { key: 'kop', label: 'Kop Surat', desc: 'Kop surat global semua dokumen cetak (KHS, SKPI, BKD, dst.)' },
 ];
 
 /**
- * Halaman Pengaturan Sistem — shell dua tab:
- * Parameter (isi lama) + Kop Surat (desain kop global terpusat).
+ * Halaman Pengaturan Sistem — shell tiga tab:
+ * Parameter (isi lama) + Feeder PDDIKTI + Kop Surat (desain kop global terpusat).
  */
 export default function KonfigurasiParameter() {
-  const [tab, setTab] = createSignal<'parameter' | 'kop'>('parameter');
+  const [tab, setTab] = createSignal<'parameter' | 'feeder' | 'kop'>('parameter');
 
   return (
     <MainLayout>
@@ -536,7 +545,14 @@ export default function KonfigurasiParameter() {
           </For>
         </div>
 
-        <Show when={tab() === 'parameter'} fallback={<TabKopSurat />}>
+        <Show
+          when={tab() === 'parameter'}
+          fallback={
+            <Show when={tab() === 'feeder'} fallback={<TabKopSurat />}>
+              <TabFeeder />
+            </Show>
+          }
+        >
           <TabParameter />
         </Show>
       </div>

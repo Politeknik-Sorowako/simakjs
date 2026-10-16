@@ -127,7 +127,52 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     description:
       'Epoch sesi (kill-switch). Menaikkan nilai ini memaksa semua pengguna login ulang: token yang dibubuhi sessEpoch lebih kecil dari nilai ini ditolak.',
   },
+  // ─── Integrasi Neo Feeder PDDIKTI (Web Service live2.php) ─────────────────
+  FEEDER_URL: {
+    value: 'https://feeder.politekniksorowako.ac.id/ws/live2.php',
+    type: 'string',
+    description: 'Alamat Web Service Neo Feeder PDDIKTI (umumnya .../ws/live2.php)',
+  },
+  FEEDER_USERNAME: {
+    value: 'darmawaty@politekniksorowako.ac.id',
+    type: 'string',
+    description: 'Username akun Web Service Neo Feeder PDDIKTI',
+  },
+  FEEDER_PASSWORD: {
+    value: '',
+    type: 'string',
+    description:
+      'Password akun Web Service Neo Feeder PDDIKTI (hanya tersimpan di server, tidak pernah ditampilkan kembali). Kosongkan saat menyimpan bila tidak ingin mengubah.',
+  },
+  FEEDER_TIMEOUT_MS: {
+    value: '20000',
+    type: 'number',
+    description: 'Timeout permintaan ke Web Service Feeder dalam milidetik (5000–60000)',
+  },
+  FEEDER_PAGE_SIZE: {
+    value: '200',
+    type: 'number',
+    description: 'Jumlah baris per halaman saat menarik data dari Feeder (50–500)',
+  },
+  FEEDER_AUTO_APPROVE_KRS: {
+    value: 'false',
+    type: 'boolean',
+    description: 'Setujui otomatis KRS tertunda sebelum dikirim/diambil dari Feeder',
+  },
 };
+
+/** Parameter yang nilainya bersifat rahasia (di-mask pada respons API). */
+export const SECRET_PARAM_KEYS: ReadonlySet<string> = new Set(['FEEDER_PASSWORD']);
+
+/** Konfigurasi ter-resolve untuk integrasi Neo Feeder PDDIKTI. */
+export interface FeederConfig {
+  url: string;
+  username: string;
+  password: string;
+  timeoutMs: number;
+  pageSize: number;
+  autoApproveKrs: boolean;
+}
 
 const SESSION_DURATION_MIN = 15;
 const SESSION_DURATION_MAX = 10080;
@@ -211,6 +256,31 @@ export class SystemParameterService {
     } catch {
       return fallback;
     }
+  }
+
+  /**
+   * Konfigurasi integrasi Neo Feeder PDDIKTI yang sudah di-resolve & di-clamp.
+   * Nilai timeout/pageSize selalu dalam rentang aman meski baris DB korup.
+   */
+  static async getFeederConfig(): Promise<FeederConfig> {
+    const [url, username, password, timeoutRaw, pageSizeRaw, autoApprove] = await Promise.all([
+      SystemParameterService.getRaw('FEEDER_URL'),
+      SystemParameterService.getRaw('FEEDER_USERNAME'),
+      SystemParameterService.getRaw('FEEDER_PASSWORD'),
+      SystemParameterService.getRaw('FEEDER_TIMEOUT_MS'),
+      SystemParameterService.getRaw('FEEDER_PAGE_SIZE'),
+      SystemParameterService.getRaw('FEEDER_AUTO_APPROVE_KRS'),
+    ]);
+    const timeoutParsed = Number(timeoutRaw);
+    const pageSizeParsed = Number(pageSizeRaw);
+    return {
+      url: (url ?? '').trim(),
+      username: (username ?? '').trim(),
+      password: password ?? '',
+      timeoutMs: Number.isFinite(timeoutParsed) ? Math.min(60000, Math.max(5000, Math.floor(timeoutParsed))) : 20000,
+      pageSize: Number.isFinite(pageSizeParsed) ? Math.min(500, Math.max(50, Math.floor(pageSizeParsed))) : 200,
+      autoApproveKrs: autoApprove === 'true' || autoApprove === '1',
+    };
   }
 
   /** Durasi sesi login (idle timeout) dalam menit, diklamp ke rentang 15–10080. */
