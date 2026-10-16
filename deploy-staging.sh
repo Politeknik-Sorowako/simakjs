@@ -163,6 +163,7 @@ fi
 log "Step 4: Building and deploying..."
 # OVERRIDE NODE_ENV=.env/dev agar staging tak salah env (Swagger/E2E mati, cookie Secure).
 export NODE_ENV=staging
+export COMPOSE_PARALLEL_LIMIT=1
 docker compose -f "$COMPOSE_FILE" build 2>&1 | tee -a "$LOG_FILE" || {
   fail "Docker build failed"
   exit 1
@@ -174,6 +175,9 @@ docker compose -f "$COMPOSE_FILE" up -d --force-recreate 2>&1 | tee -a "$LOG_FIL
   exit 1
 }
 ok "Containers started"
+
+docker image prune -f --filter "until=72h" 2>/dev/null || true
+docker builder prune -f --filter "until=24h" 2>/dev/null || true
 
 # Tunggu semua service (termasuk db_staging) mencapai status healthy
 if docker compose -f "$COMPOSE_FILE" up -d --wait 2>&1 | tee -a "$LOG_FILE"; then

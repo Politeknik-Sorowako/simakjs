@@ -217,7 +217,9 @@ cleanup_containers() {
   log "  Strategy 5: Clean old Docker images..."
   docker image prune -f --filter "until=72h" 2>/dev/null || true
   docker volume prune -f 2>/dev/null || true
-  ok "Docker images cleaned"
+  log "  Strategy 6: Clean Docker build cache..."
+  docker builder prune -f --filter "until=24h" 2>/dev/null || true
+  ok "Docker images and build cache cleaned"
   
   sleep 3
   ok "Containers cleaned up"
@@ -229,6 +231,7 @@ build_and_deploy() {
   # Pastikan produksi berjalan dengan NODE_ENV=production (cookie Secure,
   # Swagger/E2E mati). OVERRIDE nilai .env/dev agar staging/prod tak salah env.
   export NODE_ENV=production
+  export COMPOSE_PARALLEL_LIMIT=1
 
   docker compose build 2>&1 | tee -a "$LOG_FILE" || {
     fail "Docker build failed"

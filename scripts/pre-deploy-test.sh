@@ -86,14 +86,15 @@ fi
 # 6. Memory check
 log "Check 6: Memory..."
 MEM_TOTAL=$(free -m | awk 'NR==2 {print $2}')
-MEM_USED=$(free -m | awk 'NR==2 {print $3}')
+MEM_AVAIL=$(free -m | awk 'NR==2 {print $7}')
+MEM_USED=$((MEM_TOTAL - MEM_AVAIL))
 MEM_PCT=$((MEM_USED * 100 / MEM_TOTAL))
 if [ "$MEM_PCT" -lt 80 ]; then
-  ok "Memory: ${MEM_PCT}% used (${MEM_USED}MB / ${MEM_TOTAL}MB)"
+  ok "Memory: ${MEM_PCT}% used (${MEM_USED}MB / ${MEM_TOTAL}MB, ${MEM_AVAIL}MB available)"
 elif [ "$MEM_PCT" -lt 90 ]; then
-  warn "Memory: ${MEM_PCT}% used (${MEM_USED}MB / ${MEM_TOTAL}MB)"
+  warn "Memory: ${MEM_PCT}% used (${MEM_USED}MB / ${MEM_TOTAL}MB, ${MEM_AVAIL}MB available)"
 else
-  fail "Memory: ${MEM_PCT}% used (${MEM_USED}MB / ${MEM_TOTAL}MB)"
+  fail "Memory: ${MEM_PCT}% used (${MEM_USED}MB / ${MEM_TOTAL}MB, ${MEM_AVAIL}MB available)"
   EXIT_CODE=1
 fi
 

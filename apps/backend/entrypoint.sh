@@ -9,5 +9,9 @@ set -e
 bun run --cwd apps/backend db:safe-migrate
 
 # Replace shell with app process (PID 1 for proper signal handling)
-# Use start:dev to honor NODE_ENV from docker-compose (swagger available in development)
-exec bun run --cwd apps/backend start:dev
+# Use --smol in production and staging to optimize heap GC and avoid file-watcher overhead
+if [ "$NODE_ENV" = "production" ] || [ "$NODE_ENV" = "staging" ]; then
+  exec bun --smol --cwd apps/backend src/index.ts
+else
+  exec bun run --cwd apps/backend start:dev
+fi
