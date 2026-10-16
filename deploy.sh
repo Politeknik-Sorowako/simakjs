@@ -50,7 +50,7 @@ trap cleanup EXIT
 pull_latest_code() {
   local branch="${1:-main}"
   log "Step 0: Pulling latest code from branch '$branch'..."
-  git pull origin "$branch" || {
+  (git fetch origin "$branch" && git reset --hard origin/"$branch") || {
     fail "Failed to pull latest code"
     return 1
   }

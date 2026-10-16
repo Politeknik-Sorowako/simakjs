@@ -73,7 +73,7 @@ log "Log file: $LOG_FILE"
 log "Step 1: Pulling latest code..."
 git fetch origin "$BRANCH"
 git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" origin/"$BRANCH"
-git pull origin "$BRANCH"
+git reset --hard origin/"$BRANCH"
 ok "Code pulled successfully"
 log "Current commit: $(git log --oneline -1)"
 
