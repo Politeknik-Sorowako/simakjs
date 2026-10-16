@@ -552,7 +552,10 @@ export class PengumumanService {
       createdAt: pengumuman.createdAt,
       viewCount: pengumuman.viewCount,
     };
-    const selectedSort = sortColumns[query.sortBy || 'createdAt'] ?? pengumuman.createdAt;
+    // Guard with Object.hasOwn so prototype keys (e.g. "constructor", "__proto__") fall
+    // back to `createdAt` instead of resolving to Object.prototype values and breaking the query.
+    const requestedSort = query.sortBy || 'createdAt';
+    const selectedSort = Object.hasOwn(sortColumns, requestedSort) ? sortColumns[requestedSort] : pengumuman.createdAt;
     const direction = query.sortOrder === 'asc' ? sql`asc` : sql`desc`;
     // publishedAt nullable: dorong baris tanpa tanggal terbit (draft/terjadwal) ke akhir
     // agar urutan "Terbit" tetap konsisten dengan nilai yang ditampilkan (publishedAt || createdAt).

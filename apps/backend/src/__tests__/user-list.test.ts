@@ -147,4 +147,12 @@ describe('User List API — filter role/status, search, dan sort server-side', (
     expect(Array.isArray(roleRes.data)).toBe(true);
     expect(roleRes.meta).toHaveProperty('total');
   });
+
+  it('8. sortBy berupa prototype key jatuh fallback ke nama tanpa error', async () => {
+    for (const sortBy of ['constructor', 'toString', '__proto__']) {
+      const res = await fetchUsers(`search=userlist-&sortBy=${sortBy}&sortOrder=asc&limit=50`);
+      const found = res.data.filter((u) => SEED_EMAILS.includes(u.email));
+      expect(found.map((u) => u.nama)).toEqual(['Alpha Beta Userlist', 'Mid Gamma Userlist', 'Zeta Alpha Userlist']);
+    }
+  });
 });

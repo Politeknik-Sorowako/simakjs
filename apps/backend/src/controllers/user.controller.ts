@@ -68,7 +68,9 @@ export class UserController {
         role: sql`${users.role}::text`,
         createdAt: users.createdAt,
       };
-      const selectedSort = sortColumns[sortBy] ?? users.nama;
+      // Guard with Object.hasOwn so prototype keys (e.g. "constructor", "__proto__") fall
+      // back to `nama` instead of resolving to Object.prototype values and breaking the query.
+      const selectedSort = Object.hasOwn(sortColumns, sortBy) ? sortColumns[sortBy] : users.nama;
       const orderBy = sortOrder === 'desc' ? [desc(selectedSort), desc(users.id)] : [asc(selectedSort), asc(users.id)];
 
       const [totalResult] = await db.select({ total: count() }).from(users).where(whereClause);
