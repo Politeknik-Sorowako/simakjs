@@ -1,10 +1,46 @@
-import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { PengumumanCard } from '../components/pengumuman/PengumumanCard';
 import { PengumumanDetailModal } from '../components/pengumuman/PengumumanDetailModal';
 import { PengumumanFormModal } from '../components/pengumuman/PengumumanFormModal';
+import { Pagination } from '../components/ui/Pagination';
+import { SortableHeader } from '../components/ui/SortableHeader';
+import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { PengumumanItem, pengumumanController } from '../controllers/pengumumanController';
+import { usePagination } from '../hooks/usePagination';
+import { fmtWaktu } from '../utils/format';
+
+const STATUS_BADGE: Record<string, { label: string; cls: string }> = {
+  published: {
+    label: 'Live',
+    cls: 'bg-emerald-50 text-emerald-700 ring-emerald-600/10 dark:bg-emerald-900/30 dark:text-emerald-400',
+  },
+  scheduled: {
+    label: 'Terjadwal',
+    cls: 'bg-amber-50 text-amber-700 ring-amber-600/10 dark:bg-amber-900/30 dark:text-amber-400',
+  },
+  draft: {
+    label: 'Draf',
+    cls: 'bg-secondary-100 text-secondary-600 ring-secondary-500/10 dark:bg-secondary-800 dark:text-secondary-300',
+  },
+  withdrawn: {
+    label: 'Ditarik',
+    cls: 'bg-rose-50 text-rose-600 ring-rose-600/10 dark:bg-rose-950/40 dark:text-rose-400',
+  },
+  archived: {
+    label: 'Diarsipkan',
+    cls: 'bg-secondary-100 text-secondary-500 ring-secondary-500/10 dark:bg-secondary-800 dark:text-secondary-400',
+  },
+};
+
+const TARGET_ROLE_LABEL: Record<string, string> = {
+  semua: 'Semua Sivitas',
+  mahasiswa: 'Mahasiswa',
+  dosen: 'Dosen',
+  admin: 'Admin',
+};
 
 export default function Pengumuman() {
   const auth = useAuth();
@@ -12,7 +48,35 @@ export default function Pengumuman() {
 
   const [activeTab, setActiveTab] = createSignal<'feed' | 'manage'>('feed');
   const [search, setSearch] = createSignal('');
+  const [debouncedSearch, setDebouncedSearch] = createSignal('');
   const [statusFilter, setStatusFilter] = createSignal('all');
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+
+  // Manage tab: paging & sorting state
+  const managePagination = usePagination(10);
+  const [manageSortBy, setManageSortBy] = createSignal('createdAt');
+  const [manageSortOrder, setManageSortOrder] = createSignal<'asc' | 'desc'>('desc');
+
+  onCleanup(() => clearTimeout(searchDebounceTimer));
+
+  const handleSearchInput = (e: Event) => {
+    const value = (e.currentTarget as HTMLInputElement).value;
+    setSearch(value);
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      setDebouncedSearch(value);
+      managePagination.resetPage();
+    }, 400);
+  };
+
+  const toggleManageSort = (field: string) => {
+    if (manageSortBy() === field) setManageSortOrder(manageSortOrder() === 'asc' ? 'desc' : 'asc');
+    else {
+      setManageSortBy(field);
+      setManageSortOrder('asc');
+    }
+    managePagination.resetPage();
+  };
 
   // Feed items & Load More state
   const [feedItems, setFeedItems] = createSignal<PengumumanItem[]>([]);
@@ -30,7 +94,7 @@ export default function Pengumuman() {
 
   // Initial feed resource (page 1)
   const [initialFeedData, { refetch: refetchFeedResource }] = createResource(
-    () => ({ search: search() }),
+    () => ({ search: debouncedSearch() }),
     async (params) => {
       const res = await pengumumanController.getFeed(params.search, 1, 10);
       return res;
@@ -53,7 +117,7 @@ export default function Pengumuman() {
     setIsLoadingMore(true);
     const nextPage = feedPage() + 1;
     try {
-      const res = await pengumumanController.getFeed(search(), nextPage, 10);
+      const res = await pengumumanController.getFeed(debouncedSearch(), nextPage, 10);
       setFeedItems((prev) => [...prev, ...res.data]);
       setFeedPage(nextPage);
       setHasMoreFeed(res.page < res.totalPages);
@@ -68,10 +132,25 @@ export default function Pengumuman() {
     refetchFeedResource();
   };
 
-  // Manage list resource
+  // Manage list resource (server-side paging & sorting)
   const [manageData, { refetch: refetchManage }] = createResource(
-    () => ({ search: search(), status: statusFilter() }),
-    (params) => pengumumanController.getManageList(params.search, params.status),
+    () => ({
+      search: debouncedSearch(),
+      status: statusFilter(),
+      page: managePagination.page(),
+      limit: managePagination.limit(),
+      sortBy: manageSortBy(),
+      sortOrder: manageSortOrder(),
+    }),
+    (params) =>
+      pengumumanController.getManageList(
+        params.search,
+        params.status,
+        params.page,
+        params.limit,
+        params.sortBy,
+        params.sortOrder,
+      ),
   );
 
   // Filter pinned vs regular items from loaded feed items
@@ -208,7 +287,10 @@ export default function Pengumuman() {
             <Show when={activeTab() === 'manage'}>
               <select
                 value={statusFilter()}
-                onChange={(e) => setStatusFilter(e.currentTarget.value)}
+                onChange={(e) => {
+                  setStatusFilter(e.currentTarget.value);
+                  managePagination.resetPage();
+                }}
                 class="px-3 py-1.5 rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-xs text-secondary-800 dark:text-secondary-200 focus:outline-hidden"
               >
                 <option value="all">Semua Status</option>
@@ -216,6 +298,7 @@ export default function Pengumuman() {
                 <option value="scheduled">Terjadwal</option>
                 <option value="draft">Draf</option>
                 <option value="withdrawn">Ditarik</option>
+                <option value="archived">Diarsipkan</option>
               </select>
             </Show>
 
@@ -223,7 +306,7 @@ export default function Pengumuman() {
               type="text"
               placeholder="Cari pengumuman..."
               value={search()}
-              onInput={(e) => setSearch(e.currentTarget.value)}
+              onInput={handleSearchInput}
               class="px-3.5 py-1.5 rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900 text-xs text-secondary-800 dark:text-secondary-200 focus:outline-hidden focus:ring-2 focus:ring-[#0066cc] w-full sm:w-56"
             />
           </div>
@@ -322,14 +405,9 @@ export default function Pengumuman() {
         {/* Tab 2: Kelola Pengumuman */}
         <Show when={activeTab() === 'manage' && canManage()}>
           <div class="space-y-4">
-            <Show
-              when={!manageData.loading}
-              fallback={
-                <div class="py-12 text-center text-sm text-secondary-400">Memuat data kelola pengumuman...</div>
-              }
-            >
+            <Suspense fallback={<TableLoadingFallback />}>
               <Show
-                when={manageData()?.data && manageData()!.data.length > 0}
+                when={(manageData()?.data.length ?? 0) > 0}
                 fallback={
                   <div class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-3xl p-12 text-center space-y-2">
                     <span class="text-3xl">📝</span>
@@ -342,31 +420,161 @@ export default function Pengumuman() {
                     <button
                       type="button"
                       onClick={handleOpenCreate}
-                      class="mt-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0066cc]"
+                      class="mt-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0066cc] active:scale-95 transition-transform"
                     >
                       + Buat Pengumuman Baru
                     </button>
                   </div>
                 }
               >
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Table
+                  headers={[
+                    <SortableHeader
+                      field="judul"
+                      sortBy={manageSortBy()}
+                      sortOrder={manageSortOrder()}
+                      onSort={toggleManageSort}
+                    >
+                      Judul
+                    </SortableHeader>,
+                    <SortableHeader
+                      field="status"
+                      sortBy={manageSortBy()}
+                      sortOrder={manageSortOrder()}
+                      onSort={toggleManageSort}
+                    >
+                      Status
+                    </SortableHeader>,
+                    'Target',
+                    'Penulis',
+                    <SortableHeader
+                      field="publishedAt"
+                      sortBy={manageSortBy()}
+                      sortOrder={manageSortOrder()}
+                      onSort={toggleManageSort}
+                    >
+                      Terbit
+                    </SortableHeader>,
+                    <SortableHeader
+                      field="viewCount"
+                      sortBy={manageSortBy()}
+                      sortOrder={manageSortOrder()}
+                      onSort={toggleManageSort}
+                    >
+                      Dibaca
+                    </SortableHeader>,
+                    'Sematkan',
+                    'Aksi',
+                  ]}
+                >
                   <For each={manageData()?.data}>
                     {(item) => (
-                      <PengumumanCard
-                        item={item}
-                        variant="grid"
-                        isManageMode={true}
-                        onEdit={handleOpenEdit}
-                        onWithdraw={handleWithdraw}
-                        onPublishAgain={handlePublishAgain}
-                        onDelete={handleDelete}
-                        onClick={() => handleSelectDetail(item)}
-                      />
+                      <tr class="hover:bg-secondary-50/70 dark:hover:bg-secondary-800/40 transition-colors">
+                        <td class="px-6 py-4 max-w-[320px]">
+                          <button type="button" onClick={() => handleSelectDetail(item)} class="group text-left">
+                            <span class="font-semibold text-secondary-800 dark:text-white group-hover:text-[#0066cc] dark:group-hover:text-[#2997ff] transition-colors line-clamp-2">
+                              {item.judul}
+                            </span>
+                          </button>
+                          <Show when={item.lampiran && item.lampiran.length > 0}>
+                            <div class="mt-1 text-fine text-secondary-400">📎 {item.lampiran!.length} lampiran</div>
+                          </Show>
+                        </td>
+                        <td class="px-6 py-4">
+                          <span
+                            class={`inline-flex items-center px-2.5 py-1 rounded-full text-fine font-medium ring-1 ring-inset ${
+                              STATUS_BADGE[item.status]?.cls ?? STATUS_BADGE.draft.cls
+                            }`}
+                          >
+                            {STATUS_BADGE[item.status]?.label ?? item.status}
+                          </span>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-secondary-500 dark:text-secondary-400">
+                          <div class="font-medium text-secondary-700 dark:text-secondary-200">
+                            {TARGET_ROLE_LABEL[item.targetRole] ?? item.targetRole}
+                          </div>
+                          <div class="text-fine">
+                            {item.targetProdiType === 'spesifik'
+                              ? `${item.targetProdiIds?.length ?? 0} prodi`
+                              : 'Seluruh prodi'}
+                            <Show when={item.targetScopeType !== 'umum'}>
+                              {` · ${item.targetKelasIds?.length ?? 0} kelas / ${
+                                item.targetRombelIds?.length ?? 0
+                              } rombel`}
+                            </Show>
+                          </div>
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="text-xs font-medium text-secondary-700 dark:text-secondary-200">
+                            {item.authorNama || '-'}
+                          </div>
+                          <div class="text-fine text-secondary-400">{item.authorRole}</div>
+                        </td>
+                        <td class="px-6 py-4 text-xs text-secondary-500 dark:text-secondary-400 whitespace-nowrap">
+                          {fmtWaktu(item.publishedAt || item.createdAt)}
+                        </td>
+                        <td class="px-6 py-4 text-xs font-medium text-secondary-700 dark:text-secondary-200 text-right tabular-nums">
+                          {item.viewCount ?? 0}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                          <Show when={item.isPinned} fallback={<span class="text-secondary-300">-</span>}>
+                            <span title="Disematkan">📌</span>
+                          </Show>
+                        </td>
+                        <td class="px-6 py-4">
+                          <div class="flex items-center gap-2 flex-wrap">
+                            <Show when={item.status === 'published' || item.status === 'scheduled'}>
+                              <button
+                                type="button"
+                                onClick={() => handleWithdraw(item.id)}
+                                class="px-3 py-1.5 rounded-lg text-fine font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 transition-colors"
+                              >
+                                Tarik
+                              </button>
+                            </Show>
+                            <Show when={item.status === 'withdrawn'}>
+                              <button
+                                type="button"
+                                onClick={() => handlePublishAgain(item)}
+                                class="px-3 py-1.5 rounded-lg text-fine font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 transition-colors"
+                              >
+                                Publikasikan Ulang
+                              </button>
+                            </Show>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(item)}
+                              class="px-3 py-1.5 rounded-lg text-fine font-medium text-secondary-700 bg-secondary-100 hover:bg-secondary-200 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-200 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item.id)}
+                              class="px-3 py-1.5 rounded-lg text-fine font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                            >
+                              Hapus
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     )}
                   </For>
-                </div>
+                </Table>
+
+                {/* Pagination */}
+                <Show when={manageData() && manageData()!.totalPages > 0}>
+                  <Pagination
+                    currentPage={managePagination.page()}
+                    totalPages={manageData()!.totalPages}
+                    total={manageData()!.total}
+                    limit={managePagination.limit()}
+                    onPageChange={managePagination.setPage}
+                    onLimitChange={managePagination.setLimit}
+                  />
+                </Show>
               </Show>
-            </Show>
+            </Suspense>
           </div>
         </Show>
 

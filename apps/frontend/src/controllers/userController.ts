@@ -24,8 +24,24 @@ export interface UserListResponse {
 }
 
 export const userController = {
-  async getAll(page = 1, limit = 10, search = ''): Promise<UserListResponse> {
-    return fetchApi<UserListResponse>(`/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}`);
+  async getAll(
+    page = 1,
+    limit = 10,
+    search = '',
+    filterRole?: string,
+    filterStatus?: string,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
+  ): Promise<UserListResponse> {
+    const params = new URLSearchParams();
+    params.append('page', String(page));
+    params.append('limit', String(limit));
+    if (search) params.append('search', search);
+    if (filterRole) params.append('filterRole', filterRole);
+    if (filterStatus) params.append('filterStatus', filterStatus);
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
+    return fetchApi<UserListResponse>(`/users?${params.toString()}`);
   },
 
   async createUser(data: {

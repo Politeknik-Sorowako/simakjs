@@ -2,6 +2,7 @@ import { Elysia, t } from 'elysia';
 import { PengumumanController } from '../controllers/pengumuman.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  pengumumanManageQuerySchema,
   pengumumanQuerySchema,
   publishPengumumanSchema,
   saveDraftSchema,
@@ -18,7 +19,7 @@ export const pengumumanRoutes = new Elysia({ prefix: '/pengumuman' })
     detail: { tags: ['Pengumuman'], summary: 'Feed pengumuman aktif untuk sivitas' },
   })
   .get('/manage', PengumumanController.getManageList, {
-    query: pengumumanQuerySchema,
+    query: pengumumanManageQuerySchema,
     detail: { tags: ['Pengumuman'], summary: 'Daftar pengumuman yang dikelola user' },
   })
   .get('/:id', PengumumanController.getDetail, {

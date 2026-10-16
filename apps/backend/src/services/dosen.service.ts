@@ -37,6 +37,9 @@ export class DosenService {
           ilike(dosen.nip, `%${search}%`),
           ilike(dosen.email, `%${search}%`),
           ilike(dosen.nuptk, `%${search}%`),
+          ilike(dosen.nidn, `%${search}%`),
+          ilike(dosen.pohonIlmu, `%${search}%`),
+          ilike(dosen.cabangIlmu, `%${search}%`),
         ),
       );
     }

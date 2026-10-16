@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, inArray, isNull, lte, or, type SQLWrapper, sql } from 'drizzle-orm';
 import {
   dosen,
   dosenPengajarKelas,
@@ -508,7 +508,14 @@ export class PengumumanService {
    */
   static async getManageList(
     user: UserPayload,
-    query: { search?: string; status?: string; page?: number; limit?: number },
+    query: {
+      search?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: string;
+    },
   ) {
     const page = Math.max(1, query.page || 1);
     const limit = Math.max(1, Math.min(100, query.limit || 20));
@@ -531,10 +538,28 @@ export class PengumumanService {
 
     if (query.search?.trim()) {
       const term = `%${query.search.trim()}%`;
-      conditions.push(or(ilike(pengumuman.judul, term), ilike(pengumuman.konten, term))!);
+      conditions.push(
+        or(ilike(pengumuman.judul, term), ilike(pengumuman.konten, term), ilike(pengumuman.ringkasan, term))!,
+      );
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const sortColumns: Record<string, SQLWrapper> = {
+      judul: pengumuman.judul,
+      status: pengumuman.status,
+      publishedAt: pengumuman.publishedAt,
+      createdAt: pengumuman.createdAt,
+      viewCount: pengumuman.viewCount,
+    };
+    // Guard with Object.hasOwn so prototype keys (e.g. "constructor", "__proto__") fall
+    // back to `createdAt` instead of resolving to Object.prototype values and breaking the query.
+    const requestedSort = query.sortBy || 'createdAt';
+    const selectedSort = Object.hasOwn(sortColumns, requestedSort) ? sortColumns[requestedSort] : pengumuman.createdAt;
+    const direction = query.sortOrder === 'asc' ? sql`asc` : sql`desc`;
+    // publishedAt nullable: dorong baris tanpa tanggal terbit (draft/terjadwal) ke akhir
+    // agar urutan "Terbit" tetap konsisten dengan nilai yang ditampilkan (publishedAt || createdAt).
+    const orderBy = [sql`${selectedSort} ${direction} nulls last`, asc(pengumuman.id)];
 
     const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(pengumuman).where(whereClause);
 
@@ -565,7 +590,7 @@ export class PengumumanService {
       .from(pengumuman)
       .leftJoin(users, eq(pengumuman.authorId, users.id))
       .where(whereClause)
-      .orderBy(desc(pengumuman.createdAt))
+      .orderBy(...orderBy)
       .limit(limit)
       .offset(offset);
 

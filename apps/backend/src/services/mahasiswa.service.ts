@@ -47,6 +47,9 @@ export class MahasiswaService {
           ilike(mahasiswa.nama, `%${search}%`),
           ilike(mahasiswa.nim, `%${search}%`),
           ilike(mahasiswa.email, `%${search}%`),
+          ilike(mahasiswa.nik, `%${search}%`),
+          ilike(mahasiswa.angkatan, `%${search}%`),
+          ilike(mahasiswa.status, `%${search}%`),
         ),
       );
     }

@@ -56,3 +56,20 @@ export const pengumumanQuerySchema = t.Object({
   page: t.Optional(t.Numeric()),
   limit: t.Optional(t.Numeric()),
 });
+
+export const pengumumanManageQuerySchema = t.Object({
+  search: t.Optional(t.String()),
+  status: t.Optional(t.String()),
+  page: t.Optional(t.Numeric()),
+  limit: t.Optional(t.Numeric()),
+  sortBy: t.Optional(
+    t.Union([
+      t.Literal('judul'),
+      t.Literal('status'),
+      t.Literal('publishedAt'),
+      t.Literal('createdAt'),
+      t.Literal('viewCount'),
+    ]),
+  ),
+  sortOrder: t.Optional(t.Union([t.Literal('asc'), t.Literal('desc')])),
+});

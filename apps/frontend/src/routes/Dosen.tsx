@@ -88,13 +88,23 @@ export default function Dosen() {
     resetPage();
   };
 
+  // Prodi filter lokal (kosong = ikuti filter workspace global)
+  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
+  const effectiveProdiId = () => filterProdi() ?? workspace.activeProdiId();
+
+  const handleProdiChange = (value: string) => {
+    setFilterProdi(value ? Number(value) : undefined);
+    setSelectedIds([]);
+    resetPage();
+  };
+
   // Fetch Dosen Data (server-side sort)
   const [dosens, { refetch }] = createResource(
     () => ({
       search: debouncedSearch(),
       page: page(),
       limit: limit(),
-      prodiId: workspace.activeProdiId(),
+      prodiId: effectiveProdiId(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
     }),
@@ -263,7 +273,14 @@ export default function Dosen() {
             </Show>
             <ExportButtonGroup
               onFetchAll={async () => {
-                const res = await dosenController.getAll(search(), 1, 10000, workspace.activeProdiId() || undefined);
+                const res = await dosenController.getAll(
+                  debouncedSearch(),
+                  1,
+                  10000,
+                  effectiveProdiId() || undefined,
+                  sortBy(),
+                  sortOrder(),
+                );
                 return res.data;
               }}
               columns={exportColumns}
@@ -301,20 +318,36 @@ export default function Dosen() {
           onSuccess={() => refetch()}
         />
 
-        <div class="max-w-xs">
-          <Input
-            placeholder="Cari NIP, NUPTK, atau nama..."
-            value={search()}
-            onInput={(e) => {
-              const value = e.currentTarget.value;
-              setSearch(value);
-              clearTimeout(searchDebounceTimer);
-              searchDebounceTimer = setTimeout(() => {
-                setDebouncedSearch(value);
-                resetPage();
-              }, 400);
-            }}
-          />
+        <div class="flex items-center gap-3 flex-wrap">
+          <div class="w-72">
+            <Input
+              placeholder="Cari NIP, NIDN, NUPTK, atau nama..."
+              value={search()}
+              onInput={(e) => {
+                const value = e.currentTarget.value;
+                setSearch(value);
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(() => {
+                  setDebouncedSearch(value);
+                  resetPage();
+                }, 400);
+              }}
+            />
+          </div>
+          <div class="w-56">
+            <select
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              value={filterProdi() ?? ''}
+              onChange={(e) => handleProdiChange(e.currentTarget.value)}
+            >
+              <option value="">
+                {workspace.activeProdiId()
+                  ? `Ikuti Workspace — ${prodis()?.data?.find((p) => p.id === workspace.activeProdiId())?.nama ?? 'Prodi'}`
+                  : 'Ikuti Workspace (Semua Prodi)'}
+              </option>
+              <For each={prodis()?.data ?? []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+            </select>
+          </div>
         </div>
 
         <Suspense fallback={<TableLoadingFallback />}>
