@@ -140,13 +140,14 @@ export function PddiktiSync() {
         conflictResolution: conflictResolution(),
         filter: feederFilter(),
       });
-      setApplyResult(res);
       toast.showToast(
         `Berhasil menerapkan data (${res.inserted} baru, ${res.linkedOnly} ditautkan, ${res.updated} diperbarui).`,
         'success',
       );
       refetchStats();
       await executeFetchPreview();
+      // Setelah refresh preview (yang mereset applyResult) baru tampilkan ringkasan hasil.
+      setApplyResult(res);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal menerapkan data Feeder ke lokal';
       setPreviewError(msg);

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray, or, type SQL, sql } from 'drizzle-orm';
 import { dosen, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
 import { db } from '../utils/db';
 import { FeederService } from './feeder.service';
@@ -165,6 +165,9 @@ export class FeederPullService {
     // GetSemester dan GetProdi umumnya mengembalikan seluruh baris dalam 1 halaman,
     // namun kita tetap mendukung paginasi bertahap untuk master berukuran besar.
     const out: Array<Record<string, unknown>> = [];
+    // Guard dedup: sebagian aksi Feeder mengabaikan `offset`. Tanpa ini, halaman
+    // yang berulang akan terhitung ganda (preview duplikat & insert duplikat).
+    const seen = new Set<string>();
     for (let page = 0; page < maxPages; page++) {
       const offset = page * pageSize;
       const chunk = await FeederService.request<unknown>(config, act, {
@@ -173,14 +176,49 @@ export class FeederPullService {
         offset,
       });
       if (!Array.isArray(chunk) || chunk.length === 0) break;
+      let added = 0;
       for (const item of chunk) {
-        if (item && typeof item === 'object' && !Array.isArray(item)) {
-          out.push(item as Record<string, unknown>);
-        }
+        if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+        const fingerprint = JSON.stringify(item);
+        if (seen.has(fingerprint)) continue;
+        seen.add(fingerprint);
+        out.push(item as Record<string, unknown>);
+        added++;
       }
       if (chunk.length < pageSize) break;
+      // Seluruh isi halaman ini duplikat → server mengabaikan `offset`; hentikan.
+      if (added === 0) break;
     }
     return out;
+  }
+
+  /** Nilai unik non-kosong (huruf kecil) dari baris Feeder — dasar scoping query lokal. */
+  private static uniqueLower(
+    rows: Array<Record<string, unknown>>,
+    pick: (r: Record<string, unknown>) => string[],
+  ): string[] {
+    const set = new Set<string>();
+    for (const r of rows) {
+      for (const raw of pick(r)) {
+        const value = (raw ?? '').trim().toLowerCase();
+        if (value) set.add(value);
+      }
+    }
+    return [...set];
+  }
+
+  /** WHERE dari kumpulan predikat; `undefined` bila tidak ada (query dilewati). */
+  private static combinePredicates(predicates: SQL[]): SQL | undefined {
+    return predicates.length > 0 ? or(...predicates) : undefined;
+  }
+
+  /** Baris Program Studi yang cocok dengan id_prodi Feeder (dipakai diff matkul/mahasiswa). */
+  private static async loadProdiByFeederIds(prodiIds: string[]): Promise<Array<typeof programStudi.$inferSelect>> {
+    if (prodiIds.length === 0) return [];
+    return await db
+      .select()
+      .from(programStudi)
+      .where(inArray(sql`lower(${programStudi.idPddikti})`, prodiIds));
   }
 
   private static computeDiffs(
@@ -386,10 +424,14 @@ export class FeederPullService {
 
       const mappedProdi = idProdiFeeder ? (prodiByPddikti.get(idProdiFeeder.toLowerCase()) ?? null) : null;
 
+      // Bila prodi pengampu ter-resolve, HANYA cocokkan dalam prodi tersebut. Fallback
+      // global per-kode (byKodeOnly) dapat menautkan MK dari prodi lain karena `kode`
+      // hanya unik per (prodi, kode), sehingga berisiko menuliskan id_pddikti ke baris salah.
       const local =
         byPddikti.get(idMatkul.toLowerCase()) ??
-        (mappedProdi ? byProdiKode.get(`${mappedProdi.id}:${kode.toLowerCase()}`) : undefined) ??
-        byKodeOnly.get(kode.toLowerCase()) ??
+        (mappedProdi
+          ? byProdiKode.get(`${mappedProdi.id}:${kode.toLowerCase()}`)
+          : byKodeOnly.get(kode.toLowerCase())) ??
         null;
 
       const feederData = {
@@ -647,21 +689,70 @@ export class FeederPullService {
       filter: options?.filter,
     });
 
+    // Query lokal dibatasi (scoped) hanya pada kunci yang muncul di data Feeder —
+    // bukan SELECT seluruh tabel. Pencocokan memakai lower() agar konsisten dengan
+    // normalisasi map di masing-masing fungsi diff.
     let items: PullPreviewItem[] = [];
     if (entity === 'semester') {
-      const localRows = await db.select().from(periodeAkademik);
+      const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_semester)]);
+      const where = FeederPullService.combinePredicates([
+        ...(ids.length ? [inArray(sql`lower(${periodeAkademik.id})`, ids)] : []),
+        ...(ids.length ? [inArray(sql`lower(${periodeAkademik.idPddikti})`, ids)] : []),
+      ]);
+      const localRows = where ? await db.select().from(periodeAkademik).where(where) : [];
       items = FeederPullService.diffSemester(feederRows, localRows);
     } else if (entity === 'prodi') {
-      const localRows = await db.select().from(programStudi);
+      const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_prodi)]);
+      const kodes = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.kode_program_studi)]);
+      const namas = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nama_program_studi)]);
+      const where = FeederPullService.combinePredicates([
+        ...(ids.length ? [inArray(sql`lower(${programStudi.idPddikti})`, ids)] : []),
+        ...(kodes.length
+          ? [
+              inArray(sql`lower(${programStudi.kodeProdiPddikti})`, kodes),
+              inArray(sql`lower(${programStudi.kode})`, kodes),
+            ]
+          : []),
+        ...(namas.length ? [inArray(sql`lower(${programStudi.nama})`, namas)] : []),
+      ]);
+      const localRows = where ? await db.select().from(programStudi).where(where) : [];
       items = FeederPullService.diffProdi(feederRows, localRows);
     } else if (entity === 'matkul') {
-      const [localRows, prodiRows] = await Promise.all([db.select().from(mataKuliah), db.select().from(programStudi)]);
+      const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_matkul)]);
+      const kodes = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.kode_mata_kuliah)]);
+      const prodiIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_prodi)]);
+      const where = FeederPullService.combinePredicates([
+        ...(ids.length ? [inArray(sql`lower(${mataKuliah.idPddikti})`, ids)] : []),
+        ...(kodes.length ? [inArray(sql`lower(${mataKuliah.kode})`, kodes)] : []),
+      ]);
+      const localRows = where ? await db.select().from(mataKuliah).where(where) : [];
+      const prodiRows = await FeederPullService.loadProdiByFeederIds(prodiIds);
       items = FeederPullService.diffMatkul(feederRows, localRows, prodiRows);
     } else if (entity === 'dosen') {
-      const localRows = await db.select().from(dosen);
+      const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_dosen)]);
+      const nidns = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nidn)]);
+      const nips = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nip)]);
+      const namas = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nama_dosen)]);
+      const where = FeederPullService.combinePredicates([
+        ...(ids.length ? [inArray(sql`lower(${dosen.idPddikti})`, ids)] : []),
+        ...(nidns.length ? [inArray(sql`lower(${dosen.nidn})`, nidns)] : []),
+        ...(nips.length ? [inArray(sql`lower(${dosen.nip})`, nips)] : []),
+        ...(namas.length ? [inArray(sql`lower(${dosen.nama})`, namas)] : []),
+      ]);
+      const localRows = where ? await db.select().from(dosen).where(where) : [];
       items = FeederPullService.diffDosen(feederRows, localRows);
     } else if (entity === 'mahasiswa') {
-      const [localRows, prodiRows] = await Promise.all([db.select().from(mahasiswa), db.select().from(programStudi)]);
+      const ids = FeederPullService.uniqueLower(feederRows, (r) => [
+        asStr(r.id_mahasiswa) || asStr(r.id_registrasi_mahasiswa),
+      ]);
+      const nims = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nim) || asStr(r.nipd)]);
+      const prodiIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_prodi)]);
+      const where = FeederPullService.combinePredicates([
+        ...(ids.length ? [inArray(sql`lower(${mahasiswa.idPddikti})`, ids)] : []),
+        ...(nims.length ? [inArray(sql`lower(${mahasiswa.nim})`, nims)] : []),
+      ]);
+      const localRows = where ? await db.select().from(mahasiswa).where(where) : [];
+      const prodiRows = await FeederPullService.loadProdiByFeederIds(prodiIds);
       items = FeederPullService.diffMahasiswa(feederRows, localRows, prodiRows);
     }
 
@@ -727,7 +818,7 @@ export class FeederPullService {
           const id = String(item.feederData.id ?? item.feederId);
           const nama = String(item.feederData.nama ?? id);
           if (item.status === 'baru') {
-            await db
+            const insertedRows = await db
               .insert(periodeAkademik)
               .values({
                 id,
@@ -737,8 +828,10 @@ export class FeederPullService {
                 isSynced: true,
                 lastSyncAt: now,
               })
-              .onConflictDoNothing();
-            inserted++;
+              .onConflictDoNothing()
+              .returning({ id: periodeAkademik.id });
+            if (insertedRows.length > 0) inserted++;
+            else skipped++;
           } else if (item.localId) {
             const setPayload: Partial<typeof periodeAkademik.$inferInsert> = {
               idPddikti: id,

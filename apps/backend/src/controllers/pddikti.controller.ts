@@ -60,7 +60,7 @@ export class PddiktiController {
       set.status = 401;
       return { error: 'Silakan login terlebih dahulu' };
     }
-    if (!hasRole(user, ['admin', 'prodi', 'dosen'])) {
+    if (!hasRole(user, ['super_admin', 'admin', 'prodi', 'dosen'])) {
       set.status = 403;
       return { error: 'Akses ditolak. Hanya Admin, Prodi, atau Dosen.' };
     }
@@ -78,9 +78,9 @@ export class PddiktiController {
       set.status = 401;
       return { error: 'Silakan login terlebih dahulu' };
     }
-    if (!hasRole(user, ['admin', 'prodi'])) {
+    if (!hasRole(user, ['super_admin', 'admin', 'prodi'])) {
       set.status = 403;
-      return { error: 'Akses ditolak. Hanya Admin atau Prodi.' };
+      return { error: 'Akses ditolak. Hanya Admin, Super Admin, atau Prodi.' };
     }
     const rawQuery = (query ?? {}) as Record<string, unknown>;
     const entity = typeof rawQuery.entity === 'string' ? (rawQuery.entity as PullEntityKey) : undefined;

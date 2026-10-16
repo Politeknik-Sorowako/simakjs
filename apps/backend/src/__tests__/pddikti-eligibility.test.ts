@@ -16,6 +16,7 @@ import {
   programStudi,
 } from '../models/schema';
 import { FeederService } from '../services/feeder.service';
+import { FeederPullService } from '../services/feeder-pull.service';
 import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
@@ -639,6 +640,89 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
         }),
       );
       expect(forbiddenRes.status).toBe(403);
+    });
+
+    it('dedupes repeated Feeder pages when the server ignores offset', async () => {
+      let actCalls = 0;
+      const page = Array.from({ length: 50 }, (_, i) => ({
+        id_semester: String(20200 + i),
+        nama_semester: `Semester ${i}`,
+      }));
+      FeederService.setTestTransport(async (_cfg, body) => {
+        if (body.act === 'GetToken') return { error_code: 0, data: { token: 'tok' } };
+        actCalls++;
+        // Server selalu mengembalikan halaman penuh yang sama (mengabaikan offset).
+        return { error_code: 0, data: page };
+      });
+
+      const cfg = {
+        ...(await SystemParameterService.getFeederConfig()),
+        url: 'https://feeder.local.test/ws/live2.php',
+        username: 'u',
+        password: 'p',
+        writeGuard: true,
+        pageSize: 50,
+      };
+      const rows = await FeederPullService.fetchFeederRows(cfg, 'GetSemester', { maxPages: 4 });
+      expect(rows.length).toBe(50);
+      expect(actCalls).toBe(2); // halaman kedua seluruhnya duplikat → berhenti
+    });
+
+    it('does not mislink a matkul to another prodi that shares the same kode', async () => {
+      // Prodi lain (tanpa id PDDIKTI) memiliki MK dengan kode sama; prodi TI tertaut id_prodi Feeder.
+      const [prodiB] = await db
+        .insert(programStudi)
+        .values({ kode: 'TM2', nama: 'Teknik Mesin Baru', jenjang: 'D3' })
+        .returning();
+      const [mkB] = await db
+        .insert(mataKuliah)
+        .values({ programStudiId: prodiB.id, kode: 'ZZ999', nama: 'MK Prodi Lain', sksTotal: 2 })
+        .returning();
+      await db.update(programStudi).set({ idPddikti: 'uuid-prodi-ti' }).where(eq(programStudi.id, prodiId));
+      await app.handle(
+        new Request('http://localhost/system/parameters/FEEDER_PASSWORD', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 'dummy-secret' }),
+        }),
+      );
+
+      FeederService.setTestTransport(async (_cfg, body) => {
+        const act = String(body.act);
+        if (act === 'GetToken') return { error_code: 0, data: { token: 'tok' } };
+        if (act === 'GetListMataKuliah') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_matkul: 'uuid-mk-zz',
+                id_prodi: 'uuid-prodi-ti',
+                kode_mata_kuliah: 'ZZ999',
+                nama_mata_kuliah: 'MK Baru di TI',
+                sks_mata_kuliah: 2,
+              },
+            ],
+          };
+        }
+        return { error_code: 0, data: [] };
+      });
+
+      const res = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity: 'matkul', feederIds: ['uuid-mk-zz'] }),
+        }),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { inserted: number; linkedOnly: number };
+      expect(body.inserted).toBe(1); // dibuat baru di prodi TI
+      expect(body.linkedOnly).toBe(0); // TIDAK menautkan ke MK prodi lain
+
+      const [mkBAfter] = await db.select().from(mataKuliah).where(eq(mataKuliah.id, mkB.id));
+      expect(mkBAfter.idPddikti).toBeNull();
+      const [newMk] = await db.select().from(mataKuliah).where(eq(mataKuliah.idPddikti, 'uuid-mk-zz'));
+      expect(newMk.programStudiId).toBe(prodiId);
     });
   });
 
