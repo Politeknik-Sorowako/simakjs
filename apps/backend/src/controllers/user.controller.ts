@@ -1,5 +1,5 @@
-import { count, eq, ilike, inArray, or } from 'drizzle-orm';
-import { userRoles, users } from '../models/schema';
+import { and, asc, count, desc, eq, ilike, inArray, or, type SQLWrapper, sql } from 'drizzle-orm';
+import { roleEnum, userRoles, users } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { db } from '../utils/db';
 import { validatePassword } from '../utils/password-policy';
@@ -34,12 +34,42 @@ export class UserController {
       const page = parseInt(((query as Record<string, unknown>)?.page as string) || '1');
       const limit = parseInt(((query as Record<string, unknown>)?.limit as string) || '10');
       const search = ((query as Record<string, unknown>)?.search as string) || '';
+      const filterRole = ((query as Record<string, unknown>)?.filterRole as string) || '';
+      const filterStatus = ((query as Record<string, unknown>)?.filterStatus as string) || '';
+      const sortBy = ((query as Record<string, unknown>)?.sortBy as string) || 'nama';
+      const sortOrder = ((query as Record<string, unknown>)?.sortOrder as string) || 'asc';
       const offset = (page - 1) * limit;
 
-      let whereClause = undefined;
+      const conditions = [];
       if (search) {
-        whereClause = or(ilike(users.nama, `%${search}%`), ilike(users.email, `%${search}%`));
+        const term = `%${search}%`;
+        conditions.push(or(ilike(users.nama, term), ilike(users.email, term), sql`${users.role}::text ILIKE ${term}`));
       }
+      if (filterRole && (roleEnum.enumValues as readonly string[]).includes(filterRole)) {
+        // Subquery tak-terkorelasi: satu scan user_roles + subplan hashed, hindari seq scan per baris users
+        // (user_roles belum punya index pada user_id/role).
+        const roleSubquery = db
+          .select({ userId: userRoles.userId })
+          .from(userRoles)
+          .where(eq(userRoles.role, filterRole as UserRole));
+        conditions.push(sql`(${users.role} = ${filterRole} OR ${users.id} IN (${roleSubquery}))`);
+      }
+      if (filterStatus === 'active') {
+        conditions.push(eq(users.isActive, true));
+      } else if (filterStatus === 'inactive') {
+        conditions.push(eq(users.isActive, false));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const sortColumns: Record<string, SQLWrapper> = {
+        nama: users.nama,
+        email: users.email,
+        role: sql`${users.role}::text`,
+        createdAt: users.createdAt,
+      };
+      const selectedSort = sortColumns[sortBy] ?? users.nama;
+      const orderBy = sortOrder === 'desc' ? [desc(selectedSort), desc(users.id)] : [asc(selectedSort), asc(users.id)];
 
       const [totalResult] = await db.select({ total: count() }).from(users).where(whereClause);
 
@@ -63,6 +93,7 @@ export class UserController {
         })
         .from(users)
         .where(whereClause)
+        .orderBy(...orderBy)
         .limit(limit)
         .offset(offset);
 

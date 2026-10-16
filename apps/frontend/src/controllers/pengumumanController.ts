@@ -69,12 +69,21 @@ export const pengumumanController = {
     return fetchApi<PaginatedPengumuman>(`/pengumuman/feed?${params.toString()}`);
   },
 
-  async getManageList(search?: string, status?: string, page = 1, limit = 20): Promise<PaginatedPengumuman> {
+  async getManageList(
+    search?: string,
+    status?: string,
+    page = 1,
+    limit = 20,
+    sortBy?: string,
+    sortOrder?: 'asc' | 'desc',
+  ): Promise<PaginatedPengumuman> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (status && status !== 'all') params.append('status', status);
     params.append('page', String(page));
     params.append('limit', String(limit));
+    if (sortBy) params.append('sortBy', sortBy);
+    if (sortOrder) params.append('sortOrder', sortOrder);
     return fetchApi<PaginatedPengumuman>(`/pengumuman/manage?${params.toString()}`);
   },
 

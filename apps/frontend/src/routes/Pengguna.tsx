@@ -1,4 +1,4 @@
-import { createResource, createSignal, For, Show } from 'solid-js';
+import { createResource, createSignal, For, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { ExportButtonGroup } from '../components/reports/ExportButton';
 import { Button } from '../components/ui/Button';
@@ -9,6 +9,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { authController } from '../controllers/authController';
@@ -105,31 +106,43 @@ export default function Pengguna() {
     { header: 'Role', accessor: 'role' },
   ];
 
-  const [usersRes, { refetch }] = createResource(
-    () => ({ page: page(), limit: limit(), search: search() }),
-    async ({ page, limit, search }) => {
-      return userController.getAll(page, limit, search);
-    },
-  );
-
+  // Server-side sorting & filtering state
   const [sortBy, setSortBy] = createSignal('nama');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const [filterRole, setFilterRole] = createSignal('');
+  const [filterStatus, setFilterStatus] = createSignal('');
   const toggleSort = (field: string) => {
     if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
     else {
       setSortBy(field);
       setSortOrder('asc');
     }
+    resetPage();
   };
-  const sortedData = () => {
-    const data = usersRes()?.data || [];
-    return [...data].sort((a, b) => {
-      const aVal = (a as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const bVal = (b as unknown as Record<string, unknown>)[sortBy()] ?? '';
-      const cmp = String(aVal).localeCompare(String(bVal), 'id');
-      return sortOrder() === 'asc' ? cmp : -cmp;
-    });
+
+  const handleFilterRole = (value: string) => {
+    setFilterRole(value);
+    resetPage();
   };
+
+  const handleFilterStatus = (value: string) => {
+    setFilterStatus(value);
+    resetPage();
+  };
+
+  const [usersRes, { refetch }] = createResource(
+    () => ({
+      page: page(),
+      limit: limit(),
+      search: search(),
+      filterRole: filterRole(),
+      filterStatus: filterStatus(),
+      sortBy: sortBy(),
+      sortOrder: sortOrder(),
+    }),
+    ({ page, limit, search, filterRole, filterStatus, sortBy, sortOrder }) =>
+      userController.getAll(page, limit, search, filterRole, filterStatus, sortBy, sortOrder),
+  );
 
   const handleCreateUser = async (e: Event) => {
     e.preventDefault();
@@ -278,17 +291,49 @@ export default function Pengguna() {
             <div class="w-full md:w-64">
               <input
                 type="text"
-                placeholder="Cari nama atau email..."
+                placeholder="Cari nama, email, atau role..."
                 onInput={handleSearchInput}
                 class="w-full rounded-lg border border-secondary-300 bg-white px-4 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />
+            </div>
+            <div class="w-full md:w-44">
+              <select
+                value={filterRole()}
+                onChange={(e) => handleFilterRole(e.currentTarget.value)}
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              >
+                <option value="">Role: Semua</option>
+                <Show when={auth.hasRole(['super_admin'])}>
+                  <option value="super_admin">Super Admin</option>
+                </Show>
+                <For each={roleOptions()}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
+              </select>
+            </div>
+            <div class="w-full md:w-44">
+              <select
+                value={filterStatus()}
+                onChange={(e) => handleFilterStatus(e.currentTarget.value)}
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              >
+                <option value="">Status: Semua</option>
+                <option value="active">Aktif</option>
+                <option value="inactive">Belum Aktif</option>
+              </select>
             </div>
             <Button variant="primary" onClick={() => setShowAddModal(true)}>
               + Tambah Pengguna
             </Button>
             <ExportButtonGroup
               onFetchAll={async () => {
-                const res = await userController.getAll(1, 10000, search());
+                const res = await userController.getAll(
+                  1,
+                  10000,
+                  search(),
+                  filterRole(),
+                  filterStatus(),
+                  sortBy(),
+                  sortOrder(),
+                );
                 return res.data;
               }}
               columns={exportColumns}
@@ -311,194 +356,199 @@ export default function Pengguna() {
           onSuccess={() => refetch()}
         />
 
-        <Show when={usersRes.loading}>
-          <div class="flex justify-center py-12 text-secondary-400 dark:text-secondary-200">
-            Memuat data pengguna...
-          </div>
-        </Show>
-
-        <Show when={!usersRes.loading && usersRes()}>
-          <div class="bg-white rounded-xl shadow-sm border border-secondary-100 overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
-            <Table
-              headers={[
-                <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Nama
-                </SortableHeader>,
-                <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Email
-                </SortableHeader>,
-                <SortableHeader field="role" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
-                  Role / Peran
-                </SortableHeader>,
-                'Scope Prodi',
-                'Status',
-                'Aksi',
-              ]}
-            >
-              <For each={sortedData()}>
-                {(user) => (
-                  <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
-                    <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">
-                      {user.nama}
-                    </td>
-                    <td class="whitespace-nowrap px-6 py-4 text-secondary-500 dark:text-secondary-200">{user.email}</td>
-                    <td class="whitespace-nowrap px-6 py-4 text-secondary-600 dark:text-secondary-200">
-                      <div class="flex items-center gap-1.5 flex-wrap max-w-[240px]">
-                        <For each={user.roles || [user.role]}>
-                          {(r) => (
-                            <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
-                              {r === 'super_admin'
-                                ? 'Super Admin'
-                                : r === 'prodi'
-                                  ? 'Admin Prodi'
-                                  : r.charAt(0).toUpperCase() + r.slice(1).replace('_', ' ')}
-                            </span>
-                          )}
-                        </For>
-                        <Button
-                          variant="secondary"
-                          class="!py-0.5 !px-1.5 !text-[10px]"
-                          disabled={user.id === currentUser()?.id}
-                          onClick={() => {
-                            setTargetRolesUser(user);
-                            setSelectedRoles(user.roles || [user.role]);
-                            setShowRolesModal(true);
-                          }}
-                        >
-                          ✎ Edit
-                        </Button>
-                      </div>
-                    </td>
-                    <td class="whitespace-nowrap px-6 py-4 text-xs">
-                      <Show
-                        when={hasScopeRoles(user.role, user.roles)}
-                        fallback={<span class="text-secondary-400 font-mono">-</span>}
-                      >
-                        <div class="flex items-center gap-1 flex-wrap max-w-xs">
-                          <Show
-                            when={(user.prodiIds || []).length > 0}
-                            fallback={<span class="text-secondary-400 italic">Semua / Belum diatur</span>}
-                          >
-                            <For each={user.prodiIds || []}>
-                              {(pId) => {
-                                const pr = (prodis() || []).find((p) => p.id === pId);
-                                return (
-                                  <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
-                                    {pr?.kode || pId}
-                                  </span>
-                                );
-                              }}
-                            </For>
-                          </Show>
+        <Suspense fallback={<TableLoadingFallback />}>
+          <Show when={usersRes()}>
+            <div class="bg-white rounded-xl shadow-sm border border-secondary-100 overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+              <Table
+                headers={[
+                  <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Nama
+                  </SortableHeader>,
+                  <SortableHeader field="email" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Email
+                  </SortableHeader>,
+                  <SortableHeader field="role" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
+                    Role / Peran
+                  </SortableHeader>,
+                  'Scope Prodi',
+                  'Status',
+                  'Aksi',
+                ]}
+              >
+                <For each={usersRes()?.data || []}>
+                  {(user) => (
+                    <tr class="hover:bg-secondary-50/50 transition-colors dark:hover:bg-secondary-800/50">
+                      <td class="whitespace-nowrap px-6 py-4 font-semibold text-secondary-800 dark:text-white">
+                        {user.nama}
+                      </td>
+                      <td class="whitespace-nowrap px-6 py-4 text-secondary-500 dark:text-secondary-200">
+                        {user.email}
+                      </td>
+                      <td class="whitespace-nowrap px-6 py-4 text-secondary-600 dark:text-secondary-200">
+                        <div class="flex items-center gap-1.5 flex-wrap max-w-[240px]">
+                          <For each={user.roles || [user.role]}>
+                            {(r) => (
+                              <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
+                                {r === 'super_admin'
+                                  ? 'Super Admin'
+                                  : r === 'prodi'
+                                    ? 'Admin Prodi'
+                                    : r.charAt(0).toUpperCase() + r.slice(1).replace('_', ' ')}
+                              </span>
+                            )}
+                          </For>
                           <Button
                             variant="secondary"
                             class="!py-0.5 !px-1.5 !text-[10px]"
+                            disabled={user.id === currentUser()?.id}
                             onClick={() => {
-                              setTargetScopeUser(user);
-                              setSelectedProdiIds(user.prodiIds || []);
-                              setShowScopeModal(true);
+                              setTargetRolesUser(user);
+                              setSelectedRoles(user.roles || [user.role]);
+                              setShowRolesModal(true);
                             }}
                           >
-                            ⚙️ Edit Scope
+                            ✎ Edit
                           </Button>
                         </div>
-                      </Show>
-                    </td>
-                    <td class="whitespace-nowrap px-6 py-4">
-                      <div class="flex items-center gap-1.5 flex-wrap">
+                      </td>
+                      <td class="whitespace-nowrap px-6 py-4 text-xs">
                         <Show
-                          when={user.isActive}
-                          fallback={
-                            <span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-900/30 dark:text-red-400">
-                              Belum Aktif
-                            </span>
-                          }
+                          when={hasScopeRoles(user.role, user.roles)}
+                          fallback={<span class="text-secondary-400 font-mono">-</span>}
                         >
-                          <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-accent-900/30 dark:text-accent-400">
-                            Aktif
-                          </span>
+                          <div class="flex items-center gap-1 flex-wrap max-w-xs">
+                            <Show
+                              when={(user.prodiIds || []).length > 0}
+                              fallback={<span class="text-secondary-400 italic">Semua / Belum diatur</span>}
+                            >
+                              <For each={user.prodiIds || []}>
+                                {(pId) => {
+                                  const pr = (prodis() || []).find((p) => p.id === pId);
+                                  return (
+                                    <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
+                                      {pr?.kode || pId}
+                                    </span>
+                                  );
+                                }}
+                              </For>
+                            </Show>
+                            <Button
+                              variant="secondary"
+                              class="!py-0.5 !px-1.5 !text-[10px]"
+                              onClick={() => {
+                                setTargetScopeUser(user);
+                                setSelectedProdiIds(user.prodiIds || []);
+                                setShowScopeModal(true);
+                              }}
+                            >
+                              ⚙️ Edit Scope
+                            </Button>
+                          </div>
                         </Show>
-                        <Show when={user.mustChangePassword}>
-                          <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-400">
-                            Wajib Ganti PW
-                          </span>
-                        </Show>
-                      </div>
-                    </td>
-                    <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                      <DropdownMenu
-                        triggerAriaLabel={`Aksi untuk ${user.nama}`}
-                        trigger={
-                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
-                            />
-                          </svg>
-                        }
-                        position="right"
-                        items={[
-                          {
-                            label: user.isActive ? 'Nonaktifkan' : 'Aktifkan',
-                            icon: '⏻',
-                            danger: user.isActive,
-                            disabled: actionLoading() === user.id || user.id === currentUser()?.id,
-                            loading: actionLoading() === user.id,
-                            onClick: () => handleToggleActive(user),
-                          },
-                          {
-                            label: user.mustChangePassword ? 'Batalkan Wajib PW' : 'Wajibkan Ganti PW',
-                            icon: '🔑',
-                            disabled: actionLoading() === user.id || user.id === currentUser()?.id,
-                            loading: actionLoading() === user.id,
-                            onClick: () => handleForcePasswordChange(user),
-                          },
-                          {
-                            separator: true,
-                          },
-                          {
-                            label: 'Reset Password',
-                            icon: '🔄',
-                            disabled: user.id === currentUser()?.id,
-                            onClick: async () => {
-                              const newPw = prompt('Masukkan password baru (min 6 karakter):');
-                              if (!newPw || newPw.length < 6) return;
-                              try {
-                                const res = await userController.resetPassword(user.id, newPw);
-                                toast.showToast(res.message, 'success');
-                                refetch();
-                              } catch (err: unknown) {
-                                toast.showToast((err as Error).message, 'error');
-                              }
+                      </td>
+                      <td class="whitespace-nowrap px-6 py-4">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <Show
+                            when={user.isActive}
+                            fallback={
+                              <span class="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 dark:bg-red-900/30 dark:text-red-400">
+                                Belum Aktif
+                              </span>
+                            }
+                          >
+                            <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-accent-900/30 dark:text-accent-400">
+                              Aktif
+                            </span>
+                          </Show>
+                          <Show when={user.mustChangePassword}>
+                            <span class="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-900/30 dark:text-amber-400">
+                              Wajib Ganti PW
+                            </span>
+                          </Show>
+                        </div>
+                      </td>
+                      <td class="whitespace-nowrap px-6 py-4 text-sm font-medium">
+                        <DropdownMenu
+                          triggerAriaLabel={`Aksi untuk ${user.nama}`}
+                          trigger={
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+                              />
+                            </svg>
+                          }
+                          position="right"
+                          items={[
+                            {
+                              label: user.isActive ? 'Nonaktifkan' : 'Aktifkan',
+                              icon: '⏻',
+                              danger: user.isActive,
+                              disabled: actionLoading() === user.id || user.id === currentUser()?.id,
+                              loading: actionLoading() === user.id,
+                              onClick: () => handleToggleActive(user),
                             },
-                          },
-                          {
-                            label: 'Bersihkan Rate Limit',
-                            icon: '🧹',
-                            disabled: clearingEmail() === user.email,
-                            loading: clearingEmail() === user.email,
-                            onClick: () => handleClearRateLimit(user.email),
-                          },
-                        ]}
-                      />
+                            {
+                              label: user.mustChangePassword ? 'Batalkan Wajib PW' : 'Wajibkan Ganti PW',
+                              icon: '🔑',
+                              disabled: actionLoading() === user.id || user.id === currentUser()?.id,
+                              loading: actionLoading() === user.id,
+                              onClick: () => handleForcePasswordChange(user),
+                            },
+                            {
+                              separator: true,
+                            },
+                            {
+                              label: 'Reset Password',
+                              icon: '🔄',
+                              disabled: user.id === currentUser()?.id,
+                              onClick: async () => {
+                                const newPw = prompt('Masukkan password baru (min 6 karakter):');
+                                if (!newPw || newPw.length < 6) return;
+                                try {
+                                  const res = await userController.resetPassword(user.id, newPw);
+                                  toast.showToast(res.message, 'success');
+                                  refetch();
+                                } catch (err: unknown) {
+                                  toast.showToast((err as Error).message, 'error');
+                                }
+                              },
+                            },
+                            {
+                              label: 'Bersihkan Rate Limit',
+                              icon: '🧹',
+                              disabled: clearingEmail() === user.email,
+                              loading: clearingEmail() === user.email,
+                              onClick: () => handleClearRateLimit(user.email),
+                            },
+                          ]}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </For>
+                <Show when={(usersRes()?.data.length ?? 0) === 0}>
+                  <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-secondary-400 dark:text-secondary-200">
+                      Tidak ada pengguna ditemukan.
                     </td>
                   </tr>
-                )}
-              </For>
-            </Table>
+                </Show>
+              </Table>
 
-            <Pagination
-              currentPage={page()}
-              totalPages={usersRes()?.meta?.totalPages || 1}
-              total={usersRes()?.meta?.total || 0}
-              limit={limit()}
-              onPageChange={setPage}
-              onLimitChange={setLimit}
-            />
-          </div>
-        </Show>
+              <Pagination
+                currentPage={page()}
+                totalPages={usersRes()?.meta?.totalPages || 1}
+                total={usersRes()?.meta?.total || 0}
+                limit={limit()}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+              />
+            </div>
+          </Show>
+        </Suspense>
       </div>
 
       {/* Modal Tambah Pengguna Baru */}

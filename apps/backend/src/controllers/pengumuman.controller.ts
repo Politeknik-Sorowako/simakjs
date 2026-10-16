@@ -54,6 +54,8 @@ export class PengumumanController {
         status: query.status as string | undefined,
         page: query.page ? Number(query.page) : 1,
         limit: query.limit ? Number(query.limit) : 20,
+        sortBy: query.sortBy as string | undefined,
+        sortOrder: query.sortOrder as string | undefined,
       });
     } catch (err: unknown) {
       set.status = 500;

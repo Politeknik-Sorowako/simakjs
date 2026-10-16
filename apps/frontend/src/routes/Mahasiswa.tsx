@@ -80,13 +80,23 @@ export default function Mahasiswa() {
   const [sortBy, setSortBy] = createSignal('nim');
   const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
 
+  // Prodi filter lokal (kosong = ikuti filter workspace global)
+  const [filterProdi, setFilterProdi] = createSignal<number | undefined>(undefined);
+  const effectiveProdiId = () => filterProdi() ?? workspace.activeProdiId();
+
+  const handleProdiChange = (value: string) => {
+    setFilterProdi(value ? Number(value) : undefined);
+    setSelectedIds([]);
+    resetPage();
+  };
+
   // Fetch Mahasiswa Data
   const [mahasiswas, { refetch }] = createResource(
     () => ({
       search: debouncedSearch(),
       page: page(),
       limit: limit(),
-      prodiId: workspace.activeProdiId(),
+      prodiId: effectiveProdiId(),
       sortBy: sortBy(),
       sortOrder: sortOrder(),
       filterNim: filterNim(),
@@ -363,10 +373,10 @@ export default function Mahasiswa() {
             <ExportButtonGroup
               onFetchAll={async () => {
                 const res = await mahasiswaController.getAll(
-                  search(),
+                  debouncedSearch(),
                   1,
                   10000,
-                  workspace.activeProdiId() || undefined,
+                  effectiveProdiId() || undefined,
                   {
                     sortBy: sortBy(),
                     sortOrder: sortOrder(),
@@ -374,6 +384,7 @@ export default function Mahasiswa() {
                     filterNama: filterNama(),
                     filterEmail: filterEmail(),
                     filterStatus: filterStatus(),
+                    hasAccount: filterHasAccount(),
                   },
                 );
                 return res.data;
@@ -470,10 +481,10 @@ export default function Mahasiswa() {
           </form>
         </Modal>
 
-        <div class="flex items-center gap-3 flex-wrap max-w-lg">
+        <div class="flex items-center gap-3 flex-wrap max-w-3xl">
           <div class="w-64">
             <Input
-              placeholder="Cari NIM atau nama..."
+              placeholder="Cari NIM, nama, NIK, angkatan..."
               value={search()}
               onInput={(e) => {
                 const value = e.currentTarget.value;
@@ -485,6 +496,20 @@ export default function Mahasiswa() {
                 }, 400);
               }}
             />
+          </div>
+          <div class="w-56">
+            <select
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              value={filterProdi() ?? ''}
+              onChange={(e) => handleProdiChange(e.currentTarget.value)}
+            >
+              <option value="">
+                {workspace.activeProdiId()
+                  ? `Ikuti Workspace — ${prodis()?.data?.find((p) => p.id === workspace.activeProdiId())?.nama ?? 'Prodi'}`
+                  : 'Ikuti Workspace (Semua Prodi)'}
+              </option>
+              <For each={prodis()?.data ?? []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
+            </select>
           </div>
           <div class="w-48">
             <select
