@@ -3,6 +3,7 @@ services:
     image: postgres:15-alpine
     container_name: simak_db
     restart: unless-stopped
+    command: postgres -c shared_buffers=128MB -c work_mem=4MB -c max_connections=40
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-simak_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-simak_password}
@@ -11,6 +12,13 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    mem_limit: 384m
+    memswap_limit: 768m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -49,10 +57,15 @@ services:
       VERIFY_BASE_URL: ${VERIFY_BASE_URL:-https://verify.politekniksorowako.ac.id}
       EMAIL_FROM: ${EMAIL_FROM:-}
     volumes:
-      - ./apps/backend:/app/apps/backend
-      - /app/apps/backend/node_modules
       - backup_data:/app/apps/backend/backups
       - app_logs:/app/apps/backend/logs
+    mem_limit: 384m
+    memswap_limit: 768m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       db:
         condition: service_healthy
@@ -70,6 +83,13 @@ services:
     container_name: simak_frontend
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-8080}:80"
+    mem_limit: 64m
+    memswap_limit: 128m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     depends_on:
       - backend
 

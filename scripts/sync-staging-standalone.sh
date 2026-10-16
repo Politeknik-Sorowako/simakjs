@@ -42,6 +42,12 @@ if [ "${SYNC_STAGING_ENABLED:-false}" != "true" ]; then
   exit 0
 fi
 
+# Cek apakah container staging database sedang aktif
+if ! docker ps --format "{{.Names}}" | grep -q "^simak_db_staging$"; then
+  log "SKIP: Container simak_db_staging tidak sedang berjalan. Sinkronisasi dilewati."
+  exit 0
+fi
+
 # Anti-tabrakan: pastikan tidak ada sync lain yang berjalan
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
