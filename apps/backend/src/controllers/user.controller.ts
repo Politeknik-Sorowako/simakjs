@@ -43,7 +43,20 @@ export class UserController {
       const conditions = [];
       if (search) {
         const term = `%${search}%`;
-        conditions.push(or(ilike(users.nama, term), ilike(users.email, term), sql`${users.role}::text ILIKE ${term}`));
+        // Sertakan role tambahan (user_roles) agar pencarian konsisten dengan filterRole.
+        // Subquery tak-terkorelasi: satu scan user_roles (subplan hashed), bukan correlated per baris users.
+        const roleSearchSubquery = db
+          .select({ userId: userRoles.userId })
+          .from(userRoles)
+          .where(sql`${userRoles.role}::text ILIKE ${term}`);
+        conditions.push(
+          or(
+            ilike(users.nama, term),
+            ilike(users.email, term),
+            sql`${users.role}::text ILIKE ${term}`,
+            sql`${users.id} IN (${roleSearchSubquery})`,
+          ),
+        );
       }
       if (filterRole && (roleEnum.enumValues as readonly string[]).includes(filterRole)) {
         // Subquery tak-terkorelasi: satu scan user_roles + subplan hashed, hindari seq scan per baris users
