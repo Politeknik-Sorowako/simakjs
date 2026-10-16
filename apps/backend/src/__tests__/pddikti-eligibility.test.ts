@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
 import { app } from '../app';
 import {
@@ -15,6 +15,8 @@ import {
   presensi,
   programStudi,
 } from '../models/schema';
+import { FeederService } from '../services/feeder.service';
+import { SystemParameterService } from '../services/system-parameter.service';
 import { db } from '../utils/db';
 import { clearDatabase, getAuthToken } from './test-helper';
 
@@ -31,6 +33,12 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
   let krsId: number;
   let dosenId: number;
   let cpmkId: number;
+
+  afterEach(() => {
+    FeederService.setTestTransport(null);
+    FeederService.clearTokenCache();
+    SystemParameterService.clearCache();
+  });
 
   beforeEach(async () => {
     await clearDatabase();
@@ -317,6 +325,320 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
         }),
       );
       expect(res.status).toBe(403);
+    });
+
+    it('enforces FEEDER_WRITE_GUARD (ON by default) and blocks non-Get actions before network', async () => {
+      const cfgDefault = await SystemParameterService.getFeederConfig();
+      expect(cfgDefault.writeGuard).toBe(true);
+
+      // Validasi nilai parameter FEEDER_WRITE_GUARD via API
+      expect((await putParam(adminToken, 'FEEDER_WRITE_GUARD', 'bukan-bool')).status).toBe(400);
+      expect((await putParam(adminToken, 'FEEDER_WRITE_GUARD', 'true')).status).toBe(200);
+
+      let transportCalled = false;
+      FeederService.setTestTransport(async (_cfg, body) => {
+        transportCalled = true;
+        if (body.act === 'GetToken') return { error_code: 0, data: { token: 'tok-test' } };
+        return { error_code: 0, data: { id: 'ok' } };
+      });
+
+      const cfgOn = {
+        ...cfgDefault,
+        url: 'https://feeder.local.test/ws/live2.php',
+        username: 'u',
+        password: 'p',
+        writeGuard: true,
+      };
+
+      // request() menolak aksi tulis maupun GetToken langsung tanpa memanggil transport
+      await expect(FeederService.request(cfgOn, 'InsertBiodataMahasiswa')).rejects.toThrow(
+        /hanya mengizinkan operasi baca/,
+      );
+      await expect(FeederService.request(cfgOn, 'UpdateMahasiswa')).rejects.toThrow(/hanya mengizinkan operasi baca/);
+      await expect(FeederService.request(cfgOn, 'DeleteMahasiswa')).rejects.toThrow(/hanya mengizinkan operasi baca/);
+      await expect(FeederService.request(cfgOn, 'GetToken')).rejects.toThrow(/hanya mengizinkan operasi baca/);
+      expect(transportCalled).toBe(false);
+
+      // mutate() diblokir saat writeGuard ON
+      await expect(FeederService.mutate(cfgOn, 'InsertBiodataMahasiswa', { record: {} })).rejects.toThrow(
+        /FEEDER_WRITE_GUARD aktif/,
+      );
+      expect(transportCalled).toBe(false);
+
+      // Saat writeGuard dimatikan (OFF), mutate() tetap menolak act baca tetapi mengizinkan Insert*
+      expect((await putParam(adminToken, 'FEEDER_WRITE_GUARD', 'false')).status).toBe(200);
+      const cfgOff = await SystemParameterService.getFeederConfig();
+      expect(cfgOff.writeGuard).toBe(false);
+
+      await expect(FeederService.mutate({ ...cfgOn, writeGuard: false }, 'GetProfilPT')).rejects.toThrow(
+        /hanya Insert\*\/Update\*\/Delete\*/,
+      );
+
+      const mutRes = await FeederService.mutate<{ id: string }>(
+        { ...cfgOn, writeGuard: false },
+        'InsertBiodataMahasiswa',
+        { record: { nama_mahasiswa: 'Tes' } },
+      );
+      expect(mutRes.id).toBe('ok');
+      expect(transportCalled).toBe(true);
+    });
+  });
+
+  describe('Feeder Pull (Preview & Apply Read-Only)', () => {
+    it('previews and applies Referensi (semester, prodi) and Master (matkul, dosen, mahasiswa) via mock transport', async () => {
+      // Siapkan kredensial dummy lokal + pasang mock transport (tanpa koneksi ke Feeder asli)
+      await app.handle(
+        new Request('http://localhost/system/parameters/FEEDER_PASSWORD', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 'dummy-secret' }),
+        }),
+      );
+
+      const calledActs: string[] = [];
+      FeederService.setTestTransport(async (_cfg, body) => {
+        const act = String(body.act);
+        calledActs.push(act);
+        if (act === 'GetToken') {
+          return { error_code: 0, data: { token: 'mock-token-123' } };
+        }
+        if (act === 'GetSemester') {
+          return {
+            error_code: 0,
+            data: [
+              { id_semester: '20231', nama_semester: '2023/2024 Ganjil (Feeder)' },
+              { id_semester: '20241', nama_semester: '2024/2025 Ganjil' },
+            ],
+          };
+        }
+        if (act === 'GetProdi') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_prodi: 'uuid-prodi-ti',
+                kode_program_studi: 'TI',
+                nama_program_studi: 'Teknik Informatika',
+                nama_jenjang_pendidikan: 'D4',
+              },
+              {
+                id_prodi: 'uuid-prodi-tm',
+                kode_program_studi: 'TM',
+                nama_program_studi: 'Teknik Mesin',
+                nama_jenjang_pendidikan: 'D3',
+              },
+            ],
+          };
+        }
+        if (act === 'GetListMataKuliah') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_matkul: 'uuid-mk-001',
+                id_prodi: 'uuid-prodi-ti',
+                kode_mata_kuliah: 'IF101',
+                nama_mata_kuliah: 'Algoritma Pemrograman',
+                sks_mata_kuliah: 3,
+                sks_tatap_muka: 2,
+                sks_praktek: 1,
+              },
+              {
+                id_matkul: 'uuid-mk-002',
+                id_prodi: 'uuid-prodi-ti',
+                kode_mata_kuliah: 'IF102',
+                nama_mata_kuliah: 'Struktur Data Lanjut',
+                sks_mata_kuliah: 4,
+                sks_tatap_muka: 3,
+                sks_praktek: 1,
+              },
+            ],
+          };
+        }
+        if (act === 'GetListDosen') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_dosen: 'uuid-dosen-1',
+                nidn: '12345678',
+                nip: '123456789012345678',
+                nama_dosen: 'Dosen Test',
+                jenis_kelamin: 'L',
+                tanggal_lahir: '15-08-1985',
+                id_agama: 1,
+              },
+              {
+                id_dosen: 'uuid-dosen-2',
+                nidn: '87654321',
+                nip: '876543210987654321',
+                nama_dosen: 'Dosen Baru Feeder',
+                jenis_kelamin: 'P',
+                tanggal_lahir: '1990-02-20',
+                id_agama: 1,
+              },
+            ],
+          };
+        }
+        if (act === 'GetListMahasiswa') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_mahasiswa: 'uuid-mhs-1',
+                nim: '20200001',
+                nama_mahasiswa: 'Mahasiswa Test',
+                id_prodi: 'uuid-prodi-ti',
+                id_periode: '20231',
+                jenis_kelamin: 'L',
+                tanggal_lahir: '2000-01-01',
+              },
+              {
+                id_mahasiswa: 'uuid-mhs-2',
+                nim: '54321',
+                nama_mahasiswa: 'Mhs Baru Feeder',
+                id_prodi: 'uuid-prodi-ti',
+                id_periode: '20241',
+                jenis_kelamin: 'P',
+                tanggal_lahir: '12-11-2005',
+              },
+            ],
+          };
+        }
+        return { error_code: 0, data: [] };
+      });
+
+      // 1. Katalog entitas pull
+      const catRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/entities', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(catRes.status).toBe(200);
+      const catBody = (await catRes.json()) as { writeGuard: boolean; entities: Array<{ key: string }> };
+      expect(catBody.writeGuard).toBe(true);
+      expect(catBody.entities.map((e) => e.key)).toEqual(['semester', 'prodi', 'matkul', 'dosen', 'mahasiswa']);
+
+      // 2. Preview & Apply Semester (20231 konflik nama, 20241 baru)
+      const semPrevRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/preview?entity=semester', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(semPrevRes.status).toBe(200);
+      const semPrev = (await semPrevRes.json()) as {
+        summary: { baru: number; konflik: number };
+      };
+      expect(semPrev.summary.baru).toBe(1);
+      expect(semPrev.summary.konflik).toBe(1);
+
+      // Apply semester dengan conflictResolution = 'feeder'
+      const semApplyRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'semester',
+            feederIds: ['20231', '20241'],
+            conflictResolution: 'feeder',
+          }),
+        }),
+      );
+      expect(semApplyRes.status).toBe(200);
+      const semApply = (await semApplyRes.json()) as { inserted: number; updated: number };
+      expect(semApply.inserted).toBe(1);
+      expect(semApply.updated).toBe(1);
+
+      const [sem20231] = await db.select().from(periodeAkademik).where(eq(periodeAkademik.id, '20231'));
+      expect(sem20231.idPddikti).toBe('20231');
+      expect(sem20231.nama).toBe('2023/2024 Ganjil (Feeder)');
+
+      // 3. Preview & Apply Prodi (TI -> link_id, TM -> baru)
+      const prodiApplyRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'prodi',
+            feederIds: ['uuid-prodi-ti', 'uuid-prodi-tm'],
+          }),
+        }),
+      );
+      expect(prodiApplyRes.status).toBe(200);
+      const prodiApply = (await prodiApplyRes.json()) as { inserted: number; linkedOnly: number };
+      expect(prodiApply.linkedOnly).toBe(1);
+      expect(prodiApply.inserted).toBe(1);
+
+      const [tiRow] = await db.select().from(programStudi).where(eq(programStudi.id, prodiId));
+      expect(tiRow.idPddikti).toBe('uuid-prodi-ti');
+
+      // 4. Apply Matkul, Dosen, Mahasiswa
+      const mkApplyRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'matkul',
+            feederIds: ['uuid-mk-001', 'uuid-mk-002'],
+          }),
+        }),
+      );
+      expect(mkApplyRes.status).toBe(200);
+      const mkApply = (await mkApplyRes.json()) as { inserted: number; linkedOnly: number };
+      expect(mkApply.linkedOnly).toBe(1);
+      expect(mkApply.inserted).toBe(1);
+
+      const dsnApplyRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'dosen',
+            feederIds: ['uuid-dosen-1', 'uuid-dosen-2'],
+          }),
+        }),
+      );
+      expect(dsnApplyRes.status).toBe(200);
+      const dsnApply = (await dsnApplyRes.json()) as { inserted: number; linkedOnly: number };
+      expect(dsnApply.linkedOnly).toBe(1);
+      expect(dsnApply.inserted).toBe(1);
+
+      const [dsn1] = await db.select().from(dosen).where(eq(dosen.id, dosenId));
+      expect(dsn1.idPddikti).toBe('uuid-dosen-1');
+      expect(dsn1.tanggalLahir).toBe('1985-08-15'); // ternormalisasi dari DD-MM-YYYY
+
+      const mhsApplyRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'mahasiswa',
+            feederIds: ['uuid-mhs-1', 'uuid-mhs-2'],
+          }),
+        }),
+      );
+      expect(mhsApplyRes.status).toBe(200);
+      const mhsApply = (await mhsApplyRes.json()) as { inserted: number; linkedOnly: number };
+      expect(mhsApply.linkedOnly).toBe(1);
+      expect(mhsApply.inserted).toBe(1);
+
+      // Pastikan seluruh panggilan ke Feeder hanya GetToken & Get*
+      expect(calledActs.every((a) => a === 'GetToken' || a.startsWith('Get'))).toBe(true);
+
+      // 5. RBAC: non-admin ditolak saat mencoba applyPull
+      const forbiddenRes = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${dosenToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'semester',
+            feederIds: ['20241'],
+          }),
+        }),
+      );
+      expect(forbiddenRes.status).toBe(403);
     });
   });
 
