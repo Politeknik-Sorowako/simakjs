@@ -155,4 +155,16 @@ describe('User List API — filter role/status, search, dan sort server-side', (
       expect(found.map((u) => u.nama)).toEqual(['Alpha Beta Userlist', 'Mid Gamma Userlist', 'Zeta Alpha Userlist']);
     }
   });
+
+  it('9. search juga menjangkau role tambahan (user_roles)', async () => {
+    const exact = await fetchUsers('search=kaprodi&limit=50');
+    expect(exact.data.map((u) => u.email)).toContain(GAMMA_EMAIL);
+
+    const partial = await fetchUsers('search=kapr&limit=50');
+    expect(partial.data.map((u) => u.email)).toContain(GAMMA_EMAIL);
+
+    const gammaRow = partial.data.find((u) => u.email === GAMMA_EMAIL);
+    expect(gammaRow?.role).toBe('dosen');
+    expect(gammaRow?.roles).toContain('kaprodi');
+  });
 });
