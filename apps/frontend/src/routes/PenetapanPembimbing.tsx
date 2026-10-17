@@ -46,7 +46,7 @@ function describePembimbing(item: PembimbingItem, slot: PembimbingJenis): string
  * Halaman Penetapan Pembimbing.
  * - Dosen PA ditampilkan read-only (dikelola pada Data Mahasiswa).
  * - PKL / TA-1 / TA-2 dikelola di sini; pembimbing lapangan eksternal dicatat
- *   terstruktur (nama + instansi) tanpa perlu baris pada tabel dosen.
+ * terstruktur (nama + instansi) tanpa perlu baris pada tabel dosen.
  */
 export default function PenetapanPembimbing() {
   const toast = useToast();
@@ -227,107 +227,118 @@ export default function PenetapanPembimbing() {
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-secondary-800 dark:text-white">Penetapan Pembimbing</h1>
-            <p class="text-sm text-secondary-500 dark:text-secondary-200">
-              Tetapkan pembimbing PKL/magang serta pembimbing Tugas Akhir 1 &amp; 2. Dosen PA tetap dikelola pada Data
-              Mahasiswa. Pergantian pembimbing menyimpan riwayat — penetapan lama dicabut (nonaktif), bukan dihapus.
-            </p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="Jenis untuk bulk & impor"
-              value={bulkSlot()}
-              onChange={(e) => setBulkSlot(e.currentTarget.value as PembimbingJenis | '')}
-              class="rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm dark:border-secondary-700 dark:bg-secondary-800"
-            >
-              <option value="">Jenis untuk bulk/CSV…</option>
-              <For each={SLOTS}>{(s) => <option value={s.key}>{s.label}</option>}</For>
-            </select>
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!bulkSlot()}
-              onClick={() => {
-                setBulkInternal(true);
-                setBulkDosenId('');
-                setBulkNama('');
-                setBulkInstansi('');
-                setBulkOpen(true);
-              }}
-            >
-              Tetapkan Massal
-            </Button>
-            <label
-              class="cursor-pointer rounded-lg border border-secondary-200 bg-secondary-100 px-3 py-1.5 text-caption font-medium text-secondary-800 transition-colors hover:bg-secondary-200 dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-100"
-              for="input-impor-pembimbing"
-            >
-              Impor CSV
-            </label>
-            <input
-              id="input-impor-pembimbing"
-              type="file"
-              accept=".csv,text/csv"
-              class="hidden"
-              ref={csvRef}
-              disabled={!bulkSlot()}
-            />
-          </div>
-        </div>
+        {/*
+          Sub-nav frosted (DESIGN.md): bar lengket di bawah navbar dengan
+          backdrop-blur di atas kanvas parchment + hairline tipis sebagai pembatas.
+          Judul di kiri, aksi utama (pill Action Blue) di kanan; filterSearch
+          dan filter lain ditulis langsung sebagai baris kontrol, bukan kartu
+          terpisah, agar hierarki tetap tenang.
+        */}
+        <div class="sticky top-16 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 bg-parchment/80 dark:bg-secondary-950/80 backdrop-blur-md border-b border-hairline dark:border-secondary-800">
+          <div class="flex flex-col gap-3 py-4">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div class="min-w-0">
+                <h1 class="text-title font-semibold text-ink dark:text-white">Penetapan Pembimbing</h1>
+                <p class="mt-1 text-caption text-secondary-500 dark:text-secondary-300">
+                  Tetapkan pembimbing PKL/magang serta pembimbing Tugas Akhir 1 &amp; 2. Dosen PA tetap dikelola pada
+                  Data Mahasiswa. Pergantian pembimbing menyimpan riwayat — penetapan lama dicabut, bukan dihapus.
+                </p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select
+                  aria-label="Jenis untuk bulk & impor"
+                  value={bulkSlot()}
+                  onChange={(e) => setBulkSlot(e.currentTarget.value as PembimbingJenis | '')}
+                  class="h-11 rounded-full border border-hairline bg-pearl dark:border-secondary-700 dark:bg-secondary-800 px-4 text-caption dark:text-secondary-100 transition-colors hover:border-action focus:outline-none focus:ring-2 focus:ring-action-focus/30"
+                >
+                  <option value="">Jenis untuk bulk / CSV…</option>
+                  <For each={SLOTS}>{(s) => <option value={s.key}>{s.label}</option>}</For>
+                </select>
+                <Button
+                  size="sm"
+                  class="h-11 px-5"
+                  disabled={!bulkSlot()}
+                  onClick={() => {
+                    setBulkInternal(true);
+                    setBulkDosenId('');
+                    setBulkNama('');
+                    setBulkInstansi('');
+                    setBulkOpen(true);
+                  }}
+                >
+                  Tetapkan Massal
+                </Button>
+                <label
+                  class="inline-flex h-11 cursor-pointer items-center rounded-full border border-action px-5 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
+                  for="input-impor-pembimbing"
+                >
+                  Impor CSV
+                </label>
+                <input
+                  id="input-impor-pembimbing"
+                  type="file"
+                  accept=".csv,text/csv"
+                  class="hidden"
+                  ref={csvRef}
+                  disabled={!bulkSlot()}
+                />
+              </div>
+            </div>
 
-        <div class="grid grid-cols-1 gap-3 rounded-2xl border border-secondary-200/80 bg-white p-4 md:grid-cols-4 dark:border-secondary-800 dark:bg-secondary-900">
-          <Input
-            label="Cari NIM / Nama"
-            value={search()}
-            placeholder="Ketik NIM atau nama…"
-            onInput={(e) => {
-              setSearch(e.currentTarget.value);
-              resetPage();
-            }}
-          />
-          <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
-            Program Studi
-            <select
-              value={prodiFilter()}
-              onChange={(e) => {
-                setProdiFilter(e.currentTarget.value);
-                resetPage();
-              }}
-              class="rounded-lg border border-secondary-200 bg-white px-3 py-2 dark:border-secondary-700 dark:bg-secondary-800"
-            >
-              <option value="">Semua Prodi</option>
-              <For each={prodiList() ?? []}>{(p) => <option value={String(p.id)}>{p.nama}</option>}</For>
-            </select>
-          </label>
-          <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
-            Angkatan
-            <select
-              value={angkatanFilter()}
-              onChange={(e) => {
-                setAngkatanFilter(e.currentTarget.value);
-                resetPage();
-              }}
-              class="rounded-lg border border-secondary-200 bg-white px-3 py-2 dark:border-secondary-700 dark:bg-secondary-800"
-            >
-              <option value="">Semua Angkatan</option>
-              <For each={angkatanOpsi()}>{(a) => <option value={a}>{a}</option>}</For>
-            </select>
-          </label>
-          <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
-            Belum Ditetapkan
-            <select
-              value={belumFilter()}
-              onChange={(e) => {
-                setBelumFilter(e.currentTarget.value as PembimbingJenis | '');
-                resetPage();
-              }}
-              class="rounded-lg border border-secondary-200 bg-white px-3 py-2 dark:border-secondary-700 dark:bg-secondary-800"
-            >
-              <option value="">Tampilkan semua</option>
-              <For each={SLOTS}>{(s) => <option value={s.key}>Belum ada: {s.label}</option>}</For>
-            </select>
-          </label>
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <Input
+                label="Cari NIM / Nama"
+                value={search()}
+                placeholder="Ketik NIM atau nama…"
+                onInput={(e) => {
+                  setSearch(e.currentTarget.value);
+                  resetPage();
+                }}
+              />
+              <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
+                Program Studi
+                <select
+                  value={prodiFilter()}
+                  onChange={(e) => {
+                    setProdiFilter(e.currentTarget.value);
+                    resetPage();
+                  }}
+                  class="h-11 rounded-full border border-hairline bg-pearl px-4 text-caption dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-100 transition-colors hover:border-action focus:outline-none focus:ring-2 focus:ring-action-focus/30"
+                >
+                  <option value="">Semua Prodi</option>
+                  <For each={prodiList() ?? []}>{(p) => <option value={String(p.id)}>{p.nama}</option>}</For>
+                </select>
+              </label>
+              <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
+                Angkatan
+                <select
+                  value={angkatanFilter()}
+                  onChange={(e) => {
+                    setAngkatanFilter(e.currentTarget.value);
+                    resetPage();
+                  }}
+                  class="h-11 rounded-full border border-hairline bg-pearl px-4 text-caption dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-100 transition-colors hover:border-action focus:outline-none focus:ring-2 focus:ring-action-focus/30"
+                >
+                  <option value="">Semua Angkatan</option>
+                  <For each={angkatanOpsi()}>{(a) => <option value={a}>{a}</option>}</For>
+                </select>
+              </label>
+              <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
+                Belum Ditetapkan
+                <select
+                  value={belumFilter()}
+                  onChange={(e) => {
+                    setBelumFilter(e.currentTarget.value as PembimbingJenis | '');
+                    resetPage();
+                  }}
+                  class="h-11 rounded-full border border-hairline bg-pearl px-4 text-caption dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-100 transition-colors hover:border-action focus:outline-none focus:ring-2 focus:ring-action-focus/30"
+                >
+                  <option value="">Tampilkan semua</option>
+                  <For each={SLOTS}>{(s) => <option value={s.key}>Belum ada: {s.label}</option>}</For>
+                </select>
+              </label>
+            </div>
+          </div>
         </div>
 
         <Show when={!list.loading} fallback={<p class="text-sm text-secondary-500">Memuat data…</p>}>
@@ -374,7 +385,7 @@ export default function PenetapanPembimbing() {
                                 fallback={
                                   <button
                                     type="button"
-                                    class="w-fit text-fine font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                                    class="-ml-3 inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
                                     onClick={() => openModal(item, slot.key)}
                                   >
                                     Tetapkan
@@ -388,14 +399,14 @@ export default function PenetapanPembimbing() {
                                     </Badge>
                                     <button
                                       type="button"
-                                      class="text-fine font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                                      class="-ml-3 inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
                                       onClick={() => openModal(item, slot.key)}
                                     >
                                       Ubah
                                     </button>
                                     <button
                                       type="button"
-                                      class="text-fine text-danger-600 hover:underline dark:text-danger-400"
+                                      class="-ml-3 inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-danger-600 transition-colors hover:bg-danger-50 active:scale-95 dark:text-danger-400 dark:hover:bg-danger-500/10"
                                       onClick={() =>
                                         setCabutTarget({ id: d().id, label: `${item.namaMahasiswa} — ${slot.label}` })
                                       }
@@ -435,13 +446,38 @@ export default function PenetapanPembimbing() {
           <div class="flex flex-col gap-3">
             <p class="text-caption text-secondary-500">{SLOTS.find((s) => s.key === modalSlot())?.hint}</p>
 
-            <div class="flex gap-2">
-              <Button variant={internal() ? 'primary' : 'secondary'} size="sm" onClick={() => setInternal(true)}>
-                Dosen Kampus
-              </Button>
-              <Button variant={internal() ? 'secondary' : 'primary'} size="sm" onClick={() => setInternal(false)}>
-                Pembimbing Lapangan
-              </Button>
+            <div
+              role="tablist"
+              aria-label="Sumber pembimbing"
+              class="inline-flex rounded-full border border-hairline bg-pearl p-1 dark:border-secondary-700 dark:bg-secondary-800"
+            >
+              <For
+                each={
+                  [
+                    { key: 'dosen', label: 'Dosen Kampus' },
+                    { key: 'eksternal', label: 'Pembimbing Lapangan' },
+                  ] as const
+                }
+              >
+                {(opt) => {
+                  const aktif = () => (opt.key === 'dosen' ? internal() : !internal());
+                  return (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={aktif()}
+                      onClick={() => setInternal(opt.key === 'dosen')}
+                      class={`min-h-[40px] rounded-full px-4 text-caption font-medium transition-colors active:scale-95 ${
+                        aktif()
+                          ? 'bg-action text-white dark:bg-action dark:text-white'
+                          : 'text-secondary-700 hover:text-action dark:text-secondary-200 dark:hover:text-action-ondark'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                }}
+              </For>
             </div>
 
             <Show when={internal()}>
@@ -450,7 +486,7 @@ export default function PenetapanPembimbing() {
                 <select
                   value={dosenId()}
                   onChange={(e) => setDosenId(e.currentTarget.value)}
-                  class="rounded-lg border border-secondary-200 bg-white px-3 py-2 dark:border-secondary-700 dark:bg-secondary-800"
+                  class="h-11 rounded-full border border-hairline bg-pearl px-4 text-caption dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-100"
                 >
                   <option value="">— Pilih Dosen —</option>
                   <For each={dosenList() ?? []}>
@@ -500,28 +536,45 @@ export default function PenetapanPembimbing() {
               Menetapkan <strong>{SLOTS.find((s) => s.key === bulkSlot())?.label}</strong> ke seluruh mahasiswa pada
               halaman ini ({list()?.total ?? 0} mahasiswa terlihat di halaman ini).
             </p>
-            <div class="flex gap-2">
-              <Button
-                variant={bulkInternal() ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setBulkInternal(true)}
+            <div
+              role="tablist"
+              aria-label="Sumber pembimbing massal"
+              class="inline-flex rounded-full border border-hairline bg-pearl p-1 dark:border-secondary-700 dark:bg-secondary-800"
+            >
+              <For
+                each={
+                  [
+                    { key: 'dosen', label: 'Dosen Kampus' },
+                    { key: 'eksternal', label: 'Pembimbing Lapangan' },
+                  ] as const
+                }
               >
-                Dosen Kampus
-              </Button>
-              <Button
-                variant={bulkInternal() ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => setBulkInternal(false)}
-              >
-                Pembimbing Lapangan
-              </Button>
+                {(opt) => {
+                  const aktif = () => (opt.key === 'dosen' ? bulkInternal() : !bulkInternal());
+                  return (
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={aktif()}
+                      onClick={() => setBulkInternal(opt.key === 'dosen')}
+                      class={`min-h-[40px] rounded-full px-4 text-caption font-medium transition-colors active:scale-95 ${
+                        aktif()
+                          ? 'bg-action text-white dark:bg-action dark:text-white'
+                          : 'text-secondary-700 hover:text-action dark:text-secondary-200 dark:hover:text-action-ondark'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                }}
+              </For>
             </div>
 
             <Show when={bulkInternal()}>
               <select
                 value={bulkDosenId()}
                 onChange={(e) => setBulkDosenId(e.currentTarget.value)}
-                class="rounded-lg border border-secondary-200 bg-white px-3 py-2 dark:border-secondary-700 dark:bg-secondary-800"
+                class="h-11 rounded-full border border-hairline bg-pearl px-4 text-caption dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-100"
               >
                 <option value="">— Pilih Dosen —</option>
                 <For each={dosenList() ?? []}>

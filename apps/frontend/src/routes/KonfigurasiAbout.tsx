@@ -73,7 +73,7 @@ function ChangelogSectionView(props: { section: ChangelogSection }) {
           <For each={props.section.groups}>
             {(group) => (
               <div>
-                <span class="inline-flex px-2 py-0.5 rounded-full text-fine font-bold uppercase tracking-wide bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                <span class="inline-flex px-2 py-0.5 rounded-full text-fine font-bold uppercase tracking-wide bg-action-50 text-action border border-brand-100 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
                   {group.heading}
                 </span>
                 <ul class="mt-1 list-disc pl-5 text-caption text-secondary-600 dark:text-secondary-400 space-y-0.5">

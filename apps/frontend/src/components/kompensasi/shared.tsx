@@ -36,7 +36,7 @@ export function ErrorState(props: { message: string; onRetry: () => void }) {
           <button
             type="button"
             onClick={props.onRetry}
-            class="px-4 py-1.5 text-xs font-bold rounded-lg bg-primary-700 hover:bg-primary-600 text-white transition-colors active:scale-95"
+            class="px-4 py-1.5 text-xs font-bold rounded-lg bg-primary-700 hover:bg-action text-white transition-colors active:scale-95"
           >
             Coba Lagi
           </button>
@@ -133,11 +133,11 @@ export function KpiCard(props: {
       case 'warning':
         return 'text-warning-600 dark:text-warning-400';
       default:
-        return 'text-primary-700 dark:text-primary-400';
+        return 'text-primary-700 dark:text-action-ondark';
     }
   };
   return (
-    <div class="rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 p-5 shadow-card dark:shadow-card-dark transition-colors">
+    <div class="rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 p-5 transition-colors">
       <div class="text-fine font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
         {props.label}
       </div>
@@ -163,8 +163,8 @@ export function FilterField(props: { label: string; children: JSX.Element }) {
 export function RefreshingBadge(props: { show: boolean }) {
   return (
     <Show when={props.show}>
-      <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 dark:text-brand-400">
-        <span class="w-3 h-3 border-2 border-brand-600 border-t-transparent rounded-full animate-spin" />
+      <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-action dark:text-brand-400">
+        <span class="w-3 h-3 border-2 border-action border-t-transparent rounded-full animate-spin" />
         Memperbarui…
       </span>
     </Show>

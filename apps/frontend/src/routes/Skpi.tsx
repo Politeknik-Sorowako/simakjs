@@ -71,7 +71,7 @@ export default function Skpi() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header + tab bar */}
-        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
             SKPI — Pencapaian Kegiatan Mahasiswa
           </h1>
@@ -93,7 +93,7 @@ export default function Skpi() {
                     onClick={() => setActiveTab(tab)}
                     class={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
                       effectiveTab() === tab
-                        ? 'bg-brand-600 text-white shadow-sm'
+                        ? 'bg-action text-white'
                         : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
                     }`}
                   >
@@ -107,7 +107,7 @@ export default function Skpi() {
 
         {/* Ringkasan dokumen + cetak — khusus mahasiswa */}
         <Show when={isMahasiswaView() && dokumen()}>
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div class="rounded-xl bg-secondary-50 p-4 dark:bg-secondary-800/60">
                 <p class="text-xs font-semibold uppercase tracking-wider text-secondary-400">Kegiatan Terverifikasi</p>

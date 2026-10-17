@@ -54,7 +54,7 @@ export default function LaporanKeuangan() {
           </Show>
         </div>
 
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
             Periode Akademik
           </label>
@@ -136,7 +136,7 @@ export default function LaporanKeuangan() {
                   />
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
                     <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran</h3>
                     <PieChart
                       labels={['Lunas', 'Cicilan', 'Belum Bayar']}
@@ -149,7 +149,7 @@ export default function LaporanKeuangan() {
                       donut
                     />
                   </div>
-                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
                     <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Tunggakan per Prodi</h3>
                     <BarChart
                       labels={(s.rekapPerProdi || []).map(
@@ -170,7 +170,7 @@ export default function LaporanKeuangan() {
                     />
                   </div>
                 </div>
-                <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+                <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
                   <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
                     <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rekap per Program Studi</h3>
                   </div>

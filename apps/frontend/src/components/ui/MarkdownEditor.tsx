@@ -209,7 +209,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                 when={props.value.trim()}
                 fallback={
                   <p class="text-secondary-400 italic text-sm">
-                    Belum ada teks markdown. Mulai ketik di tab "Tulis" untuk melihat pratinjau.
+                    Belum ada teks markdown. Mulai ketik di tab"Tulis" untuk melihat pratinjau.
                   </p>
                 }
               >

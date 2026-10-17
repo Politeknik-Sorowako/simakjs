@@ -342,7 +342,7 @@ export default function Login() {
       <Show when={ssoLoading()}>
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-secondary-900/60 backdrop-blur-sm p-4 animate-fade-in">
           <div class="bg-white dark:bg-secondary-900 rounded-2xl p-6 max-w-sm w-full text-center shadow-2xl border border-secondary-100 dark:border-secondary-800 flex flex-col items-center gap-4">
-            <div class="w-12 h-12 border-4 border-brand-600 border-t-transparent rounded-full animate-spin"></div>
+            <div class="w-12 h-12 border-4 border-action border-t-transparent rounded-full animate-spin"></div>
             <h3 class="text-base font-bold text-secondary-800 dark:text-white">Menghubungkan ke Google Workspace</h3>
             <p class="text-xs text-secondary-500 dark:text-secondary-400">
               Mengarahkan ke portal otentikasi Politeknik Sorowako...
@@ -365,7 +365,7 @@ export default function Login() {
             const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
             auth.setTheme(nextTheme);
           }}
-          class="p-2.5 rounded-xl bg-secondary-100/80 dark:bg-white/10 backdrop-blur-md border border-secondary-200/50 dark:border-white/20 text-secondary-700 dark:text-white hover:bg-secondary-200/80 dark:hover:bg-white/20 transition-all focus:outline-none shadow-md dark:shadow-lg"
+          class="p-2.5 rounded-xl bg-secondary-100/80 dark:bg-white/10 backdrop-blur-md border border-secondary-200/50 dark:border-white/20 text-secondary-700 dark:text-white hover:bg-secondary-200/80 dark:hover:bg-white/20 transition-all focus:outline-none dark:shadow-lg"
           title="Beralih Mode Gelap/Terang"
         >
           {auth.theme() === 'light' ? (
@@ -378,7 +378,12 @@ export default function Login() {
               />
             </svg>
           ) : (
-            <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              class="w-5 h-5 text-action dark:text-action-ondark"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -391,11 +396,11 @@ export default function Login() {
       </div>
 
       {/* Decorative Blur Orbs */}
-      <div class="absolute -top-40 -left-40 w-96 h-96 bg-brand-500/10 dark:bg-brand-500/20 rounded-full blur-[128px] pointer-events-none" />
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-accent-500/10 dark:bg-accent-500/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -top-40 -left-40 w-96 h-96 bg-action/10 dark:bg-action/20 rounded-full blur-[128px] pointer-events-none" />
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-action/10 dark:bg-action/20 rounded-full blur-[128px] pointer-events-none" />
 
       {/* Login Card */}
-      <div class="w-full max-w-md bg-white dark:bg-secondary-900/60 dark:backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-secondary-800 dark:text-white transition-all duration-200">
+      <div class="w-full max-w-md bg-white dark:bg-secondary-900/60 dark:backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-secondary-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
           <h2 class="text-2xl font-bold tracking-tight text-secondary-800 dark:text-white">
@@ -410,7 +415,7 @@ export default function Login() {
           <div
             class={`p-3 rounded-lg text-xs font-semibold text-center flex flex-col items-center gap-2 ${
               errorMsg().includes('sukses') || errorMsg().includes('dikirimkan')
-                ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400 border border-accent-500/20'
+                ? 'bg-action/10 text-action dark:text-action dark:text-action-ondark border border-action/20'
                 : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
             }`}
           >
@@ -453,7 +458,7 @@ export default function Login() {
               value={totpCode()}
               onInput={(e) => setTotpCode(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-primary-500/30 text-center text-lg tracking-widest font-mono"
+              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-action-focus/30 text-center text-lg tracking-widest font-mono"
             />
 
             <Button type="submit" loading={loading()} class="w-full py-3">
@@ -464,7 +469,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => setIsRecoveryMode(!isRecoveryMode())}
-                class="text-brand-600 dark:text-brand-400 hover:underline"
+                class="text-action dark:text-brand-400 hover:underline"
               >
                 {isRecoveryMode() ? 'Gunakan Kode 6-Digit Authenticator' : 'Gunakan Kode Pemulihan Backup'}
               </button>
@@ -490,7 +495,7 @@ export default function Login() {
               type="button"
               onClick={handleGoogleSSO}
               disabled={loading()}
-              class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-secondary-300 dark:border-white/20 bg-white dark:bg-secondary-800/80 hover:bg-secondary-50 dark:hover:bg-secondary-800 text-secondary-700 dark:text-white font-medium text-sm transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+              class="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl border border-secondary-300 dark:border-white/20 bg-white dark:bg-secondary-800/80 hover:bg-secondary-50 dark:hover:bg-secondary-800 text-secondary-700 dark:text-white font-medium text-sm transition-all focus:outline-none focus:ring-2 focus:ring-action-focus/30"
             >
               <svg class="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -529,7 +534,7 @@ export default function Login() {
               value={email()}
               onInput={(e) => setEmail(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-primary-500/30"
+              class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-action-focus/30"
             />
 
             <Show when={isRegister()}>
@@ -540,7 +545,7 @@ export default function Login() {
                 value={nama()}
                 onInput={(e) => setNama(e.currentTarget.value)}
                 disabled={loading()}
-                class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-primary-500/30"
+                class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-action-focus/30"
               />
             </Show>
 
@@ -552,7 +557,7 @@ export default function Login() {
                 value={password()}
                 onInput={(e) => setPassword(e.currentTarget.value)}
                 disabled={loading()}
-                class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-primary-500/30 !pr-12"
+                class="!bg-secondary-50 dark:!bg-secondary-950/40 !border-secondary-200 dark:!border-white/10 !text-secondary-800 dark:!text-white focus:!ring-action-focus/30 !pr-12"
               />
               <button
                 type="button"
@@ -631,7 +636,7 @@ export default function Login() {
                 resetTurnstile();
               }}
               disabled={loading()}
-              class="text-xs text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
+              class="text-xs text-action dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
             >
               {isRegister() ? 'Sudah memiliki akun? Masuk' : 'Belum memiliki akun? Daftar'}
             </button>

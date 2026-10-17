@@ -30,7 +30,7 @@ const JENIS_FULL_DAY: JenisKompen[] = ['sakit', 'izin', 'alpa'];
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -524,7 +524,7 @@ export default function KompensasiManual() {
         </div>
 
         {/* Filter Bar */}
-        <div class="bg-white dark:bg-secondary-900 p-4 rounded-2xl border border-secondary-200 dark:border-secondary-800 shadow-sm flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div class="bg-white dark:bg-secondary-900 p-4 rounded-2xl border border-secondary-200 dark:border-secondary-800 flex flex-col md:flex-row items-stretch md:items-center gap-3">
           <div class="flex-1">
             <Input
               id="pencarian-kompensasi"
@@ -580,10 +580,8 @@ export default function KompensasiManual() {
 
         {/* Bulk Action Bar */}
         <Show when={selectedIds().size > 0}>
-          <div class="bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-900/60 rounded-2xl px-4 py-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
-            <span class="text-xs font-bold text-primary-800 dark:text-primary-300">
-              {selectedIds().size} data terpilih
-            </span>
+          <div class="bg-primary-50 dark:bg-primary-950/40 border border-primary-200 dark:border-primary-900/60 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <span class="text-xs font-bold text-action dark:text-primary-300">{selectedIds().size} data terpilih</span>
             <div class="flex flex-wrap items-center gap-2">
               <Button onClick={() => setShowBulkJenisModal(true)} variant="secondary" class="text-xs py-1.5 px-3">
                 Ubah Jenis Massal
@@ -613,7 +611,7 @@ export default function KompensasiManual() {
                         checked={isAllPageSelected()}
                         onChange={() => toggleSelectAllPage()}
                         title="Pilih semua baris di halaman ini"
-                        class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                        class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                       />,
                     ]
                   : []),
@@ -650,7 +648,7 @@ export default function KompensasiManual() {
                         type="checkbox"
                         checked={isRowSelected(rec.id)}
                         onChange={() => toggleRowSelect(rec.id)}
-                        class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500"
+                        class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                       />
                     </td>
                   </Show>
@@ -675,7 +673,7 @@ export default function KompensasiManual() {
                       {JENIS_KOMPEN_LABEL[rec.jenisKompen] || rec.jenisKompen}
                     </Badge>
                   </td>
-                  <td class="py-3 px-4 font-semibold text-brand-600 dark:text-brand-400">{rec.durasiMenit} menit</td>
+                  <td class="py-3 px-4 font-semibold text-action dark:text-brand-400">{rec.durasiMenit} menit</td>
                   <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{fmtWaktu(rec.createdAt)}</td>
                   <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300 max-w-xs truncate">
                     {rec.keterangan || '-'}
@@ -816,7 +814,7 @@ export default function KompensasiManual() {
                 value={keterangan()}
                 onInput={(e) => setKeterangan(e.currentTarget.value)}
                 placeholder="Catatan opsional (misal: surat dokter, izin keluarga, dll.)"
-                class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-sm text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100 dark:placeholder:text-secondary-500"
+                class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-sm text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-action-focus/20 focus:border-action dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100 dark:placeholder:text-secondary-500"
               />
             </div>
 

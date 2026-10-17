@@ -779,7 +779,7 @@ export default function Cpmk() {
                   type="file"
                   accept=".csv"
                   onChange={handleImportFileChange}
-                  class="block w-full text-sm text-secondary-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-accent-600 file:text-white hover:file:bg-accent-500 file:cursor-pointer"
+                  class="block w-full text-sm text-secondary-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-action-dark file:text-white hover:file:bg-action file:cursor-pointer"
                 />
               </div>
               <div class="flex justify-end gap-3 pt-2">

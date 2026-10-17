@@ -136,7 +136,7 @@ export function BulkUploadFotoModal(props: BulkUploadFotoModalProps) {
           <div
             class={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
               isDragOver()
-                ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                ? 'border-action bg-action-50 dark:bg-action/20'
                 : 'border-secondary-300 dark:border-secondary-600 hover:border-brand-400'
             }`}
             onDragOver={handleDragOver}
@@ -192,7 +192,7 @@ export function BulkUploadFotoModal(props: BulkUploadFotoModalProps) {
               type="checkbox"
               checked={overwrite()}
               onChange={(e) => setOverwrite(e.target.checked)}
-              class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+              class="rounded border-secondary-300 text-action focus:ring-action-focus dark:border-secondary-700"
             />
             <span class="text-sm text-secondary-700 dark:text-secondary-300">
               Timpa foto yang sudah ada (Overwrite)
@@ -203,10 +203,7 @@ export function BulkUploadFotoModal(props: BulkUploadFotoModalProps) {
         {/* Progress Bar */}
         <Show when={loading()}>
           <div class="w-full bg-secondary-200 dark:bg-secondary-700 rounded-full h-2.5">
-            <div
-              class="bg-brand-600 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${progress()}%` }}
-            />
+            <div class="bg-action h-2.5 rounded-full transition-all duration-300" style={{ width: `${progress()}%` }} />
           </div>
           <p class="text-xs text-center text-secondary-500">Mengunggah dan memproses file...</p>
         </Show>

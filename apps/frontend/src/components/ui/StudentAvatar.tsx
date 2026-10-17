@@ -54,8 +54,8 @@ export function StudentAvatar(props: StudentAvatarProps) {
         type="button"
         title={props.foto ? 'Klik untuk memperbesar' : props.nama}
         onClick={() => setShowModal(true)}
-        class={`inline-flex items-center justify-center shrink-0 rounded-full overflow-hidden border border-secondary-200 dark:border-secondary-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${sizeClass()} ${
-          props.foto ? 'cursor-zoom-in hover:ring-2 hover:ring-brand-500/40' : 'cursor-default'
+        class={`inline-flex items-center justify-center shrink-0 rounded-full overflow-hidden border border-secondary-200 dark:border-secondary-700 focus:outline-none focus:ring-2 focus:ring-action-focus/30 ${sizeClass()} ${
+          props.foto ? 'cursor-zoom-in hover:ring-2 hover:ring-action-focus/40' : 'cursor-default'
         } ${props.class || ''}`}
       >
         <Show
@@ -105,7 +105,7 @@ export function StudentAvatar(props: StudentAvatarProps) {
               type="button"
               onClick={handleDownload}
               disabled={downloading()}
-              class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full border border-brand-500 text-brand-600 dark:text-brand-400 text-caption font-semibold hover:bg-brand-50 dark:hover:bg-brand-900/30 active:scale-95 transition-all disabled:opacity-50"
+              class="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full border border-action text-action dark:text-brand-400 text-caption font-semibold hover:bg-action-50 dark:hover:bg-brand-900/30 active:scale-95 transition-all disabled:opacity-50"
             >
               {downloading() ? 'Mengunduh...' : '⬇️ Unduh Foto'}
             </button>

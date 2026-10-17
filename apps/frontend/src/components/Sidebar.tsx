@@ -204,7 +204,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         {/* Mobile Close Button */}
         <button
           onClick={() => props.onClose()}
-          class="p-1 rounded-lg text-secondary-300 hover:bg-brand-700 hover:text-white md:hidden focus:outline-none"
+          class="p-1 rounded-lg text-secondary-300 hover:bg-action-dark hover:text-white md:hidden focus:outline-none"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -222,7 +222,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         <A
           href="/dashboard"
           onClick={() => props.onClose()}
-          activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
+          activeClass="text-action-ondark font-semibold border-l-2 border-action-ondark pl-2 bg-brand-800/40"
           inactiveClass="hover:bg-brand-800/60 hover:text-white"
           class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-all duration-150"
         >
@@ -246,7 +246,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
         <A
           href="/pengumuman"
           onClick={() => props.onClose()}
-          activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
+          activeClass="text-action-ondark font-semibold border-l-2 border-action-ondark pl-2 bg-brand-800/40"
           inactiveClass="hover:bg-brand-800/60 hover:text-white"
           class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-all duration-150"
         >
@@ -275,7 +275,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <A
               href="/admisi/dashboard"
               onClick={() => props.onClose()}
-              activeClass="text-accent-400 font-semibold border-l-2 border-accent-400 pl-2 bg-brand-800/40"
+              activeClass="text-action-ondark font-semibold border-l-2 border-action-ondark pl-2 bg-brand-800/40"
               inactiveClass="hover:bg-brand-800/60 hover:text-white"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-all duration-150"
             >
@@ -292,7 +292,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
 
             <button
               onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Pendaftaran</span>
               <svg
@@ -310,7 +310,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/admisi/sesi"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -327,7 +327,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/admisi/pendaftaran/baru"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -351,7 +351,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsMasterOpen(!isMasterOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Data Master</span>
               <svg
@@ -369,7 +369,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/program-studi"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -386,7 +386,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/mahasiswa"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -403,7 +403,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/dosen"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -420,7 +420,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/pengguna"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -437,7 +437,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/periode-akademik"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -461,7 +461,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsPerencanaanOpen(!isPerencanaanOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Persiapan Semester</span>
               <svg
@@ -476,14 +476,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
 
             <Show when={isPerencanaanOpen()}>
               <div class="mt-1 space-y-1 pl-2 border-l border-brand-950/60 ml-3 sidebar-submenu">
-                <div class="px-3 pt-2 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">
+                <div class="px-3 pt-2 pb-1 text-fine font-bold text-action-ondark uppercase tracking-wider">
                   1. Kurikulum OBE
                 </div>
                 <Show when={isAdmin() || isProdi()}>
                   <A
                     href="/visi-misi-prodi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -508,7 +508,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/profil-lulusan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -527,7 +527,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/cpl"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -546,7 +546,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/bahan-kajian"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -565,7 +565,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/cpmk"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -584,7 +584,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/peta-obe"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -600,14 +600,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   </A>
                 </Show>
 
-                <div class="px-3 pt-3 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">
+                <div class="px-3 pt-3 pb-1 text-fine font-bold text-action-ondark uppercase tracking-wider">
                   2. Mata Kuliah & Kurikulum
                 </div>
                 <Show when={isAdmin()}>
                   <A
                     href="/mata-kuliah"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -626,7 +626,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/kurikulum"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -645,7 +645,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/angkatan-kurikulum"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -661,12 +661,12 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   </A>
                 </Show>
 
-                <div class="px-3 pt-3 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">3. RPS</div>
+                <div class="px-3 pt-3 pb-1 text-fine font-bold text-action-ondark uppercase tracking-wider">3. RPS</div>
                 <Show when={isAdmin() || isDosen() || isInstruktur()}>
                   <A
                     href="/rps"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -682,12 +682,14 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   </A>
                 </Show>
 
-                <div class="px-3 pt-3 pb-1 text-fine font-bold text-accent-400 uppercase tracking-wider">4. Kelas</div>
+                <div class="px-3 pt-3 pb-1 text-fine font-bold text-action-ondark uppercase tracking-wider">
+                  4. Kelas
+                </div>
                 <Show when={isAdmin()}>
                   <A
                     href="/kelas-kuliah"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -712,7 +714,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsRegistrasiOpen(!isRegistrasiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Registrasi Akademik</span>
               <svg
@@ -731,7 +733,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/krs"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -750,7 +752,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/keuangan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -775,7 +777,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsPelaksanaanOpen(!isPelaksanaanOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Pelaksanaan Akademik</span>
               <svg
@@ -794,7 +796,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/jurnal-presensi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -813,7 +815,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/presensi-apel"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -833,7 +835,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/input-nilai"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -852,7 +854,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/bimbingan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -871,7 +873,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/monitoring-bimbingan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -890,7 +892,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/penetapan-pembimbing"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -909,7 +911,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/aktivitas-mbkm"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -934,7 +936,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsEvaluasiOpen(!isEvaluasiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Evaluasi & Kelulusan</span>
               <svg
@@ -957,7 +959,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/khs"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -976,7 +978,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/yudisium"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1000,7 +1002,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsLaporanOpen(!isLaporanOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Laporan</span>
               <svg
@@ -1019,7 +1021,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/ketidakhadiran-kompensasi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1038,7 +1040,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/rekap-nilai"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1057,7 +1059,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/presensi-kelas"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1076,7 +1078,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/peringatan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1095,7 +1097,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/obe"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1114,7 +1116,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/obe/bobot-penilaian"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1133,7 +1135,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/obe/evaluasi-kurikulum"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1152,7 +1154,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/mahasiswa-baru"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1171,7 +1173,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/kompensasi-manual"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1190,7 +1192,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/apel/monitor"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1209,7 +1211,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/akademik"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1228,7 +1230,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/bkd"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1247,7 +1249,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/krs"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1266,7 +1268,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/keuangan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1285,7 +1287,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/yudisium"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1304,7 +1306,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/laporan/mahasiswa-keluar"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1328,7 +1330,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsLayananOpen(!isLayananOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Layanan Mahasiswa</span>
               <svg
@@ -1347,7 +1349,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/pelanggaran"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1366,7 +1368,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/skpi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1394,7 +1396,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/skpi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1413,7 +1415,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/pengajuan-cuti"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1432,7 +1434,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/presensi-saya"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1451,7 +1453,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/kompensasi-saya"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1470,7 +1472,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/manajemen-cuti"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1489,7 +1491,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/penonaktifan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1514,7 +1516,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Admisi</span>
               <svg
@@ -1533,7 +1535,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1570,7 +1572,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/sesi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1589,7 +1591,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/verifikasi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1608,7 +1610,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/penilaian"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1627,7 +1629,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/jadwal"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1646,7 +1648,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/import-ujian"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1665,7 +1667,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/seleksi-massal"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1684,7 +1686,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/daftar-ulang"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1703,7 +1705,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/va-banks"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1722,7 +1724,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/pengumuman"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1741,7 +1743,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/admisi/manajemen/laporan"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1766,7 +1768,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <div class="pt-2">
             <button
               onClick={() => setIsKonfigurasiOpen(!isKonfigurasiOpen())}
-              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-accent-400 uppercase tracking-widest focus:outline-none"
+              class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
             >
               <span>Konfigurasi</span>
               <svg
@@ -1785,7 +1787,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/pengguna"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1804,7 +1806,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/konfigurasi/akses-role"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1823,7 +1825,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/konfigurasi/scope-prodi"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1842,7 +1844,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/konfigurasi/parameter"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1861,7 +1863,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/pddikti"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1880,7 +1882,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/audit-log"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1899,7 +1901,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                   <A
                     href="/evaluasi-sistem"
                     onClick={() => props.onClose()}
-                    activeClass="text-accent-400 font-semibold"
+                    activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                   >
@@ -1917,7 +1919,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <A
                   href="/konfigurasi/about"
                   onClick={() => props.onClose()}
-                  activeClass="text-accent-400 font-semibold"
+                  activeClass="text-action-ondark font-semibold"
                   inactiveClass="hover:text-white text-secondary-200"
                   class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
                 >
@@ -1943,7 +1945,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
           <Show
             when={auth.user()?.avatar}
             fallback={
-              <div class="h-9 w-9 rounded-full bg-brand-600 border border-brand-500 flex items-center justify-center font-bold text-white uppercase shadow-md shadow-accent-500/20 text-sm">
+              <div class="h-9 w-9 rounded-full bg-action border border-action flex items-center justify-center font-bold text-white uppercase text-sm">
                 {auth.user()?.nama?.[0] || auth.user()?.email?.[0] || 'U'}
               </div>
             }
@@ -1951,7 +1953,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <img
               src={auth.user()?.avatar}
               alt="Foto Profil"
-              class="h-9 w-9 rounded-full object-cover border border-brand-800 shadow-md"
+              class="h-9 w-9 rounded-full object-cover border border-brand-800"
             />
           </Show>
           <div class="flex-1 overflow-hidden sidebar-footer-text">

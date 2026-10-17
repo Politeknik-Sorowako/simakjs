@@ -68,7 +68,7 @@ export default function KrsCetak() {
         <button
           type="button"
           onClick={() => window.print()}
-          class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95"
+          class="rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95"
         >
           🖨️ Cetak Sekarang
         </button>
@@ -78,7 +78,7 @@ export default function KrsCetak() {
         when={!printData.loading}
         fallback={
           <div class="flex items-center justify-center py-24 text-secondary-400">
-            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-action border-t-transparent" />
             <span class="text-sm">Menyiapkan data cetak...</span>
           </div>
         }

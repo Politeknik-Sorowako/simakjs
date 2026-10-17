@@ -85,9 +85,9 @@ export default function VerifikasiDokumen() {
 
   return (
     <div class="min-h-screen flex items-center justify-center p-4 bg-secondary-50 dark:bg-secondary-950">
-      <div class="w-full max-w-lg bg-white dark:bg-secondary-900 rounded-2xl shadow-xl border border-secondary-200/80 dark:border-secondary-800 p-8">
+      <div class="w-full max-w-lg bg-white dark:bg-secondary-900 rounded-2xl border border-secondary-200/80 dark:border-secondary-800 p-8">
         <div class="text-center mb-6">
-          <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400">
+          <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-action-ondark">
             <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path
                 stroke-linecap="round"
@@ -178,7 +178,7 @@ export default function VerifikasiDokumen() {
               }
             >
               <div class="flex flex-col items-center justify-center py-10 text-secondary-500 dark:text-secondary-300">
-                <div class="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
+                <div class="mb-3 h-6 w-6 animate-spin rounded-full border-2 border-action border-t-transparent" />
                 <p class="text-sm">Memeriksa keaslian dokumen…</p>
               </div>
             </Show>
@@ -205,7 +205,7 @@ export default function VerifikasiDokumen() {
                     NIM: res().nimMask || '-',
                     'Program Studi': res().prodi || '-',
                     // Baris Periode hanya untuk dokumen berperiode (KHS); SKPI tidak
-                    // punya periode sehingga disembunyikan alih-alih tampil "-".
+                    // punya periode sehingga disembunyikan alih-alih tampil"-".
                     ...(res().periodeNama ? { Periode: res().periodeNama } : {}),
                     Ditandatangani: res().signerNama
                       ? `${res().signerNama}${res().signerJabatan ? ` • ${res().signerJabatan}` : ''}`
@@ -250,7 +250,7 @@ export default function VerifikasiDokumen() {
         </Show>
 
         <div class="mt-6 text-center">
-          <a href="/" class="text-sm font-semibold text-primary-600 underline hover:text-primary-700">
+          <a href="/" class="text-sm font-semibold text-action underline hover:text-primary-700">
             Kembali ke beranda
           </a>
         </div>

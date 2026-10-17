@@ -72,7 +72,7 @@ function SesiDetailModal(props: SesiDetailModalProps) {
               <span
                 class={`font-bold px-2 py-0.5 rounded text-fine ${
                   sesi().statusBkd
-                    ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300'
+                    ? 'bg-action-100 text-action dark:bg-accent-900/40 dark:text-action-200 dark:text-action-ondark'
                     : 'bg-secondary-100 text-secondary-500'
                 }`}
               >
@@ -89,8 +89,8 @@ function SesiDetailModal(props: SesiDetailModalProps) {
             </div>
 
             {/* Solusi & Masukan Dosen PA */}
-            <div class="p-3 bg-accent-50/50 border border-accent-100/60 rounded-xl dark:bg-accent-950/20 dark:border-accent-900/40">
-              <span class="text-fine font-bold text-accent-600 uppercase tracking-wider block mb-0.5">
+            <div class="p-3 bg-action-50/50 border border-action-100/60 rounded-xl dark:bg-accent-950/20 dark:border-accent-900/40">
+              <span class="text-fine font-bold text-action uppercase tracking-wider block mb-0.5">
                 Solusi & Masukan Dosen PA
               </span>
               <MarkdownViewer content={sesi().solusi} />
@@ -98,8 +98,8 @@ function SesiDetailModal(props: SesiDetailModalProps) {
 
             {/* Respons Awal Mahasiswa */}
             <Show when={sesi().responsMahasiswa}>
-              <div class="p-3 bg-brand-50/50 border border-brand-100/60 rounded-xl dark:bg-brand-950/20 dark:border-brand-900/40">
-                <span class="text-fine font-bold text-brand-600 uppercase tracking-wider block mb-0.5">
+              <div class="p-3 bg-action-50/50 border border-brand-100/60 rounded-xl dark:bg-brand-950/20 dark:border-brand-900/40">
+                <span class="text-fine font-bold text-action uppercase tracking-wider block mb-0.5">
                   Respons Awal Mahasiswa
                 </span>
                 <MarkdownViewer content={sesi().responsMahasiswa} />
@@ -147,8 +147,8 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                         <div
                           class={`px-3 py-2 rounded-2xl text-caption ${
                             isOwn(b.senderRole)
-                              ? 'bg-brand-600 text-white rounded-tr-none'
-                              : 'bg-secondary-50 text-secondary-800 border border-secondary-100 rounded-tl-none shadow-sm dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700'
+                              ? 'bg-action text-white rounded-tr-none'
+                              : 'bg-secondary-50 text-secondary-800 border border-secondary-100 rounded-tl-none dark:bg-secondary-800 dark:text-secondary-100 dark:border-secondary-700'
                           }`}
                         >
                           <MarkdownViewer content={b.pesan} />
@@ -177,7 +177,7 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                   type="button"
                   disabled={props.sending || props.draft.trim().length === 0}
                   onClick={props.onSend}
-                  class="px-3 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-3 py-2 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all disabled:opacity-50 dark:bg-action-dark dark:hover:bg-action"
                 >
                   {props.sending ? 'Mengirim...' : 'Kirim'}
                 </button>
@@ -206,7 +206,7 @@ function SesiDetailModal(props: SesiDetailModalProps) {
                           href={`${API_URL}${att.fileUrl}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          class="shrink-0 text-brand-600 hover:underline dark:text-brand-400 font-semibold"
+                          class="shrink-0 text-action hover:underline dark:text-brand-400 font-semibold"
                         >
                           Unduh
                         </a>
@@ -666,7 +666,7 @@ export default function Bimbingan() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header */}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm print:hidden dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 print:hidden dark:bg-secondary-900 dark:border-secondary-800">
           <div>
             <h1 class="page-title">Bimbingan Akademik</h1>
             <p class="text-base text-secondary-500 dark:text-secondary-300">
@@ -685,7 +685,7 @@ export default function Bimbingan() {
               </button>
               <button
                 onClick={() => window.open('/laporan/bkd', '_blank')}
-                class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 transition-colors flex items-center gap-1.5 dark:bg-brand-700 dark:hover:bg-brand-600"
+                class="px-3 py-1.5 bg-action text-white font-bold rounded-lg text-caption hover:bg-action-dark transition-colors flex items-center gap-1.5 dark:bg-action-dark dark:hover:bg-action"
               >
                 🖨️ Cetak Laporan BKD
               </button>
@@ -717,7 +717,7 @@ export default function Bimbingan() {
                     </span>
                   }
                 >
-                  <span class="px-3 py-1.5 bg-accent-50 text-accent-600 rounded-full text-caption font-bold border border-accent-100 dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800">
+                  <span class="px-3 py-1.5 bg-action-50 text-action rounded-full text-caption font-bold border border-action-100 dark:bg-action-ondark/30 dark:text-accent-400 dark:border-accent-800">
                     Layak Ujian
                   </span>
                 </Show>
@@ -730,7 +730,7 @@ export default function Bimbingan() {
         <Show when={auth.hasRole(['mahasiswa'])}>
           <Show when={mhsProfile.loading || studentBimbingan.loading}>
             <div class="flex items-center justify-center py-8 text-secondary-400 dark:text-secondary-300">
-              <div class="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <div class="w-5 h-5 border-2 border-action border-t-transparent rounded-full animate-spin mr-2" />
               <span class="text-sm">Memuat data bimbingan...</span>
             </div>
           </Show>
@@ -781,7 +781,7 @@ export default function Bimbingan() {
 
           <div class="grid grid-cols-1 gap-6 print:hidden">
             {/* Catatan Dosen PA & Riwayat Sesi (chat dihilangkan sementara) */}
-            <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Catatan Dosen PA</h3>
                 <Show when={studentBimbingan()?.isReadByMahasiswa === false}>
@@ -791,7 +791,7 @@ export default function Bimbingan() {
                       type="button"
                       onClick={handleMarkAsRead}
                       disabled={markingRead()}
-                      class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 dark:bg-brand-700 dark:hover:bg-brand-600"
+                      class="px-3 py-1.5 bg-action text-white font-bold rounded-lg text-caption hover:bg-action-dark active:scale-95 transition-all disabled:opacity-50 dark:bg-action-dark dark:hover:bg-action"
                     >
                       Tandai Sudah Dibaca
                     </button>
@@ -807,7 +807,7 @@ export default function Bimbingan() {
                   <span class="text-fine font-bold text-secondary-400 dark:text-secondary-300 uppercase tracking-wider">
                     Catatan Kelayakan / Ringkasan
                   </span>
-                  <div class="p-3 bg-brand-50/50 border border-brand-100/50 rounded-xl text-caption text-brand-900 leading-relaxed">
+                  <div class="p-3 bg-action-50/50 border border-brand-100/50 rounded-xl text-caption text-action leading-relaxed">
                     {studentBimbingan()?.ringkasan}
                   </div>
                 </div>
@@ -866,7 +866,7 @@ export default function Bimbingan() {
                             <button
                               type="button"
                               onClick={() => setActiveSesiId(sesi.id)}
-                              class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                              class="px-3 py-1.5 bg-action text-white font-bold rounded-lg text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                             >
                               💬 Detail Sesi &amp; Percakapan
                             </button>
@@ -885,7 +885,7 @@ export default function Bimbingan() {
         <Show when={auth.hasRole(['dosen', 'admin'])}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
             {/* List Mahasiswa */}
-            <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm overflow-hidden h-[600px] flex flex-col dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white rounded-2xl border border-secondary-100 overflow-hidden h-[600px] flex flex-col dark:bg-secondary-900 dark:border-secondary-800">
               <div class="p-3 border-b border-secondary-50 bg-secondary-50/50 flex flex-col gap-2 dark:bg-secondary-800 dark:border-secondary-700">
                 <div class="flex items-center justify-between">
                   <h3 class="font-bold text-secondary-800 text-base dark:text-white">
@@ -901,13 +901,13 @@ export default function Bimbingan() {
                   placeholder="Cari Nama / NIM..."
                   value={searchFilter()}
                   onInput={(e) => setSearchFilter(e.currentTarget.value)}
-                  class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                  class="border border-secondary-200 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:border-action text-secondary-900 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 />
                 <div class="grid grid-cols-3 gap-1.5">
                   <select
                     value={kategoriFilter()}
                     onChange={(e) => setKategoriFilter(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-lg px-2 py-1 text-fine focus:outline-none focus:border-brand-500 text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-lg px-2 py-1 text-fine focus:outline-none focus:border-action text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                   >
                     <option value="ALL">Semua Kategori</option>
                     <option value="PA">Akademik (PA)</option>
@@ -917,7 +917,7 @@ export default function Bimbingan() {
                   <select
                     value={angkatanFilter()}
                     onChange={(e) => setAngkatanFilter(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-lg px-2 py-1 text-fine focus:outline-none focus:border-brand-500 text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-lg px-2 py-1 text-fine focus:outline-none focus:border-action text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                   >
                     <option value="">Semua Angkatan</option>
                     <option value="2026">2026</option>
@@ -931,7 +931,7 @@ export default function Bimbingan() {
                   <select
                     value={prodiFilter() || ''}
                     onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
-                    class="border border-secondary-200 rounded-lg px-2 py-1 text-fine focus:outline-none focus:border-brand-500 text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-lg px-2 py-1 text-fine focus:outline-none focus:border-action text-secondary-800 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                   >
                     <option value="">Semua Prodi</option>
                     <For each={prodisList()?.data || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
@@ -964,7 +964,7 @@ export default function Bimbingan() {
                               setSelectedMhsNama(item.nama);
                             }
                           }}
-                          class={`w-full p-4 text-left flex flex-col gap-2 cursor-pointer transition-all hover:bg-brand-50/30 focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${selectedMhsId() === item.id ? 'bg-brand-50/60 border-l-4 border-brand-600' : ''}`}
+                          class={`w-full p-4 text-left flex flex-col gap-2 cursor-pointer transition-all hover:bg-action-50/30 focus:outline-none focus:ring-2 focus:ring-action-focus/30 ${selectedMhsId() === item.id ? 'bg-action-50/60 border-l-4 border-action' : ''}`}
                         >
                           <div class="flex items-center justify-between gap-2">
                             <div class="flex items-center gap-2 min-w-0">
@@ -1000,7 +1000,7 @@ export default function Bimbingan() {
               <Show
                 when={selectedMhsId()}
                 fallback={
-                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col items-center justify-center text-center p-12 h-[600px] dark:bg-secondary-900 dark:border-secondary-800">
+                  <div class="bg-white rounded-2xl border border-secondary-100 flex flex-col items-center justify-center text-center p-12 h-[600px] dark:bg-secondary-900 dark:border-secondary-800">
                     <span class="text-5xl mb-4">👈</span>
                     <h3 class="font-bold text-secondary-800 text-lg dark:text-white">Pilih Mahasiswa</h3>
                     <p class="text-secondary-400 dark:text-secondary-300 text-base max-w-xs mt-1">
@@ -1016,7 +1016,7 @@ export default function Bimbingan() {
                   }`}
                 >
                   {/* Panel Riwayat & Pengelolaan Sesi Bimbingan */}
-                  <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm flex flex-col h-[70vh] lg:h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+                  <div class="bg-white rounded-2xl border border-secondary-100 flex flex-col h-[70vh] lg:h-full overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
                     <div class="p-4 border-b border-secondary-50 bg-secondary-50/50 flex items-center justify-between dark:bg-secondary-800 dark:border-secondary-700">
                       <div class="flex flex-col">
                         <h3 class="font-bold text-secondary-800 text-base dark:text-white">
@@ -1030,7 +1030,7 @@ export default function Bimbingan() {
                         <button
                           type="button"
                           onClick={handleOpenAddSesi}
-                          class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                          class="px-3 py-1.5 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                         >
                           + Tambah Sesi
                         </button>
@@ -1040,7 +1040,7 @@ export default function Bimbingan() {
                           class={`px-2.5 py-1.5 border rounded-xl text-caption transition-all flex items-center gap-1.5 font-bold active:scale-95 ${
                             isRightPanelOpen()
                               ? 'bg-white border-secondary-200 text-secondary-700 hover:bg-secondary-50 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200 dark:hover:bg-secondary-800'
-                              : 'bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100 dark:bg-brand-900/40 dark:border-brand-800 dark:text-brand-300'
+                              : 'bg-action-50 border-brand-200 text-action hover:bg-action-100 dark:bg-brand-900/40 dark:border-brand-800 dark:text-brand-300'
                           }`}
                           title={isRightPanelOpen() ? 'Sembunyikan Panel Resume' : 'Tampilkan Panel Resume'}
                         >
@@ -1067,7 +1067,7 @@ export default function Bimbingan() {
                               Belum Ada Sesi Bimbingan
                             </h4>
                             <p class="text-secondary-400 dark:text-secondary-300 text-caption mt-1 max-w-xs">
-                              Klik tombol "+ Tambah Sesi" di atas untuk mencatat sesi asistensi/bimbingan mahasiswa.
+                              Klik tombol"+ Tambah Sesi" di atas untuk mencatat sesi asistensi/bimbingan mahasiswa.
                             </p>
                           </div>
                         }
@@ -1076,15 +1076,15 @@ export default function Bimbingan() {
                           {(sesi: SesiBimbingan) => {
                             const katObj = (kategoriList()?.data || []).find((k) => k.id === sesi.kategoriId);
                             return (
-                              <div class="p-4 bg-white border border-secondary-100 rounded-2xl shadow-sm flex flex-col gap-2 relative dark:bg-secondary-900 dark:border-secondary-800">
+                              <div class="p-4 bg-white border border-secondary-100 rounded-2xl flex flex-col gap-2 relative dark:bg-secondary-900 dark:border-secondary-800">
                                 <div class="flex items-center justify-between border-b border-secondary-100 pb-2 dark:border-secondary-800">
                                   <div class="flex items-center gap-2">
-                                    <span class="font-bold text-caption text-brand-700 bg-brand-50 px-2 py-0.5 rounded-lg dark:bg-brand-900/30 dark:text-brand-300">
+                                    <span class="font-bold text-caption text-action bg-action-50 px-2 py-0.5 rounded-lg dark:bg-brand-900/30 dark:text-brand-300">
                                       Pertemuan Ke-{sesi.pertemuanKe}
                                     </span>
                                     <Show when={katObj}>
                                       {(kat) => (
-                                        <span class="px-2 py-0.5 bg-accent-50 text-accent-700 border border-accent-100 rounded-lg text-fine font-bold dark:bg-accent-900/30 dark:text-accent-300 dark:border-accent-800">
+                                        <span class="px-2 py-0.5 bg-action-50 text-action border border-action-100 rounded-lg text-fine font-bold dark:bg-action-ondark/30 dark:text-action-200 dark:text-action-ondark dark:border-accent-800">
                                           {kat().nama}
                                         </span>
                                       )}
@@ -1094,7 +1094,7 @@ export default function Bimbingan() {
                                     <button
                                       type="button"
                                       onClick={() => handleOpenEditSesi(sesi)}
-                                      class="text-caption text-brand-600 hover:text-brand-800 font-bold dark:text-brand-400"
+                                      class="text-caption text-action hover:text-action font-bold dark:text-brand-400"
                                     >
                                       ✏️ Edit
                                     </button>
@@ -1111,7 +1111,7 @@ export default function Bimbingan() {
                                 <div class="flex items-center justify-between text-fine text-secondary-400 dark:text-secondary-300">
                                   <span>📅 {fmtTanggal(sesi.tanggalBimbingan)}</span>
                                   <span
-                                    class={`font-bold px-2 py-0.5 rounded text-fine ${sesi.statusBkd ? 'bg-accent-100 text-accent-700 dark:bg-accent-900/40 dark:text-accent-300' : 'bg-secondary-100 text-secondary-500'}`}
+                                    class={`font-bold px-2 py-0.5 rounded text-fine ${sesi.statusBkd ? 'bg-action-100 text-action dark:bg-accent-900/40 dark:text-action-200 dark:text-action-ondark' : 'bg-secondary-100 text-secondary-500'}`}
                                   >
                                     BKD: {sesi.statusBkd ? 'YA' : 'TIDAK'}
                                   </span>
@@ -1145,7 +1145,7 @@ export default function Bimbingan() {
                                   <button
                                     type="button"
                                     onClick={() => setActiveSesiId(sesi.id)}
-                                    class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 active:scale-95 transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                                    class="px-3 py-1.5 bg-action text-white font-bold rounded-lg text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                                   >
                                     💬 Detail Sesi &amp; Percakapan
                                   </button>
@@ -1160,7 +1160,7 @@ export default function Bimbingan() {
 
                   {/* Form Approval, Resume Akademik, & Timeline Sesi */}
                   <Show when={isRightPanelOpen()}>
-                    <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm p-6 flex flex-col gap-6 h-[70vh] lg:h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
+                    <div class="bg-white rounded-2xl border border-secondary-100 p-6 flex flex-col gap-6 h-[70vh] lg:h-full overflow-y-auto dark:bg-secondary-900 dark:border-secondary-800 animate-fadeIn">
                       {/* Resume Akademik */}
                       <div class="flex flex-col gap-3">
                         <div class="flex items-center justify-between border-b pb-2">
@@ -1226,13 +1226,13 @@ export default function Bimbingan() {
                               Lihat Detail →
                             </button>
                           </div>
-                          <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
-                            <span class="text-fine text-accent-600 font-bold uppercase">IPK Kumulatif</span>
-                            <span class="text-base font-bold text-accent-700">{akademikSummary()?.ipk || '0.00'}</span>
+                          <div class="p-3 bg-action-50 border border-action-100 rounded-xl flex flex-col gap-0.5 dark:border-accent-800">
+                            <span class="text-fine text-action font-bold uppercase">IPK Kumulatif</span>
+                            <span class="text-base font-bold text-action">{akademikSummary()?.ipk || '0.00'}</span>
                           </div>
-                          <div class="p-3 bg-brand-50 border border-brand-100 rounded-xl flex flex-col gap-0.5 dark:border-brand-800">
-                            <span class="text-fine text-brand-600 font-bold uppercase">IPS Sem. Lalu</span>
-                            <span class="text-base font-bold text-brand-700">
+                          <div class="p-3 bg-action-50 border border-brand-100 rounded-xl flex flex-col gap-0.5 dark:border-brand-800">
+                            <span class="text-fine text-action font-bold uppercase">IPS Sem. Lalu</span>
+                            <span class="text-base font-bold text-action">
                               {akademikSummary()?.ipsSemesterLalu || '0.00'}
                             </span>
                           </div>
@@ -1261,7 +1261,7 @@ export default function Bimbingan() {
                             type="checkbox"
                             checked={isApprovedStatus()}
                             onChange={(e) => setIsApprovedStatus(e.currentTarget.checked)}
-                            class="w-4 h-4 text-brand-600 border-secondary-300 rounded focus:ring-brand-500 dark:border-secondary-700"
+                            class="w-4 h-4 text-action border-secondary-300 rounded focus:ring-action-focus dark:border-secondary-700"
                           />
                         </div>
 
@@ -1274,13 +1274,13 @@ export default function Bimbingan() {
                             placeholder="Ringkasan bimbingan untuk satu semester..."
                             value={ringkasanText()}
                             onInput={(e) => setRingkasanText(e.currentTarget.value)}
-                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 resize-y min-h-[72px] max-h-[320px] dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                            class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-action text-secondary-950 resize-y min-h-[72px] max-h-[320px] dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                          class="w-full py-2.5 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark transition-all dark:bg-action-dark dark:hover:bg-action"
                         >
                           Update Kelayakan & Ringkasan
                         </button>
@@ -1292,7 +1292,7 @@ export default function Bimbingan() {
                 {/* --- MODAL TAMBAH / EDIT SESI BIMBINGAN --- */}
                 <Show when={showSesiModal()}>
                   <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain">
-                    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100vh-2rem)] overflow-hidden dark:bg-secondary-900">
+                    <div class="bg-white rounded-2xl w-full max-w-md flex flex-col my-auto max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100vh-2rem)] overflow-hidden dark:bg-secondary-900">
                       <div class="shrink-0 px-6 pt-5 pb-3 border-b border-secondary-100 dark:border-secondary-800">
                         <h3 class="font-bold text-secondary-800 text-base dark:text-white">
                           {editingSesiId() ? 'Edit Sesi Bimbingan' : 'Tambah Sesi Bimbingan'} {selectedMhsNama()}
@@ -1308,7 +1308,7 @@ export default function Bimbingan() {
                               min="1"
                               value={pertemuanKeInput()}
                               onInput={(e) => setPertemuanKeInput(parseInt(e.currentTarget.value) || 1)}
-                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-950 dark:border-secondary-700"
                               required
                             />
                           </div>
@@ -1319,7 +1319,7 @@ export default function Bimbingan() {
                               type="date"
                               value={tanggalInput()}
                               onChange={(e) => setTanggalInput(e.currentTarget.value)}
-                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:border-secondary-700"
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-950 dark:border-secondary-700"
                               required
                             />
                           </div>
@@ -1333,7 +1333,7 @@ export default function Bimbingan() {
                                 <button
                                   type="button"
                                   onClick={() => setShowKategoriModal(true)}
-                                  class="text-fine font-bold text-brand-600 hover:underline dark:text-brand-400"
+                                  class="text-fine font-bold text-action hover:underline dark:text-brand-400"
                                 >
                                   + Kelola Kategori
                                 </button>
@@ -1344,7 +1344,7 @@ export default function Bimbingan() {
                               onChange={(e) =>
                                 setKategoriInput(e.currentTarget.value ? Number(e.currentTarget.value) : null)
                               }
-                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                              class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-950 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                             >
                               <option value="">-- Pilih Jenis Bimbingan (Opsional) --</option>
                               <For each={kategoriList()?.data || []}>
@@ -1374,16 +1374,16 @@ export default function Bimbingan() {
                             maxAttachmentMb={maxAttachmentMb()}
                           />
 
-                          <div class="flex items-center justify-between p-3 bg-brand-50/50 rounded-xl border border-brand-100/50">
+                          <div class="flex items-center justify-between p-3 bg-action-50/50 rounded-xl border border-brand-100/50">
                             <div class="flex flex-col">
-                              <span class="text-caption font-bold text-brand-800">Lapor Beban Kerja Dosen (BKD)</span>
-                              <span class="text-fine text-brand-600">Sertakan sesi ini ke laporan BKD resmi</span>
+                              <span class="text-caption font-bold text-action">Lapor Beban Kerja Dosen (BKD)</span>
+                              <span class="text-fine text-action">Sertakan sesi ini ke laporan BKD resmi</span>
                             </div>
                             <input
                               type="checkbox"
                               checked={statusBkdInput()}
                               onChange={(e) => setStatusBkdInput(e.currentTarget.checked)}
-                              class="w-4 h-4 text-brand-600 border-brand-300 rounded focus:ring-brand-500"
+                              class="w-4 h-4 text-action border-brand-300 rounded focus:ring-action-focus"
                             />
                           </div>
                         </div>
@@ -1398,7 +1398,7 @@ export default function Bimbingan() {
                           </button>
                           <button
                             type="submit"
-                            class="px-4 py-2 min-h-[44px] bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                            class="px-4 py-2 min-h-[44px] bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                           >
                             Simpan Sesi
                           </button>
@@ -1414,7 +1414,7 @@ export default function Bimbingan() {
         {/* --- MODAL KELOLA KATEGORI BIMBINGAN --- */}
         <Show when={showKategoriModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-5 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col gap-5 dark:bg-secondary-900">
               <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">⚙️ Kelola Kategori Bimbingan</h3>
                 <button
@@ -1441,7 +1441,7 @@ export default function Bimbingan() {
                     placeholder="Contoh: Skripsi, Tugas Akhir, PKL..."
                     value={newKatNama()}
                     onInput={(e) => setNewKatNama(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-action text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
                     required
                   />
                 </div>
@@ -1454,12 +1454,12 @@ export default function Bimbingan() {
                     placeholder="Penjelasan singkat kategori..."
                     value={newKatDeskripsi()}
                     onInput={(e) => setNewKatDeskripsi(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-action text-secondary-950 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <button
                   type="submit"
-                  class="self-end px-3.5 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-caption hover:bg-brand-700 dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="self-end px-3.5 py-1.5 bg-action text-white font-bold rounded-lg text-caption hover:bg-action-dark dark:bg-action-dark dark:hover:bg-action"
                 >
                   Simpan Kategori
                 </button>
@@ -1497,7 +1497,7 @@ export default function Bimbingan() {
         {/* --- MODAL DETAIL PELANGGARAN --- */}
         <Show when={showPelanggaranDetail()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-5 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-3xl p-6 flex flex-col gap-5 dark:bg-secondary-900">
               <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">🔴 Detail Pelanggaran</h3>
                 <button
@@ -1598,7 +1598,7 @@ export default function Bimbingan() {
         {/* --- MODAL DETAIL KOMPENSASI --- */}
         <Show when={showKompensasiDetail()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-5 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-3xl p-6 flex flex-col gap-5 dark:bg-secondary-900">
               <div class="flex items-center justify-between border-b pb-3 dark:border-secondary-800">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">🟠 Detail Kompensasi</h3>
                 <button

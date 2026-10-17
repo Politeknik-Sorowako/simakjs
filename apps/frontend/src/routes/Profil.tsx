@@ -186,14 +186,14 @@ export default function Profil() {
         </div>
 
         {/* Profile Card */}
-        <div class="bg-white dark:bg-secondary-900 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 p-6 transition-colors duration-200">
+        <div class="bg-white dark:bg-secondary-900 rounded-xl border border-secondary-100 dark:border-secondary-800 p-6 transition-colors duration-200">
           <form onSubmit={handleUpdateProfile} class="flex flex-col gap-5">
             <div class="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-secondary-50 dark:bg-secondary-950/40 border border-secondary-100 dark:border-secondary-800/40">
               <div class="relative group">
                 <Show
                   when={avatar()}
                   fallback={
-                    <div class="h-20 w-20 rounded-full bg-brand-600 border-2 border-brand-500 flex items-center justify-center font-bold text-white text-3xl uppercase shadow-lg">
+                    <div class="h-20 w-20 rounded-full bg-action border-2 border-action flex items-center justify-center font-bold text-white text-3xl uppercase shadow-lg">
                       {nama()?.[0] || user()?.email?.[0] || 'U'}
                     </div>
                   }
@@ -201,7 +201,7 @@ export default function Profil() {
                   <img
                     src={avatar()}
                     alt="Foto Profil"
-                    class="h-20 w-20 rounded-full object-cover border-2 border-brand-500 shadow-lg"
+                    class="h-20 w-20 rounded-full object-cover border-2 border-action shadow-lg"
                   />
                 </Show>
               </div>
@@ -217,7 +217,7 @@ export default function Profil() {
                 <div class="flex gap-2">
                   <label
                     for="avatar-upload-input"
-                    class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-750 text-white rounded text-xs font-bold transition-colors cursor-pointer"
+                    class="px-3.5 py-1.5 bg-action hover:bg-brand-750 text-white rounded text-xs font-bold transition-colors cursor-pointer"
                   >
                     Pilih Foto
                   </label>
@@ -253,7 +253,7 @@ export default function Profil() {
               value={nama()}
               onInput={(e) => setNama(e.currentTarget.value)}
               disabled={loading()}
-              class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-primary-500/30"
+              class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-action-focus/30"
             />
 
             <hr class="border-secondary-100 dark:border-secondary-800 my-2" />
@@ -272,7 +272,7 @@ export default function Profil() {
                 value={currentPassword()}
                 onInput={(e) => setCurrentPassword(e.currentTarget.value)}
                 disabled={loading()}
-                class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-primary-500/30 !pr-12"
+                class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-action-focus/30 !pr-12"
               />
               <button
                 type="button"
@@ -315,7 +315,7 @@ export default function Profil() {
                 value={confirmPassword()}
                 onInput={(e) => setConfirmPassword(e.currentTarget.value)}
                 disabled={loading()}
-                class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-primary-500/30 !pr-12"
+                class="!bg-white dark:!bg-secondary-950 !border-secondary-200 dark:!border-secondary-800 dark:!text-white focus:!ring-action-focus/30 !pr-12"
               />
               <button
                 type="button"
@@ -360,7 +360,7 @@ export default function Profil() {
         </div>
 
         {/* 2FA Security Card */}
-        <div class="bg-white dark:bg-secondary-900 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 p-6 transition-colors duration-200">
+        <div class="bg-white dark:bg-secondary-900 rounded-xl border border-secondary-100 dark:border-secondary-800 p-6 transition-colors duration-200">
           <div class="flex flex-col gap-4">
             <div class="flex items-center justify-between">
               <div>

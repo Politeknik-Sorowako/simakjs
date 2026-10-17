@@ -18,7 +18,7 @@ import { getTodayString } from '../utils/format';
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -288,7 +288,7 @@ export default function MahasiswaKeluarPage() {
         );
       case 'pindah':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400">
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-action-100 text-action dark:bg-brand-900/30 dark:text-brand-400">
             Pindah
           </span>
         );
@@ -336,7 +336,7 @@ export default function MahasiswaKeluarPage() {
           </div>
           <div class="w-48">
             <select
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={periodeFilter()}
               onChange={(e) => {
                 setPeriodeFilter(e.currentTarget.value);
@@ -399,7 +399,7 @@ export default function MahasiswaKeluarPage() {
                       <button
                         type="button"
                         onClick={() => openViewLampiranModal(item.id, `Lampiran - ${item.mahasiswa?.nama}`)}
-                        class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                        class="inline-flex items-center gap-1 mt-1 text-xs text-action hover:text-action hover:underline"
                       >
                         <span>📎 {item.lampiran?.length} Berkas</span>
                       </button>
@@ -453,9 +453,9 @@ export default function MahasiswaKeluarPage() {
             <Show
               when={!selectedMhs()}
               fallback={
-                <div class="flex justify-between items-center p-3 bg-brand-50 border border-brand-200 rounded-lg">
+                <div class="flex justify-between items-center p-3 bg-action-50 border border-brand-200 rounded-lg">
                   <div>
-                    <div class="font-semibold text-brand-900">{selectedMhs()?.nama}</div>
+                    <div class="font-semibold text-action">{selectedMhs()?.nama}</div>
                     <div class="text-xs text-brand-700 dark:text-brand-400">
                       NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
                     </div>
@@ -484,7 +484,7 @@ export default function MahasiswaKeluarPage() {
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Status Baru</label>
               <select
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={statusBaru()}
                 onChange={(e) => setStatusBaru(e.currentTarget.value)}
               >
@@ -498,7 +498,7 @@ export default function MahasiswaKeluarPage() {
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Periode Keluar</label>
               <select
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={periodeId()}
                 onChange={(e) => setPeriodeId(e.currentTarget.value)}
               >
@@ -555,7 +555,7 @@ export default function MahasiswaKeluarPage() {
             </label>
             <textarea
               rows={2}
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Tambahkan alasan mengapa mahasiswa ini dinonaktifkan..."
               value={alasanKeluar()}
               onInput={(e) => setAlasanKeluar(e.currentTarget.value)}

@@ -446,7 +446,7 @@ export default function KeuanganDashboard() {
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900/60 dark:border-secondary-800">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900/60 dark:border-secondary-800">
           <div>
             <h1 class="page-title">
               {role() === 'mahasiswa' ? 'Informasi Tagihan & SPP' : 'Manajemen Keuangan & SPP'}
@@ -465,7 +465,7 @@ export default function KeuanganDashboard() {
                   Periode Akademik
                 </label>
                 <select
-                  class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors font-medium text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                  class="w-full px-3 py-2 text-base bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-action-focus/25 focus:border-action transition-colors font-medium text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                   value={selectedPeriode()}
                   onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
                 >
@@ -571,7 +571,7 @@ export default function KeuanganDashboard() {
         </Suspense>
 
         {/* Search & Filter */}
-        <div class="bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white p-4 rounded-2xl border border-secondary-100 flex flex-col md:flex-row gap-4 items-center justify-between dark:bg-secondary-900 dark:border-secondary-800">
           <div class="w-full md:w-80">
             <Show when={role() !== 'mahasiswa'}>
               <Input
@@ -597,7 +597,7 @@ export default function KeuanganDashboard() {
                 Prodi:
               </span>
               <select
-                class="px-3 py-1.5 text-caption bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors text-secondary-900 font-semibold dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                class="px-3 py-1.5 text-caption bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-action-focus/25 focus:border-action transition-colors text-secondary-900 font-semibold dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={prodiFilter()}
                 onChange={(e) => setProdiFilter(e.currentTarget.value)}
               >
@@ -609,7 +609,7 @@ export default function KeuanganDashboard() {
               Filter Status:
             </span>
             <select
-              class="px-3 py-1.5 text-caption bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500/25 focus:border-brand-500 transition-colors text-secondary-900 font-semibold dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="px-3 py-1.5 text-caption bg-secondary-50 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-action-focus/25 focus:border-action transition-colors text-secondary-900 font-semibold dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={statusFilter()}
               onChange={(e) => setStatusFilter(e.currentTarget.value)}
             >
@@ -652,7 +652,7 @@ export default function KeuanganDashboard() {
                   </td>
                   <td class="px-6 py-4 font-mono text-caption text-secondary-600">{item.periodeId}</td>
                   <td class="px-6 py-4 font-semibold text-secondary-700">{formatRupiah(item.nominal)}</td>
-                  <td class="px-6 py-4 font-semibold text-accent-600">{formatRupiah(item.nominalTerbayar || 0)}</td>
+                  <td class="px-6 py-4 font-semibold text-action">{formatRupiah(item.nominalTerbayar || 0)}</td>
                   <td class="px-6 py-4 font-semibold text-rose-500">
                     {formatRupiah(item.nominal - (item.nominalTerbayar || 0))}
                   </td>
@@ -662,7 +662,7 @@ export default function KeuanganDashboard() {
                         item.status === 'lunas'
                           ? 'bg-green-50 text-green-700 border border-green-200'
                           : item.status === 'cicilan'
-                            ? 'bg-brand-50 text-brand-700 border border-brand-200'
+                            ? 'bg-action-50 text-action border border-brand-200'
                             : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                       }`}
                     >
@@ -676,7 +676,7 @@ export default function KeuanganDashboard() {
                     <Show when={role() !== 'mahasiswa'}>
                       <Show
                         when={item.status !== 'lunas'}
-                        fallback={<span class="text-caption font-semibold italic text-accent-600">Lunas</span>}
+                        fallback={<span class="text-caption font-semibold italic text-action">Lunas</span>}
                       >
                         <Button variant="primary" onClick={() => handleBayar(item)} class="!py-1 !px-3 text-caption">
                           Input Bayar
@@ -687,7 +687,7 @@ export default function KeuanganDashboard() {
                     <Show when={role() !== 'mahasiswa'}>
                       <button
                         onClick={() => handleEdit(item)}
-                        class="px-2.5 py-1 bg-accent-50 hover:bg-accent-100 text-accent-700 font-bold rounded-lg text-caption transition-colors flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400"
+                        class="px-2.5 py-1 bg-action-50 hover:bg-action-100 text-action font-bold rounded-lg text-caption transition-colors flex items-center gap-1 dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark"
                       >
                         ⚙️ Edit Nominal
                       </button>
@@ -695,7 +695,7 @@ export default function KeuanganDashboard() {
 
                     <button
                       onClick={() => handleOpenRiwayat(item)}
-                      class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold rounded-lg text-caption transition-colors flex items-center gap-1 dark:bg-brand-900/30 dark:text-brand-400"
+                      class="px-2.5 py-1 bg-action-50 hover:bg-action-100 text-action font-bold rounded-lg text-caption transition-colors flex items-center gap-1 dark:bg-brand-900/30 dark:text-brand-400"
                     >
                       🔎 Riwayat
                     </button>
@@ -710,7 +710,7 @@ export default function KeuanganDashboard() {
                     <Show when={item.status === 'lunas' || item.status === 'cicilan'}>
                       <button
                         onClick={() => handlePrintReceipt(item)}
-                        class="px-2.5 py-1 bg-accent-50 hover:bg-accent-100 text-accent-700 font-bold rounded-lg text-caption transition-colors flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400"
+                        class="px-2.5 py-1 bg-action-50 hover:bg-action-100 text-action font-bold rounded-lg text-caption transition-colors flex items-center gap-1 dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark"
                       >
                         🧾 Struk Bayar
                       </button>
@@ -744,7 +744,7 @@ export default function KeuanganDashboard() {
         {/* --- CUSTOM GENERATE TAGIHAN MODAL --- */}
         <Show when={showGenerateModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">Generate Tagihan Massal</h3>
                 <button
@@ -759,7 +759,7 @@ export default function KeuanganDashboard() {
                   Anda akan membuat tagihan massal untuk semua mahasiswa terdaftar pada periode akademik{' '}
                   <span class="font-bold text-secondary-700">{selectedPeriode()}</span>. Nominal tagihan default adalah
                   nominal di bawah, namun mahasiswa yang memiliki{' '}
-                  <span class="font-bold text-brand-600">Skema Tarif Angkatan</span> akan disesuaikan secara otomatis.
+                  <span class="font-bold text-action">Skema Tarif Angkatan</span> akan disesuaikan secara otomatis.
                 </p>
                 <div class="flex flex-col gap-1.5">
                   <label class="text-caption font-bold text-secondary-700">Nominal Tagihan Default (Rp)</label>
@@ -767,7 +767,7 @@ export default function KeuanganDashboard() {
                     type="number"
                     value={generateNominal()}
                     onInput={(e) => setGenerateNominal(parseInt(e.currentTarget.value))}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
@@ -780,7 +780,7 @@ export default function KeuanganDashboard() {
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                    class="px-4 py-2 text-caption font-bold bg-action text-white hover:bg-action-dark rounded-xl transition-all dark:bg-action-dark dark:hover:bg-action"
                   >
                     Generate Sekarang
                   </button>
@@ -793,7 +793,7 @@ export default function KeuanganDashboard() {
         {/* --- CUSTOM INPUT BAYAR MODAL --- */}
         <Show when={showPayModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">Input Pembayaran SPP</h3>
                 <button
@@ -825,9 +825,7 @@ export default function KeuanganDashboard() {
                   </p>
                   <p>
                     Telah Dibayar:{' '}
-                    <span class="font-bold text-accent-600">
-                      {formatRupiah(selectedTagihan()?.nominalTerbayar || 0)}
-                    </span>
+                    <span class="font-bold text-action">{formatRupiah(selectedTagihan()?.nominalTerbayar || 0)}</span>
                   </p>
                   <p>
                     Sisa Pembayaran:{' '}
@@ -843,7 +841,7 @@ export default function KeuanganDashboard() {
                     value={payNominal()}
                     onInput={(e) => setPayNominal(parseInt(e.currentTarget.value))}
                     max={(selectedTagihan()?.nominal || 0) - (selectedTagihan()?.nominalTerbayar || 0)}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -852,7 +850,7 @@ export default function KeuanganDashboard() {
                     value={payNotes()}
                     onInput={(e) => setPayNotes(e.currentTarget.value)}
                     placeholder="Contoh: Pembayaran cicilan pertama ke-1"
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 h-16 resize-none dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 h-16 resize-none dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
@@ -865,7 +863,7 @@ export default function KeuanganDashboard() {
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                    class="px-4 py-2 text-caption font-bold bg-action text-white hover:bg-action-dark rounded-xl transition-all dark:bg-action-dark dark:hover:bg-action"
                   >
                     Simpan Pembayaran
                   </button>
@@ -878,7 +876,7 @@ export default function KeuanganDashboard() {
         {/* --- CUSTOM PRINT INVOICE MODAL --- */}
         <Show when={showPrintInvoice()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Cetak Tagihan Kuliah</h3>
                 <button
@@ -947,7 +945,7 @@ export default function KeuanganDashboard() {
                     </tr>
                     <tr class="font-bold border-t">
                       <td class="p-2 border-r text-right">Telah Terbayar:</td>
-                      <td class="p-2 text-right text-accent-600">
+                      <td class="p-2 text-right text-action">
                         {formatRupiah(selectedPrintItem()?.nominalTerbayar || 0)}
                       </td>
                     </tr>
@@ -973,7 +971,7 @@ export default function KeuanganDashboard() {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-4 py-2 text-caption font-bold bg-action text-white hover:bg-action-dark rounded-xl transition-all dark:bg-action-dark dark:hover:bg-action"
                 >
                   🖨️ Cetak Sekarang
                 </button>
@@ -985,7 +983,7 @@ export default function KeuanganDashboard() {
         {/* --- CUSTOM PRINT RECEIPT MODAL --- */}
         <Show when={showPrintReceipt()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-lg p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Cetak Bukti Pembayaran</h3>
                 <button
@@ -1042,7 +1040,7 @@ export default function KeuanganDashboard() {
                   <tbody>
                     <tr class="border-b">
                       <td class="p-2 border-r">Pembayaran Biaya Pendidikan Semester</td>
-                      <td class="p-2 text-right font-semibold text-accent-600">
+                      <td class="p-2 text-right font-semibold text-action">
                         {formatRupiah(selectedPrintItem()?.nominalTerbayar || 0)}
                       </td>
                     </tr>
@@ -1052,7 +1050,7 @@ export default function KeuanganDashboard() {
                     </tr>
                     <tr class="bg-secondary-50 font-bold dark:bg-secondary-800">
                       <td class="p-2 border-r text-right">Status Pembayaran:</td>
-                      <td class="p-2 text-right uppercase text-accent-600">
+                      <td class="p-2 text-right uppercase text-action">
                         {selectedPrintItem()?.status === 'lunas' ? 'LUNAS' : 'CICILAN / SEBAGIAN'}
                       </td>
                     </tr>
@@ -1075,7 +1073,7 @@ export default function KeuanganDashboard() {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-4 py-2 text-caption font-bold bg-action text-white hover:bg-action-dark rounded-xl transition-all dark:bg-action-dark dark:hover:bg-action"
                 >
                   🖨️ Cetak Bukti
                 </button>
@@ -1087,7 +1085,7 @@ export default function KeuanganDashboard() {
         {/* --- MODAL SKEMA TARIF ANGKATAN (NEW) --- */}
         <Show when={showTarifModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">
                   Konfigurasi Tarif SPP per Angkatan
@@ -1268,7 +1266,7 @@ export default function KeuanganDashboard() {
                           <td class="p-3 text-center">
                             <button
                               onClick={() => openEditTarif(t)}
-                              class="text-caption font-bold text-brand-600 hover:text-brand-800 px-2 py-1 rounded-lg hover:bg-brand-50"
+                              class="text-caption font-bold text-action hover:text-action px-2 py-1 rounded-lg hover:bg-action-50"
                             >
                               Edit
                             </button>
@@ -1305,7 +1303,7 @@ export default function KeuanganDashboard() {
         {/* --- MODAL RIWAYAT TRANSAKSI & VOID (NEW) --- */}
         <Show when={showRiwayatModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-4 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-3xl p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <div>
                   <h3 class="font-bold text-secondary-800 text-base dark:text-white">Riwayat Pembayaran & Koreksi</h3>
@@ -1342,7 +1340,7 @@ export default function KeuanganDashboard() {
                         <tr class="border-b hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50">
                           <td class="p-3 font-bold text-secondary-800 dark:text-white">Termin {ang.terminKe}</td>
                           <td class="p-3 font-semibold text-secondary-700">{formatRupiah(ang.nominal)}</td>
-                          <td class="p-3 font-semibold text-accent-600">{formatRupiah(ang.nominalTerbayar)}</td>
+                          <td class="p-3 font-semibold text-action">{formatRupiah(ang.nominalTerbayar)}</td>
                           <td class="p-3 font-mono text-fine text-secondary-500 dark:text-secondary-300">
                             {ang.jatuhTempo}
                           </td>
@@ -1352,7 +1350,7 @@ export default function KeuanganDashboard() {
                                 ang.status === 'lunas'
                                   ? 'bg-green-50 text-green-700 border border-green-200'
                                   : ang.status === 'cicilan'
-                                    ? 'bg-brand-50 text-brand-700 border border-brand-200'
+                                    ? 'bg-action-50 text-action border border-brand-200'
                                     : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                               }`}
                             >
@@ -1404,7 +1402,7 @@ export default function KeuanganDashboard() {
                               class={`inline-flex px-2 py-0.5 rounded-full text-fine font-bold ${
                                 tr.isVoid
                                   ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                                  : 'bg-accent-50 text-accent-700 border border-accent-100'
+                                  : 'bg-action-50 text-action border border-action-100'
                               }`}
                             >
                               {tr.isVoid ? 'Void (Batal)' : 'Sukses'}
@@ -1446,7 +1444,7 @@ export default function KeuanganDashboard() {
         {/* --- MODAL EDIT NOMINAL TAGIHAN (NEW) --- */}
         <Show when={showEditModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">Edit Nominal Tagihan</h3>
                 <button
@@ -1478,9 +1476,7 @@ export default function KeuanganDashboard() {
                   </p>
                   <p>
                     Sudah Terbayar:{' '}
-                    <span class="font-bold text-accent-600">
-                      {formatRupiah(selectedTagihan()?.nominalTerbayar || 0)}
-                    </span>
+                    <span class="font-bold text-action">{formatRupiah(selectedTagihan()?.nominalTerbayar || 0)}</span>
                   </p>
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -1489,7 +1485,7 @@ export default function KeuanganDashboard() {
                     type="number"
                     value={editNominal()}
                     onInput={(e) => setEditNominal(parseInt(e.currentTarget.value))}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
                 <div class="flex justify-end gap-2 mt-2">
@@ -1502,7 +1498,7 @@ export default function KeuanganDashboard() {
                   </button>
                   <button
                     type="submit"
-                    class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-xl shadow-sm transition-all dark:bg-brand-700 dark:hover:bg-brand-600"
+                    class="px-4 py-2 text-caption font-bold bg-action text-white hover:bg-action-dark rounded-xl transition-all dark:bg-action-dark dark:hover:bg-action"
                   >
                     Simpan Perubahan
                   </button>

@@ -143,35 +143,35 @@ export default function BkdCetak() {
     const rowsHtml = kelasBerisi
       .map(
         (mk) => `
-        <div class="section">
-          <h3>[${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(mk.namaKelas)}</h3>
-          <table>
-            <thead>
-              <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
-            </thead>
-            <tbody>
-              ${mk.pertemuan
-                .map(
-                  (p, i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td>${escapeHtml(p.pertemuanKe)}</td>
-                  <td>${escapeHtml(p.tanggal)}</td>
-                  <td>${p.tema ? `${escapeHtml(p.tema)} — ` : ''}${escapeHtml(p.materi)}</td>
-                  <td>${escapeHtml(p.durasiMenit)} mnt</td>
-                  <td></td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <div class="sign-area">
-            <div class="sign-box">
-              <p class="sign-gap">(_______________)</p>
-              <p>${escapeHtml(data.dosen.nama)}</p>
-            </div>
-          </div>
-        </div>`,
+ <div class="section">
+ <h3>[${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(mk.namaKelas)}</h3>
+ <table>
+ <thead>
+ <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
+ </thead>
+ <tbody>
+ ${mk.pertemuan
+   .map(
+     (p, i) => `
+ <tr>
+ <td>${i + 1}</td>
+ <td>${escapeHtml(p.pertemuanKe)}</td>
+ <td>${escapeHtml(p.tanggal)}</td>
+ <td>${p.tema ? `${escapeHtml(p.tema)} — ` : ''}${escapeHtml(p.materi)}</td>
+ <td>${escapeHtml(p.durasiMenit)} mnt</td>
+ <td></td>
+ </tr>`,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <div class="sign-area">
+ <div class="sign-box">
+ <p class="sign-gap">(_______________)</p>
+ <p>${escapeHtml(data.dosen.nama)}</p>
+ </div>
+ </div>
+ </div>`,
       )
       .join('');
 
@@ -197,51 +197,51 @@ export default function BkdCetak() {
       .map((rk) => {
         const sesi = pertemuanByKelas.get(rk.kelasId) || [];
         return `
-        <div class="section">
-          <h3>[${escapeHtml(rk.mataKuliah.kode)}] ${escapeHtml(rk.mataKuliah.nama)} · Kelas ${escapeHtml(rk.namaKelas)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(rk.totalMenit)} mnt)</h3>
-          <h4>A. Rekap Presensi per Mahasiswa</h4>
-          <table>
-            <thead>
-              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total Hadir</th><th>% Hadir</th></tr>
-            </thead>
-            <tbody>
-              ${rk.mahasiswa
-                .map(
-                  (m, i) => `
-                <tr>
-                  <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
-                  <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(m.alpa)}</td>
-                  <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <h4>B. Rekap Presensi per Sesi</h4>
-          <table>
-            <thead>
-              <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total</th></tr>
-            </thead>
-            <tbody>
-              ${sesi
-                .map(
-                  (p, i) => `
-                <tr>
-                  <td>${i + 1}</td><td>${escapeHtml(p.pertemuanKe)}</td><td>${escapeHtml(p.tanggal)}</td>
-                  <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(p.presensiRingkasan.izin)}</td>
-                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <div class="sign-area">
-            <div class="sign-box">
-              <p class="sign-gap">(_______________)</p>
-              <p>${escapeHtml(data.dosen.nama)}</p>
-            </div>
-          </div>
-        </div>`;
+ <div class="section">
+ <h3>[${escapeHtml(rk.mataKuliah.kode)}] ${escapeHtml(rk.mataKuliah.nama)} · Kelas ${escapeHtml(rk.namaKelas)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(rk.totalMenit)} mnt)</h3>
+ <h4>A. Rekap Presensi per Mahasiswa</h4>
+ <table>
+ <thead>
+ <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total Hadir</th><th>% Hadir</th></tr>
+ </thead>
+ <tbody>
+ ${rk.mahasiswa
+   .map(
+     (m, i) => `
+ <tr>
+ <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
+ <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(m.alpa)}</td>
+ <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
+ </tr>`,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <h4>B. Rekap Presensi per Sesi</h4>
+ <table>
+ <thead>
+ <tr><th>No</th><th>Pertemuan</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total</th></tr>
+ </thead>
+ <tbody>
+ ${sesi
+   .map(
+     (p, i) => `
+ <tr>
+ <td>${i + 1}</td><td>${escapeHtml(p.pertemuanKe)}</td><td>${escapeHtml(p.tanggal)}</td>
+ <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(p.presensiRingkasan.izin)}</td>
+ <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
+ </tr>`,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <div class="sign-area">
+ <div class="sign-box">
+ <p class="sign-gap">(_______________)</p>
+ <p>${escapeHtml(data.dosen.nama)}</p>
+ </div>
+ </div>
+ </div>`;
       })
       .join('');
 
@@ -267,37 +267,37 @@ export default function BkdCetak() {
     const rowsHtml = rombelBerisi
       .map(
         (mk) => `
-        <div class="section">
-          <h3>[PRAKTIKUM] [${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(
-            mk.namaKelas,
-          )} · Group ${escapeHtml(mk.namaGroup)}${mk.mataKuliah.sksPraktek != null ? ` · SKS Praktikum: ${escapeHtml(mk.mataKuliah.sksPraktek)}` : ''}</h3>
-          <table>
-            <thead>
-              <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
-            </thead>
-            <tbody>
-              ${mk.pertemuan
-                .map(
-                  (p, i) => `
-                <tr>
-                  <td>${i + 1}</td>
-                  <td>${escapeHtml(p.sesiKe)}</td>
-                  <td>${escapeHtml(p.tanggal)}</td>
-                  <td>${p.tema ? `${escapeHtml(p.tema)} — ` : ''}${escapeHtml(p.materi)}</td>
-                  <td>${escapeHtml(p.durasiMenit)} mnt</td>
-                  <td></td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <div class="sign-area">
-            <div class="sign-box">
-              <p class="sign-gap">(_______________)</p>
-              <p>${escapeHtml(data.dosen.nama)}</p>
-            </div>
-          </div>
-        </div>`,
+ <div class="section">
+ <h3>[PRAKTIKUM] [${escapeHtml(mk.mataKuliah.kode)}] ${escapeHtml(mk.mataKuliah.nama)} · Kelas ${escapeHtml(
+   mk.namaKelas,
+ )} · Group ${escapeHtml(mk.namaGroup)}${mk.mataKuliah.sksPraktek != null ? ` · SKS Praktikum: ${escapeHtml(mk.mataKuliah.sksPraktek)}` : ''}</h3>
+ <table>
+ <thead>
+ <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th></tr>
+ </thead>
+ <tbody>
+ ${mk.pertemuan
+   .map(
+     (p, i) => `
+ <tr>
+ <td>${i + 1}</td>
+ <td>${escapeHtml(p.sesiKe)}</td>
+ <td>${escapeHtml(p.tanggal)}</td>
+ <td>${p.tema ? `${escapeHtml(p.tema)} — ` : ''}${escapeHtml(p.materi)}</td>
+ <td>${escapeHtml(p.durasiMenit)} mnt</td>
+ <td></td>
+ </tr>`,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <div class="sign-area">
+ <div class="sign-box">
+ <p class="sign-gap">(_______________)</p>
+ <p>${escapeHtml(data.dosen.nama)}</p>
+ </div>
+ </div>
+ </div>`,
       )
       .join('');
 
@@ -323,59 +323,59 @@ export default function BkdCetak() {
       .map((rk) => {
         const sesi = pertemuanByRombel.get(rk.rombelId) || [];
         return `
-        <div class="section">
-          <h3>[PRAKTIKUM] [${escapeHtml(rk.mataKuliah.kode)}] ${escapeHtml(rk.mataKuliah.nama)} · Kelas ${escapeHtml(
-            rk.namaKelas,
-          )} · Group ${escapeHtml(rk.namaGroup)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(
-            rk.totalMenit,
-          )} mnt${rk.mataKuliah.sksPraktek != null ? `, SKS Praktikum: ${escapeHtml(rk.mataKuliah.sksPraktek)}` : ''})</h3>
-          <h4>A. Rekap Presensi per Mahasiswa</h4>
-          <table>
-            <thead>
-              <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total Hadir</th><th>% Hadir</th></tr>
-            </thead>
-            <tbody>
-              ${rk.mahasiswa
-                .map(
-                  (m, i) => `
-                <tr>
-                  <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
-                  <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(
-                    m.alpa,
-                  )}</td>
-                  <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <h4>B. Rekap Presensi per Sesi</h4>
-          <table>
-            <thead>
-              <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total</th></tr>
-            </thead>
-            <tbody>
-              ${sesi
-                .map(
-                  (p, i) => `
-                <tr>
-                  <td>${i + 1}</td><td>${escapeHtml(p.sesiKe)}</td><td>${escapeHtml(p.tanggal)}</td>
-                  <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(
-                    p.presensiRingkasan.izin,
-                  )}</td>
-                  <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
-                </tr>`,
-                )
-                .join('')}
-            </tbody>
-          </table>
-          <div class="sign-area">
-            <div class="sign-box">
-              <p class="sign-gap">(_______________)</p>
-              <p>${escapeHtml(data.dosen.nama)}</p>
-            </div>
-          </div>
-        </div>`;
+ <div class="section">
+ <h3>[PRAKTIKUM] [${escapeHtml(rk.mataKuliah.kode)}] ${escapeHtml(rk.mataKuliah.nama)} · Kelas ${escapeHtml(
+   rk.namaKelas,
+ )} · Group ${escapeHtml(rk.namaGroup)} (${escapeHtml(rk.jumlahPertemuan)} pertemuan, ${escapeHtml(
+   rk.totalMenit,
+ )} mnt${rk.mataKuliah.sksPraktek != null ? `, SKS Praktikum: ${escapeHtml(rk.mataKuliah.sksPraktek)}` : ''})</h3>
+ <h4>A. Rekap Presensi per Mahasiswa</h4>
+ <table>
+ <thead>
+ <tr><th>No</th><th>NIM</th><th>Nama</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total Hadir</th><th>% Hadir</th></tr>
+ </thead>
+ <tbody>
+ ${rk.mahasiswa
+   .map(
+     (m, i) => `
+ <tr>
+ <td>${i + 1}</td><td>${escapeHtml(m.nim)}</td><td>${escapeHtml(m.nama)}</td>
+ <td>${escapeHtml(m.hadir)}</td><td>${escapeHtml(m.sakit)}</td><td>${escapeHtml(m.izin)}</td><td>${escapeHtml(
+   m.alpa,
+ )}</td>
+ <td>${escapeHtml(m.totalKehadiran)}</td><td>${escapeHtml(m.persentaseHadir)}%</td>
+ </tr>`,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <h4>B. Rekap Presensi per Sesi</h4>
+ <table>
+ <thead>
+ <tr><th>No</th><th>Sesi</th><th>Tanggal</th><th>H</th><th>S</th><th>I</th><th>A</th><th>Total</th></tr>
+ </thead>
+ <tbody>
+ ${sesi
+   .map(
+     (p, i) => `
+ <tr>
+ <td>${i + 1}</td><td>${escapeHtml(p.sesiKe)}</td><td>${escapeHtml(p.tanggal)}</td>
+ <td>${escapeHtml(p.presensiRingkasan.hadir)}</td><td>${escapeHtml(p.presensiRingkasan.sakit)}</td><td>${escapeHtml(
+   p.presensiRingkasan.izin,
+ )}</td>
+ <td>${escapeHtml(p.presensiRingkasan.alpa)}</td><td>${escapeHtml(p.presensiRingkasan.total)}</td>
+ </tr>`,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <div class="sign-area">
+ <div class="sign-box">
+ <p class="sign-gap">(_______________)</p>
+ <p>${escapeHtml(data.dosen.nama)}</p>
+ </div>
+ </div>
+ </div>`;
       })
       .join('');
 
@@ -401,35 +401,35 @@ ${k.email ? `<p class="sub" style="margin:0">Email: <a href="mailto:${escapeHtml
     const html = `<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(title)}</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
-    h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
-    .sub { text-align: center; font-size: 13px; margin: 2px 0; }
-    .meta { text-align: center; font-size: 12px; margin: 4px 0 14px; color: #333; }
-    .section { margin-top: 24px; page-break-before: always; }
-    .section:first-child { page-break-before: auto; }
-    h3 { font-size: 14px; margin: 0 0 8px; }
-    h4 { font-size: 12px; margin: 14px 0 6px; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
-    th { background: #eee; text-align: center; }
-    td { text-align: center; }
-    .empty { text-align: center; color: #666; }
-    .sign-area { margin-top: 40px; }
-    .sign-box { display: inline-block; width: 220px; text-align: center; }
-    .sign-gap { margin-bottom: 60px; }
-  </style>
+ <meta charset="utf-8" />
+ <title>${escapeHtml(title)}</title>
+ <style>
+ body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
+ h2 { text-align: center; margin: 0 0 6px; font-size: 18px; }
+ .sub { text-align: center; font-size: 13px; margin: 2px 0; }
+ .meta { text-align: center; font-size: 12px; margin: 4px 0 14px; color: #333; }
+ .section { margin-top: 24px; page-break-before: always; }
+ .section:first-child { page-break-before: auto; }
+ h3 { font-size: 14px; margin: 0 0 8px; }
+ h4 { font-size: 12px; margin: 14px 0 6px; }
+ table { width: 100%; border-collapse: collapse; font-size: 12px; }
+ th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; }
+ th { background: #eee; text-align: center; }
+ td { text-align: center; }
+ .empty { text-align: center; color: #666; }
+ .sign-area { margin-top: 40px; }
+ .sign-box { display: inline-block; width: 220px; text-align: center; }
+ .sign-gap { margin-bottom: 60px; }
+ </style>
 </head>
 <body>
-  ${kopBlock}
-  <h2>${escapeHtml(heading)}</h2>
-  <p class="meta">Periode Akademik: ${escapeHtml(data.periode.nama)} · Dosen: ${escapeHtml(data.dosen.nama)} (NIP: ${escapeHtml(data.dosen.nip)} · NUPTK: ${escapeHtml(data.dosen.nuptk || data.dosen.nidn || '-')})</p>
-  ${bodyHtml}
-  <script>
-    window.onload = function() { window.print(); };
-  <\/script>
+ ${kopBlock}
+ <h2>${escapeHtml(heading)}</h2>
+ <p class="meta">Periode Akademik: ${escapeHtml(data.periode.nama)} · Dosen: ${escapeHtml(data.dosen.nama)} (NIP: ${escapeHtml(data.dosen.nip)} · NUPTK: ${escapeHtml(data.dosen.nuptk || data.dosen.nidn || '-')})</p>
+ ${bodyHtml}
+ <script>
+ window.onload = function() { window.print(); };
+ <\/script>
 </body>
 </html>`;
 
@@ -449,35 +449,35 @@ ${k.email ? `<p class="sub" style="margin:0">Email: <a href="mailto:${escapeHtml
         <button
           type="button"
           onClick={openBapBulkPrintWindow}
-          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-action border border-brand-300 transition-all hover:bg-action-50 active:scale-95"
         >
           🗂️ Cetak BAP (Semua Sesi)
         </button>
         <button
           type="button"
           onClick={openPresensiBulkPrintWindow}
-          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-action border border-brand-300 transition-all hover:bg-action-50 active:scale-95"
         >
           📊 Cetak Rekap Presensi
         </button>
         <button
           type="button"
           onClick={openBapPraktikumBulkPrintWindow}
-          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-action border border-brand-300 transition-all hover:bg-action-50 active:scale-95"
         >
           🧪 Cetak BAP Praktikum (Semua Rombel)
         </button>
         <button
           type="button"
           onClick={openPresensiPraktikumBulkPrintWindow}
-          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-brand-600 border border-brand-300 shadow-sm transition-all hover:bg-brand-50 active:scale-95"
+          class="rounded-full bg-white px-5 py-2.5 text-sm font-bold text-action border border-brand-300 transition-all hover:bg-action-50 active:scale-95"
         >
           📊 Cetak Rekap Presensi Praktikum
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95"
+          class="rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95"
         >
           🖨️ Cetak Sekarang
         </button>
@@ -487,7 +487,7 @@ ${k.email ? `<p class="sub" style="margin:0">Email: <a href="mailto:${escapeHtml
         when={!rekap.loading}
         fallback={
           <div class="flex items-center justify-center py-24 text-secondary-400">
-            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-action border-t-transparent" />
             <span class="text-sm">Menyiapkan data cetak...</span>
           </div>
         }

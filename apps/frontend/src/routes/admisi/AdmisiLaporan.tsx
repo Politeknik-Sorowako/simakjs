@@ -74,7 +74,7 @@ export default function AdmisiLaporan() {
                   <span class="text-sm w-40">{s.status}</span>
                   <div class="flex-1 bg-secondary-200 dark:bg-secondary-700 rounded-full h-2.5">
                     <div
-                      class="bg-brand-500 h-2.5 rounded-full"
+                      class="bg-action h-2.5 rounded-full"
                       style={{ width: `${stats()!.totalPendaftar ? (s.count / stats()!.totalPendaftar) * 100 : 0}%` }}
                     />
                   </div>

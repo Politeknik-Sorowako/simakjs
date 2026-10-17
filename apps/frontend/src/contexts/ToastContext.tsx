@@ -39,7 +39,7 @@ export function ToastProvider(props: { children: JSX.Element }) {
                   ? 'bg-emerald-600 border-emerald-500'
                   : toast.type === 'error'
                     ? 'bg-rose-600 border-rose-500'
-                    : 'bg-accent-600 border-accent-500'
+                    : 'bg-action-dark border-action'
               }`}
             >
               <span>{toast.message}</span>

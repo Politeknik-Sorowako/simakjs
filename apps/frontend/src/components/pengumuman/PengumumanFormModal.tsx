@@ -392,7 +392,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                 fallback={
                   <div
                     onClick={() => thumbnailInputRef?.click()}
-                    class="border-2 border-dashed border-secondary-200 dark:border-secondary-700 hover:border-brand-500 dark:hover:border-brand-500 rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-white dark:bg-secondary-900 transition-colors"
+                    class="border-2 border-dashed border-secondary-200 dark:border-secondary-700 hover:border-action dark:hover:border-action rounded-xl p-4 flex flex-col items-center justify-center gap-1.5 cursor-pointer bg-white dark:bg-secondary-900 transition-colors"
                   >
                     <span class="text-xl">📸</span>
                     <span class="text-xs font-medium text-secondary-700 dark:text-secondary-300">
@@ -425,7 +425,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                     <button
                       type="button"
                       onClick={() => thumbnailInputRef?.click()}
-                      class="text-xs text-brand-600 hover:underline mt-1 font-semibold"
+                      class="text-xs text-action hover:underline mt-1 font-semibold"
                     >
                       Ganti Gambar
                     </button>
@@ -456,7 +456,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                         }}
                         class={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-center ${
                           targetRole() === role
-                            ? 'bg-[#0066cc] text-white border-[#0066cc] shadow-sm'
+                            ? 'bg-[#0066cc] text-white border-[#0066cc]'
                             : 'bg-white dark:bg-secondary-900 text-secondary-700 dark:text-secondary-300 border-secondary-200 dark:border-secondary-700 hover:border-secondary-300'
                         }`}
                       >
@@ -521,7 +521,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                           onClick={() => toggleProdi(pr.id)}
                           class={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
                             targetProdiIds().includes(pr.id)
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 dark:bg-secondary-800 text-secondary-700 dark:text-secondary-300'
                           }`}
                         >
@@ -822,7 +822,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                 <button
                   type="submit"
                   disabled={isSubmitting()}
-                  class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0066cc] hover:bg-[#0071e3] active:scale-95 shadow-md transition-all"
+                  class="px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0066cc] hover:bg-[#0071e3] active:scale-95 transition-all"
                 >
                   {isSubmitting()
                     ? 'Memproses...'

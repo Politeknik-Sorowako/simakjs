@@ -90,7 +90,7 @@ export default function LaporanMahasiswaKeluar() {
                   />
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
                     <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Jenis Mahasiswa Keluar</h3>
                     <PieChart
                       labels={(s.perStatus || []).map((p) => p.status)}
@@ -99,7 +99,7 @@ export default function LaporanMahasiswaKeluar() {
                       donut
                     />
                   </div>
-                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+                  <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
                     <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">
                       Mahasiswa Keluar per Prodi
                     </h3>

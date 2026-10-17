@@ -427,7 +427,7 @@ export default function TabVerifikasi() {
   return (
     <>
       <div class="flex flex-col gap-6">
-        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div>
               <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Verifikasi SKPI</h1>
@@ -451,14 +451,14 @@ export default function TabVerifikasi() {
           </div>
         </div>
 
-        <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div class="relative flex-1 w-full">
               <span class="absolute left-3.5 top-2.5 text-secondary-400">🔍</span>
               <input
                 type="text"
                 placeholder="Cari nama kegiatan / penyelenggara / NIM / nama mahasiswa..."
-                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={pagination.search()}
                 onInput={(e) => {
                   pagination.setSearch(e.currentTarget.value);
@@ -549,7 +549,7 @@ export default function TabVerifikasi() {
                       type="checkbox"
                       checked={allPendingSelected()}
                       onChange={toggleSelectAllPending}
-                      class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                      class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                       title="Pilih semua rekaman menunggu verifikasi di halaman ini"
                     />
                   </th>
@@ -594,7 +594,7 @@ export default function TabVerifikasi() {
                               type="checkbox"
                               checked={selectedIds().has(row.id)}
                               onChange={() => toggleSelect(row.id)}
-                              class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                              class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                               aria-label={`Pilih rekaman ${row.namaKegiatan}`}
                             />
                           </Show>
@@ -627,7 +627,7 @@ export default function TabVerifikasi() {
                             <button
                               type="button"
                               onClick={() => handleOpenLampiran(row)}
-                              class="text-brand-600 hover:underline font-medium"
+                              class="text-action hover:underline font-medium"
                             >
                               Lihat
                             </button>
@@ -821,7 +821,7 @@ export default function TabVerifikasi() {
               }
               value={catatan()}
               onInput={(e) => setCatatan(e.currentTarget.value)}
-              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-action-focus/20 focus:border-action resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
             />
           </div>
 
@@ -892,7 +892,7 @@ export default function TabVerifikasi() {
               placeholder="Kosongkan bila tidak ada catatan..."
               value={editCatatan()}
               onInput={(e) => setEditCatatan(e.currentTarget.value)}
-              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-action-focus/20 focus:border-action resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
             />
           </div>
 
@@ -961,7 +961,7 @@ export default function TabVerifikasi() {
             <p class="mt-1 font-mono">nim, nama_kategori, nama_kegiatan, tanggal_mulai (YYYY-MM-DD)</p>
             <p class="mt-1 font-mono">Opsional: tanggal_selesai, penyelenggara, lokasi, nomor_sertifikat, deskripsi</p>
             <p class="mt-2">
-              <button type="button" onClick={downloadTemplate} class="text-brand-600 hover:underline font-semibold">
+              <button type="button" onClick={downloadTemplate} class="text-action hover:underline font-semibold">
                 Unduh template CSV
               </button>
             </p>
@@ -971,7 +971,7 @@ export default function TabVerifikasi() {
             ref={importInputRef}
             type="file"
             accept=".csv,text/csv"
-            class="block w-full text-xs text-secondary-600 file:mr-3 file:rounded-full file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 dark:text-secondary-300"
+            class="block w-full text-xs text-secondary-600 file:mr-3 file:rounded-full file:border-0 file:bg-action-50 file:px-4 file:py-2 file:text-xs file:font-semibold file:text-action hover:file:bg-action-100 dark:text-secondary-300"
             onChange={(e) => setImportFile(e.currentTarget.files?.[0] ?? null)}
           />
 

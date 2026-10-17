@@ -267,14 +267,14 @@ export default function AuditLog() {
 
         <div class="flex flex-wrap items-center gap-3">
           <button
-            class="rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 active:scale-95 transition-all shadow-sm"
+            class="rounded-xl bg-action hover:bg-action-dark px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 active:scale-95 transition-all"
             disabled={isExportingFiltered()}
             onClick={handleExportFiltered}
           >
             {isExportingFiltered() ? 'Mengekspor Hasil Filter...' : 'Download Hasil Filter (CSV)'}
           </button>
           <button
-            class="rounded-xl border border-brand-300 dark:border-brand-700 text-brand-700 dark:text-brand-300 hover:bg-brand-50 dark:hover:bg-brand-900/40 px-4 py-2 text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
+            class="rounded-xl border border-brand-300 dark:border-brand-700 text-brand-700 dark:text-brand-300 hover:bg-action-50 dark:hover:bg-brand-900/40 px-4 py-2 text-sm font-semibold disabled:opacity-50 active:scale-95 transition-all"
             disabled={isExportingAll()}
             onClick={handleExportAll}
           >
@@ -289,7 +289,7 @@ export default function AuditLog() {
           </button>
         </div>
 
-        <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl p-6 dark:bg-secondary-900 dark:border-secondary-800">
           {/* Filters */}
           <div class="flex flex-wrap gap-3 items-end mb-4">
             <div class="flex-1 min-w-[180px]">
@@ -299,7 +299,7 @@ export default function AuditLog() {
               <input
                 type="text"
                 placeholder="Deskripsi / entitas / user / IP..."
-                class="w-full rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={search()}
                 onInput={(e) => handleSearchChange(e.currentTarget.value)}
                 onKeyDown={(e) => e.key === 'Enter' && commitSearch()}
@@ -310,7 +310,7 @@ export default function AuditLog() {
                 Status Respons
               </label>
               <select
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={statusCategory()}
                 onChange={(e) => {
                   setStatusCategory(
@@ -331,7 +331,7 @@ export default function AuditLog() {
                 Modul / Fitur
               </label>
               <select
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 max-w-[200px]"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus max-w-[200px]"
                 value={module()}
                 onChange={(e) => {
                   setModule(e.currentTarget.value);
@@ -345,7 +345,7 @@ export default function AuditLog() {
             <div>
               <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-300 mb-1">Aksi</label>
               <select
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={actionType()}
                 onChange={(e) => {
                   setActionType(e.currentTarget.value);
@@ -362,7 +362,7 @@ export default function AuditLog() {
               </label>
               <input
                 type="date"
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={startDate()}
                 onInput={(e) => {
                   setStartDate(e.currentTarget.value);
@@ -376,7 +376,7 @@ export default function AuditLog() {
               </label>
               <input
                 type="date"
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={endDate()}
                 onInput={(e) => {
                   setEndDate(e.currentTarget.value);
@@ -389,7 +389,7 @@ export default function AuditLog() {
                 Baris / Hal
               </label>
               <select
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={limit()}
                 onChange={(e) => {
                   setLimit(Number(e.currentTarget.value));
@@ -480,7 +480,7 @@ export default function AuditLog() {
                           </td>
                           <td class="py-3 px-4 text-center">
                             <button
-                              class="text-brand-600 hover:text-brand-700 font-semibold text-xs active:scale-95 transition-transform"
+                              class="text-action hover:text-action font-semibold text-xs active:scale-95 transition-transform"
                               onClick={() => setDetail(item)}
                             >
                               Lihat →
@@ -543,7 +543,7 @@ export default function AuditLog() {
             onClick={() => setDetail(null)}
           >
             <div
-              class="bg-white dark:bg-secondary-900 rounded-2xl shadow-xl p-6 w-full max-w-lg overflow-y-auto max-h-[90vh]"
+              class="bg-white dark:bg-secondary-900 rounded-2xl p-6 w-full max-w-lg overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div class="flex items-center justify-between mb-4 pb-3 border-b border-secondary-100 dark:border-secondary-800">

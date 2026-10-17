@@ -73,7 +73,7 @@ function ToggleCard(props: ToggleCardProps) {
   );
 }
 
-/** Tab "Parameter" — isi pengaturan parameter (dulu seluruh isi halaman). */
+/** Tab"Parameter" — isi pengaturan parameter (dulu seluruh isi halaman). */
 function TabParameter() {
   const [params, { refetch }] = createResource(() => systemController.getParameters());
   const [edits, setEdits] = createSignal<Record<string, string>>({});
@@ -534,7 +534,7 @@ export default function KonfigurasiParameter() {
                 onClick={() => setTab(t.key)}
                 class={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
                   tab() === t.key
-                    ? 'bg-white text-brand-600 shadow-sm dark:bg-secondary-800 dark:text-brand-400'
+                    ? 'bg-white text-action dark:bg-secondary-800 dark:text-brand-400'
                     : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400'
                 }`}
                 title={t.desc}

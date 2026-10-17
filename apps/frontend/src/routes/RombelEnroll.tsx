@@ -44,7 +44,7 @@ export default function RombelEnroll() {
 
   return (
     <div class="min-h-screen flex items-center justify-center p-4 bg-secondary-50 dark:bg-secondary-950">
-      <div class="w-full max-w-lg bg-white dark:bg-secondary-900 rounded-2xl shadow-xl border border-secondary-200/80 dark:border-secondary-800 p-8">
+      <div class="w-full max-w-lg bg-white dark:bg-secondary-900 rounded-2xl border border-secondary-200/80 dark:border-secondary-800 p-8">
         <Switch
           fallback={<div class="text-secondary-500 dark:text-secondary-300 text-center py-10">Memuat informasi...</div>}
         >
@@ -53,7 +53,7 @@ export default function RombelEnroll() {
               <p class="text-danger-600 dark:text-danger-400 font-semibold mb-4">
                 Link pendaftaran tidak valid atau telah dinonaktifkan.
               </p>
-              <a href="/login" class="text-primary-600 underline text-sm">
+              <a href="/login" class="text-action underline text-sm">
                 Kembali ke aplikasi
               </a>
             </div>

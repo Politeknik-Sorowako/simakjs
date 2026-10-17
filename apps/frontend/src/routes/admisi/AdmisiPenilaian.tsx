@@ -74,7 +74,7 @@ export default function AdmisiPenilaian() {
             <div class="flex gap-3 flex-wrap">
               <For each={components()?.data || []}>
                 {(c: { namaKomponen: string; bobot: number }) => (
-                  <span class="text-xs px-2 py-1 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 rounded-full">
+                  <span class="text-xs px-2 py-1 bg-action-50 dark:bg-action/20 text-brand-700 dark:text-brand-300 rounded-full">
                     {c.namaKomponen} ({c.bobot}%)
                   </span>
                 )}

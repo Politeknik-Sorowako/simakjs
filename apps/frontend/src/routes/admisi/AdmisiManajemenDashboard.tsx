@@ -6,7 +6,7 @@ function StatCard(props: { title: string; value: number | string; color?: string
   return (
     <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
       <div class="text-xs text-secondary-500 uppercase tracking-wider">{props.title}</div>
-      <div class={`text-2xl font-bold mt-1 ${props.color || 'text-brand-600'}`}>{props.value}</div>
+      <div class={`text-2xl font-bold mt-1 ${props.color || 'text-action'}`}>{props.value}</div>
     </div>
   );
 }

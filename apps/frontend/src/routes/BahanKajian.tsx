@@ -542,7 +542,7 @@ export default function BahanKajian() {
               <div class="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                 <h4 class="text-blue-300 font-medium mb-2">Format CSV:</h4>
                 <p class="text-slate-300 text-sm mb-2">
-                  Baris pertama (header) akan dilewati jika mengandung kata "kode_prodi"
+                  Baris pertama (header) akan dilewati jika mengandung kata"kode_prodi"
                 </p>
                 <code class="block bg-slate-900 p-3 rounded text-sm text-green-400">
                   kode_prodi,kode,nama,deskripsi
@@ -565,7 +565,7 @@ export default function BahanKajian() {
                   type="file"
                   accept=".csv,.txt"
                   onChange={handleFileUpload}
-                  class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-500 file:text-white hover:file:bg-accent-600"
+                  class="w-full px-4 py-2.5 bg-slate-800 border border-slate-600 rounded-xl text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-action file:text-white hover:file:bg-action-dark"
                 />
               </div>
 
@@ -588,7 +588,9 @@ export default function BahanKajian() {
                           {(item, index) => (
                             <tr class="border-b border-slate-700/50 hover:bg-slate-700/30">
                               <td class="py-2 px-3 text-secondary-400">{index() + 1}</td>
-                              <td class="py-2 px-3 text-accent-400 font-medium">{item.kodeProdi}</td>
+                              <td class="py-2 px-3 text-action dark:text-action-ondark font-medium">
+                                {item.kodeProdi}
+                              </td>
                               <td class="py-2 px-3 text-black dark:text-white font-medium">{item.kode}</td>
                               <td class="py-2 px-3 text-black dark:text-white">{item.nama}</td>
                               <td class="py-2 px-3 text-black dark:text-white">{item.deskripsi || '-'}</td>

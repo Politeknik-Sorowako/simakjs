@@ -169,7 +169,7 @@ export default function MonitoringBimbingan() {
         </div>
 
         {/* Filters */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-4 shadow-sm flex flex-wrap gap-4 items-center justify-between print:hidden">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-4 flex flex-wrap gap-4 items-center justify-between print:hidden">
           <div class="flex flex-wrap gap-4 items-center">
             <div>
               <label class="block text-xs font-semibold text-secondary-600 dark:text-secondary-300 mb-1">
@@ -249,7 +249,7 @@ export default function MonitoringBimbingan() {
         </div>
 
         {/* Table */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm print:hidden">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 print:hidden">
           <Suspense fallback={<TableLoadingFallback />}>
             <Show
               when={data().length > 0}
@@ -299,7 +299,7 @@ export default function MonitoringBimbingan() {
                       <td class="px-6 py-4 text-xs font-mono text-secondary-600 dark:text-secondary-400">
                         {item.periodeId}
                       </td>
-                      <td class="px-6 py-4 text-xs font-bold text-primary-600 dark:text-primary-400">
+                      <td class="px-6 py-4 text-xs font-bold text-action dark:text-action-ondark">
                         {item.totalSesi} Sesi
                       </td>
                       <td class="px-6 py-4 text-xs">

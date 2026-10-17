@@ -16,7 +16,7 @@ const variants = {
     'bg-danger-50 text-danger-700 border border-danger-200 dark:bg-danger-900/30 dark:text-danger-400 dark:border-danger-800',
   info: 'bg-info-50 text-info-700 border border-info-200 dark:bg-info-900/30 dark:text-info-400 dark:border-info-800',
   accent:
-    'bg-accent-50 text-accent-700 border border-accent-200 dark:bg-accent-900/30 dark:text-accent-400 dark:border-accent-800',
+    'bg-action-50 text-action border border-action-200 dark:bg-action-ondark/30 dark:text-accent-400 dark:border-accent-800',
 };
 
 const sizes = {

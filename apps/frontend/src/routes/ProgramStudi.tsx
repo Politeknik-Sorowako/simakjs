@@ -302,13 +302,13 @@ export default function ProgramStudi() {
           >
             <For each={sortedData()}>
               {(item) => (
-                <tr class="hover:bg-brand-50/50 transition-colors dark:hover:bg-brand-900/50">
+                <tr class="hover:bg-action-50/50 transition-colors dark:hover:bg-brand-900/50">
                   <td class="px-6 py-4 font-mono font-semibold text-secondary-700 dark:text-secondary-200">
                     {item.kode}
                   </td>
                   <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
                   <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800">
+                    <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-action-50 text-action border border-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:border-brand-800">
                       {item.jenjang}
                     </span>
                   </td>
@@ -332,7 +332,7 @@ export default function ProgramStudi() {
                           href={`${API_URL}${item.fileSkIzinOperasional}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          class="text-brand-600 hover:underline dark:text-brand-400"
+                          class="text-action hover:underline dark:text-brand-400"
                         >
                           📄 SK Izin Operasional
                         </a>
@@ -342,7 +342,7 @@ export default function ProgramStudi() {
                           href={`${API_URL}${item.fileSkAkreditasi}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          class="text-brand-600 hover:underline dark:text-brand-400"
+                          class="text-action hover:underline dark:text-brand-400"
                         >
                           📄 SK Akreditasi
                         </a>
@@ -464,14 +464,14 @@ export default function ProgramStudi() {
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(e) => handleSkUpload(e, 'izin')}
                     disabled={uploadingSk() === 'izin'}
-                    class="text-caption text-secondary-700 dark:text-secondary-300 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-caption file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700"
+                    class="text-caption text-secondary-700 dark:text-secondary-300 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-caption file:font-semibold file:bg-action file:text-white hover:file:bg-action-dark"
                   />
                   <Show when={fileSkIzin()}>
                     <a
                       href={`${API_URL}${fileSkIzin()}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="text-caption text-brand-600 hover:underline dark:text-brand-400"
+                      class="text-caption text-action hover:underline dark:text-brand-400"
                     >
                       Lihat file SK Izin yang diunggah
                     </a>
@@ -510,14 +510,14 @@ export default function ProgramStudi() {
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     onChange={(e) => handleSkUpload(e, 'akreditasi')}
                     disabled={uploadingSk() === 'akreditasi'}
-                    class="text-caption text-secondary-700 dark:text-secondary-300 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-caption file:font-semibold file:bg-brand-600 file:text-white hover:file:bg-brand-700"
+                    class="text-caption text-secondary-700 dark:text-secondary-300 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-caption file:font-semibold file:bg-action file:text-white hover:file:bg-action-dark"
                   />
                   <Show when={fileSkAkreditasi()}>
                     <a
                       href={`${API_URL}${fileSkAkreditasi()}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="text-caption text-brand-600 hover:underline dark:text-brand-400"
+                      class="text-caption text-action hover:underline dark:text-brand-400"
                     >
                       Lihat file SK Akreditasi yang diunggah
                     </a>

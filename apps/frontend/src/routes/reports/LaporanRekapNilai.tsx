@@ -11,7 +11,7 @@ import { ExportColumn } from '../../utils/export';
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -203,7 +203,7 @@ export default function LaporanRekapNilai() {
         </div>
 
         {/* Filter */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Akademik
@@ -251,7 +251,7 @@ export default function LaporanRekapNilai() {
         </div>
 
         {/* Matriks Sebaran Nilai Mata Kuliah (A s.d. E) */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">
@@ -277,12 +277,12 @@ export default function LaporanRekapNilai() {
               </select>
               <Suspense
                 fallback={
-                  <span class="text-caption font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
+                  <span class="text-caption font-bold text-action bg-action-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
                     … Mata Kuliah
                   </span>
                 }
               >
-                <span class="text-caption font-bold text-brand-600 bg-brand-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
+                <span class="text-caption font-bold text-action bg-action-50 dark:bg-brand-900/30 px-3 py-1 rounded-lg">
                   {matriksNilai()?.pagination?.total || 0} Mata Kuliah
                 </span>
               </Suspense>
@@ -377,7 +377,7 @@ export default function LaporanRekapNilai() {
                                 namaMk: row.namaMk,
                               })
                             }
-                            class="px-2.5 py-1 text-caption font-bold bg-brand-50 text-brand-700 hover:bg-brand-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
+                            class="px-2.5 py-1 text-caption font-bold bg-action-50 text-action hover:bg-action-100 rounded-lg dark:bg-brand-900/40 dark:text-brand-300"
                           >
                             Detail
                           </button>
@@ -416,7 +416,7 @@ export default function LaporanRekapNilai() {
 
         {/* Rekap per Prodi */}
         <Show when={rekapProdi()}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">Rata-rata IP per Program Studi</h3>
             </div>
@@ -435,7 +435,7 @@ export default function LaporanRekapNilai() {
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                         <td class="py-3 px-5 text-center text-secondary-600">{p.totalMahasiswa}</td>
-                        <td class="py-3 px-5 text-center font-bold text-brand-600">
+                        <td class="py-3 px-5 text-center font-bold text-action">
                           {p.rataIP > 0 ? p.rataIP.toFixed(2) : '-'}
                         </td>
                       </tr>
@@ -448,7 +448,7 @@ export default function LaporanRekapNilai() {
         </Show>
 
         {/* Pencarian Individual Mahasiswa */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
             Pencarian Detail Nilai Mahasiswa
           </label>
@@ -463,7 +463,7 @@ export default function LaporanRekapNilai() {
 
         {/* Pencarian Mahasiswa & Detail Nilai */}
         <Show when={mhsSearch()}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">Hasil Pencarian Mahasiswa</h3>
             </div>
@@ -492,7 +492,7 @@ export default function LaporanRekapNilai() {
                           <td class="py-3 px-5 text-center">
                             <button
                               onClick={() => setSelectedMhsId(selectedMhsId() === m.id ? null : m.id)}
-                              class="text-caption font-bold text-brand-600 hover:text-brand-700 underline"
+                              class="text-caption font-bold text-action hover:text-action underline"
                             >
                               {selectedMhsId() === m.id ? 'Tutup' : 'Lihat Nilai'}
                             </button>
@@ -513,7 +513,7 @@ export default function LaporanRekapNilai() {
             {(() => {
               const data = rekapNilai()!;
               return (
-                <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+                <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
                   <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
                     <div>
                       <h3 class="text-base font-bold text-secondary-800 dark:text-white">
@@ -528,8 +528,8 @@ export default function LaporanRekapNilai() {
                         <p class="text-caption text-secondary-400 dark:text-secondary-300">Total SKS</p>
                         <p class="text-base font-bold text-secondary-800 dark:text-white">{data.summary.totalSks}</p>
                       </div>
-                      <div class="text-right bg-brand-50 dark:bg-brand-900/30 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800">
-                        <p class="text-caption text-brand-600 dark:text-brand-400 font-bold">IPK</p>
+                      <div class="text-right bg-action-50 dark:bg-brand-900/30 px-3 py-1.5 rounded-lg border border-brand-200 dark:border-brand-800">
+                        <p class="text-caption text-action dark:text-brand-400 font-bold">IPK</p>
                         <p class="text-base font-bold text-brand-700 dark:text-brand-300">{data.summary.ip}</p>
                       </div>
                     </div>
@@ -558,7 +558,7 @@ export default function LaporanRekapNilai() {
                               <td class="py-3 px-5 text-center">{mk.sks}</td>
                               <td class="py-3 px-5 text-center">{mk.nilaiAngka || '-'}</td>
                               <td class="py-3 px-5 text-center font-bold">{mk.nilaiHuruf || '-'}</td>
-                              <td class="py-3 px-5 text-center font-bold text-brand-600">{mk.nilaiIndeks || '-'}</td>
+                              <td class="py-3 px-5 text-center font-bold text-action">{mk.nilaiIndeks || '-'}</td>
                             </tr>
                           )}
                         </For>
@@ -616,61 +616,61 @@ export default function LaporanRekapNilai() {
                               const printWin = window.open('', '_blank');
                               if (!printWin) return;
                               const html = `
-                              <!DOCTYPE html>
-                              <html>
-                              <head>
-                                <title>Daftar Nilai - ${d.mataKuliah.nama}</title>
-                                <style>
-                                  body { font-family: sans-serif; padding: 20px; color: #333; }
-                                  h2 { text-align: center; margin-bottom: 5px; }
-                                  p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
-                                  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                  th { background-color: #f4f4f4; text-align: center; }
-                                  .center { text-align: center; }
-                                  .ttd { margin-top: 40px; float: right; width: 250px; text-align: center; font-size: 12px; }
-                                </style>
-                              </head>
-                              <body>
-                                <h2>DAFTAR NILAI KULIAH</h2>
-                                <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode}) - ${d.mataKuliah.sksTotal} SKS<br>Program Studi: ${d.mataKuliah.prodiNama} | Periode: ${selectedPeriode()}</p>
-                                <table>
-                                  <thead>
-                                    <tr>
-                                      <th width="5%">No</th>
-                                      <th width="20%">NIM</th>
-                                      <th>Nama Mahasiswa</th>
-                                      <th width="15%">Nilai Angka</th>
-                                      <th width="15%">Nilai Huruf</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    ${(d.peserta || [])
-                                      .map(
-                                        (p, idx) => `
-                                      <tr>
-                                        <td class="center">${idx + 1}</td>
-                                        <td class="center">${p.nim}</td>
-                                        <td>${p.nama}</td>
-                                        <td class="center">${p.nilaiAngka || '-'}</td>
-                                        <td class="center"><strong>${p.nilaiHuruf || '-'}</strong></td>
-                                      </tr>
-                                    `,
-                                      )
-                                      .join('')}
-                                  </tbody>
-                                </table>
-                                <div class="ttd">
-                                  <p>Dosen Pengampu,<br><br><br><br><strong>${(d.dosenPengampu || []).join(', ') || '(...........................)'}</strong></p>
-                                </div>
-                                <script>window.onload = () => { window.print(); };</script>
-                              </body>
-                              </html>
-                            `;
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Daftar Nilai - ${d.mataKuliah.nama}</title>
+ <style>
+ body { font-family: sans-serif; padding: 20px; color: #333; }
+ h2 { text-align: center; margin-bottom: 5px; }
+ p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
+ table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+ th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+ th { background-color: #f4f4f4; text-align: center; }
+ .center { text-align: center; }
+ .ttd { margin-top: 40px; float: right; width: 250px; text-align: center; font-size: 12px; }
+ </style>
+ </head>
+ <body>
+ <h2>DAFTAR NILAI KULIAH</h2>
+ <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode}) - ${d.mataKuliah.sksTotal} SKS<br>Program Studi: ${d.mataKuliah.prodiNama} | Periode: ${selectedPeriode()}</p>
+ <table>
+ <thead>
+ <tr>
+ <th width="5%">No</th>
+ <th width="20%">NIM</th>
+ <th>Nama Mahasiswa</th>
+ <th width="15%">Nilai Angka</th>
+ <th width="15%">Nilai Huruf</th>
+ </tr>
+ </thead>
+ <tbody>
+ ${(d.peserta || [])
+   .map(
+     (p, idx) => `
+ <tr>
+ <td class="center">${idx + 1}</td>
+ <td class="center">${p.nim}</td>
+ <td>${p.nama}</td>
+ <td class="center">${p.nilaiAngka || '-'}</td>
+ <td class="center"><strong>${p.nilaiHuruf || '-'}</strong></td>
+ </tr>
+ `,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <div class="ttd">
+ <p>Dosen Pengampu,<br><br><br><br><strong>${(d.dosenPengampu || []).join(', ') || '(...........................)'}</strong></p>
+ </div>
+ <script>window.onload = () => { window.print(); };</script>
+ </body>
+ </html>
+ `;
                               printWin.document.write(html);
                               printWin.document.close();
                             }}
-                            class="px-4 py-2 text-caption font-bold bg-brand-600 text-white hover:bg-brand-700 rounded-lg shadow-sm"
+                            class="px-4 py-2 text-caption font-bold bg-action text-white hover:bg-action-dark rounded-lg"
                           >
                             🖨️ Cetak Daftar Nilai
                           </button>
@@ -679,57 +679,57 @@ export default function LaporanRekapNilai() {
                               const printWin = window.open('', '_blank');
                               if (!printWin) return;
                               const html = `
-                              <!DOCTYPE html>
-                              <html>
-                              <head>
-                                <title>BAP Perkuliahan - ${d.mataKuliah.nama}</title>
-                                <style>
-                                  body { font-family: sans-serif; padding: 20px; color: #333; }
-                                  h2 { text-align: center; margin-bottom: 5px; }
-                                  p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
-                                  table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                  th { background-color: #f4f4f4; text-align: center; }
-                                  .center { text-align: center; }
-                                </style>
-                              </head>
-                              <body>
-                                <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
-                                <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode})<br>Dosen: ${(d.dosenPengampu || []).join(', ') || '-'}</p>
-                                <table>
-                                  <thead>
-                                    <tr>
-                                      <th width="8%">Pertemuan</th>
-                                      <th width="15%">Tanggal</th>
-                                      <th>Materi / Pokok Bahasan</th>
-                                      <th width="15%">Durasi (Menit)</th>
-                                      <th width="20%">Dosen Pengajar</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    ${(d.bapList || [])
-                                      .map(
-                                        (b) => `
-                                      <tr>
-                                        <td class="center">${b.pertemuanKe}</td>
-                                        <td class="center">${new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
-                                        <td>${b.materi}</td>
-                                        <td class="center">${b.durasiMenit}</td>
-                                        <td>${b.dosenNama}</td>
-                                      </tr>
-                                    `,
-                                      )
-                                      .join('')}
-                                  </tbody>
-                                </table>
-                                <script>window.onload = () => { window.print(); };</script>
-                              </body>
-                              </html>
-                            `;
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>BAP Perkuliahan - ${d.mataKuliah.nama}</title>
+ <style>
+ body { font-family: sans-serif; padding: 20px; color: #333; }
+ h2 { text-align: center; margin-bottom: 5px; }
+ p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
+ table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+ th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+ th { background-color: #f4f4f4; text-align: center; }
+ .center { text-align: center; }
+ </style>
+ </head>
+ <body>
+ <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
+ <p><strong>${d.mataKuliah.nama}</strong> (${d.mataKuliah.kode})<br>Dosen: ${(d.dosenPengampu || []).join(', ') || '-'}</p>
+ <table>
+ <thead>
+ <tr>
+ <th width="8%">Pertemuan</th>
+ <th width="15%">Tanggal</th>
+ <th>Materi / Pokok Bahasan</th>
+ <th width="15%">Durasi (Menit)</th>
+ <th width="20%">Dosen Pengajar</th>
+ </tr>
+ </thead>
+ <tbody>
+ ${(d.bapList || [])
+   .map(
+     (b) => `
+ <tr>
+ <td class="center">${b.pertemuanKe}</td>
+ <td class="center">${new Date(b.tanggal).toLocaleDateString('id-ID')}</td>
+ <td>${b.materi}</td>
+ <td class="center">${b.durasiMenit}</td>
+ <td>${b.dosenNama}</td>
+ </tr>
+ `,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <script>window.onload = () => { window.print(); };</script>
+ </body>
+ </html>
+ `;
                               printWin.document.write(html);
                               printWin.document.close();
                             }}
-                            class="px-4 py-2 text-caption font-bold bg-secondary-700 text-white hover:bg-secondary-800 rounded-lg shadow-sm"
+                            class="px-4 py-2 text-caption font-bold bg-secondary-700 text-white hover:bg-secondary-800 rounded-lg"
                           >
                             📄 Lihat & Cetak BAP Perkuliahan
                           </button>

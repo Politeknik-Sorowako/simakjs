@@ -51,7 +51,7 @@ export default function AdmisiDashboard() {
           </div>
           <A
             href="/admisi/pendaftaran/baru"
-            class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+            class="bg-action hover:bg-action-dark text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
           >
             + Daftar Baru
           </A>
@@ -70,7 +70,7 @@ export default function AdmisiDashboard() {
                 fileName?: string;
                 createdAt: string;
               }) => (
-                <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-4">
+                <div class="bg-action-50 dark:bg-action/20 border border-brand-200 dark:border-brand-800 rounded-xl p-4">
                   <div class="flex items-center gap-2 mb-1">
                     {a.isPinned ? (
                       <span class="text-xs px-1.5 py-0.5 bg-brand-200 dark:bg-brand-800 text-brand-700 dark:text-brand-300 rounded font-semibold">
@@ -85,7 +85,7 @@ export default function AdmisiDashboard() {
                       href={`${apiUrl}/admisi/announcements/${a.id}/file`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 underline mt-1"
+                      class="inline-flex items-center gap-1 text-xs text-action hover:text-action underline mt-1"
                     >
                       📎 {a.fileName}
                     </a>
@@ -114,7 +114,7 @@ export default function AdmisiDashboard() {
             <p class="text-sm text-secondary-500 mb-4">Anda belum membuat pendaftaran apa pun.</p>
             <A
               href="/admisi/pendaftaran/baru"
-              class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold"
+              class="bg-action hover:bg-action-dark text-white px-5 py-2.5 rounded-lg text-sm font-semibold"
             >
               Mulai Daftar Sekarang
             </A>

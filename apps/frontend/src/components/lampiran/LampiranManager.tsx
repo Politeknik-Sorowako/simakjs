@@ -169,7 +169,7 @@ export function LampiranManager(props: LampiranManagerProps) {
                     type="button"
                     disabled={uploadingSk()}
                     onClick={() => skInputRef?.click()}
-                    class="w-full py-3 px-4 border border-dashed border-secondary-300 dark:border-secondary-700 rounded-xl flex items-center justify-center gap-2 text-xs font-medium text-secondary-600 hover:text-brand-600 hover:border-brand-400 dark:text-secondary-300 transition-colors"
+                    class="w-full py-3 px-4 border border-dashed border-secondary-300 dark:border-secondary-700 rounded-xl flex items-center justify-center gap-2 text-xs font-medium text-secondary-600 hover:text-action hover:border-brand-400 dark:text-secondary-300 transition-colors"
                   >
                     <span>+ Pilih Surat SK (PDF / Gambar)</span>
                   </button>
@@ -178,7 +178,7 @@ export function LampiranManager(props: LampiranManagerProps) {
             >
               <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700">
                 <div class="flex items-center gap-2.5 overflow-hidden">
-                  <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400 flex items-center justify-center font-bold text-xs shrink-0">
+                  <div class="w-8 h-8 rounded-lg bg-action-50 text-action dark:bg-brand-950/60 dark:text-brand-400 flex items-center justify-center font-bold text-xs shrink-0">
                     PDF
                   </div>
                   <div class="truncate">
@@ -195,7 +195,7 @@ export function LampiranManager(props: LampiranManagerProps) {
                     <button
                       type="button"
                       onClick={() => skInputRef?.click()}
-                      class="text-xs text-brand-600 hover:underline px-2 py-1 font-medium"
+                      class="text-xs text-action hover:underline px-2 py-1 font-medium"
                     >
                       Ganti
                     </button>
@@ -214,7 +214,7 @@ export function LampiranManager(props: LampiranManagerProps) {
         >
           <div class="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-secondary-800 border border-secondary-200/80 dark:border-secondary-700">
             <div class="flex items-center gap-2.5 overflow-hidden">
-              <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-400 flex items-center justify-center font-bold text-xs shrink-0">
+              <div class="w-8 h-8 rounded-lg bg-action-50 text-action dark:bg-brand-950/60 dark:text-brand-400 flex items-center justify-center font-bold text-xs shrink-0">
                 SK
               </div>
               <div class="truncate">
@@ -319,7 +319,7 @@ export function LampiranManager(props: LampiranManagerProps) {
                       variant="danger"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`Hapus berkas "${item.fileName}"?`)) {
+                        if (confirm(`Hapus berkas"${item.fileName}"?`)) {
                           props.onDelete!(item.id);
                         }
                       }}
