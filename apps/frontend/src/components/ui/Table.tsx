@@ -13,6 +13,13 @@ interface TableProps {
   colWidths?: string[];
   /** Judul tooltip untuk header (berguna saat header memakai `whitespace-nowrap`). */
   headerTitles?: string[];
+  /**
+   * Header menempel saat tabel digulir. Tanpa ini, baris header ikut ter-scroll
+   * dan-kosong-kosong sehingga sulit dicocokkan dengan kolomnya di body.
+   * Memerlukan `divide-separate` agar border/background `thead` tidak "tembus"
+   * ke body (efek `border-collapse: collapse` pada elemen sticky).
+   */
+  stickyHeader?: boolean;
 }
 
 export function Table(props: TableProps) {
@@ -25,6 +32,8 @@ export function Table(props: TableProps) {
       <div class="overflow-x-auto">
         <table
           class={`divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-table ${
+            props.stickyHeader ? 'divide-separate border-separate' : ''
+          } ${
             // Tanpa lebar kolom eksplisit: `min-w-full` (perilaku lama).
             // Dengannya: `table-fixed` + lebar minimum, sehingga pada layar sempit
             // terjadi scroll horizontal (bukan kolom tergencet) dan header tetap
@@ -37,7 +46,7 @@ export function Table(props: TableProps) {
               <For each={props.colWidths ?? []}>{(w) => <col style={{ width: w }} />}</For>
             </colgroup>
           </Show>
-          <thead>
+          <thead class={props.stickyHeader ? 'sticky top-0 z-10 bg-parchment dark:bg-secondary-800' : undefined}>
             <tr class="bg-parchment dark:bg-secondary-800/60 border-b border-secondary-200/80 dark:border-secondary-800">
               <For each={props.headers}>
                 {(header, i) => (

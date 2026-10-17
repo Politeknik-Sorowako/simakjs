@@ -28,14 +28,27 @@ const SLOTS: SlotMeta[] = [
   },
 ];
 
-/** Header tabel (dipakai juga sebagai tooltip saat header tidak boleh wrap). */
-const TABLE_HEADERS = ['NIM', 'Mahasiswa', 'Angkatan', 'Program Studi', 'Dosen PA', ...SLOTS.map((s) => s.label)];
+/**
+ * Header tabel dipendekkan ("PKL", "TA 1", "TA 2") dengan nama lengkap pada
+ * `headerTitles` (tooltip). Alasannya: header panjang + `whitespace-nowrap`
+ * memaksa lebar kolomnya sendiri dan mendorong kolom tetangga, sehingga header
+ * terlihat tidak sejajar dengan body. Nama lengkapnya: label pada tooltip.
+ */
+const TABLE_HEADERS = ['NIM', 'Mahasiswa', 'Angkatan', 'Prodi', 'Dosen PA', 'PKL', 'TA 1', 'TA 2'];
+const TABLE_HEADER_TITLES = [
+  'NIM',
+  'Nama mahasiswa',
+  'Angkatan',
+  'Program studi',
+  'Dosen Pembimbing Akademik (dikelola pada Data Mahasiswa)',
+  ...SLOTS.map((s) => s.label),
+];
 
 /**
  * Lebar kolom (persentase, total 100%). Dengan `table-fixed`, header dan body
  * memakai lebar kolom yang identik sehingga keduanya tidak dapat bergeser.
  */
-const COL_WIDTHS = ['13%', '19%', '9%', '15%', '12%', '11%', '10.5%', '10.5%'];
+const COL_WIDTHS = ['14%', '20%', '9%', '16%', '13%', '9.5%', '9.5%', '9%'];
 
 interface DosenOpsi {
   id: number;
@@ -237,13 +250,13 @@ export default function PenetapanPembimbing() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/*
-          Sub-nav frosted (DESIGN.md): bar lengket di bawah navbar dengan
-          backdrop-blur di atas kanvas parchment + hairline tipis sebagai pembatas.
-          Judul di kiri, aksi utama (pill Action Blue) di kanan; filterSearch
-          dan filter lain ditulis langsung sebagai baris kontrol, bukan kartu
-          terpisah, agar hierarki tetap tenang.
+          Kepala halaman (judul + aksi utama + filter) ditulis sebagai satu blok
+          mengalir normal, BUKAN sticky. Alasannya: header tabel dibuat sticky
+          (`stickyHeader`) agar selalu sejajar dengan kolom body saat digulir —
+          bila kepala halaman ikut menempel, keduanya bertumpuk dan header
+          tabel justru tertutup.
         */}
-        <div class="sticky top-16 z-30 -mx-4 px-4 md:-mx-8 md:px-8 bg-parchment/80 dark:bg-secondary-950/80 backdrop-blur-md border-b border-hairline dark:border-secondary-800">
+        <div class="-mx-4 px-4 pb-4 md:-mx-8 md:px-8">
           <div class="flex flex-col gap-3 py-4">
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div class="min-w-0">
@@ -357,7 +370,8 @@ export default function PenetapanPembimbing() {
             // kolom yang sama persis, sehingga tidak bisa bergeser saat tabel
             // digeser horizontal atau pada viewport sempit.
             colWidths={COL_WIDTHS}
-            headerTitles={TABLE_HEADERS}
+            headerTitles={TABLE_HEADER_TITLES}
+            stickyHeader
           >
             <tbody>
               <For
@@ -372,28 +386,37 @@ export default function PenetapanPembimbing() {
               >
                 {(item) => (
                   <tr class="border-b border-secondary-100 last:border-0 dark:border-secondary-800">
-                    <td class="px-6 py-3 font-mono text-caption text-secondary-600 dark:text-secondary-300">
+                    <td class="align-top px-6 py-3 font-mono text-caption text-secondary-600 dark:text-secondary-300">
                       {item.nim}
                     </td>
-                    <td class="px-6 py-3 text-table font-medium text-secondary-800 dark:text-white">
-                      {item.namaMahasiswa}
+                    <td class="align-top px-6 py-3 text-table font-medium text-secondary-800 dark:text-white">
+                      <span class="block truncate" title={item.namaMahasiswa}>
+                        {item.namaMahasiswa}
+                      </span>
                     </td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
                       {item.angkatan ?? '-'}
                     </td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      {item.prodiNama ?? '-'}
+                    <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                      <span class="block truncate" title={item.prodiNama ?? undefined}>
+                        {item.prodiNama ?? '-'}
+                      </span>
                     </td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      {item.dosenPaNama ?? 'Belum ada PA'}
+                    <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                      <span class="block truncate" title={item.dosenPaNama ?? 'Belum ada PA'}>
+                        {item.dosenPaNama ?? 'Belum ada PA'}
+                      </span>
                     </td>
                     <For each={SLOTS}>
                       {(slot) => {
                         const detail = () => item.pembimbing[slot.key];
                         return (
-                          <td class="px-6 py-3">
+                          <td class="align-top px-6 py-3">
                             <div class="flex flex-col items-start gap-1">
-                              <span class="text-caption text-secondary-700 dark:text-secondary-200">
+                              <span
+                                class="block max-w-full truncate text-caption text-secondary-700 dark:text-secondary-200"
+                                title={describePembimbing(item, slot.key)}
+                              >
                                 {describePembimbing(item, slot.key)}
                               </span>
                               <Show
@@ -401,7 +424,7 @@ export default function PenetapanPembimbing() {
                                 fallback={
                                   <button
                                     type="button"
-                                    class="-ml-3 inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
+                                    class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
                                     onClick={() => openModal(item, slot.key)}
                                   >
                                     Tetapkan
@@ -415,14 +438,14 @@ export default function PenetapanPembimbing() {
                                     </Badge>
                                     <button
                                       type="button"
-                                      class="-ml-3 inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
+                                      class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
                                       onClick={() => openModal(item, slot.key)}
                                     >
                                       Ubah
                                     </button>
                                     <button
                                       type="button"
-                                      class="-ml-3 inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-danger-600 transition-colors hover:bg-danger-50 active:scale-95 dark:text-danger-400 dark:hover:bg-danger-500/10"
+                                      class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-danger-600 transition-colors hover:bg-danger-50 active:scale-95 dark:text-danger-400 dark:hover:bg-danger-500/10"
                                       onClick={() =>
                                         setCabutTarget({ id: d().id, label: `${item.namaMahasiswa} — ${slot.label}` })
                                       }
