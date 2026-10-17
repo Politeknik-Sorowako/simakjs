@@ -171,6 +171,14 @@ export class SystemController {
       }
       value = String(Math.floor(size));
     }
+    if (key === 'FEEDER_WRITE_GUARD') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized !== 'true' && normalized !== 'false') {
+        set.status = 400;
+        return { error: 'FEEDER_WRITE_GUARD harus bernilai true atau false' };
+      }
+      value = normalized;
+    }
     try {
       const row = await SystemParameterService.set(key, String(value), user.id, description);
       return { key: row.key, value: SECRET_PARAM_KEYS.has(key) ? '' : row.value };

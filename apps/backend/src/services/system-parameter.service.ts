@@ -159,6 +159,12 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     type: 'boolean',
     description: 'Setujui otomatis KRS tertunda sebelum dikirim/diambil dari Feeder',
   },
+  FEEDER_WRITE_GUARD: {
+    value: 'true',
+    type: 'boolean',
+    description:
+      'Blokir semua aksi tulis ke Feeder PDDIKTI (Insert/Update/Delete). Jika aktif (true), aplikasi hanya mengizinkan operasi baca (Get* / GetToken).',
+  },
 };
 
 /** Parameter yang nilainya bersifat rahasia (di-mask pada respons API). */
@@ -172,6 +178,8 @@ export interface FeederConfig {
   timeoutMs: number;
   pageSize: number;
   autoApproveKrs: boolean;
+  /** Jika true (default fail-safe), semua mutasi ke Feeder (Insert/Update/Delete) diblokir. */
+  writeGuard: boolean;
 }
 
 const SESSION_DURATION_MIN = 15;
@@ -185,6 +193,11 @@ export class SystemParameterService {
       cache.delete(key);
       return;
     }
+    cache.clear();
+  }
+
+  /** Bersihkan cache parameter in-memory (mis. saat reset DB pengujian). */
+  static clearCache(): void {
     cache.clear();
   }
 
@@ -261,18 +274,22 @@ export class SystemParameterService {
   /**
    * Konfigurasi integrasi Neo Feeder PDDIKTI yang sudah di-resolve & di-clamp.
    * Nilai timeout/pageSize selalu dalam rentang aman meski baris DB korup.
+   * `writeGuard` bersifat fail-safe: aktif (`true`) kecuali diset eksplisit `'false'` atau `'0'`.
    */
   static async getFeederConfig(): Promise<FeederConfig> {
-    const [url, username, password, timeoutRaw, pageSizeRaw, autoApprove] = await Promise.all([
+    const [url, username, password, timeoutRaw, pageSizeRaw, autoApprove, writeGuardRaw] = await Promise.all([
       SystemParameterService.getRaw('FEEDER_URL'),
       SystemParameterService.getRaw('FEEDER_USERNAME'),
       SystemParameterService.getRaw('FEEDER_PASSWORD'),
       SystemParameterService.getRaw('FEEDER_TIMEOUT_MS'),
       SystemParameterService.getRaw('FEEDER_PAGE_SIZE'),
       SystemParameterService.getRaw('FEEDER_AUTO_APPROVE_KRS'),
+      SystemParameterService.getRaw('FEEDER_WRITE_GUARD'),
     ]);
     const timeoutParsed = Number(timeoutRaw);
     const pageSizeParsed = Number(pageSizeRaw);
+    const normalizedGuard = (writeGuardRaw ?? '').trim().toLowerCase();
+    const writeGuard = normalizedGuard !== 'false' && normalizedGuard !== '0';
     return {
       url: (url ?? '').trim(),
       username: (username ?? '').trim(),
@@ -280,7 +297,15 @@ export class SystemParameterService {
       timeoutMs: Number.isFinite(timeoutParsed) ? Math.min(60000, Math.max(5000, Math.floor(timeoutParsed))) : 20000,
       pageSize: Number.isFinite(pageSizeParsed) ? Math.min(500, Math.max(50, Math.floor(pageSizeParsed))) : 200,
       autoApproveKrs: autoApprove === 'true' || autoApprove === '1',
+      writeGuard,
     };
+  }
+
+  /** Status guard tulis Feeder (fail-safe ke `true` bila belum diset/korup). */
+  static async isFeederWriteGuardEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('FEEDER_WRITE_GUARD');
+    const normalized = (raw ?? '').trim().toLowerCase();
+    return normalized !== 'false' && normalized !== '0';
   }
 
   /** Durasi sesi login (idle timeout) dalam menit, diklamp ke rentang 15–10080. */

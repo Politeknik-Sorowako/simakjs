@@ -4,10 +4,21 @@ import { type FeederConfig, SystemParameterService } from './system-parameter.se
 /**
  * Klien Web Service Neo Feeder PDDIKTI (`ws/live2.php`).
  *
- * Protokol: setiap permintaan adalah POST JSON dengan field `act`. Autentikasi
- * memakai `GetToken` (sekali) lalu token diikutkan pada setiap panggilan `act`
- * berikutnya. Token di-cache ±20 menit per kombinasi url+username+password.
+ * Protokol resmi Feeder: setiap permintaan ke `ws/live2.php` dikirim via HTTP POST
+ * dengan body JSON berisi field `act`. Autentikasi memakai `GetToken` lalu token
+ * diikutkan pada setiap panggilan `act` berikutnya.
+ *
+ * Kebijakan Keamanan (Write Guard):
+ * - `FeederService.request()` HANYA mengizinkan aksi baca (`Get*`). Aksi tulis
+ *   (`Insert*`, `Update*`, `Delete*`) ditolak sebelum menyentuh jaringan.
+ * - `FeederService.mutate()` disediakan khusus untuk fase push mendatang dan
+ *   memblokir seluruh aksi tulis selama `config.writeGuard !== false` (default ON / fail-safe).
  */
+
+export const READ_ONLY_ACT_PATTERN = /^Get[A-Z][A-Za-z0-9_]*$/;
+export const MUTATION_ACT_PATTERN = /^(Insert|Update|Delete)[A-Z][A-Za-z0-9_]*$/;
+
+export type FeederTransport = (config: FeederConfig, body: Record<string, unknown>) => Promise<unknown>;
 
 interface FeederEnvelope {
   error_code?: number | string;
@@ -35,8 +46,14 @@ export interface FeederTestOverride {
 const TOKEN_TTL_MS = 20 * 60 * 1000;
 const TOKEN_CACHE_MAX = 20;
 const tokenCache = new Map<string, { token: string; at: number }>();
+let customTransport: FeederTransport | null = null;
 
 export class FeederService {
+  /** Override transport (khusus pengujian lokal agar tidak menyentuh server Feeder asli). */
+  static setTestTransport(fn: FeederTransport | null): void {
+    customTransport = fn;
+  }
+
   /** Kunci cache token — hash agar password tidak tersimpan mentah di kunci Map. */
   private static cacheKey(config: FeederConfig): string {
     return crypto
@@ -46,7 +63,34 @@ export class FeederService {
       .slice(0, 32);
   }
 
+  /** Validasi bahwa `act` adalah operasi baca (`Get*`, bukan `GetToken` maupun aksi tulis). */
+  static assertReadAllowed(act: string): void {
+    const trimmed = (act ?? '').trim();
+    if (!READ_ONLY_ACT_PATTERN.test(trimmed) || trimmed === 'GetToken') {
+      throw new Error(`Aksi Feeder "${act}" ditolak: FeederService.request() hanya mengizinkan operasi baca (Get*).`);
+    }
+  }
+
+  /** Validasi bahwa aksi tulis diizinkan oleh `FEEDER_WRITE_GUARD` dan prefix `act` valid. */
+  static assertMutationAllowed(config: Pick<FeederConfig, 'writeGuard'>, act: string): void {
+    if (config.writeGuard !== false) {
+      throw new Error(`Aksi tulis Feeder "${act}" diblokir karena FEEDER_WRITE_GUARD aktif (mode baca-saja).`);
+    }
+    const trimmed = (act ?? '').trim();
+    if (!MUTATION_ACT_PATTERN.test(trimmed)) {
+      throw new Error(`Aksi Feeder "${act}" tidak valid untuk mutate(): hanya Insert*/Update*/Delete* yang diizinkan.`);
+    }
+  }
+
   private static async post(config: FeederConfig, body: Record<string, unknown>): Promise<unknown> {
+    const act = typeof body.act === 'string' ? body.act.trim() : '';
+    // Choke-point defense-in-depth: cegah mutasi lolos ke jaringan bila writeGuard aktif.
+    if (act !== 'GetToken' && !READ_ONLY_ACT_PATTERN.test(act) && config.writeGuard !== false) {
+      throw new Error(`Aksi tulis Feeder "${act}" diblokir karena FEEDER_WRITE_GUARD aktif (mode baca-saja).`);
+    }
+    if (customTransport) {
+      return await customTransport(config, body);
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), config.timeoutMs);
     try {
@@ -132,12 +176,13 @@ export class FeederService {
     );
   }
 
-  /** Panggil sebuah `act` Feeder; token kedaluwarsa di-refresh otomatis sekali. */
+  /** Panggil sebuah `act` BACA (`Get*`) Feeder; token kedaluwarsa di-refresh otomatis sekali. */
   static async request<T = unknown>(
     config: FeederConfig,
     act: string,
     extra: Record<string, unknown> = {},
   ): Promise<T> {
+    FeederService.assertReadAllowed(act);
     let token = await FeederService.getToken(config);
     try {
       return (await FeederService.callWithToken(config, act, token, extra)) as T;
@@ -145,6 +190,38 @@ export class FeederService {
       if (e instanceof Error && /token/i.test(e.message)) {
         token = await FeederService.getToken(config, true);
         return (await FeederService.callWithToken(config, act, token, extra)) as T;
+      }
+      throw e;
+    }
+  }
+
+  /**
+   * Panggil aksi TULIS (`Insert*`/`Update*`/`Delete*`) ke Feeder.
+   * Diblokir secara otomatis selama `config.writeGuard !== false` (default ON / fail-safe).
+   */
+  static async mutate<T = unknown>(config: FeederConfig, act: string, extra: Record<string, unknown> = {}): Promise<T> {
+    FeederService.assertMutationAllowed(config, act);
+    let token = await FeederService.getToken(config);
+    try {
+      return (await FeederService.unwrap(
+        await FeederService.post(config, {
+          act,
+          token,
+          ...extra,
+        }),
+        act,
+      )) as T;
+    } catch (e: unknown) {
+      if (e instanceof Error && /token/i.test(e.message)) {
+        token = await FeederService.getToken(config, true);
+        return (await FeederService.unwrap(
+          await FeederService.post(config, {
+            act,
+            token,
+            ...extra,
+          }),
+          act,
+        )) as T;
       }
       throw e;
     }

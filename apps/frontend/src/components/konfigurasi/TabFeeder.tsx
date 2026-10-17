@@ -13,6 +13,7 @@ interface FeederForm {
   timeoutMs: string;
   pageSize: string;
   autoApproveKrs: boolean;
+  writeGuard: boolean;
 }
 
 /**
@@ -34,6 +35,12 @@ export default function TabFeeder() {
 
   const findParam = (key: string) => params()?.find((p) => p.key === key) ?? null;
   const serverValue = (key: string, fallback = '') => String(findParam(key)?.value ?? fallback);
+  const serverBool = (key: string, fallback: boolean) => {
+    const raw = serverValue(key, fallback ? 'true' : 'false')
+      .trim()
+      .toLowerCase();
+    return fallback ? raw !== 'false' && raw !== '0' : raw === 'true' || raw === '1';
+  };
   const passwordFilled = () => Boolean(findParam('FEEDER_PASSWORD')?.hasValue);
 
   createEffect(() => {
@@ -45,7 +52,8 @@ export default function TabFeeder() {
         password: '',
         timeoutMs: serverValue('FEEDER_TIMEOUT_MS', '20000'),
         pageSize: serverValue('FEEDER_PAGE_SIZE', '200'),
-        autoApproveKrs: serverValue('FEEDER_AUTO_APPROVE_KRS', 'false') === 'true',
+        autoApproveKrs: serverBool('FEEDER_AUTO_APPROVE_KRS', false),
+        writeGuard: serverBool('FEEDER_WRITE_GUARD', true),
       });
     }
   });
@@ -60,7 +68,8 @@ export default function TabFeeder() {
       f.username !== serverValue('FEEDER_USERNAME') ||
       f.timeoutMs !== serverValue('FEEDER_TIMEOUT_MS', '20000') ||
       f.pageSize !== serverValue('FEEDER_PAGE_SIZE', '200') ||
-      String(f.autoApproveKrs) !== serverValue('FEEDER_AUTO_APPROVE_KRS', 'false') ||
+      f.autoApproveKrs !== serverBool('FEEDER_AUTO_APPROVE_KRS', false) ||
+      f.writeGuard !== serverBool('FEEDER_WRITE_GUARD', true) ||
       f.password.length > 0
     );
   };
@@ -92,8 +101,11 @@ export default function TabFeeder() {
       if (f.pageSize !== serverValue('FEEDER_PAGE_SIZE', '200')) {
         jobs.push(systemController.updateParameter('FEEDER_PAGE_SIZE', f.pageSize));
       }
-      if (String(f.autoApproveKrs) !== serverValue('FEEDER_AUTO_APPROVE_KRS', 'false')) {
+      if (f.autoApproveKrs !== serverBool('FEEDER_AUTO_APPROVE_KRS', false)) {
         jobs.push(systemController.updateParameter('FEEDER_AUTO_APPROVE_KRS', f.autoApproveKrs ? 'true' : 'false'));
+      }
+      if (f.writeGuard !== serverBool('FEEDER_WRITE_GUARD', true)) {
+        jobs.push(systemController.updateParameter('FEEDER_WRITE_GUARD', f.writeGuard ? 'true' : 'false'));
       }
       if (jobs.length === 0) {
         setNotice('Tidak ada perubahan untuk disimpan.');
@@ -112,13 +124,20 @@ export default function TabFeeder() {
       const fresh = await refetch();
       if (fresh) {
         const val = (key: string, fallback = '') => String(fresh.find((p) => p.key === key)?.value ?? fallback);
+        const boolVal = (key: string, fallback: boolean) => {
+          const raw = val(key, fallback ? 'true' : 'false')
+            .trim()
+            .toLowerCase();
+          return fallback ? raw !== 'false' && raw !== '0' : raw === 'true' || raw === '1';
+        };
         setForm({
           url: val('FEEDER_URL'),
           username: val('FEEDER_USERNAME'),
           password: '',
           timeoutMs: val('FEEDER_TIMEOUT_MS', '20000'),
           pageSize: val('FEEDER_PAGE_SIZE', '200'),
-          autoApproveKrs: val('FEEDER_AUTO_APPROVE_KRS', 'false') === 'true',
+          autoApproveKrs: boolVal('FEEDER_AUTO_APPROVE_KRS', false),
+          writeGuard: boolVal('FEEDER_WRITE_GUARD', true),
         });
       } else {
         setForm(null);
@@ -254,6 +273,29 @@ export default function TabFeeder() {
                     onInput={(e) => patch({ pageSize: e.currentTarget.value })}
                   />
                 </label>
+              </div>
+
+              <div class="rounded-xl border border-secondary-200 bg-secondary-50/60 p-4 dark:border-secondary-800 dark:bg-secondary-900/40">
+                <div class="flex items-start justify-between gap-3">
+                  <label class="flex items-start gap-2.5 text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                    <input
+                      type="checkbox"
+                      checked={f().writeGuard}
+                      onChange={(e) => patch({ writeGuard: e.currentTarget.checked })}
+                      class="mt-0.5 h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                    />
+                    <span>
+                      Aktifkan Write Guard — Mode Baca Saja ke Feeder
+                      <span class="mt-0.5 block text-xs font-normal text-secondary-500 dark:text-secondary-400">
+                        Saat aktif (disarankan), aplikasi memblokir seluruh perintah ubah data (Insert/Update/Delete) ke
+                        Neo Feeder PDDIKTI dan hanya mengizinkan penarikan data (Get*).
+                      </span>
+                    </span>
+                  </label>
+                  <Badge variant={f().writeGuard ? 'success' : 'warning'}>
+                    {f().writeGuard ? 'Guard ON (Baca Saja)' : 'Guard OFF'}
+                  </Badge>
+                </div>
               </div>
 
               <label class="flex items-center gap-2 text-sm font-semibold text-secondary-700 dark:text-secondary-200">
