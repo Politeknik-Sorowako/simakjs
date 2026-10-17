@@ -143,7 +143,7 @@ function AdminWidgets() {
         <DashboardPengumumanWidget />
 
         {/* Kolom 2: Tagihan Status */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Pembayaran Mahasiswa</h3>
           <Show
             when={tagihanStats().total > 0}
@@ -178,7 +178,7 @@ function AdminWidgets() {
                   </span>
                 </div>
                 <div class="mt-2 text-center">
-                  <a href="/keuangan" class="text-caption font-bold text-brand-600 hover:text-brand-700 underline">
+                  <a href="/keuangan" class="text-caption font-bold text-action hover:text-action underline">
                     Kelola Keuangan →
                   </a>
                 </div>
@@ -188,7 +188,7 @@ function AdminWidgets() {
         </div>
 
         {/* PDDIKTI Sync Status */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Sinkronisasi PDDIKTI</h3>
           <Show
             when={!pddiktiStats.loading && pddiktiStats()}
@@ -217,7 +217,7 @@ function AdminWidgets() {
                 )}
               </For>
               <div class="pt-2 text-center">
-                <a href="/pddikti" class="text-caption font-bold text-brand-600 hover:text-brand-700 underline">
+                <a href="/pddikti" class="text-caption font-bold text-action hover:text-action underline">
                   Sinkronisasi Data →
                 </a>
               </div>
@@ -227,7 +227,7 @@ function AdminWidgets() {
       </div>
 
       {/* Periode Aktif Info */}
-      <div class="bg-gradient-to-r from-brand-600 to-accent-700 text-white rounded-2xl p-5 shadow-sm">
+      <div class="bg-gradient-to-r from-brand-600 to-accent-700 text-white rounded-2xl p-5">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
           <div>
             <h3 class="text-base font-bold opacity-90">Periode Akademik Aktif</h3>
@@ -354,19 +354,19 @@ function DosenWidgets() {
       </div>
 
       {/* Daftar Kelas Diampu */}
-      <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5 shadow-sm">
+      <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <div class="flex items-center gap-2 flex-wrap">
             <h3 class="text-base font-bold text-secondary-800 dark:text-white">Kelas Aktif Semester Ini</h3>
             <Show when={periodeAktif()}>
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-fine font-semibold bg-brand-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-fine font-semibold bg-action-50 dark:bg-brand-900/40 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
                 {periodeAktif()?.nama}
               </span>
             </Show>
           </div>
           <a
             href="/jurnal-presensi"
-            class="text-caption font-bold text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 underline"
+            class="text-caption font-bold text-action dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 underline"
           >
             Isi BAP & Presensi →
           </a>
@@ -376,7 +376,7 @@ function DosenWidgets() {
           fallback={
             <div class="flex flex-col items-center justify-center py-10 text-secondary-400 dark:text-secondary-300">
               <svg
-                class="animate-spin h-6 w-6 text-brand-500 mb-2"
+                class="animate-spin h-6 w-6 text-action mb-2"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -396,7 +396,7 @@ function DosenWidgets() {
             when={(kelasDiampu()?.data?.length || 0) > 0}
             fallback={
               <div class="flex flex-col items-center justify-center py-12 px-4 text-center bg-secondary-50/50 dark:bg-secondary-800/30 rounded-xl border border-dashed border-secondary-200 dark:border-secondary-700">
-                <div class="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 flex items-center justify-center mb-3 text-brand-600 dark:text-brand-400">
+                <div class="w-14 h-14 rounded-2xl bg-action-50 dark:bg-brand-900/30 border border-brand-100 dark:border-brand-800 flex items-center justify-center mb-3 text-action dark:text-brand-400">
                   <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
                       stroke-linecap="round"
@@ -422,20 +422,20 @@ function DosenWidgets() {
                     class="group relative border border-secondary-100 dark:border-secondary-800 rounded-xl p-4 hover:shadow-md hover:border-brand-300 dark:hover:border-brand-700 transition-all bg-secondary-50/40 dark:bg-secondary-800/40 hover:bg-white dark:hover:bg-secondary-800"
                   >
                     <div class="flex items-center justify-between">
-                      <span class="inline-flex items-center px-2 py-0.5 rounded text-fine font-bold bg-brand-100/70 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 uppercase tracking-wider">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded text-fine font-bold bg-action-100/70 dark:bg-brand-900/50 text-brand-700 dark:text-brand-300 uppercase tracking-wider">
                         {item.kelasKuliah?.namaKelas}
                       </span>
                       <span class="text-fine font-medium text-secondary-400 dark:text-secondary-500">
                         {item.sksBebanMengajar || item.kelasKuliah?.mataKuliah?.sksTotal || 0} SKS
                       </span>
                     </div>
-                    <div class="text-base font-bold text-secondary-800 dark:text-white mt-2 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-1">
+                    <div class="text-base font-bold text-secondary-800 dark:text-white mt-2 group-hover:text-action dark:group-hover:text-brand-400 transition-colors line-clamp-1">
                       {item.kelasKuliah?.mataKuliah?.nama || 'Mata Kuliah'}
                     </div>
                     <div class="text-fine text-secondary-500 dark:text-secondary-400 mt-1 flex items-center gap-2">
                       <span class="font-mono">{item.kelasKuliah?.mataKuliah?.kode}</span>
                     </div>
-                    <span class="mt-2.5 inline-flex items-center gap-1 text-fine font-bold text-brand-600 dark:text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span class="mt-2.5 inline-flex items-center gap-1 text-fine font-bold text-action dark:text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       Buka BAP →
                     </span>
                   </a>
@@ -447,7 +447,7 @@ function DosenWidgets() {
       </div>
 
       {/* Mahasiswa Bimbingan */}
-      <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5 shadow-sm">
+      <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-5">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-base font-bold text-secondary-800 dark:text-white">
             Mahasiswa Bimbingan Akademik
@@ -490,10 +490,7 @@ function DosenWidgets() {
                         {m.bimbinganId ? `${m.totalSesi || 0} sesi` : 'Belum ada'}
                       </td>
                       <td class="py-3">
-                        <a
-                          href={`/bimbingan?mhs=${m.id}`}
-                          class="text-brand-600 hover:text-brand-700 font-bold text-fine"
-                        >
+                        <a href={`/bimbingan?mhs=${m.id}`} class="text-action hover:text-action font-bold text-fine">
                           Detail →
                         </a>
                       </td>
@@ -645,7 +642,7 @@ function MahasiswaWidgets() {
       {/* Row 2: IP Trend + Tagihan */}
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* IP Trend Chart */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Tren IP per Semester</h3>
           <Show
             when={ipsData().labels.length > 0}
@@ -672,7 +669,7 @@ function MahasiswaWidgets() {
         </div>
 
         {/* Tagihan Info */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Tagihan</h3>
           <Show
             when={currentTagihan()}
@@ -681,7 +678,7 @@ function MahasiswaWidgets() {
                 <p class="text-caption text-secondary-400 dark:text-secondary-300">Tidak ada tagihan aktif</p>
                 <a
                   href="/keuangan"
-                  class="text-caption font-bold text-brand-600 hover:text-brand-700 underline mt-2 inline-block"
+                  class="text-caption font-bold text-action hover:text-action underline mt-2 inline-block"
                 >
                   Lihat Riwayat →
                 </a>
@@ -724,7 +721,7 @@ function MahasiswaWidgets() {
                     currentTagihan()?.status === 'lunas'
                       ? 'bg-green-50 text-green-700 border border-green-200'
                       : currentTagihan()?.status === 'cicilan'
-                        ? 'bg-brand-50 text-brand-700 border border-brand-200'
+                        ? 'bg-action-50 text-action border border-brand-200'
                         : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
                   }`}
                 >
@@ -741,7 +738,7 @@ function MahasiswaWidgets() {
       </div>
 
       {/* Poin Pelanggaran Info */}
-      <div class="bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl p-5 shadow-sm">
+      <div class="bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-2xl p-5">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-base font-bold opacity-90">Poin Pelanggaran</h3>
@@ -760,7 +757,7 @@ function MahasiswaWidgets() {
       <Show when={unknownCount() > 0}>
         <a
           href="/presensi-saya"
-          class="flex items-center justify-between gap-4 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl p-5 shadow-sm hover:opacity-90 transition-opacity"
+          class="flex items-center justify-between gap-4 bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-2xl p-5 hover:opacity-90 transition-opacity"
         >
           <div class="flex items-center gap-4">
             <div class="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center">
@@ -827,7 +824,7 @@ export default function Dashboard() {
 
         {/* Other roles */}
         <Show when={auth.hasRole(['prodi', 'keuangan', 'plp'])}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6">
             <p class="text-base text-secondary-500 dark:text-secondary-300">
               Dashboard khusus untuk role <strong>{role()}</strong> sedang dalam pengembangan. Silakan gunakan menu
               navigasi di sebelah kiri.

@@ -33,7 +33,7 @@ export default function AdmisiDaftar() {
   if (success()) {
     return (
       <div class="min-h-screen flex items-center justify-center bg-gradient-to-tr from-secondary-100 via-secondary-50 to-brand-50 dark:from-secondary-950 dark:via-primary-950 dark:to-secondary-950 p-4">
-        <div class="max-w-md w-full bg-white dark:bg-secondary-900/60 backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl text-center">
+        <div class="max-w-md w-full bg-white dark:bg-secondary-900/60 backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl text-center">
           <div class="text-5xl mb-4">📧</div>
           <h2 class="text-xl font-bold mb-2">Cek Email Anda</h2>
           <p class="text-sm text-secondary-500 dark:text-secondary-300 mb-6">
@@ -48,7 +48,7 @@ export default function AdmisiDaftar() {
 
   return (
     <div class="min-h-screen flex items-center justify-center bg-gradient-to-tr from-secondary-100 via-secondary-50 to-brand-50 dark:from-secondary-950 dark:via-primary-950 dark:to-secondary-950 p-4">
-      <div class="max-w-md w-full bg-white dark:bg-secondary-900/60 backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl">
+      <div class="max-w-md w-full bg-white dark:bg-secondary-900/60 backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl">
         <div class="text-center mb-6">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mx-auto mb-2" />
           <h2 class="text-2xl font-bold">Daftar Akun PMB</h2>
@@ -89,7 +89,7 @@ export default function AdmisiDaftar() {
 
         <p class="text-center text-xs text-secondary-500 mt-4">
           Sudah punya akun?{' '}
-          <A href="/login" class="text-brand-600 hover:text-brand-700 font-semibold">
+          <A href="/login" class="text-action hover:text-action font-semibold">
             Masuk
           </A>
         </p>

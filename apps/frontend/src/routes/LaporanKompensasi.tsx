@@ -15,7 +15,7 @@ const PER_PAGE = 20;
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -289,7 +289,7 @@ export default function LaporanKompensasi() {
             <Button
               onClick={() => setShowImportModal(true)}
               variant="secondary"
-              class="!px-4 !py-2 text-xs font-bold flex items-center gap-2 shadow-sm"
+              class="!px-4 !py-2 text-xs font-bold flex items-center gap-2"
             >
               Impor CSV
             </Button>
@@ -297,7 +297,7 @@ export default function LaporanKompensasi() {
               onClick={handleExportExcel}
               disabled={isExporting()}
               variant="success"
-              class="!px-4 !py-2 text-xs font-bold flex items-center gap-2 shadow-sm"
+              class="!px-4 !py-2 text-xs font-bold flex items-center gap-2"
             >
               📊 {isExporting() ? 'Mengunduh...' : 'Ekspor Excel (.xlsx)'}
             </Button>
@@ -305,7 +305,7 @@ export default function LaporanKompensasi() {
         </div>
 
         {/* Filters & Control Toolbar */}
-        <div class="bg-white border border-secondary-100 p-5 rounded-2xl shadow-sm flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 p-5 rounded-2xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
             {/* Search */}
             <div class="relative w-full sm:w-64">
@@ -313,7 +313,7 @@ export default function LaporanKompensasi() {
               <input
                 type="text"
                 placeholder="Cari NIM atau Nama..."
-                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={search()}
                 onInput={(e) => setSearch(e.currentTarget.value)}
               />
@@ -322,7 +322,7 @@ export default function LaporanKompensasi() {
             {/* Filter Prodi */}
             <Show when={(prodis()?.data?.length || 0) > 0}>
               <select
-                class="px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                class="px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-action-focus font-semibold text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={filterProdiId() || ''}
                 onChange={(e) => {
                   setFilterProdiId(e.currentTarget.value ? parseInt(e.currentTarget.value) : undefined);
@@ -336,7 +336,7 @@ export default function LaporanKompensasi() {
 
             {/* Filter Status Lunas */}
             <select
-              class="px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-action-focus font-semibold text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={statusLunas()}
               onChange={(e) => {
                 setStatusLunas(e.currentTarget.value);
@@ -350,7 +350,7 @@ export default function LaporanKompensasi() {
 
             {/* Sorting Select */}
             <select
-              class="px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 font-semibold text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-action-focus font-semibold text-secondary-700 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={`${sortBy()}_${sortOrder()}`}
               onChange={(e) => {
                 const [valSort, valOrder] = e.currentTarget.value.split('_');
@@ -373,12 +373,12 @@ export default function LaporanKompensasi() {
         </div>
 
         {/* Laporan Table — server-side paginated */}
-        <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
           <Suspense fallback={<TableLoadingFallback />}>
             <Show when={filterProdiId() || debouncedSearch() || statusLunas() !== 'belum_lunas'}>
-              <div class="px-5 py-2 bg-brand-50 dark:bg-brand-950/40 border-b border-brand-100 dark:border-brand-900/50 flex justify-between items-center">
+              <div class="px-5 py-2 bg-action-50 dark:bg-brand-950/40 border-b border-brand-100 dark:border-brand-900/50 flex justify-between items-center">
                 <span class="text-xs font-bold text-brand-700 dark:text-brand-400">
-                  {debouncedSearch() ? `Pencarian: "${debouncedSearch()}"` : ''}
+                  {debouncedSearch() ? `Pencarian:"${debouncedSearch()}"` : ''}
                   {filterProdiId() ? ' — Filter prodi' : ''} ({filteredCount()} mahasiswa)
                 </span>
                 <button
@@ -390,7 +390,7 @@ export default function LaporanKompensasi() {
                     setSortOrder('desc');
                     setPage(1);
                   }}
-                  class="text-[10px] font-bold text-brand-600 hover:text-brand-700 underline"
+                  class="text-[10px] font-bold text-action hover:text-action underline"
                 >
                   Reset Filter
                 </button>
@@ -403,7 +403,7 @@ export default function LaporanKompensasi() {
                     <th
                       onClick={() => handleSort('nama')}
                       title="Klik untuk mengurutkan berdasarkan nama"
-                      class="py-3 px-6 cursor-pointer select-none hover:text-brand-600 transition-colors"
+                      class="py-3 px-6 cursor-pointer select-none hover:text-action transition-colors"
                     >
                       Mahasiswa <span class="text-xs font-bold">{getSortIcon('nama')}</span>
                     </th>
@@ -411,7 +411,7 @@ export default function LaporanKompensasi() {
                     <th
                       onClick={() => handleSort('total')}
                       title="Klik untuk mengurutkan berdasarkan total mangkir"
-                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-action transition-colors"
                     >
                       Akumulasi Mangkir <span class="text-xs font-bold">{getSortIcon('total')}</span>
                     </th>
@@ -419,7 +419,7 @@ export default function LaporanKompensasi() {
                     <th
                       onClick={() => handleSort('sisa')}
                       title="Klik untuk mengurutkan berdasarkan sisa tanggungan"
-                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-brand-600 transition-colors"
+                      class="py-3 px-6 text-center cursor-pointer select-none hover:text-action transition-colors"
                     >
                       Sisa Tanggungan <span class="text-xs font-bold">{getSortIcon('sisa')}</span>
                     </th>
@@ -474,7 +474,7 @@ export default function LaporanKompensasi() {
                             {item.prodiNama || '-'}
                           </td>
                           <td class="py-4 px-6 text-center text-red-500 font-bold">{item.totalKompensasi} Menit</td>
-                          <td class="py-4 px-6 text-center text-accent-600 font-bold dark:text-accent-400">
+                          <td class="py-4 px-6 text-center text-action font-bold dark:text-action dark:text-action-ondark">
                             {item.totalDibayar} Menit
                           </td>
                           <td class="py-4 px-6 text-center">
@@ -608,7 +608,7 @@ export default function LaporanKompensasi() {
                               <span class="text-secondary-400 dark:text-secondary-200">
                                 {fmtTanggal(log.bapTanggal)}
                               </span>
-                              <span class="font-semibold text-accent-600 dark:text-accent-400">
+                              <span class="font-semibold text-action dark:text-action dark:text-action-ondark">
                                 Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} Menit)
                               </span>
                               <Show when={log.keterangan}>
@@ -659,7 +659,7 @@ export default function LaporanKompensasi() {
                               <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(pay.tanggal)}</span>
                             </div>
                             <div class="flex items-center gap-2">
-                              <span class="font-bold text-accent-600 font-mono dark:text-accent-400">
+                              <span class="font-bold text-action font-mono dark:text-action dark:text-action-ondark">
                                 -{pay.jumlahMenit}m
                               </span>
                               <Button
@@ -713,7 +713,7 @@ export default function LaporanKompensasi() {
               Keterangan Kegiatan Kompensasi
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Misal: Menyapu dan mengepel Lab Komputer Vokasi"
               value={keterangan()}

@@ -142,8 +142,8 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
   return (
     <Modal show={props.show} onClose={props.onClose} title={`Impor Data ${props.title} via CSV`}>
       <div class="flex flex-col gap-4">
-        <div class="flex justify-between items-center bg-accent-50 dark:bg-secondary-800/50 p-3 rounded-lg border border-accent-100 dark:border-secondary-800">
-          <span class="text-xs text-accent-800 dark:text-accent-400 font-medium">
+        <div class="flex justify-between items-center bg-action-50 dark:bg-secondary-800/50 p-3 rounded-lg border border-action-100 dark:border-secondary-800">
+          <span class="text-xs text-accent-800 dark:text-action dark:text-action-ondark font-medium">
             Unduh template format CSV standar terlebih dahulu
           </span>
           <Button variant="secondary" onClick={handleDownloadTemplate}>
@@ -182,7 +182,7 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
               type="file"
               accept=".csv"
               onChange={handleFileChange}
-              class="w-full text-sm text-secondary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-50 file:text-accent-700 hover:file:bg-accent-100 dark:file:bg-secondary-800 dark:file:text-white"
+              class="w-full text-sm text-secondary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-action-50 file:text-action hover:file:bg-action-100 dark:file:bg-secondary-800 dark:file:text-white"
             />
           </div>
 

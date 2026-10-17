@@ -88,19 +88,19 @@ export default function PetaObe() {
           <Show when={prodiFilter()}>
             <div class="flex gap-2 bg-slate-800 rounded-xl p-1">
               <button
-                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'pl-cpl' ? 'bg-accent-500 text-white' : 'text-secondary-300 hover:text-white'}`}
+                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'pl-cpl' ? 'bg-action text-white' : 'text-secondary-300 hover:text-white'}`}
                 onClick={() => setActiveTab('pl-cpl')}
               >
                 PL ⟷ CPL
               </button>
               <button
-                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'bk-cpl' ? 'bg-accent-500 text-white' : 'text-secondary-300 hover:text-white'}`}
+                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'bk-cpl' ? 'bg-action text-white' : 'text-secondary-300 hover:text-white'}`}
                 onClick={() => setActiveTab('bk-cpl')}
               >
                 BK ⟷ CPL
               </button>
               <button
-                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'cpmk-cpl' ? 'bg-accent-500 text-white' : 'text-secondary-300 hover:text-white'}`}
+                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'cpmk-cpl' ? 'bg-action text-white' : 'text-secondary-300 hover:text-white'}`}
                 onClick={() => setActiveTab('cpmk-cpl')}
               >
                 CPMK ⟷ CPL
@@ -253,7 +253,7 @@ export default function PetaObe() {
                     {(row) => (
                       <Card variant="bordered" padding="lg">
                         <div class="flex items-center gap-3 mb-4">
-                          <span class="text-accent-400 font-semibold text-lg">{row.cpl.kode}</span>
+                          <span class="text-action dark:text-action-ondark font-semibold text-lg">{row.cpl.kode}</span>
                           <span class="text-secondary-400 text-sm">{row.cpl.deskripsi}</span>
                         </div>
                         <div class="overflow-x-auto">

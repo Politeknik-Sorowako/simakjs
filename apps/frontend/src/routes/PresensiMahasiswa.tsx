@@ -173,30 +173,30 @@ export default function PresensiMahasiswa() {
 
         {/* Summary Cards */}
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-4 shadow-sm">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-4">
             <div class="text-xs font-semibold text-secondary-400 uppercase">Total Pertemuan</div>
             <div class="text-2xl font-extrabold text-secondary-800 dark:text-white mt-1">{summary().total}</div>
           </div>
-          <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-2xl p-4 shadow-sm">
+          <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-2xl p-4">
             <div class="text-xs font-semibold text-orange-500 uppercase">Butuh Bukti / Surat</div>
             <div class="text-2xl font-extrabold text-orange-600 dark:text-orange-400 mt-1">{summary().unknown}</div>
           </div>
-          <div class="bg-sky-50 dark:bg-sky-900/20 border border-sky-100 dark:border-sky-800 rounded-2xl p-4 shadow-sm">
+          <div class="bg-sky-50 dark:bg-sky-900/20 border border-sky-100 dark:border-sky-800 rounded-2xl p-4">
             <div class="text-xs font-semibold text-sky-500 uppercase">Sakit</div>
             <div class="text-2xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">{summary().sakit}</div>
           </div>
-          <div class="bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 rounded-2xl p-4 shadow-sm">
+          <div class="bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800 rounded-2xl p-4">
             <div class="text-xs font-semibold text-violet-500 uppercase">Izin</div>
             <div class="text-2xl font-extrabold text-violet-600 dark:text-violet-400 mt-1">{summary().izin}</div>
           </div>
         </div>
 
-        <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl p-6 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-wrap gap-4 items-center mb-4">
             <div class="flex flex-col gap-1">
               <label class="text-xs font-semibold text-secondary-500">Filter Periode</label>
               <select
-                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={periodeFilter()}
                 onChange={(e) => {
                   setPeriodeFilter(e.currentTarget.value);
@@ -340,7 +340,7 @@ export default function PresensiMahasiswa() {
                 <div class="flex flex-col gap-1.5">
                   <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Jenis Surat</label>
                   <select
-                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                     value={uploadJenis()}
                     onChange={(e) => setUploadJenis(e.currentTarget.value as 'sakit' | 'izin')}
                   >
@@ -356,7 +356,7 @@ export default function PresensiMahasiswa() {
                   <input
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-                    class="w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-4 file:py-2 file:text-white file:cursor-pointer"
+                    class="w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-action file:px-4 file:py-2 file:text-white file:cursor-pointer"
                     onChange={(e) => setUploadFile(e.currentTarget.files?.[0] || null)}
                   />
                   <Show when={uploadFile()}>
@@ -370,7 +370,7 @@ export default function PresensiMahasiswa() {
                   </label>
                   <textarea
                     rows={3}
-                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                     placeholder="Contoh: Tidak dapat hadir karena demam tinggi, surat terlampir."
                     value={uploadKeterangan()}
                     onInput={(e) => setUploadKeterangan(e.currentTarget.value)}
@@ -428,7 +428,7 @@ export default function PresensiMahasiswa() {
           </Show>
           <Show when={previewLoading()}>
             <div class="flex items-center justify-center py-16 text-secondary-400">
-              <div class="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <div class="w-6 h-6 border-2 border-action border-t-transparent rounded-full animate-spin mr-2" />
               <span class="text-sm">Memuat berkas...</span>
             </div>
           </Show>

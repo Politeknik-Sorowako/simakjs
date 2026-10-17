@@ -8,7 +8,7 @@ import { ExportColumn } from '../../utils/export';
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -122,7 +122,7 @@ export default function LaporanPeringatan() {
         </div>
 
         {/* Filter Periode */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div class="w-full sm:w-72">
             <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Semester
@@ -149,7 +149,7 @@ export default function LaporanPeringatan() {
             <Show when={selectedPeriode()} fallback={<span>Menampilkan akumulasi seluruh periode</span>}>
               <span>
                 Menampilkan data periode:{' '}
-                <strong class="text-brand-600 dark:text-brand-400">
+                <strong class="text-action dark:text-brand-400">
                   {periodes()?.data?.find((p) => p.id === selectedPeriode())?.nama || selectedPeriode()}
                 </strong>
               </span>
@@ -210,7 +210,7 @@ export default function LaporanPeringatan() {
         {/* Distribution Chart (Top 10 Pasal + Lainnya) */}
         <Show when={(rekapPasal()?.perPasal?.length || 0) > 0}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-section font-bold text-secondary-800 dark:text-white mb-3">
                 Agregasi Top 10 Pasal Pelanggaran (Terbanyak)
               </h3>
@@ -225,7 +225,7 @@ export default function LaporanPeringatan() {
                 donut
               />
             </div>
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl flex flex-col justify-between">
               <div>
                 <h3 class="text-section font-bold text-secondary-800 dark:text-white mb-3">Detail Agregasi Pasal</h3>
                 <div class="overflow-x-auto max-h-[260px] overflow-y-auto">
@@ -263,7 +263,7 @@ export default function LaporanPeringatan() {
         </Show>
 
         {/* Table Riwayat with Search & Pagination */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <h3 class="text-section font-bold text-secondary-800 dark:text-white">Riwayat Pelanggaran Detail</h3>
             <div class="flex items-center gap-2 w-full sm:w-auto">
@@ -335,7 +335,7 @@ export default function LaporanPeringatan() {
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">
                           <div>{item.jenisPelanggaran}</div>
                           <Show when={item.nomorPasal}>
-                            <span class="inline-block text-caption text-brand-600 dark:text-brand-400 font-normal">
+                            <span class="inline-block text-caption text-action dark:text-brand-400 font-normal">
                               Pasal {item.nomorPasal}
                             </span>
                           </Show>

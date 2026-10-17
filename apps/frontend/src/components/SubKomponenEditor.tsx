@@ -104,7 +104,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
               value={row().nama}
               disabled={props.disabled}
               onInput={(e) => updateRow(idx, 'nama', e.currentTarget.value)}
-              class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] flex-1 focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+              class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] flex-1 focus:outline-none focus:border-action disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
             />
             <input
               type="text"
@@ -113,7 +113,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
               value={row().bobot}
               disabled={props.disabled}
               onInput={(e) => updateRow(idx, 'bobot', e.currentTarget.value)}
-              class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] w-14 text-center focus:outline-none focus:border-brand-500 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
+              class="border border-secondary-200 rounded-lg px-2 py-1 text-[11px] w-14 text-center focus:outline-none focus:border-action disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:border-secondary-700 dark:text-white"
             />
             <span class="text-[11px] text-secondary-400 font-bold">%</span>
             <Show when={!props.disabled}>
@@ -134,7 +134,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
           <button
             type="button"
             onClick={addRow}
-            class="text-brand-600 hover:text-brand-700 font-bold text-[11px] flex items-center gap-1"
+            class="text-action hover:text-action font-bold text-[11px] flex items-center gap-1"
           >
             + Tambah Sub-Komponen
           </button>
@@ -153,7 +153,7 @@ export default function SubKomponenEditor(props: SubKomponenEditorProps) {
           type="button"
           onClick={handleSave}
           disabled={saving() || !totalValid()}
-          class="self-start px-3 py-1.5 bg-brand-600 text-white font-bold rounded-lg text-[11px] hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-700 dark:hover:bg-brand-600"
+          class="self-start px-3 py-1.5 bg-action text-white font-bold rounded-lg text-[11px] hover:bg-action-dark active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-action-dark dark:hover:bg-action"
         >
           {saving() ? 'Menyimpan...' : 'Simpan Sub-Komponen'}
         </button>

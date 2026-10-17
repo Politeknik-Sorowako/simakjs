@@ -164,9 +164,9 @@ export default function PwaInstallPrompt() {
       <Show when={deferredPrompt() && !dismissed() && !showIosGuide() && !showManualGuide() && !installed()}>
         <div
           id="pwa-install-prompt"
-          class="fixed bottom-5 left-5 z-50 flex max-w-sm items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 shadow-xl backdrop-blur-md transition-all dark:border-slate-800/80 dark:bg-slate-900/95"
+          class="fixed bottom-5 left-5 z-50 flex max-w-sm items-center gap-3.5 rounded-2xl border border-slate-200/80 bg-white/95 p-3.5 backdrop-blur-md transition-all dark:border-slate-800/80 dark:bg-slate-900/95"
         >
-          <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-11 w-11 rounded-xl object-cover shadow-sm" />
+          <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-11 w-11 rounded-xl object-cover" />
           <div class="flex-1 text-xs">
             <p class="font-semibold text-slate-900 dark:text-slate-100">Pasang SIMAK Vokasi</p>
             <p class="text-slate-500 dark:text-slate-400">
@@ -177,7 +177,7 @@ export default function PwaInstallPrompt() {
             <button
               type="button"
               onClick={handleInstall}
-              class="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-sky-700 active:scale-95 focus:outline-none"
+              class="rounded-full bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-sky-700 active:scale-95 focus:outline-none"
             >
               Pasang
             </button>
@@ -199,11 +199,11 @@ export default function PwaInstallPrompt() {
       <Show when={showIosGuide() && !dismissed() && !installed()}>
         <div
           id="pwa-ios-prompt"
-          class="fixed bottom-5 left-5 right-5 z-50 max-w-sm rounded-2xl border border-slate-200/80 bg-white/95 p-4 shadow-xl backdrop-blur-md transition-all sm:left-5 sm:right-auto dark:border-slate-800/80 dark:bg-slate-900/95"
+          class="fixed bottom-5 left-5 right-5 z-50 max-w-sm rounded-2xl border border-slate-200/80 bg-white/95 p-4 backdrop-blur-md transition-all sm:left-5 sm:right-auto dark:border-slate-800/80 dark:bg-slate-900/95"
         >
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3">
-              <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-10 w-10 rounded-xl object-cover shadow-sm" />
+              <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-10 w-10 rounded-xl object-cover" />
               <div>
                 <p class="text-xs font-semibold text-slate-900 dark:text-slate-100">Pasang SIMAK Vokasi di iOS</p>
                 <p class="text-[11px] text-slate-500 dark:text-slate-400">Tambahkan ke Layar Utama iPhone/iPad Anda</p>
@@ -255,7 +255,7 @@ export default function PwaInstallPrompt() {
           >
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-center gap-3">
-                <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-11 w-11 rounded-xl object-cover shadow-sm" />
+                <img src="/pwa-192x192.png" alt="SIMAK Icon" class="h-11 w-11 rounded-xl object-cover" />
                 <div>
                   <p class="text-sm font-semibold text-slate-900 dark:text-slate-100">Pasang SIMAK Vokasi</p>
                   <p class="text-xs text-slate-500 dark:text-slate-400">
@@ -322,7 +322,7 @@ export default function PwaInstallPrompt() {
               <button
                 type="button"
                 onClick={handleDismiss}
-                class="flex-1 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all hover:bg-sky-700 active:scale-95 focus:outline-none"
+                class="flex-1 rounded-full bg-sky-600 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-sky-700 active:scale-95 focus:outline-none"
               >
                 Mengerti
               </button>

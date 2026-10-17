@@ -442,64 +442,64 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     const pasal = item.nomorPasal ? `${escapeHtml(item.nomorPasal)} - ${escapeHtml(item.bunyiPasal || '')}` : '';
 
     const body = `
-      <div id="printable-sp" class="sp-doc">
-        ${kopBlock}
-        <div class="judul">
-          <p style="margin:0 0 4px;font-size:13px;letter-spacing:1px">KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI</p>
-          <h4>SURAT PERINGATAN KEDISIPLINAN ${isTertulis ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}</h4>
-          <p>Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28</p>
-        </div>
-        <div class="identitas">
-          <div class="row"><span>Nama Mahasiswa</span><span>: ${namaMahasiswa}</span></div>
-          <div class="row"><span>NIM</span><span>: ${nim}</span></div>
-          <div class="row"><span>Program Studi</span><span>: ${prodiNama}</span></div>
-        </div>
-        <p class="isi">
-          Dengan ini diberikan peringatan indisipliner kepada mahasiswa bersangkutan atas pelanggaran yang terjadi pada:
-        </p>
-        <div class="rincian">
-          <div class="row"><span>Tanggal Kejadian</span><span>: ${tanggal}</span></div>
-          ${pasal ? `<div class="row"><span>Pasal BPA</span><span>: ${pasal}</span></div>` : ''}
-          <div class="row"><span>Jenis Pelanggaran</span><span>: ${jenisPelanggaran}</span></div>
-          <div class="row">
-            <span>Tingkat Sanksi</span>
-            <span>: ${
-              isTertulis
-                ? 'Peringatan Tertulis (Degradasi Nilai Mutu Sikap -1.00)'
-                : 'Peringatan Lisan (Degradasi Nilai Mutu Sikap -0.25)'
-            }</span>
-          </div>
-          <div class="row"><span>Dilaporkan Oleh</span><span>: ${pelapor}</span></div>
-          <div class="row"><span>Keterangan / Kronologi</span><span>: "${keterangan}"</span></div>
-        </div>
-        <p class="catatan">
-          Mahasiswa diharapkan mematuhi Buku Pedoman Akademik Politeknik Sorowako. Apabila melakukan pelanggaran
-          berulang, akan dikenakan sanksi peringatan tingkat berikutnya hingga pemberhentian (Drop Out).
-        </p>
-        <div class="ttd">
-          <div>
-            <span>Mahasiswa Bersangkutan,</span>
-            <div>
-              <p class="tanda">${item.namaMahasiswa ? escapeHtml(item.namaMahasiswa) : '....................'}</p>
-              <p>NIM. ${item.nim ? escapeHtml(item.nim) : '...............'}</p>
-            </div>
-          </div>
-          <div>
-            <span>Mengetahui,<br />Dosen Pembimbing Akademik</span>
-            <div>
-              <p class="tanda">_________________________</p>
-              <p>NIP/NIDN Dosen PA</p>
-            </div>
-          </div>
-          <div>
-            <span>Menyetujui,<br />Ketua Program Studi</span>
-            <div>
-              <p class="tanda">_________________________</p>
-              <p>Ketua Program Studi</p>
-            </div>
-          </div>
-        </div>
-      </div>`;
+ <div id="printable-sp" class="sp-doc">
+ ${kopBlock}
+ <div class="judul">
+ <p style="margin:0 0 4px;font-size:13px;letter-spacing:1px">KEMENTERIAN PENDIDIKAN TINGGI, RISET, DAN TEKNOLOGI</p>
+ <h4>SURAT PERINGATAN KEDISIPLINAN ${isTertulis ? 'TERTULIS (SP TERTULIS)' : 'LISAN (SP LISAN)'}</h4>
+ <p>Berdasarkan Buku Pedoman Akademik (BPA) Pasal 25, 26, & 28</p>
+ </div>
+ <div class="identitas">
+ <div class="row"><span>Nama Mahasiswa</span><span>: ${namaMahasiswa}</span></div>
+ <div class="row"><span>NIM</span><span>: ${nim}</span></div>
+ <div class="row"><span>Program Studi</span><span>: ${prodiNama}</span></div>
+ </div>
+ <p class="isi">
+ Dengan ini diberikan peringatan indisipliner kepada mahasiswa bersangkutan atas pelanggaran yang terjadi pada:
+ </p>
+ <div class="rincian">
+ <div class="row"><span>Tanggal Kejadian</span><span>: ${tanggal}</span></div>
+ ${pasal ? `<div class="row"><span>Pasal BPA</span><span>: ${pasal}</span></div>` : ''}
+ <div class="row"><span>Jenis Pelanggaran</span><span>: ${jenisPelanggaran}</span></div>
+ <div class="row">
+ <span>Tingkat Sanksi</span>
+ <span>: ${
+   isTertulis
+     ? 'Peringatan Tertulis (Degradasi Nilai Mutu Sikap -1.00)'
+     : 'Peringatan Lisan (Degradasi Nilai Mutu Sikap -0.25)'
+}</span>
+ </div>
+ <div class="row"><span>Dilaporkan Oleh</span><span>: ${pelapor}</span></div>
+ <div class="row"><span>Keterangan / Kronologi</span><span>:"${keterangan}"</span></div>
+ </div>
+ <p class="catatan">
+ Mahasiswa diharapkan mematuhi Buku Pedoman Akademik Politeknik Sorowako. Apabila melakukan pelanggaran
+ berulang, akan dikenakan sanksi peringatan tingkat berikutnya hingga pemberhentian (Drop Out).
+ </p>
+ <div class="ttd">
+ <div>
+ <span>Mahasiswa Bersangkutan,</span>
+ <div>
+ <p class="tanda">${item.namaMahasiswa ? escapeHtml(item.namaMahasiswa) : '....................'}</p>
+ <p>NIM. ${item.nim ? escapeHtml(item.nim) : '...............'}</p>
+ </div>
+ </div>
+ <div>
+ <span>Mengetahui,<br />Dosen Pembimbing Akademik</span>
+ <div>
+ <p class="tanda">_________________________</p>
+ <p>NIP/NIDN Dosen PA</p>
+ </div>
+ </div>
+ <div>
+ <span>Menyetujui,<br />Ketua Program Studi</span>
+ <div>
+ <p class="tanda">_________________________</p>
+ <p>Ketua Program Studi</p>
+ </div>
+ </div>
+ </div>
+ </div>`;
 
     const win = window.open('', '_blank', 'width=900,height=1000');
     if (!win) {
@@ -512,36 +512,36 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 <meta charset="utf-8" />
 <title>Surat Peringatan - ${escapeHtml(item.namaMahasiswa || '')}</title>
 <style>
-  @page { size: A4; margin: 18mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 12px; line-height: 1.5; }
-  .sp-doc { max-width: 680px; margin: 0 auto; }
-  .kop { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px; }
-  .kop h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-  .kop h3 { font-size: 18px; font-weight: 900; text-transform: uppercase; color: #14532d; }
-  .kop p { font-size: 10px; color: #555; }
-  .judul { text-align: center; margin: 12px 0; }
-  .judul h4 { font-size: 14px; font-weight: 800; text-decoration: underline; text-transform: uppercase; }
-  .judul p { font-size: 11px; color: #555; }
-  .identitas { margin: 12px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
-  .row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; padding: 2px 0; }
-  .row > span:first-child { font-weight: 600; color: #555; }
-  .isi { margin: 10px 0; line-height: 1.6; }
-  .rincian { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
-  .catatan { font-size: 11px; color: #555; line-height: 1.6; margin: 10px 0; }
-  .ttd { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #999; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 12px; }
-  .ttd > div { display: flex; flex-direction: column; justify-content: space-between; height: 110px; }
-  .tanda { font-weight: 700; text-decoration: underline; }
-  .ttd p { font-size: 10px; }
-  @media print { .no-print { display: none; } }
+ @page { size: A4; margin: 18mm; }
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+ body { font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 12px; line-height: 1.5; }
+ .sp-doc { max-width: 680px; margin: 0 auto; }
+ .kop { text-align: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px; }
+ .kop h2 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+ .kop h3 { font-size: 18px; font-weight: 900; text-transform: uppercase; color: #14532d; }
+ .kop p { font-size: 10px; color: #555; }
+ .judul { text-align: center; margin: 12px 0; }
+ .judul h4 { font-size: 14px; font-weight: 800; text-decoration: underline; text-transform: uppercase; }
+ .judul p { font-size: 11px; color: #555; }
+ .identitas { margin: 12px 0; padding: 10px; background: #f8f8f8; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+ .row { display: grid; grid-template-columns: 200px 1fr; gap: 8px; padding: 2px 0; }
+ .row > span:first-child { font-weight: 600; color: #555; }
+ .isi { margin: 10px 0; line-height: 1.6; }
+ .rincian { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; }
+ .catatan { font-size: 11px; color: #555; line-height: 1.6; margin: 10px 0; }
+ .ttd { margin-top: 28px; padding-top: 14px; border-top: 1px dashed #999; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; font-size: 12px; }
+ .ttd > div { display: flex; flex-direction: column; justify-content: space-between; height: 110px; }
+ .tanda { font-weight: 700; text-decoration: underline; }
+ .ttd p { font-size: 10px; }
+ @media print { .no-print { display: none; } }
 </style>
 </head>
 <body>
-  ${body}
-  <div class="no-print" style="margin-top:24px; text-align:center;">
-    <button onclick="window.print()" style="padding:10px 20px; font-size:14px;">Cetak Dokumen SP</button>
-  </div>
-  <script>window.onload = function(){ window.print(); };</script>
+ ${body}
+ <div class="no-print" style="margin-top:24px; text-align:center;">
+ <button onclick="window.print()" style="padding:10px 20px; font-size:14px;">Cetak Dokumen SP</button>
+ </div>
+ <script>window.onload = function(){ window.print(); };</script>
 </body>
 </html>`);
     win.document.close();
@@ -800,7 +800,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header Section */}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <div>
             <h1 class="page-title">Kedisiplinan Mahasiswa</h1>
             <p class="text-base text-secondary-500 dark:text-secondary-300">
@@ -878,7 +878,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               onClick={() => setViewTab('daftar')}
               class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
                 viewTab() === 'daftar'
-                  ? 'bg-brand-600 text-white shadow-sm'
+                  ? 'bg-action text-white'
                   : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
               }`}
             >
@@ -888,7 +888,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               onClick={() => setViewTab('rekap')}
               class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
                 viewTab() === 'rekap'
-                  ? 'bg-brand-600 text-white shadow-sm'
+                  ? 'bg-action text-white'
                   : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
               }`}
             >
@@ -898,7 +898,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               onClick={() => setViewTab('mahasiswa')}
               class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
                 viewTab() === 'mahasiswa'
-                  ? 'bg-brand-600 text-white shadow-sm'
+                  ? 'bg-action text-white'
                   : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
               }`}
             >
@@ -911,12 +911,12 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
         <Show when={auth.hasRole(['mahasiswa'])}>
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Summary Widget */}
-            <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Status Kedisiplinan</h3>
               <div class="flex flex-col gap-2 items-center justify-center py-6">
                 <span
                   class={`text-6xl font-bold ${
-                    (studentViolations()?.totalPoin || 0) >= 25 ? 'text-rose-600 animate-pulse' : 'text-accent-600'
+                    (studentViolations()?.totalPoin || 0) >= 25 ? 'text-rose-600 animate-pulse' : 'text-action'
                   }`}
                 >
                   {studentViolations.loading ? '...' : studentViolations()?.totalPoin || 0}
@@ -926,7 +926,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                 </span>
                 <Show when={studentViolations()?.predikat}>
                   <div class="flex flex-col items-center gap-1 mt-1">
-                    <span class="px-3 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-bold text-base dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                    <span class="px-3 py-1 rounded-lg bg-action-50 text-action border border-brand-100 font-bold text-base dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
                       Predikat: {studentViolations()?.predikat}
                     </span>
                     <span class="text-fine font-semibold text-rose-600 dark:text-rose-400">
@@ -948,7 +948,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
             </div>
 
             {/* Violation List */}
-            <div class="lg:col-span-2 bg-white border border-secondary-100 rounded-2xl shadow-sm overflow-hidden p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="lg:col-span-2 bg-white border border-secondary-100 rounded-2xl overflow-hidden p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">Riwayat Tindakan Indisipliner</h3>
               <Show
                 when={studentViolations()?.pelanggaranList && studentViolations()!.pelanggaranList.length > 0}
@@ -1038,7 +1038,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
         {/* Staff View (Admin/Dosen/Prodi/Instruktur) */}
         <Show when={isStaff() && viewTab() === 'daftar'}>
-          <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-3">
               <div>
                 <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Pelanggaran Mahasiswa</h3>
@@ -1139,7 +1139,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                     setFilterStartDate(e.currentTarget.value);
                     resetPage();
                   }}
-                  class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                  class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
                 />
               </div>
 
@@ -1155,7 +1155,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                       setFilterEndDate(e.currentTarget.value);
                       resetPage();
                     }}
-                    class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                    class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
                   />
                   <Show
                     when={
@@ -1207,38 +1207,35 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                     <thead>
                       <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
                         <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          class="p-3 cursor-pointer select-none hover:text-action"
                           onClick={() => toggleSort('namaMahasiswa')}
                         >
                           Mahasiswa {sortField() === 'namaMahasiswa' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
                         </th>
-                        <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
-                          onClick={() => toggleSort('nim')}
-                        >
+                        <th class="p-3 cursor-pointer select-none hover:text-action" onClick={() => toggleSort('nim')}>
                           NIM {sortField() === 'nim' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
                         </th>
                         <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          class="p-3 cursor-pointer select-none hover:text-action"
                           onClick={() => toggleSort('prodiNama')}
                         >
                           Program Studi {sortField() === 'prodiNama' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
                         </th>
                         <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          class="p-3 cursor-pointer select-none hover:text-action"
                           onClick={() => toggleSort('tanggal')}
                         >
                           Tanggal {sortField() === 'tanggal' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
                         </th>
                         <th class="p-3">Pasal</th>
                         <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          class="p-3 cursor-pointer select-none hover:text-action"
                           onClick={() => toggleSort('pelapor')}
                         >
                           Pelapor {sortField() === 'pelapor' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
                         </th>
                         <th
-                          class="p-3 cursor-pointer select-none hover:text-brand-500"
+                          class="p-3 cursor-pointer select-none hover:text-action"
                           onClick={() => toggleSort('jenisSanksi')}
                         >
                           Sanksi {sortField() === 'jenisSanksi' ? (sortDir() === 'asc' ? '▲' : '▼') : ''}
@@ -1351,7 +1348,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
         {/* Rekap View (Staff) */}
         <Show when={isStaff() && viewTab() === 'rekap'}>
-          <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h3 class="font-bold text-secondary-800 border-b pb-2 dark:text-white">
@@ -1401,16 +1398,16 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                   Mahasiswa
                 </div>
               </div>
-              <div class="p-4 bg-accent-50 rounded-xl border border-accent-100 dark:bg-secondary-800 dark:border-secondary-800">
-                <div class="text-2xl font-bold text-accent-600 dark:text-accent-400">
+              <div class="p-4 bg-action-50 rounded-xl border border-action-100 dark:bg-secondary-800 dark:border-secondary-800">
+                <div class="text-2xl font-bold text-action dark:text-action dark:text-action-ondark">
                   {rekap()?.perProdi.reduce((a, p) => a + p.totalPoin, 0) || 0}
                 </div>
                 <div class="text-fine uppercase font-semibold text-secondary-400 dark:text-secondary-300">
                   Total Poin
                 </div>
               </div>
-              <div class="p-4 bg-brand-50 rounded-xl border border-brand-100 dark:bg-secondary-800 dark:border-secondary-800">
-                <div class="text-2xl font-bold text-brand-600 dark:text-brand-400">
+              <div class="p-4 bg-action-50 rounded-xl border border-brand-100 dark:bg-secondary-800 dark:border-secondary-800">
+                <div class="text-2xl font-bold text-action dark:text-brand-400">
                   {rekap()?.topPelanggar.length || 0}
                 </div>
                 <div class="text-fine uppercase font-semibold text-secondary-400 dark:text-secondary-300">
@@ -1465,7 +1462,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             </span>
                           </td>
                           <td class="p-3">
-                            <span class="px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                            <span class="px-2.5 py-1 rounded-lg bg-action-50 text-action border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
                               {item.predikat}
                             </span>
                           </td>
@@ -1555,7 +1552,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
         {/* Tab 3: Daftar Mahasiswa TXLY (Staff View) */}
         <Show when={isStaff() && viewTab() === 'mahasiswa'}>
-          <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-3">
               <div>
                 <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Predikat TXLY</h3>
@@ -1640,7 +1637,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                   placeholder="Semua / filter predikat (mis. T1L0)..."
                   value={mhsTxlyPredikat() ?? ''}
                   onInput={(e) => setMhsTxlyPredikat(e.currentTarget.value.trim() || undefined)}
-                  class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                  class="w-full border border-secondary-200 rounded-lg px-3 py-1.5 text-caption focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
                 />
               </div>
 
@@ -1662,8 +1659,8 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
             </div>
 
             {/* Tabel Daftar Mahasiswa TXLY — stale-while-revalidate: tampilkan data
-                lama selama refetch berjalan (tanpa flash penuh); spinner hanya saat
-                belum pernah ada data. */}
+ lama selama refetch berjalan (tanpa flash penuh); spinner hanya saat
+ belum pernah ada data. */}
             <Show
               when={!mahasiswaTxlyList.loading || mahasiswaTxlyList()}
               fallback={
@@ -1688,7 +1685,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th scope="col" aria-sort={mhsTxlySortAria('nama')} class="p-3">
                           <button
                             type="button"
-                            class="cursor-pointer select-none hover:text-brand-500"
+                            class="cursor-pointer select-none hover:text-action"
                             onClick={() => toggleMhsTxlySort('nama')}
                           >
                             Mahasiswa {mhsTxlySortField() === 'nama' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
@@ -1697,7 +1694,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th scope="col" aria-sort={mhsTxlySortAria('nim')} class="p-3">
                           <button
                             type="button"
-                            class="cursor-pointer select-none hover:text-brand-500"
+                            class="cursor-pointer select-none hover:text-action"
                             onClick={() => toggleMhsTxlySort('nim')}
                           >
                             NIM {mhsTxlySortField() === 'nim' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
@@ -1706,7 +1703,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th scope="col" aria-sort={mhsTxlySortAria('prodiNama')} class="p-3">
                           <button
                             type="button"
-                            class="cursor-pointer select-none hover:text-brand-500"
+                            class="cursor-pointer select-none hover:text-action"
                             onClick={() => toggleMhsTxlySort('prodiNama')}
                           >
                             Program Studi{' '}
@@ -1716,7 +1713,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th scope="col" aria-sort={mhsTxlySortAria('semester')} class="p-3 text-center">
                           <button
                             type="button"
-                            class="cursor-pointer select-none hover:text-brand-500"
+                            class="cursor-pointer select-none hover:text-action"
                             onClick={() => toggleMhsTxlySort('semester')}
                           >
                             Semester {mhsTxlySortField() === 'semester' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
@@ -1725,7 +1722,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th scope="col" aria-sort={mhsTxlySortAria('jumlahPelanggaran')} class="p-3 text-center">
                           <button
                             type="button"
-                            class="cursor-pointer select-none hover:text-brand-500"
+                            class="cursor-pointer select-none hover:text-action"
                             onClick={() => toggleMhsTxlySort('jumlahPelanggaran')}
                           >
                             Jumlah Pelanggaran{' '}
@@ -1735,7 +1732,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th scope="col" aria-sort={mhsTxlySortAria('predikat')} class="p-3 text-center">
                           <button
                             type="button"
-                            class="cursor-pointer select-none hover:text-brand-500"
+                            class="cursor-pointer select-none hover:text-action"
                             onClick={() => toggleMhsTxlySort('predikat')}
                           >
                             Predikat TXLY{' '}
@@ -1760,7 +1757,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             }}
                             tabIndex={0}
                             role="button"
-                            class="cursor-pointer transition-colors hover:bg-brand-50/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:hover:bg-brand-950/20"
+                            class="cursor-pointer transition-colors hover:bg-action-50/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-action-focus dark:hover:bg-brand-950/20"
                             title="Tekan Enter untuk melihat riwayat pelanggaran mahasiswa"
                           >
                             <td class="p-3 text-secondary-400">
@@ -1770,7 +1767,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               <div class="flex items-center gap-2">
                                 <StudentAvatar foto={item.foto} nama={item.nama} nim={item.nim} size="sm" />
                                 <div>
-                                  <div class="hover:text-brand-600 transition-colors">{item.nama}</div>
+                                  <div class="hover:text-action transition-colors">{item.nama}</div>
                                   <div class="text-fine text-secondary-400 font-normal">
                                     {item.angkatan ? `Angkatan ${item.angkatan}` : ''}
                                   </div>
@@ -1784,7 +1781,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               {item.jumlahPelanggaran}
                             </td>
                             <td class="p-3 text-center">
-                              <span class="px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                              <span class="px-2.5 py-1 rounded-lg bg-action-50 text-action border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
                                 {item.predikat}
                               </span>
                             </td>
@@ -1855,7 +1852,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               <div class="flex items-center gap-3">
                 <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
                   <span class="text-fine uppercase text-secondary-400 font-semibold">Predikat</span>
-                  <span class="font-bold text-brand-600 dark:text-brand-400 text-base">
+                  <span class="font-bold text-action dark:text-brand-400 text-base">
                     {selectedMhsDetail()?.predikat}
                   </span>
                 </div>
@@ -2057,9 +2054,11 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
             {/* Info pasal terpilih */}
             <Show when={selectedPasal()}>
-              <div class="p-3 bg-accent-50 border border-accent-100 rounded-xl text-caption flex flex-col gap-1 dark:bg-secondary-800 dark:border-secondary-700">
+              <div class="p-3 bg-action-50 border border-action-100 rounded-xl text-caption flex flex-col gap-1 dark:bg-secondary-800 dark:border-secondary-700">
                 <div class="flex items-center justify-between">
-                  <span class="font-bold text-accent-800 dark:text-accent-300">{selectedPasal()?.nomorPasal}</span>
+                  <span class="font-bold text-accent-800 dark:text-action-200 dark:text-action-ondark">
+                    {selectedPasal()?.nomorPasal}
+                  </span>
                   <span
                     class={`px-2 py-0.5 rounded border font-bold ${
                       selectedPasal()?.jenisSanksi === 4
@@ -2100,7 +2099,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                 placeholder="Tulis kronologi singkat atau rincian pelanggaran yang terjadi..."
                 value={keterangan()}
                 onInput={(e) => setKeterangan(e.currentTarget.value)}
-                class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-brand-500 resize-none dark:border-secondary-700"
+                class="border border-secondary-200 rounded-xl p-3 text-caption focus:outline-none focus:border-action resize-none dark:border-secondary-700"
               />
             </div>
 
@@ -2129,7 +2128,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                   {/* Printable Document Box */}
                   <div
                     id="printable-sp"
-                    class="p-6 bg-white border border-secondary-200 rounded-xl shadow-sm text-secondary-900 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="p-6 bg-white border border-secondary-200 rounded-xl text-secondary-900 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
                   >
                     {/* Kop surat global + baris kementerian pada judul */}
                     <KopSurat kop={kop() ?? KOPI_FALLBACK} />
@@ -2183,7 +2182,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <Show when={sp().nomorPasal}>
                           <div class="grid grid-cols-3">
                             <span class="font-semibold text-secondary-500 dark:text-secondary-400">Pasal BPA</span>
-                            <span class="col-span-2 font-bold text-brand-600 dark:text-brand-400">
+                            <span class="col-span-2 font-bold text-action dark:text-brand-400">
                               : {sp().nomorPasal} - {sp().bunyiPasal}
                             </span>
                           </div>
@@ -2205,7 +2204,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         </div>
                         <div class="grid grid-cols-3">
                           <span class="font-semibold text-secondary-500 dark:text-secondary-400">Dilaporkan Oleh</span>
-                          <span class="col-span-2 font-bold text-accent-700 dark:text-accent-400">
+                          <span class="col-span-2 font-bold text-action dark:text-action dark:text-action-ondark">
                             : {sp().pelapor || 'Petugas Kedisiplinan'}
                           </span>
                         </div>
@@ -2214,7 +2213,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             Keterangan / Kronologi
                           </span>
                           <span class="col-span-2 italic text-secondary-700 dark:text-secondary-300">
-                            : "{sp().keterangan}"
+                            :"{sp().keterangan}"
                           </span>
                         </div>
                       </div>

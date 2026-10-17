@@ -121,7 +121,7 @@ export default function AdmisiVABanks() {
                 type="checkbox"
                 checked={isMidtrans()}
                 onChange={(e) => setIsMidtrans(e.currentTarget.checked)}
-                class="rounded border-secondary-300 text-brand-600"
+                class="rounded border-secondary-300 text-action"
               />
               Integrasi Midtrans (webhook otomatis)
             </label>

@@ -17,7 +17,7 @@ interface FeederForm {
 }
 
 /**
- * Tab "Feeder PDDIKTI" — konfigurasi Web Service Neo Feeder (`live2.php`):
+ * Tab"Feeder PDDIKTI" — konfigurasi Web Service Neo Feeder (`live2.php`):
  * alamat, kredensial, timeout, dan page size. Password bersifat write-only
  * (tidak pernah dikembalikan server) dan hanya diperbarui bila diisi.
  */
@@ -282,7 +282,7 @@ export default function TabFeeder() {
                       type="checkbox"
                       checked={f().writeGuard}
                       onChange={(e) => patch({ writeGuard: e.currentTarget.checked })}
-                      class="mt-0.5 h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                      class="mt-0.5 h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                     />
                     <span>
                       Aktifkan Write Guard — Mode Baca Saja ke Feeder
@@ -303,7 +303,7 @@ export default function TabFeeder() {
                   type="checkbox"
                   checked={f().autoApproveKrs}
                   onChange={(e) => patch({ autoApproveKrs: e.currentTarget.checked })}
-                  class="h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                  class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                 />
                 Setujui otomatis KRS tertunda sebelum sinkronisasi
               </label>

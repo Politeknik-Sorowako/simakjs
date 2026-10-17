@@ -307,14 +307,14 @@ export default function TabRekap(props: TabRekapProps) {
         )}
       </Show>
 
-      <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-5 shadow-card dark:shadow-card-dark flex flex-col gap-3">
+      <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-5 flex flex-col gap-3">
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex-1 min-w-[220px]">
             <FilterField label="Cari NIM / Nama">
               <input
                 type="text"
                 placeholder="Cari NIM atau nama mahasiswa..."
-                class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-secondary-400"
+                class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-action-focus placeholder:text-secondary-400"
                 value={props.filters.search()}
                 onInput={(e) => props.filters.setSearch(e.currentTarget.value)}
               />
@@ -381,7 +381,7 @@ export default function TabRekap(props: TabRekapProps) {
                 setSortOrder('desc');
                 setPage(1);
               }}
-              class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
+              class="text-xs font-bold text-action hover:text-action underline"
             >
               Reset Filter
             </button>
@@ -394,7 +394,7 @@ export default function TabRekap(props: TabRekapProps) {
           <button
             type="button"
             onClick={() => toggleSort('nama')}
-            class="hover:text-brand-700 inline-flex items-center gap-1"
+            class="hover:text-action inline-flex items-center gap-1"
           >
             Mahasiswa {getSortIcon('nama')}
           </button>,
@@ -402,7 +402,7 @@ export default function TabRekap(props: TabRekapProps) {
           <button
             type="button"
             onClick={() => toggleSort('total')}
-            class="hover:text-brand-700 inline-flex items-center gap-1"
+            class="hover:text-action inline-flex items-center gap-1"
           >
             Total Kompensasi {getSortIcon('total')}
           </button>,
@@ -410,7 +410,7 @@ export default function TabRekap(props: TabRekapProps) {
           <button
             type="button"
             onClick={() => toggleSort('sisa')}
-            class="hover:text-brand-700 inline-flex items-center gap-1"
+            class="hover:text-action inline-flex items-center gap-1"
           >
             Sisa {getSortIcon('sisa')}
           </button>,
@@ -549,7 +549,7 @@ export default function TabRekap(props: TabRekapProps) {
             </label>
             <textarea
               rows="3"
-              class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-4 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-4 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-action-focus"
               placeholder="Misal: Membersihkan Laboratorium Komputer"
               value={payKeterangan()}
               onInput={(e) => setPayKeterangan(e.currentTarget.value)}
@@ -682,7 +682,7 @@ function SuspenseDetail(props: {
                             : `${log.bapMateri || 'Perkuliahan'} (Pertemuan ${log.bapPertemuan || '-'})`}
                         </span>
                         <span class="text-secondary-400 dark:text-secondary-200">{fmtTanggal(log.bapTanggal)}</span>
-                        <span class="font-semibold text-accent-600 dark:text-accent-400">
+                        <span class="font-semibold text-action dark:text-action dark:text-action-ondark">
                           Status: {(log.verifiedStatus ?? log.status).toUpperCase()} ({log.durasiMangkir} mnt)
                         </span>
                         <Show when={log.keteranganAdmin}>

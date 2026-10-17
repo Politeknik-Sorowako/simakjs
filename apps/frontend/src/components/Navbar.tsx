@@ -73,7 +73,7 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
   );
 
   return (
-    <header class="sticky top-0 z-40 h-16 backdrop-blur-md bg-white/80 dark:bg-secondary-900/80 border-b border-secondary-200/80 dark:border-secondary-800/80 flex items-center justify-between px-6 shadow-sm transition-colors duration-200">
+    <header class="sticky top-0 z-40 h-16 backdrop-blur-md bg-white/80 dark:bg-secondary-900/80 border-b border-secondary-200/80 dark:border-secondary-800/80 flex items-center justify-between px-6 transition-colors duration-200">
       <div class="flex items-center gap-3">
         {/* Mobile Hamburger Toggle Button */}
         <button
@@ -185,7 +185,7 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
 
           {/* Notif Popover */}
           <Show when={showNotifPopover()}>
-            <div class="absolute right-0 mt-2 w-80 bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl shadow-xl z-50 p-4 flex flex-col gap-3">
+            <div class="absolute right-0 mt-2 w-80 bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl z-50 p-4 flex flex-col gap-3">
               <div class="flex items-center justify-between border-b pb-2">
                 <h4 class="text-base font-bold text-secondary-900 dark:text-white">Notifikasi</h4>
                 <span class="text-caption text-secondary-500 dark:text-secondary-400">
@@ -207,7 +207,7 @@ export function Navbar(props: { onToggleSidebar: () => void; collapsed?: boolean
                       class={`p-2.5 rounded-xl border text-caption cursor-pointer transition-colors ${
                         item.isRead
                           ? 'bg-secondary-50/50 dark:bg-secondary-800/30 border-secondary-100 dark:border-secondary-800 text-secondary-600 dark:text-secondary-400'
-                          : 'bg-brand-50/50 dark:bg-brand-900/20 border-brand-200 dark:border-brand-800 font-semibold text-secondary-900 dark:text-white'
+                          : 'bg-action-50/50 dark:bg-action/20 border-brand-200 dark:border-brand-800 font-semibold text-secondary-900 dark:text-white'
                       }`}
                     >
                       <div class="flex justify-between items-start gap-1">

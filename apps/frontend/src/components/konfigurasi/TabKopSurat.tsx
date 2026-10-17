@@ -10,7 +10,7 @@ const LOGO_MIME = ['image/png', 'image/jpeg'];
 const LOGO_MAX_MB = 2;
 
 /**
- * Tab "Kop Surat" — desain kop surat global yang diterapkan ke semua dokumen
+ * Tab"Kop Surat" — desain kop surat global yang diterapkan ke semua dokumen
  * cetak (KHS, SKPI, BKD, KRS, Surat Peringatan, dst.). Admin mengedit teks,
  * mengunggah logo kustom, dan melihat pratinjau langsung sebelum menyimpan.
  */
@@ -218,7 +218,7 @@ export default function TabKopSurat() {
                   onInput={(e) => patch({ alamatPerBaris: e.currentTarget.value })}
                   rows={3}
                   maxLength={400}
-                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-800 focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
+                  class="rounded-xl border border-secondary-200 bg-white px-3 py-2 text-sm text-secondary-800 focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-900 dark:border-secondary-700 dark:text-white"
                 />
               </label>
 
@@ -258,7 +258,7 @@ export default function TabKopSurat() {
                   type="checkbox"
                   checked={f().tampilkanLogo}
                   onChange={(e) => patch({ tampilkanLogo: e.currentTarget.checked })}
-                  class="h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                  class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                 />
                 Tampilkan logo pada kop surat
               </label>
@@ -288,7 +288,7 @@ export default function TabKopSurat() {
               class="sr-only"
               onChange={(e) => handleUpload(e.currentTarget.files?.[0])}
             />
-            <span class="inline-flex items-center rounded-full border border-secondary-300 bg-white px-4 py-2 text-xs font-semibold text-secondary-700 shadow-sm transition-all active:scale-95 dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-200">
+            <span class="inline-flex items-center rounded-full border border-secondary-300 bg-white px-4 py-2 text-xs font-semibold text-secondary-700 transition-all active:scale-95 dark:border-secondary-700 dark:bg-secondary-800 dark:text-secondary-200">
               {uploading() ? 'Mengunggah...' : 'Unggah Logo'}
             </span>
           </label>

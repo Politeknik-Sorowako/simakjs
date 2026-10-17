@@ -9,7 +9,7 @@
 
   body {
     margin: 0;
-    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     @apply text-body leading-relaxed bg-parchment text-secondary-800 transition-colors duration-200;

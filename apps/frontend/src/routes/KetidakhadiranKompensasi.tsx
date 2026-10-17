@@ -109,7 +109,7 @@ export default function KetidakhadiranKompensasi() {
 
         {/* Tab Bar */}
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div class="flex flex-wrap gap-1.5 p-1.5 rounded-full bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 shadow-sm backdrop-blur-md">
+          <div class="flex flex-wrap gap-1.5 p-1.5 rounded-full bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 backdrop-blur-md">
             <ForTabs active={activeTab} onChange={switchTab} />
           </div>
           <Show when={!canManage()}>
@@ -148,7 +148,7 @@ function ForTabs(props: { active: () => TabKey; onChange: (key: TabKey) => void 
             title={item.desc}
             class={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-150 active:scale-95 ${
               isActive()
-                ? 'bg-primary-800 text-white shadow-md dark:bg-primary-600'
+                ? 'bg-action text-white dark:bg-action'
                 : 'text-secondary-500 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >

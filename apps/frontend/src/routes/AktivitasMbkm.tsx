@@ -270,7 +270,7 @@ export default function AktivitasMbkm() {
                     <td class="px-6 py-3">
                       <button
                         type="button"
-                        class="text-fine font-semibold text-primary-600 hover:underline dark:text-primary-400"
+                        class="text-fine font-semibold text-action hover:underline dark:text-action-ondark"
                         onClick={() => setDetailId(row.id)}
                       >
                         Kelola

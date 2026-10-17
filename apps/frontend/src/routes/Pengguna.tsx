@@ -293,14 +293,14 @@ export default function Pengguna() {
                 type="text"
                 placeholder="Cari nama, email, atau role..."
                 onInput={handleSearchInput}
-                class="w-full rounded-lg border border-secondary-300 bg-white px-4 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-4 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />
             </div>
             <div class="w-full md:w-44">
               <select
                 value={filterRole()}
                 onChange={(e) => handleFilterRole(e.currentTarget.value)}
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               >
                 <option value="">Role: Semua</option>
                 <Show when={auth.hasRole(['super_admin'])}>
@@ -313,7 +313,7 @@ export default function Pengguna() {
               <select
                 value={filterStatus()}
                 onChange={(e) => handleFilterStatus(e.currentTarget.value)}
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none shadow-sm dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               >
                 <option value="">Status: Semua</option>
                 <option value="active">Aktif</option>
@@ -358,7 +358,7 @@ export default function Pengguna() {
 
         <Suspense fallback={<TableLoadingFallback />}>
           <Show when={usersRes()}>
-            <div class="bg-white rounded-xl shadow-sm border border-secondary-100 overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white rounded-xl border border-secondary-100 overflow-hidden dark:bg-secondary-900 dark:border-secondary-800">
               <Table
                 headers={[
                   <SortableHeader field="nama" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
@@ -388,7 +388,7 @@ export default function Pengguna() {
                         <div class="flex items-center gap-1.5 flex-wrap max-w-[240px]">
                           <For each={user.roles || [user.role]}>
                             {(r) => (
-                              <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
+                              <span class="inline-flex items-center rounded-md bg-action-50 px-2 py-0.5 text-[11px] font-semibold text-action ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
                                 {r === 'super_admin'
                                   ? 'Super Admin'
                                   : r === 'prodi'
@@ -425,7 +425,7 @@ export default function Pengguna() {
                                 {(pId) => {
                                   const pr = (prodis() || []).find((p) => p.id === pId);
                                   return (
-                                    <span class="inline-flex items-center rounded-md bg-brand-50 px-2 py-0.5 text-xs font-semibold text-brand-700 ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
+                                    <span class="inline-flex items-center rounded-md bg-action-50 px-2 py-0.5 text-xs font-semibold text-action ring-1 ring-inset ring-brand-700/10 dark:bg-brand-900/30 dark:text-brand-300">
                                       {pr?.kode || pId}
                                     </span>
                                   );
@@ -456,7 +456,7 @@ export default function Pengguna() {
                               </span>
                             }
                           >
-                            <span class="inline-flex items-center rounded-md bg-accent-50 px-2 py-1 text-xs font-medium text-accent-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-accent-900/30 dark:text-accent-400">
+                            <span class="inline-flex items-center rounded-md bg-action-50 px-2 py-1 text-xs font-medium text-action ring-1 ring-inset ring-emerald-600/10 dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark">
                               Aktif
                             </span>
                           </Show>
@@ -582,7 +582,7 @@ export default function Pengguna() {
               Role / Peran
             </label>
             <select
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={newRole()}
               onChange={(e) => setNewRole(e.currentTarget.value)}
             >
@@ -658,7 +658,7 @@ export default function Pengguna() {
                         setSelectedProdiIds(selectedProdiIds().filter((id) => id !== pr.id));
                       }
                     }}
-                    class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4"
+                    class="rounded text-action focus:ring-action-focus h-4 w-4"
                   />
                   <div>
                     <span class="font-bold">[{pr.kode}]</span> {pr.nama} ({pr.jenjang})
@@ -698,7 +698,7 @@ export default function Pengguna() {
                     checked={selectedRoles().includes(r.value)}
                     disabled={isRoleSelectionDisabled(r.value)}
                     onChange={() => toggleRoleSelection(r.value)}
-                    class="rounded text-brand-600 focus:ring-brand-500 h-4 w-4 disabled:opacity-40 disabled:cursor-not-allowed"
+                    class="rounded text-action focus:ring-action-focus h-4 w-4 disabled:opacity-40 disabled:cursor-not-allowed"
                   />
                   <span class={isRoleSelectionDisabled(r.value) ? 'opacity-50' : ''}>{r.label}</span>
                 </label>

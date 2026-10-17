@@ -9,7 +9,7 @@ import { ExportColumn } from '../../utils/export';
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -136,7 +136,7 @@ export default function LaporanAkademik() {
         </div>
 
         {/* Filter Controls */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Akademik
@@ -182,7 +182,7 @@ export default function LaporanAkademik() {
         {/* Rekap Graphs */}
         <Show when={rekap()}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Rata-rata IP per Prodi</h3>
               <BarChart
                 labels={(rekap()?.prodi || []).map((p) => p.prodiNama)}
@@ -197,7 +197,7 @@ export default function LaporanAkademik() {
                 horizontal
               />
             </div>
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Jumlah Mahasiswa per Prodi</h3>
               <BarChart
                 labels={(rekap()?.prodi || []).map((p) => p.prodiNama)}
@@ -217,7 +217,7 @@ export default function LaporanAkademik() {
 
         {/* Tabel Ringkasan Prodi */}
         <Show when={rekap()}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail Rekap IP per Program Studi</h3>
             </div>
@@ -236,7 +236,7 @@ export default function LaporanAkademik() {
                       <tr class="border-b border-secondary-50 hover:bg-secondary-50/30 dark:hover:bg-secondary-800/30">
                         <td class="py-3 px-5 font-semibold text-secondary-800 dark:text-white">{p.prodiNama}</td>
                         <td class="py-3 px-5 text-center">{p.totalMahasiswa}</td>
-                        <td class="py-3 px-5 text-center font-bold text-brand-600">
+                        <td class="py-3 px-5 text-center font-bold text-action">
                           {p.rataIP > 0 ? p.rataIP.toFixed(2) : '-'}
                         </td>
                       </tr>
@@ -249,7 +249,7 @@ export default function LaporanAkademik() {
         </Show>
 
         {/* Matriks Nilai Mata Kuliah (A s.d. E) */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
           <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center">
             <h3 class="text-base font-bold text-secondary-800 dark:text-white">
               Matriks Mata Kuliah $\times$ Jumlah Mahasiswa Nilai (A - E)

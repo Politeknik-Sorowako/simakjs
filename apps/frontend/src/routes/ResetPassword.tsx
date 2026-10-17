@@ -120,7 +120,7 @@ export default function ResetPassword() {
             const nextTheme = auth.theme() === 'light' ? 'dark' : 'light';
             auth.setTheme(nextTheme);
           }}
-          class="p-2.5 rounded-xl bg-secondary-100/80 dark:bg-white/10 backdrop-blur-md border border-secondary-200/50 dark:border-white/20 text-secondary-700 dark:text-white hover:bg-secondary-200/80 dark:hover:bg-white/20 transition-all focus:outline-none shadow-md dark:shadow-lg"
+          class="p-2.5 rounded-xl bg-secondary-100/80 dark:bg-white/10 backdrop-blur-md border border-secondary-200/50 dark:border-white/20 text-secondary-700 dark:text-white hover:bg-secondary-200/80 dark:hover:bg-white/20 transition-all focus:outline-none dark:shadow-lg"
           title="Beralih Mode Gelap/Terang"
         >
           {auth.theme() === 'light' ? (
@@ -133,7 +133,12 @@ export default function ResetPassword() {
               />
             </svg>
           ) : (
-            <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              class="w-5 h-5 text-action dark:text-action-ondark"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -145,7 +150,7 @@ export default function ResetPassword() {
         </button>
       </div>
 
-      <div class="w-full max-w-md bg-white dark:bg-secondary-900/60 dark:backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl shadow-xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-secondary-800 dark:text-white transition-all duration-200">
+      <div class="w-full max-w-md bg-white dark:bg-secondary-900/60 dark:backdrop-blur-xl border border-secondary-200/80 dark:border-white/10 p-8 rounded-2xl dark:shadow-2xl flex flex-col gap-6 relative z-10 text-secondary-800 dark:text-white transition-all duration-200">
         <div class="text-center flex flex-col items-center gap-2">
           <img src={logoImg} alt="Logo" class="w-16 h-16 object-contain mb-2" />
           <h2 class="text-2xl font-bold tracking-tight text-secondary-800 dark:text-white">Atur Ulang Kata Sandi</h2>
@@ -252,7 +257,7 @@ export default function ResetPassword() {
           </button>
           <A
             href="/login"
-            class="text-brand-800 dark:text-brand-400 hover:text-brand-900 dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
+            class="text-action dark:text-brand-400 hover:text-action dark:hover:text-brand-300 font-semibold transition-colors focus:outline-none"
           >
             Kembali ke Halaman Masuk
           </A>

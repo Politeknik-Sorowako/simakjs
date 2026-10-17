@@ -24,7 +24,7 @@ export function DashboardPengumumanWidget(props: DashboardPengumumanWidgetProps)
   };
 
   return (
-    <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+    <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl flex flex-col justify-between">
       <div>
         <div class="flex items-center justify-between pb-3 mb-2 border-b border-secondary-100 dark:border-secondary-800">
           <div class="flex items-center gap-2">
@@ -90,7 +90,7 @@ export function DashboardPengumumanWidget(props: DashboardPengumumanWidgetProps)
       </div>
 
       <div class="mt-3 pt-2 text-center border-t border-secondary-100/60 dark:border-secondary-800/40">
-        <A href="/pengumuman" class="text-caption font-bold text-brand-600 hover:text-brand-700 underline">
+        <A href="/pengumuman" class="text-caption font-bold text-action hover:text-action underline">
           Buka Papan Pengumuman →
         </A>
       </div>

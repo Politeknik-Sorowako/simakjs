@@ -135,7 +135,7 @@ export default function KonfigurasiScopeProdi() {
                 type="checkbox"
                 checked={isGlobal()}
                 onChange={(e) => setIsGlobal(e.currentTarget.checked)}
-                class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500/30"
+                class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus/30"
               />
               Akses global (semua program studi) — Super Admin / BAAK
             </label>
@@ -149,7 +149,7 @@ export default function KonfigurasiScopeProdi() {
                         type="checkbox"
                         checked={(selected() as Set<number>).has(p.id)}
                         onChange={() => toggleProdi(p.id)}
-                        class="h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500/30"
+                        class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus/30"
                       />
                       <span>
                         {p.nama} <span class="text-xs text-secondary-400">({p.kode})</span>

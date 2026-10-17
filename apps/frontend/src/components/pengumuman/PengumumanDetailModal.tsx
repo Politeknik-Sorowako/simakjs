@@ -67,7 +67,7 @@ export function PengumumanDetailModal(props: PengumumanDetailModalProps) {
               <button
                 type="button"
                 onClick={handleOpenStandalone}
-                class="px-2.5 py-1.5 text-xs font-medium text-[#0066cc] dark:text-[#2997ff] hover:bg-brand-50 dark:hover:bg-brand-950/40 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                class="px-2.5 py-1.5 text-xs font-medium text-[#0066cc] dark:text-[#2997ff] hover:bg-action-50 dark:hover:bg-brand-950/40 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
                 title="Buka pada halaman terpisah"
               >
                 <span>↗</span>
@@ -119,7 +119,7 @@ export function PengumumanDetailModal(props: PengumumanDetailModalProps) {
 
             {/* Thumbnail Banner */}
             <Show when={p()?.thumbnailUrl}>
-              <div class="w-full max-h-96 rounded-2xl overflow-hidden bg-secondary-100 dark:bg-secondary-800 shadow-sm border border-secondary-100 dark:border-secondary-800">
+              <div class="w-full max-h-96 rounded-2xl overflow-hidden bg-secondary-100 dark:bg-secondary-800 border border-secondary-100 dark:border-secondary-800">
                 <img
                   src={getAbsoluteStorageUrl(p()!.thumbnailUrl!)}
                   alt={p()?.judul}

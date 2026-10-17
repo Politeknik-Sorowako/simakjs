@@ -499,7 +499,7 @@ export default function Mahasiswa() {
           </div>
           <div class="w-56">
             <select
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={filterProdi() ?? ''}
               onChange={(e) => handleProdiChange(e.currentTarget.value)}
             >
@@ -513,7 +513,7 @@ export default function Mahasiswa() {
           </div>
           <div class="w-48">
             <select
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={filterHasAccount() === undefined ? '' : filterHasAccount() ? 'true' : 'false'}
               onChange={(e) => {
                 const val = e.currentTarget.value;
@@ -536,7 +536,7 @@ export default function Mahasiswa() {
                 type="checkbox"
                 checked={isAllSelected()}
                 onChange={toggleSelectAll}
-                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+                class="rounded border-secondary-300 text-action focus:ring-action-focus dark:border-secondary-700"
               />,
               'Foto',
               <div class="flex flex-col gap-2 w-full">
@@ -546,7 +546,7 @@ export default function Mahasiswa() {
                 <input
                   type="text"
                   placeholder="Filter NIM..."
-                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-24"
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-action-focus w-24"
                   value={inputNim()}
                   onInput={(e) => {
                     setInputNim(e.currentTarget.value);
@@ -561,7 +561,7 @@ export default function Mahasiswa() {
                 <input
                   type="text"
                   placeholder="Filter Nama..."
-                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-32"
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-action-focus w-32"
                   value={inputNama()}
                   onInput={(e) => {
                     setInputNama(e.currentTarget.value);
@@ -576,7 +576,7 @@ export default function Mahasiswa() {
                 <input
                   type="text"
                   placeholder="Filter Email..."
-                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-32"
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-action-focus w-32"
                   value={inputEmail()}
                   onInput={(e) => {
                     setInputEmail(e.currentTarget.value);
@@ -591,7 +591,7 @@ export default function Mahasiswa() {
                   Status
                 </SortableHeader>
                 <select
-                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-brand-500 w-24"
+                  class="px-2 py-1 text-xs font-normal border rounded-md border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 focus:ring-1 focus:ring-action-focus w-24"
                   value={filterStatus()}
                   onChange={(e) => {
                     setFilterStatus(e.currentTarget.value);
@@ -617,7 +617,7 @@ export default function Mahasiswa() {
                       type="checkbox"
                       checked={selectedIds().includes(item.id)}
                       onChange={() => toggleSelect(item.id)}
-                      class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+                      class="rounded border-secondary-300 text-action focus:ring-action-focus dark:border-secondary-700"
                     />
                   </td>
                   <td class="px-6 py-4">
@@ -634,8 +634,8 @@ export default function Mahasiswa() {
                     <span
                       class={`px-2.5 py-1 text-xs font-semibold rounded-full ${
                         item.status === 'aktif'
-                          ? 'bg-accent-50 text-accent-700 border border-accent-100'
-                          : 'bg-accent-50 text-accent-700 border border-accent-100'
+                          ? 'bg-action-50 text-action border border-action-100'
+                          : 'bg-action-50 text-action border border-action-100'
                       }`}
                     >
                       {item.status}

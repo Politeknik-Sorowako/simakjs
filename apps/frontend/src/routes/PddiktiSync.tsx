@@ -217,7 +217,7 @@ export function PddiktiSync() {
     <MainLayout>
       <div class="flex flex-col gap-6 max-w-6xl mx-auto p-4">
         {/* Header */}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-col gap-1">
             <div class="flex flex-wrap items-center gap-2.5">
               <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
@@ -239,7 +239,7 @@ export function PddiktiSync() {
           <button
             onClick={handleSync}
             disabled={isSyncing()}
-            class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-sm rounded-xl disabled:opacity-50 active:scale-95 transition-all shadow-md shadow-accent-100 flex items-center gap-2 dark:bg-brand-700 dark:hover:bg-brand-600"
+            class="px-5 py-2.5 bg-action hover:bg-action-dark text-white font-extrabold text-sm rounded-xl disabled:opacity-50 active:scale-95 transition-all shadow-accent-100 flex items-center gap-2 dark:bg-action-dark dark:hover:bg-action"
           >
             <Show when={isSyncing()} fallback="⚡ Tandai Kesiapan Lokal">
               <span class="animate-spin">🔄</span> Memproses...
@@ -248,8 +248,8 @@ export function PddiktiSync() {
         </div>
 
         {/* Section: Tarik Data dari Neo Feeder (Read-Only Pull).
-            Ditampilkan hanya bila katalog dapat dimuat (RBAC admin/prodi/super_admin),
-            agar pengguna tanpa hak preview (mis. dosen) tidak melihat tombol yang selalu 403. */}
+ Ditampilkan hanya bila katalog dapat dimuat (RBAC admin/prodi/super_admin),
+ agar pengguna tanpa hak preview (mis. dosen) tidak melihat tombol yang selalu 403. */}
         <Show when={pullCatalog()}>
           <Card>
             <div class="flex flex-col gap-5">
@@ -266,7 +266,7 @@ export function PddiktiSync() {
                 </div>
                 <a
                   href="/konfigurasi-parameter"
-                  class="text-xs font-semibold text-brand-600 hover:underline dark:text-brand-400"
+                  class="text-xs font-semibold text-action hover:underline dark:text-brand-400"
                 >
                   Pengaturan Koneksi & Write Guard →
                 </a>
@@ -283,7 +283,7 @@ export function PddiktiSync() {
                         onClick={() => handleSelectEntity(ent.key)}
                         class={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all active:scale-95 ${
                           active()
-                            ? 'border-brand-600 bg-brand-50/70 dark:border-brand-500 dark:bg-brand-900/30'
+                            ? 'border-action bg-action-50/70 dark:border-action dark:bg-brand-900/30'
                             : 'border-secondary-200 bg-white hover:border-secondary-300 dark:border-secondary-800 dark:bg-secondary-900'
                         }`}
                       >
@@ -295,7 +295,7 @@ export function PddiktiSync() {
                                 ? '2. Master'
                                 : '3. Transaksional'}
                           </span>
-                          <code class="text-[10px] font-mono text-brand-600 dark:text-brand-400">{ent.feederAct}</code>
+                          <code class="text-[10px] font-mono text-action dark:text-brand-400">{ent.feederAct}</code>
                         </div>
                         <span class="text-sm font-bold text-secondary-800 dark:text-white">{ent.label}</span>
                         <Show when={ent.previewOnly}>
@@ -348,7 +348,7 @@ export function PddiktiSync() {
               {/* Konfirmasi Eksplisit sebelum menghubungi Server Feeder */}
               <Show when={confirmingPull() && currentEntityMeta()}>
                 {(meta) => (
-                  <div class="rounded-xl border border-brand-300 bg-brand-50/80 p-4 dark:border-brand-700 dark:bg-brand-900/30">
+                  <div class="rounded-xl border border-brand-300 bg-action-50/80 p-4 dark:border-brand-700 dark:bg-brand-900/30">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div class="flex flex-col gap-1">
                         <span class="text-sm font-bold text-secondary-800 dark:text-white">
@@ -407,7 +407,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('actionable')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'actionable'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -419,7 +419,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('baru')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'baru'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -430,7 +430,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('isi')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'isi'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -441,7 +441,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('link_id')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'link_id'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -452,7 +452,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('konflik')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'konflik'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -463,7 +463,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('sama')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'sama'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -474,7 +474,7 @@ export function PddiktiSync() {
                           onClick={() => setStatusFilter('all')}
                           class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                             statusFilter() === 'all'
-                              ? 'bg-brand-600 text-white'
+                              ? 'bg-action text-white'
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
@@ -543,7 +543,7 @@ export function PddiktiSync() {
                                 checked={allFilteredSelected()}
                                 disabled={selectableFilteredIds().length === 0}
                                 onChange={(e) => toggleSelectAllFiltered(e.currentTarget.checked)}
-                                class="h-4 w-4 rounded border-secondary-300 text-brand-600"
+                                class="h-4 w-4 rounded border-secondary-300 text-action"
                               />
                             </th>
                             <th class="p-3">Kunci / Identitas</th>
@@ -573,7 +573,7 @@ export function PddiktiSync() {
                                         checked={checked()}
                                         disabled={!item.canApply || item.status === 'sama'}
                                         onChange={(e) => toggleItem(item.feederId, e.currentTarget.checked)}
-                                        class="h-4 w-4 rounded border-secondary-300 text-brand-600 disabled:opacity-40"
+                                        class="h-4 w-4 rounded border-secondary-300 text-action disabled:opacity-40"
                                       />
                                     </td>
                                     <td class="p-3 align-top">
@@ -645,12 +645,12 @@ export function PddiktiSync() {
         >
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Mahasiswa Stats */}
-            <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center">
                 <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">
                   Data Mahasiswa
                 </span>
-                <span class="px-2 py-0.5 bg-brand-50 text-brand-600 text-[10px] font-bold rounded">PDDIKTI</span>
+                <span class="px-2 py-0.5 bg-action-50 text-action text-[10px] font-bold rounded">PDDIKTI</span>
               </div>
               <div class="flex flex-col gap-1">
                 <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">
@@ -661,7 +661,9 @@ export function PddiktiSync() {
               <div class="grid grid-cols-2 gap-2 border-t pt-3 text-xs">
                 <div>
                   <p class="text-secondary-400 dark:text-secondary-200">Tersinkron</p>
-                  <p class="font-bold text-accent-600 dark:text-accent-400">{stats()?.mahasiswa?.synced}</p>
+                  <p class="font-bold text-action dark:text-action dark:text-action-ondark">
+                    {stats()?.mahasiswa?.synced}
+                  </p>
                 </div>
                 <div>
                   <p class="text-secondary-400 dark:text-secondary-200">Belum Sinkron</p>
@@ -671,12 +673,12 @@ export function PddiktiSync() {
             </div>
 
             {/* Kelas Stats */}
-            <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center">
                 <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">
                   Kelas Kuliah
                 </span>
-                <span class="px-2 py-0.5 bg-accent-50 text-accent-600 text-[10px] font-bold rounded dark:bg-accent-900/30 dark:text-accent-400">
+                <span class="px-2 py-0.5 bg-action-50 text-action text-[10px] font-bold rounded dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark">
                   PDDIKTI
                 </span>
               </div>
@@ -689,7 +691,9 @@ export function PddiktiSync() {
               <div class="grid grid-cols-2 gap-2 border-t pt-3 text-xs">
                 <div>
                   <p class="text-secondary-400 dark:text-secondary-200">Tersinkron</p>
-                  <p class="font-bold text-accent-600 dark:text-accent-400">{stats()?.kelasKuliah?.synced}</p>
+                  <p class="font-bold text-action dark:text-action dark:text-action-ondark">
+                    {stats()?.kelasKuliah?.synced}
+                  </p>
                 </div>
                 <div>
                   <p class="text-secondary-400 dark:text-secondary-200">Belum Sinkron</p>
@@ -699,12 +703,12 @@ export function PddiktiSync() {
             </div>
 
             {/* KRS Stats */}
-            <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div class="flex justify-between items-center">
                 <span class="text-xs uppercase font-extrabold tracking-wider text-secondary-400 dark:text-secondary-200">
                   KRS & Nilai
                 </span>
-                <span class="px-2 py-0.5 bg-accent-50 text-accent-600 text-[10px] font-bold rounded">PDDIKTI</span>
+                <span class="px-2 py-0.5 bg-action-50 text-action text-[10px] font-bold rounded">PDDIKTI</span>
               </div>
               <div class="flex flex-col gap-1">
                 <span class="text-3xl font-extrabold text-secondary-800 dark:text-white">{stats()?.krs?.total}</span>
@@ -713,7 +717,7 @@ export function PddiktiSync() {
               <div class="grid grid-cols-2 gap-2 border-t pt-3 text-xs">
                 <div>
                   <p class="text-secondary-400 dark:text-secondary-200">Tersinkron</p>
-                  <p class="font-bold text-accent-600 dark:text-accent-400">{stats()?.krs?.synced}</p>
+                  <p class="font-bold text-action dark:text-action dark:text-action-ondark">{stats()?.krs?.synced}</p>
                 </div>
                 <div>
                   <p class="text-secondary-400 dark:text-secondary-200">Belum Sinkron</p>
@@ -726,12 +730,12 @@ export function PddiktiSync() {
 
         {/* Sync Console Logs */}
         <Show when={syncLogs().length > 0}>
-          <div class="bg-secondary-900 rounded-2xl p-6 border border-secondary-800 shadow-xl flex flex-col gap-4 font-mono text-xs text-secondary-300 dark:border-secondary-700">
+          <div class="bg-secondary-900 rounded-2xl p-6 border border-secondary-800 flex flex-col gap-4 font-mono text-xs text-secondary-300 dark:border-secondary-700">
             <div class="flex justify-between items-center border-b border-secondary-800 pb-2">
               <span class="text-secondary-400 font-bold uppercase tracking-wider dark:text-secondary-200">
                 Sync Log Console
               </span>
-              <span class="w-3 h-3 bg-accent-500 rounded-full animate-ping"></span>
+              <span class="w-3 h-3 bg-action rounded-full animate-ping"></span>
             </div>
             <div class="flex flex-col gap-2 max-h-72 overflow-y-auto">
               <For each={syncLogs()}>

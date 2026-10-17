@@ -69,7 +69,7 @@ export function ProtectedRoute(props: ProtectedRouteProps) {
             </p>
             <button
               onClick={() => navigate('/dashboard')}
-              class="px-5 py-2.5 bg-primary-800 hover:bg-primary-700 text-white rounded-xl font-semibold shadow-md shadow-primary-900/20 transition-all active:scale-95"
+              class="px-5 py-2.5 bg-action hover:bg-action-dark text-white rounded-full font-medium transition-colors active:scale-95"
             >
               Kembali ke Dashboard
             </button>

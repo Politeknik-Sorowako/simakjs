@@ -18,15 +18,15 @@ export function Input(props: InputProps) {
   const inputId = () => local.id || `input-${createUniqueId()}`;
 
   const baseClasses = `
-    w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800
-    placeholder:text-secondary-400
-    focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600
-    transition-all duration-200
-    disabled:bg-secondary-50 disabled:text-secondary-400 disabled:cursor-not-allowed
-    dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100 dark:placeholder:text-secondary-500
-    dark:focus:ring-primary-500/30 dark:focus:border-primary-500
-    dark:disabled:bg-secondary-800 dark:disabled:text-secondary-600
-  `;
+ w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800
+ placeholder:text-secondary-400
+ focus:outline-none focus:ring-2 focus:ring-action-focus/20 focus:border-action
+ transition-all duration-200
+ disabled:bg-secondary-50 disabled:text-secondary-400 disabled:cursor-not-allowed
+ dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100 dark:placeholder:text-secondary-500
+ dark:focus:ring-action-ondark/30 dark:focus:border-action-ondark
+ dark:disabled:bg-secondary-800 dark:disabled:text-secondary-600
+ `;
 
   const errorClasses =
     'border-danger-500 focus:border-danger-500 focus:ring-danger-500/20 dark:border-danger-400 dark:focus:border-danger-400 dark:focus:ring-danger-400/20';

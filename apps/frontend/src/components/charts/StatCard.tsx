@@ -12,14 +12,14 @@ interface StatCardProps {
 
 const colorMap = {
   brand: {
-    bg: 'bg-brand-50 dark:bg-brand-950/40',
-    text: 'text-brand-600 dark:text-brand-400',
+    bg: 'bg-action-50 dark:bg-brand-950/40',
+    text: 'text-action dark:text-brand-400',
     border: 'border-brand-200 dark:border-brand-900/50',
   },
   accent: {
-    bg: 'bg-accent-50 dark:bg-accent-950/40',
-    text: 'text-accent-600 dark:text-accent-400',
-    border: 'border-accent-200 dark:border-accent-900/50',
+    bg: 'bg-action-50 dark:bg-accent-950/40',
+    text: 'text-action dark:text-action dark:text-action-ondark',
+    border: 'border-action-200 dark:border-accent-900/50',
   },
   green: {
     bg: 'bg-green-50 dark:bg-green-950/40',
@@ -43,7 +43,7 @@ export function StatCard(props: StatCardProps) {
 
   const content = (
     <div
-      class={`bg-white dark:bg-secondary-900 border ${c.border} p-5 rounded-2xl shadow-sm flex items-center justify-between transition-all duration-200 hover:shadow-md ${props.href ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
+      class={`bg-white dark:bg-secondary-900 border ${c.border} p-5 rounded-2xl flex items-center justify-between transition-all duration-200 hover:shadow-md ${props.href ? 'cursor-pointer hover:scale-[1.02]' : ''}`}
     >
       <div class="flex flex-col gap-0.5">
         <span class="text-caption font-semibold text-secondary-500 dark:text-secondary-400 uppercase tracking-wider">

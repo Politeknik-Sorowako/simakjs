@@ -55,14 +55,19 @@ export function ThemeToggle(props: { compact?: boolean }) {
           e.stopPropagation();
           setIsOpen(!isOpen());
         }}
-        class="inline-flex items-center justify-center p-2.5 rounded-xl bg-secondary-100/80 dark:bg-secondary-800/80 border border-secondary-200/80 dark:border-secondary-700/80 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500/30 active:scale-95 shadow-sm"
+        class="inline-flex items-center justify-center p-2.5 rounded-xl bg-secondary-100/80 dark:bg-secondary-800/80 border border-secondary-200/80 dark:border-secondary-700/80 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-200 dark:hover:bg-secondary-700 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-action-focus/30 active:scale-95"
         title={`Tema saat ini: ${theme() === 'system' ? 'Sistem' : theme() === 'dark' ? 'Gelap' : 'Terang'}`}
         aria-label="Pilih Mode Tema"
         aria-expanded={isOpen()}
         aria-haspopup="true"
       >
         {effectiveTheme() === 'dark' ? (
-          <svg class="w-5 h-5 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg
+            class="w-5 h-5 text-action dark:text-action-ondark"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -94,7 +99,7 @@ export function ThemeToggle(props: { compact?: boolean }) {
             onClick={() => handleSelect('light')}
             class={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2.5 transition-colors ${
               theme() === 'light'
-                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-action dark:text-action-ondark'
                 : 'text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
@@ -114,11 +119,16 @@ export function ThemeToggle(props: { compact?: boolean }) {
             onClick={() => handleSelect('dark')}
             class={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2.5 transition-colors ${
               theme() === 'dark'
-                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-action dark:text-action-ondark'
                 : 'text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
-            <svg class="w-4 h-4 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg
+              class="w-4 h-4 text-action dark:text-action-ondark"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -134,7 +144,7 @@ export function ThemeToggle(props: { compact?: boolean }) {
             onClick={() => handleSelect('system')}
             class={`w-full text-left px-3 py-2 text-xs font-semibold flex items-center gap-2.5 transition-colors ${
               theme() === 'system'
-                ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                ? 'bg-primary-50 dark:bg-primary-900/30 text-action dark:text-action-ondark'
                 : 'text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >

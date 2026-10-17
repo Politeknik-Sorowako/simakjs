@@ -70,7 +70,7 @@ export default function KompensasiMahasiswa() {
           when={!mhsProfile.loading && !detail.loading}
           fallback={
             <div class="flex items-center justify-center py-16 text-secondary-400 dark:text-secondary-300">
-              <div class="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <div class="w-6 h-6 border-2 border-action border-t-transparent rounded-full animate-spin mr-2" />
               <span class="text-sm">Memuat data kompensasi...</span>
             </div>
           }
@@ -93,14 +93,14 @@ export default function KompensasiMahasiswa() {
             >
               {(data) => (
                 <div class="flex flex-col gap-6">
-                  <div class="rounded-2xl border border-secondary-100 bg-white p-5 shadow-sm dark:border-secondary-800 dark:bg-secondary-900">
+                  <div class="rounded-2xl border border-secondary-100 bg-white p-5 dark:border-secondary-800 dark:bg-secondary-900">
                     <div class="text-caption font-semibold uppercase tracking-wider text-secondary-400">
                       {data().mahasiswa.nama} · {data().mahasiswa.nim}
                     </div>
                   </div>
 
                   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div class="rounded-2xl border border-orange-200 bg-orange-50 p-5 shadow-sm dark:border-orange-900/40 dark:bg-orange-900/20">
+                    <div class="rounded-2xl border border-orange-200 bg-orange-50 p-5 dark:border-orange-900/40 dark:bg-orange-900/20">
                       <div class="text-caption font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">
                         Total Kompensasi
                       </div>
@@ -108,7 +108,7 @@ export default function KompensasiMahasiswa() {
                         {data().summary.totalKompensasi} Menit
                       </div>
                     </div>
-                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm dark:border-emerald-900/40 dark:bg-emerald-900/20">
+                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/40 dark:bg-emerald-900/20">
                       <div class="text-caption font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                         Sudah Dilunasi
                       </div>
@@ -116,7 +116,7 @@ export default function KompensasiMahasiswa() {
                         {data().summary.totalDibayar} Menit
                       </div>
                     </div>
-                    <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 shadow-sm dark:border-rose-900/40 dark:bg-rose-900/20">
+                    <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 dark:border-rose-900/40 dark:bg-rose-900/20">
                       <div class="text-caption font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
                         Sisa Tanggungan
                       </div>
@@ -132,7 +132,7 @@ export default function KompensasiMahasiswa() {
                       onClick={() => handleTabChange('ketidakhadiran')}
                       class={`flex items-center gap-2 px-4 py-2 rounded-full text-caption font-semibold transition-all ${
                         activeTab() === 'ketidakhadiran'
-                          ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-900 dark:text-white'
+                          ? 'bg-white text-secondary-900 dark:bg-secondary-900 dark:text-white'
                           : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200'
                       }`}
                     >
@@ -146,7 +146,7 @@ export default function KompensasiMahasiswa() {
                       onClick={() => handleTabChange('pelunasan')}
                       class={`flex items-center gap-2 px-4 py-2 rounded-full text-caption font-semibold transition-all ${
                         activeTab() === 'pelunasan'
-                          ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-900 dark:text-white'
+                          ? 'bg-white text-secondary-900 dark:bg-secondary-900 dark:text-white'
                           : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200'
                       }`}
                     >
@@ -158,7 +158,7 @@ export default function KompensasiMahasiswa() {
                   </div>
 
                   <Show when={activeTab() === 'ketidakhadiran'}>
-                    <div class="rounded-2xl border border-secondary-100 bg-white p-6 shadow-sm dark:border-secondary-800 dark:bg-secondary-900">
+                    <div class="rounded-2xl border border-secondary-100 bg-white p-6 dark:border-secondary-800 dark:bg-secondary-900">
                       <h2 class="mb-3 text-base font-bold text-secondary-800 dark:text-white">
                         Riwayat Ketidakhadiran
                       </h2>
@@ -215,7 +215,7 @@ export default function KompensasiMahasiswa() {
                   </Show>
 
                   <Show when={activeTab() === 'pelunasan'}>
-                    <div class="rounded-2xl border border-secondary-100 bg-white p-6 shadow-sm dark:border-secondary-800 dark:bg-secondary-900">
+                    <div class="rounded-2xl border border-secondary-100 bg-white p-6 dark:border-secondary-800 dark:bg-secondary-900">
                       <h2 class="mb-3 text-base font-bold text-secondary-800 dark:text-white">
                         Riwayat Pelunasan Kompensasi
                       </h2>

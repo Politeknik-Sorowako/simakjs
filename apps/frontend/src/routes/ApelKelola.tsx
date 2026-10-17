@@ -1226,7 +1226,7 @@ export default function ApelKelola() {
         {/* MODAL 1: Buat Kelompok Baru */}
         <Show when={showCreateModal()}>
           <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4">
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
                 <h3 class="text-lg font-bold">Buat Kelompok Apel Baru</h3>
                 <button
@@ -1285,7 +1285,7 @@ export default function ApelKelola() {
         {/* MODAL 2: Kelola Anggota Mahasiswa */}
         <Show when={showAnggotaModal()}>
           <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] flex flex-col">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3 flex-shrink-0">
                 <div>
                   <h3 class="text-lg font-bold">Kelola Anggota Kelompok Apel</h3>
@@ -1421,7 +1421,7 @@ export default function ApelKelola() {
         {/* MODAL 3: Edit Sesi Apel */}
         <Show when={showEditSesiModal()}>
           <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4">
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
                 <h3 class="text-lg font-bold">Edit Data Sesi Apel</h3>
                 <button
@@ -1510,7 +1510,7 @@ export default function ApelKelola() {
         {/* MODAL 4: Catatan / Alasan Presensi */}
         <Show when={editingCatatanMhs()}>
           <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-sm w-full p-5 space-y-4 shadow-xl">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-sm w-full p-5 space-y-4">
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-2">
                 <h3 class="text-base font-bold text-gray-900 dark:text-white">Catatan — {editingCatatanMhs()?.nama}</h3>
                 <button
@@ -1562,7 +1562,7 @@ export default function ApelKelola() {
         {/* MODAL 5: Buka Sesi Apel Baru */}
         <Show when={showBukaSesiModal()}>
           <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 space-y-4">
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white">Buka Sesi Apel Baru</h3>
                 <button

@@ -115,7 +115,7 @@ import { queryClient } from './utils/queryClient';
 export function RouteLoadingFallback() {
   return (
     <div class="min-h-screen flex flex-col items-center justify-center bg-parchment dark:bg-secondary-950 text-secondary-700 dark:text-secondary-200">
-      <div class="w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-10 h-10 border-4 border-action border-t-transparent rounded-full animate-spin"></div>
       <p class="mt-4 text-sm font-medium">Memuat Halaman...</p>
     </div>
   );
@@ -141,7 +141,7 @@ function RouteErrorFallback(props: { error: unknown; reset: () => void }) {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          class="px-4 py-2 text-sm font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all active:scale-95"
+          class="px-4 py-2 text-sm font-semibold rounded-xl bg-action hover:bg-action-dark text-white transition-all active:scale-95"
         >
           Muat Ulang Halaman
         </button>
@@ -160,7 +160,7 @@ function RouteErrorFallback(props: { error: unknown; reset: () => void }) {
 function VerificationRouteFallback() {
   return (
     <div class="min-h-screen flex flex-col items-center justify-center bg-parchment dark:bg-secondary-950 text-secondary-800 dark:text-secondary-100 p-6 text-center">
-      <div class="w-14 h-14 mb-4 rounded-2xl bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-400 flex items-center justify-center">
+      <div class="w-14 h-14 mb-4 rounded-2xl bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-action-ondark flex items-center justify-center">
         <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             stroke-linecap="round"
@@ -179,7 +179,7 @@ function VerificationRouteFallback() {
         <button
           type="button"
           onClick={() => window.location.reload()}
-          class="px-4 py-2 text-sm font-semibold rounded-xl bg-primary-600 hover:bg-primary-700 text-white shadow-md transition-all active:scale-95"
+          class="px-4 py-2 text-sm font-semibold rounded-xl bg-action hover:bg-action-dark text-white transition-all active:scale-95"
         >
           Muat Ulang Halaman
         </button>
@@ -502,7 +502,7 @@ function AppContent() {
             }
           />
           {/* Halaman verifikasi kini menjadi tab di /skpi — redirect permanen
-              agar bookmark / tautan lama tidak 404. */}
+ agar bookmark / tautan lama tidak 404. */}
           <Route path="/skpi/verifikasi" element={<Navigate href="/skpi" />} />
           <Route
             path="/skpi/cetak/:mhsId"

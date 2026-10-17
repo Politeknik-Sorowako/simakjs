@@ -284,7 +284,7 @@ export default function AdmisiVerifikasi() {
                                 jalan: app.jalan || '',
                               });
                             }}
-                            class="text-xs px-2 py-1 bg-brand-100 text-brand-700 rounded hover:bg-brand-200"
+                            class="text-xs px-2 py-1 bg-action-100 text-action rounded hover:bg-brand-200"
                           >
                             {editBiodata() === app.id ? 'Batal' : 'Edit Biodata'}
                           </button>
@@ -421,7 +421,7 @@ export default function AdmisiVerifikasi() {
                                     toast.showToast((err as Error).message, 'error');
                                   }
                                 }}
-                                class="text-xs px-3 py-1 bg-brand-600 text-white rounded hover:bg-brand-700"
+                                class="text-xs px-3 py-1 bg-action text-white rounded hover:bg-action-dark"
                               >
                                 Simpan Biodata
                               </button>
@@ -488,7 +488,7 @@ export default function AdmisiVerifikasi() {
                                       toast.showToast((err as Error).message, 'error');
                                     }
                                   }}
-                                  class="text-xs px-2 py-1 bg-brand-600 text-white rounded hover:bg-brand-700"
+                                  class="text-xs px-2 py-1 bg-action text-white rounded hover:bg-action-dark"
                                 >
                                   Simpan
                                 </button>
@@ -508,7 +508,7 @@ export default function AdmisiVerifikasi() {
                                 setNewP1(null);
                                 setNewP2(null);
                               }}
-                              class="text-xs px-2 py-1 bg-brand-100 text-brand-700 rounded hover:bg-brand-200"
+                              class="text-xs px-2 py-1 bg-action-100 text-action rounded hover:bg-brand-200"
                             >
                               Ubah
                             </button>
@@ -615,7 +615,7 @@ export default function AdmisiVerifikasi() {
                                           href={latest.fileLink}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          class="text-xs text-brand-600 hover:underline"
+                                          class="text-xs text-action hover:underline"
                                         >
                                           🔗
                                         </a>
@@ -624,7 +624,7 @@ export default function AdmisiVerifikasi() {
                                           href={`${apiUrl}/admisi/documents/${latest.id}/file`}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          class="text-xs text-brand-600 hover:underline"
+                                          class="text-xs text-action hover:underline"
                                         >
                                           📄
                                         </a>

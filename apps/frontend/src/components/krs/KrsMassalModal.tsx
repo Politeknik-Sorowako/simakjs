@@ -218,7 +218,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
             <span
               class={`px-3 py-1 rounded-full text-xs font-bold ${
                 step() === 1
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-action text-white'
                   : 'bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-300'
               }`}
             >
@@ -228,7 +228,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
             <span
               class={`px-3 py-1 rounded-full text-xs font-bold ${
                 step() === 2
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-action text-white'
                   : 'bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-300'
               }`}
             >
@@ -292,7 +292,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                     selectedMhsIds().length === (mahasiswaList.latest || []).length
                   }
                   onChange={toggleSelectAllMhs}
-                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                  class="rounded border-secondary-300 text-action focus:ring-action-focus"
                 />,
                 'NIM',
                 'Nama Mahasiswa',
@@ -308,7 +308,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                         type="checkbox"
                         checked={selectedMhsIds().includes(item.id)}
                         onChange={() => toggleSelectMhs(item.id)}
-                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                        class="rounded border-secondary-300 text-action focus:ring-action-focus"
                       />
                     </td>
                     <td class="px-4 py-2 font-mono text-xs text-secondary-800 dark:text-white">{item.nim}</td>
@@ -317,7 +317,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                       {item.programStudi?.nama || '-'}
                     </td>
                     <td class="px-4 py-2 text-xs">
-                      <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-accent-50 text-accent-700 border border-accent-100">
+                      <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-action-50 text-action border border-action-100">
                         {item.status}
                       </span>
                     </td>
@@ -409,7 +409,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                     (kelasList.latest || []).length > 0 && selectedKelasIds().length === (kelasList.latest || []).length
                   }
                   onChange={toggleSelectAllKelas}
-                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                  class="rounded border-secondary-300 text-action focus:ring-action-focus"
                 />,
                 'Kode MK',
                 'Mata Kuliah',
@@ -426,7 +426,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                         type="checkbox"
                         checked={selectedKelasIds().includes(item.id)}
                         onChange={() => toggleSelectKelas(item.id)}
-                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                        class="rounded border-secondary-300 text-action focus:ring-action-focus"
                       />
                     </td>
                     <td class="px-4 py-2 font-mono text-xs text-secondary-800 dark:text-white">
@@ -435,7 +435,7 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
                     <td class="px-4 py-2 text-xs font-medium text-secondary-800 dark:text-white">
                       {item.mataKuliah?.nama || '-'}
                     </td>
-                    <td class="px-4 py-2 text-xs font-semibold text-brand-600 dark:text-brand-400">{item.namaKelas}</td>
+                    <td class="px-4 py-2 text-xs font-semibold text-action dark:text-brand-400">{item.namaKelas}</td>
                     <td class="px-4 py-2 text-xs text-secondary-600 dark:text-secondary-300">
                       {item.mataKuliah?.sksTotal || '-'} SKS
                     </td>
@@ -459,8 +459,8 @@ export function KrsMassalModal(props: KrsMassalModalProps) {
           </div>
 
           {/* Summary Box */}
-          <div class="p-3 bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl flex items-center justify-between">
-            <span class="text-xs text-brand-800 dark:text-brand-300 font-medium">
+          <div class="p-3 bg-action-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-800 rounded-xl flex items-center justify-between">
+            <span class="text-xs text-action dark:text-brand-300 font-medium">
               Total Entri KRS yang akan dibuat: <strong>{selectedMhsIds().length} Mahasiswa</strong> ×{' '}
               <strong>{selectedKelasIds().length} Kelas</strong> ={' '}
               <strong>{selectedMhsIds().length * selectedKelasIds().length} Entri KRS</strong>

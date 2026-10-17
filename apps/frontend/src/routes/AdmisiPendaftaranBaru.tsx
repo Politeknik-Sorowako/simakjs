@@ -81,7 +81,7 @@ export default function AdmisiPendaftaranBaru() {
                   onClick={() => handleSessionSelect(session.id)}
                   class={`text-left p-4 rounded-lg border-2 transition-colors ${
                     selectedSession() === session.id
-                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                      ? 'border-action bg-action-50 dark:bg-action/20'
                       : 'border-secondary-200 dark:border-secondary-700 hover:border-brand-300'
                   }`}
                 >

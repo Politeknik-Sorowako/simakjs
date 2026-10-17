@@ -46,7 +46,7 @@ export default function LaporanMahasiswaBaru() {
         </div>
 
         {/* Filter */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <div class="w-full sm:w-48">
             <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Angkatan
@@ -142,7 +142,7 @@ export default function LaporanMahasiswaBaru() {
         {/* Chart + Table */}
         <Show when={!stats.loading && !stats.error && (stats()?.total || 0) > 0}>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Mahasiswa Baru per Prodi</h3>
               <BarChart
                 labels={(stats()?.perProdi || []).map(
@@ -161,7 +161,7 @@ export default function LaporanMahasiswaBaru() {
                 horizontal
               />
             </div>
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Tren Penerimaan per Angkatan</h3>
               <BarChart
                 labels={(stats()?.trend || []).map((t: { angkatan: string; total: number }) => t.angkatan)}
@@ -178,7 +178,7 @@ export default function LaporanMahasiswaBaru() {
           </div>
 
           {/* Table */}
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail per Program Studi</h3>
             </div>

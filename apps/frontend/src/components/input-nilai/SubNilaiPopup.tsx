@@ -111,7 +111,7 @@ export default function SubNilaiPopup(props: SubNilaiPopupProps) {
                         ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
                         : isChanged(sub.id)
                           ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                          : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                          : 'border-secondary-200 focus:border-action focus:ring-action-focus/20 dark:border-secondary-700'
                     }`}
                   />
                 </div>

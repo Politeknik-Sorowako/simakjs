@@ -395,7 +395,7 @@ export default function Rps() {
         </div>
 
         {/* Cascading Filter Selection */}
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800">
           <SearchableSelect
             label="Periode Akademik"
             value={selectedPeriode()}
@@ -455,7 +455,7 @@ export default function Rps() {
 
         {/* Daftar Kelas */}
         <Show when={selectedMk() > 0 && selectedPeriode()}>
-          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
+          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800">
             <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200 mb-2">
               Kelas yang mengambil MK ini ({classes()?.length || 0})
             </h3>
@@ -466,7 +466,7 @@ export default function Rps() {
               <div class="flex flex-wrap gap-2">
                 <For each={classes()}>
                   {(kelas) => (
-                    <span class="px-3 py-1.5 bg-brand-50 dark:bg-brand-900/30 rounded-lg text-xs font-semibold text-brand-700 dark:text-brand-400 border border-brand-100 dark:border-brand-800">
+                    <span class="px-3 py-1.5 bg-action-50 dark:bg-brand-900/30 rounded-lg text-xs font-semibold text-brand-700 dark:text-brand-400 border border-brand-100 dark:border-brand-800">
                       {kelas.namaKelas}
                       <Show when={kelas.dosenPengajarKelas?.length}>
                         <span class="text-secondary-500 font-normal ml-1">
@@ -483,7 +483,7 @@ export default function Rps() {
 
         {/* Copy RPS Section */}
         <Show when={selectedMk() > 0 && selectedPeriode()}>
-          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex items-center justify-between gap-3">
+          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800 flex items-center justify-between gap-3">
             <div>
               <h3 class="text-sm font-bold text-secondary-700 dark:text-secondary-200">
                 Salin RPS Lintas Prodi & Periode
@@ -500,7 +500,7 @@ export default function Rps() {
         <Show when={selectedMk() > 0 && selectedPeriode() !== ''}>
           <Show when={rps.loading || classes.loading}>
             <div class="flex items-center justify-center py-10 text-secondary-400">
-              <div class="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <div class="w-6 h-6 border-2 border-action border-t-transparent rounded-full animate-spin mr-2" />
               <span class="text-sm">Memuat data...</span>
             </div>
           </Show>
@@ -508,7 +508,7 @@ export default function Rps() {
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* RPS Header and Topics */}
               <div class="lg:col-span-2 flex flex-col gap-6">
-                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
+                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
                   <div class="flex justify-between items-start border-b border-secondary-100 dark:border-secondary-800 pb-4">
                     <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Deskripsi & CPL</h2>
                     <Show when={rps()}>
@@ -542,7 +542,7 @@ export default function Rps() {
                 </div>
 
                 <Show when={rps()}>
-                  <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
+                  <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
                     <div class="flex justify-between items-center">
                       <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Pertemuan Mingguan</h2>
                       <Button onClick={openAddTopik}>+ Tambah Pertemuan</Button>
@@ -614,7 +614,7 @@ export default function Rps() {
 
               {/* Rencana Evaluasi */}
               <div class="flex flex-col gap-6">
-                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
+                <div class="bg-white dark:bg-secondary-900 p-6 rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-4">
                   <div class="flex justify-between items-center border-b border-secondary-100 dark:border-secondary-800 pb-4">
                     <h2 class="text-lg font-bold text-secondary-800 dark:text-white">Rencana Evaluasi</h2>
                     <Button onClick={openAddEval}>+ Tambah</Button>
@@ -661,7 +661,7 @@ export default function Rps() {
               </label>
               <textarea
                 rows="4"
-                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={deskripsi()}
                 onInput={(e) => setDeskripsi(e.currentTarget.value)}
               />
@@ -672,7 +672,7 @@ export default function Rps() {
               </label>
               <textarea
                 rows="4"
-                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={cplProdi()}
                 onInput={(e) => setCplProdi(e.currentTarget.value)}
               />
@@ -804,7 +804,7 @@ export default function Rps() {
               </label>
               <textarea
                 rows="3"
-                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full p-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={evalDeskripsi()}
                 onInput={(e) => setEvalDeskripsi(e.currentTarget.value)}
               />
@@ -883,7 +883,7 @@ export default function Rps() {
             <div class="border border-secondary-200 dark:border-secondary-700 rounded-xl divide-y divide-secondary-100 dark:divide-secondary-800 max-h-64 overflow-y-auto">
               <Show when={sources.loading}>
                 <div class="flex items-center justify-center py-8 text-secondary-400">
-                  <div class="w-5 h-5 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+                  <div class="w-5 h-5 border-2 border-action border-t-transparent rounded-full animate-spin mr-2" />
                   <span class="text-xs">Memuat sumber...</span>
                 </div>
               </Show>
@@ -898,7 +898,7 @@ export default function Rps() {
                     type="button"
                     class={`w-full flex items-start justify-between gap-3 px-4 py-3 text-left text-sm transition-colors ${
                       selectedSource()?.id === s.id
-                        ? 'bg-brand-50 dark:bg-brand-900/30 border-l-4 border-brand-600'
+                        ? 'bg-action-50 dark:bg-brand-900/30 border-l-4 border-action'
                         : 'hover:bg-secondary-50 dark:hover:bg-secondary-800/40 border-l-4 border-transparent'
                     }`}
                     onClick={() => setSelectedSource(s)}
@@ -914,7 +914,7 @@ export default function Rps() {
                         <div class="text-xs text-secondary-400 line-clamp-1 mt-1">{s.deskripsi}</div>
                       </Show>
                     </div>
-                    <span class="text-xs text-brand-600 font-semibold shrink-0 mt-0.5">Pilih</span>
+                    <span class="text-xs text-action font-semibold shrink-0 mt-0.5">Pilih</span>
                   </button>
                 )}
               </For>
