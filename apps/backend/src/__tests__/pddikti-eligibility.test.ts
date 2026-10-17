@@ -519,7 +519,17 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       expect(catRes.status).toBe(200);
       const catBody = (await catRes.json()) as { writeGuard: boolean; entities: Array<{ key: string }> };
       expect(catBody.writeGuard).toBe(true);
-      expect(catBody.entities.map((e) => e.key)).toEqual(['semester', 'prodi', 'matkul', 'dosen', 'mahasiswa']);
+      expect(catBody.entities.map((e) => e.key)).toEqual([
+        'semester',
+        'prodi',
+        'matkul',
+        'dosen',
+        'mahasiswa',
+        'kelas',
+        'krs-nilai',
+        'transkrip',
+        'aktivitas-mahasiswa',
+      ]);
 
       // 2. Preview & Apply Semester (20231 konflik nama, 20241 baru)
       const semPrevRes = await app.handle(
@@ -723,6 +733,250 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
       expect(mkBAfter.idPddikti).toBeNull();
       const [newMk] = await db.select().from(mataKuliah).where(eq(mataKuliah.idPddikti, 'uuid-mk-zz'));
       expect(newMk.programStudiId).toBe(prodiId);
+    });
+
+    it('pulls transactional data: kelas kuliah, KRS & nilai, transkrip, aktivitas MBKM', async () => {
+      const actsCalled: string[] = [];
+      // Prasyarat: semester, prodi, matkul, mahasiswa sudah tertaut ke ID PDDIKTI.
+      await app.handle(
+        new Request('http://localhost/system/parameters/FEEDER_PASSWORD', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 'dummy-secret' }),
+        }),
+      );
+      await db.update(periodeAkademik).set({ idPddikti: '20231' }).where(eq(periodeAkademik.id, '20231'));
+      await db.update(programStudi).set({ idPddikti: 'uuid-prodi-ti' }).where(eq(programStudi.id, prodiId));
+      await db.update(mahasiswa).set({ idPddikti: 'uuid-mhs-lokal' }).where(eq(mahasiswa.id, mhsId));
+      await db.update(mataKuliah).set({ idPddikti: 'uuid-mk-lokal' }).where(eq(mataKuliah.id, mkId));
+
+      const [mhsRow] = await db.select({ nim: mahasiswa.nim }).from(mahasiswa).where(eq(mahasiswa.id, mhsId));
+      const nimMhs = mhsRow.nim;
+      // Simpan satu kelas lokal yang perlu ditautkan (idPddikti belum ada).
+      const [kelasLokal] = await db
+        .insert(kelasKuliah)
+        .values({
+          mataKuliahId: mkId,
+          periodeId: periodeId,
+          namaKelas: 'Kelas Teori A',
+          tanggalMulaiEfektif: '2024-02-05',
+        })
+        .returning();
+      // KRS lokal tanpa nilai (menunggu pengisian) dan KRS lokal yang sudah bernilai 70.
+      const [krsBaru] = await db
+        .insert(krs)
+        .values({ mahasiswaId: mhsId, kelasKuliahId: kelasLokal.id, isApproved: false })
+        .returning();
+      const [kelasNilai] = await db
+        .insert(kelasKuliah)
+        .values({
+          mataKuliahId: mkId,
+          periodeId: periodeId,
+          namaKelas: 'Kelas Nilai Lama',
+          idPddikti: 'uuid-kelas-nilai',
+        })
+        .returning();
+      const [krsKonflik] = await db
+        .insert(krs)
+        .values({
+          mahasiswaId: mhsId,
+          kelasKuliahId: kelasNilai.id,
+          nilaiAngka: 70,
+          nilaiHuruf: 'B-',
+          nilaiIndeks: 2.75,
+          isApproved: true,
+        })
+        .returning();
+
+      FeederService.setTestTransport(async (_cfg, body) => {
+        const act = String(body.act);
+        actsCalled.push(act);
+        if (act === 'GetToken') return { error_code: 0, data: { token: 'tok-trans' } };
+        if (act === 'GetListKelasKuliah') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_kelas_kuliah: 'uuid-kelas-1',
+                id_semester: '20231',
+                id_matkul: 'uuid-mk-lokal',
+                kode_mata_kuliah: 'IF101',
+                nama_kelas: 'Kelas Teori A',
+                tanggal_mulai_efektif: '05-02-2024',
+                tanggal_akhir_efektif: '2024-06-30',
+              },
+              {
+                id_kelas_kuliah: 'uuid-kelas-2',
+                id_semester: '20231',
+                id_matkul: 'uuid-mk-lokal',
+                kode_mata_kuliah: 'IF101',
+                nama_kelas: 'Kelas Teori B',
+              },
+            ],
+          };
+        }
+        if (act === 'GetRiwayatNilaiMahasiswa') {
+          return {
+            error_code: 0,
+            data: [
+              // KRS sudah ada lokal (nilai kosong) → status "isi"
+              {
+                nim: nimMhs,
+                id_kelas_kuliah: 'uuid-kelas-1',
+                kode_mata_kuliah: 'IF101',
+                id_semester: '20231',
+                nilai_angka: 85,
+                nilai_huruf: 'A',
+                nilai_indeks: 4,
+              },
+              // Nilai bertentangan dengan lokal (70 → 60) → konflik
+              {
+                nim: nimMhs,
+                id_kelas_kuliah: 'uuid-kelas-nilai',
+                kode_mata_kuliah: 'IF101',
+                id_semester: '20231',
+                nilai_angka: 60,
+                nilai_huruf: 'C',
+                nilai_indeks: 2,
+              },
+              // NIM belum ada di aplikasi → tidak dapat diterapkan
+              {
+                nim: '99999999',
+                id_kelas_kuliah: 'uuid-kelas-1',
+                kode_mata_kuliah: 'IF101',
+                nilai_angka: 90,
+              },
+            ],
+          };
+        }
+        if (act === 'GetTranskripMahasiswa') {
+          return {
+            error_code: 0,
+            data: [
+              { nim: nimMhs, nama_mahasiswa: 'Mahasiswa Test', ipk: 3.45, jumlah_sks_diakui: 96 },
+              { nim: '99999999', nama_mahasiswa: 'Mahasiswa Luar', ipk: 3.1, jumlah_sks_diakui: 100 },
+            ],
+          };
+        }
+        if (act === 'GetListAktivitasMahasiswa') {
+          return {
+            error_code: 0,
+            data: [
+              {
+                id_aktivitas: 'uuid-akt-1',
+                judul: 'Magang Industri Polos',
+                id_jenis_aktivitas: '5',
+                id_semester: '20231',
+                id_prodi: 'uuid-prodi-ti',
+              },
+            ],
+          };
+        }
+        return { error_code: 0, data: [] };
+      });
+
+      // Kelas bertabrakan dipanggil dengan id_pddikti miliknya sendiri (unik, bukan id kelas baru).
+      // 1) Kelas: tautkan kelas lokal + satu kelas baru
+      const applyKelas = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity: 'kelas', feederIds: ['uuid-kelas-1', 'uuid-kelas-2'] }),
+        }),
+      );
+      expect(applyKelas.status).toBe(200);
+      const kelasResult = (await applyKelas.json()) as { linkedOnly: number; inserted: number };
+      expect(kelasResult.linkedOnly).toBe(1);
+      expect(kelasResult.inserted).toBe(1);
+
+      const [kelasUtama] = await db.select().from(kelasKuliah).where(eq(kelasKuliah.idPddikti, 'uuid-kelas-1'));
+      expect(kelasUtama.id).toBe(kelasLokal.id);
+      expect(kelasUtama.tanggalMulaiEfektif).toBe('2024-02-05'); // tanggal ternormalisasi == lokal, tidak ditimpa
+
+      const [kelasBaru] = await db.select().from(kelasKuliah).where(eq(kelasKuliah.idPddikti, 'uuid-kelas-2'));
+      expect(kelasBaru.namaKelas).toBe('Kelas Teori B');
+      expect(kelasBaru.periodeId).toBe(periodeId);
+
+      // 2) KRS & nilai: "isi" nilai kosong; konflik dipertahankan lokal (default)
+      const applyKrs = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'krs-nilai',
+            feederIds: [`${nimMhs}|uuid-kelas-1`, `${nimMhs}|uuid-kelas-nilai`, '99999999|uuid-kelas-1'],
+          }),
+        }),
+      );
+      expect(applyKrs.status).toBe(200);
+      const krsResult = (await applyKrs.json()) as { updated: number; linkedOnly: number; skipped: number };
+      expect(krsResult.updated).toBe(1); // nilai diisi
+      expect(krsResult.linkedOnly).toBe(1); // konflik dipertahankan lokal
+      expect(krsResult.skipped).toBe(1); // NIM tidak dikenal
+
+      const [krsTerisi] = await db.select().from(krs).where(eq(krs.id, krsBaru.id));
+      expect(Number(krsTerisi.nilaiAngka)).toBe(85);
+      expect(krsTerisi.nilaiHuruf).toBe('A');
+      expect(Number(krsTerisi.nilaiIndeks)).toBe(4);
+      expect(krsTerisi.isApproved).toBe(true);
+
+      const [krsDitahan] = await db.select().from(krs).where(eq(krs.id, krsKonflik.id));
+      expect(Number(krsDitahan.nilaiAngka)).toBe(70); // tetap lokal
+      expect(krsDitahan.nilaiHuruf).toBe('B-');
+
+      // Konflik + resolusi "feeder" → nilai ditimpa
+      const applyKrsFeeder = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'krs-nilai',
+            feederIds: [`${nimMhs}|uuid-kelas-nilai`],
+            conflictResolution: 'feeder',
+          }),
+        }),
+      );
+      expect(applyKrsFeeder.status).toBe(200);
+      const [krsDitimpa] = await db.select().from(krs).where(eq(krs.id, krsKonflik.id));
+      expect(Number(krsDitimpa.nilaiAngka)).toBe(60);
+      expect(krsDitimpa.nilaiHuruf).toBe('C');
+
+      // 3) Preview transkrip & aktivitas: read-only, apply ditolak
+      const prevTranskrip = await app.handle(
+        new Request('http://localhost/pddikti/pull/preview?entity=transkrip', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(prevTranskrip.status).toBe(200);
+      const transkripBody = (await prevTranskrip.json()) as { items: Array<{ canApply: boolean; status: string }> };
+      expect(transkripBody.items.length).toBe(2);
+      expect(transkripBody.items.every((i) => i.canApply === false)).toBe(true);
+
+      const prevAktivitas = await app.handle(
+        new Request('http://localhost/pddikti/pull/preview?entity=aktivitas-mahasiswa', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(prevAktivitas.status).toBe(200);
+      const aktivitasBody = (await prevAktivitas.json()) as { items: Array<{ canApply: boolean; label: string }> };
+      expect(aktivitasBody.items.length).toBe(1);
+      expect(aktivitasBody.items[0].label).toContain('Magang Industri');
+      expect(aktivitasBody.items[0].canApply).toBe(false);
+
+      const applyPreviewOnly = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entity: 'transkrip', feederIds: [nimMhs] }),
+        }),
+      );
+      expect(applyPreviewOnly.status).toBe(400);
+
+      // 4) Semua interaksi Feeder tetap read-only
+      expect(actsCalled.length).toBeGreaterThan(0);
+      expect(actsCalled.every((a) => a === 'GetToken' || a.startsWith('Get'))).toBe(true);
     });
   });
 

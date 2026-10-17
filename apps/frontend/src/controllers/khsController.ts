@@ -233,16 +233,31 @@ export interface LegacyImportResult {
   errors: { line: number; error: string }[];
 }
 
-export type PullEntityKey = 'semester' | 'prodi' | 'matkul' | 'dosen' | 'mahasiswa';
-export type PullDiffStatus = 'baru' | 'link_id' | 'konflik' | 'sama';
+export type PullEntityKey =
+  | 'semester'
+  | 'prodi'
+  | 'matkul'
+  | 'dosen'
+  | 'mahasiswa'
+  | 'kelas'
+  | 'krs-nilai'
+  | 'transkrip'
+  | 'aktivitas-mahasiswa';
+/**
+ * `isi` → baris lokal sudah ada tetapi field target masih kosong (nilai diisi dari Feeder).
+ * `link_id`` → hanya menautkan id_pddikti, nilai lokal dipertahankan.
+ */
+export type PullDiffStatus = 'baru' | 'isi' | 'link_id' | 'konflik' | 'sama';
 export type ConflictResolution = 'feeder' | 'lokal';
 
 export interface PullEntityMeta {
   key: PullEntityKey;
   label: string;
-  category: 'referensi' | 'master';
+  category: 'referensi' | 'master' | 'transaksional';
   feederAct: string;
   description: string;
+  /** true = entitas hanya pratinjau (tidak ada tabel lokal untuk diterapkan). */
+  previewOnly?: boolean;
 }
 
 export interface PullPreviewItem {
@@ -270,6 +285,7 @@ export interface PullPreviewResult {
   summary: {
     totalFeeder: number;
     baru: number;
+    isi: number;
     linkId: number;
     konflik: number;
     sama: number;

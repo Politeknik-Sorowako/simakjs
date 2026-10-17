@@ -157,8 +157,9 @@ export function PddiktiSync() {
     }
   };
 
-  const statusBadgeVariant = (status: PullDiffStatus): 'success' | 'info' | 'warning' | 'default' => {
+  const statusBadgeVariant = (status: PullDiffStatus): 'success' | 'accent' | 'info' | 'warning' | 'default' => {
     if (status === 'baru') return 'info';
+    if (status === 'isi') return 'accent';
     if (status === 'link_id') return 'success';
     if (status === 'konflik') return 'warning';
     return 'default';
@@ -166,6 +167,7 @@ export function PddiktiSync() {
 
   const statusLabel = (status: PullDiffStatus): string => {
     if (status === 'baru') return 'Baru di Feeder';
+    if (status === 'isi') return 'Isi Nilai dari Feeder';
     if (status === 'link_id') return 'Tautkan ID PDDIKTI';
     if (status === 'konflik') return 'Berbeda (Konflik)';
     return 'Sudah Sinkron';
@@ -270,7 +272,7 @@ export function PddiktiSync() {
               </div>
 
               {/* Entity Selector */}
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 <For each={pullCatalog()?.entities ?? []}>
                   {(ent) => {
                     const active = () => selectedEntity() === ent.key;
@@ -286,11 +288,20 @@ export function PddiktiSync() {
                       >
                         <div class="flex w-full items-center justify-between gap-1">
                           <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">
-                            {ent.category === 'referensi' ? '1. Referensi' : '2. Master'}
+                            {ent.category === 'referensi'
+                              ? '1. Referensi'
+                              : ent.category === 'master'
+                                ? '2. Master'
+                                : '3. Transaksional'}
                           </span>
                           <code class="text-[10px] font-mono text-brand-600 dark:text-brand-400">{ent.feederAct}</code>
                         </div>
                         <span class="text-sm font-bold text-secondary-800 dark:text-white">{ent.label}</span>
+                        <Show when={ent.previewOnly}>
+                          <span class="text-[10px] font-semibold uppercase tracking-wider text-secondary-400">
+                            Pratinjau saja
+                          </span>
+                        </Show>
                       </button>
                     );
                   }}
@@ -301,6 +312,18 @@ export function PddiktiSync() {
                 {(meta) => (
                   <div class="flex flex-col md:flex-row md:items-end justify-between gap-3 rounded-xl bg-secondary-50/70 p-4 dark:bg-secondary-900/50">
                     <div class="flex-1 flex flex-col gap-2">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <Badge variant={meta().category === 'transaksional' ? 'accent' : 'info'}>
+                          {meta().category === 'referensi'
+                            ? 'Referensi'
+                            : meta().category === 'master'
+                              ? 'Master'
+                              : 'Transaksional'}
+                        </Badge>
+                        <Show when={meta().previewOnly}>
+                          <Badge variant="warning">Pratinjau Saja (tidak diterapkan)</Badge>
+                        </Show>
+                      </div>
                       <p class="text-xs text-secondary-600 dark:text-secondary-300">{meta().description}</p>
                       <label class="flex flex-col gap-1 text-xs font-semibold text-secondary-600 dark:text-secondary-300">
                         Filter Feeder Opsional (klausa filter WS Feeder, kosongkan untuk semua)
@@ -387,7 +410,8 @@ export function PddiktiSync() {
                               : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
                           }`}
                         >
-                          Perlu Tindakan ({data().summary.baru + data().summary.linkId + data().summary.konflik})
+                          Perlu Tindakan (
+                          {data().summary.baru + data().summary.isi + data().summary.linkId + data().summary.konflik})
                         </button>
                         <button
                           type="button"
@@ -399,6 +423,17 @@ export function PddiktiSync() {
                           }`}
                         >
                           Baru ({data().summary.baru})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStatusFilter('isi')}
+                          class={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                            statusFilter() === 'isi'
+                              ? 'bg-brand-600 text-white'
+                              : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
+                          }`}
+                        >
+                          Isi Nilai ({data().summary.isi})
                         </button>
                         <button
                           type="button"
@@ -457,34 +492,44 @@ export function PddiktiSync() {
                     </div>
 
                     {/* Conflict Policy & Apply Action Bar */}
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-xl border border-secondary-200 p-3 dark:border-secondary-800">
-                      <div class="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-secondary-700 dark:text-secondary-200">
-                        <span class="font-semibold">Kebijakan saat baris Konflik dipilih:</span>
-                        <select
-                          value={conflictResolution()}
-                          onChange={(e) => setConflictResolution(e.currentTarget.value as ConflictResolution)}
-                          class="rounded-lg border border-secondary-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-secondary-800 dark:border-secondary-700 dark:bg-secondary-900 dark:text-secondary-100"
-                        >
-                          <option value="lokal">Pertahankan nilai lokal (hanya tautkan ID PDDIKTI)</option>
-                          <option value="feeder">Ikuti nilai Feeder (perbarui field yang berbeda)</option>
-                        </select>
-                      </div>
+                    <Show
+                      when={!currentEntityMeta()?.previewOnly}
+                      fallback={
+                        <div class="rounded-xl border border-warning-200 bg-warning-50 px-4 py-3 text-xs text-warning-800 dark:border-warning-800 dark:bg-warning-900/30 dark:text-warning-300">
+                          Entitas ini hanya pratinjau — hasil tarikan Feeder ditampilkan untuk keputusan Anda dan tidak
+                          ditulis ke database lokal.
+                        </div>
+                      }
+                    >
+                      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-xl border border-secondary-200 p-3 dark:border-secondary-800">
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-2 text-xs text-secondary-700 dark:text-secondary-200">
+                          <span class="font-semibold">Kebijakan saat baris Konflik dipilih:</span>
+                          <select
+                            value={conflictResolution()}
+                            onChange={(e) => setConflictResolution(e.currentTarget.value as ConflictResolution)}
+                            class="rounded-lg border border-secondary-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-secondary-800 dark:border-secondary-700 dark:bg-secondary-900 dark:text-secondary-100"
+                          >
+                            <option value="lokal">Pertahankan nilai lokal (hanya tautkan ID PDDIKTI)</option>
+                            <option value="feeder">Ikuti nilai Feeder (perbarui field yang berbeda)</option>
+                          </select>
+                        </div>
 
-                      <div class="flex items-center justify-end gap-2">
-                        <span class="text-xs text-secondary-500 dark:text-secondary-400">
-                          {selectedIds().length} baris dipilih
-                        </span>
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          loading={applyingPull()}
-                          disabled={selectedIds().length === 0}
-                          onClick={handleApplySelected}
-                        >
-                          Terapkan ke Lokal ({selectedIds().length})
-                        </Button>
+                        <div class="flex items-center justify-end gap-2">
+                          <span class="text-xs text-secondary-500 dark:text-secondary-400">
+                            {selectedIds().length} baris dipilih
+                          </span>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            loading={applyingPull()}
+                            disabled={selectedIds().length === 0}
+                            onClick={handleApplySelected}
+                          >
+                            Terapkan ke Lokal ({selectedIds().length})
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    </Show>
 
                     {/* Table */}
                     <div class="overflow-x-auto rounded-xl border border-secondary-200 dark:border-secondary-800">
