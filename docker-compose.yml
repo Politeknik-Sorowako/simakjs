@@ -55,6 +55,10 @@ services:
       SIGN_HMAC_KEYS: ${SIGN_HMAC_KEYS}
       SIGN_ACTIVE_KID: ${SIGN_ACTIVE_KID:-k1}
       VERIFY_BASE_URL: ${VERIFY_BASE_URL:-https://verify.politekniksorowako.ac.id}
+      # Kunci enkripsi parameter rahasia di system_settings (mis. FEEDER_PASSWORD).
+      # Wajib diteruskan ke container: kode hanya membaca process.env. Kosongkan
+      # hanya pada server yang belum ingin mengaktifkan enkripsi (fail-open plaintext).
+      SETTINGS_SECRET_KEY: ${SETTINGS_SECRET_KEY}
       EMAIL_FROM: ${EMAIL_FROM:-}
     volumes:
       - backup_data:/app/apps/backend/backups
