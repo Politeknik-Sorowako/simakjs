@@ -293,10 +293,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Pendaftaran"
+              aria-label="Pendaftaran"
             >
-              <span>Pendaftaran</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h3m-3 3h.009M9 3.75H6.75a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 006.75 21.75h10.5a2.25 2.25 0 002.25-2.25V6a2.25 2.25 0 00-2.25-2.25H15M12.75 2.25H10.5a2.25 2.25 0 00-2.25 2.25v.75a.75.75 0 002.25.75h2.25a.75.75 0 002.25-.75V4.5A2.25 2.25 0 0010.5 2.25z"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Pendaftaran</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -352,10 +369,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsMasterOpen(!isMasterOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Data Master"
+              aria-label="Data Master"
             >
-              <span>Data Master</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Data Master</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isMasterOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isMasterOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -462,10 +496,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsPerencanaanOpen(!isPerencanaanOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Persiapan Semester"
+              aria-label="Persiapan Semester"
             >
-              <span>Persiapan Semester</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Persiapan Semester</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isPerencanaanOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isPerencanaanOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -715,10 +766,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsRegistrasiOpen(!isRegistrasiOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Registrasi Akademik"
+              aria-label="Registrasi Akademik"
             >
-              <span>Registrasi Akademik</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m-9.75 0h9.75"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Registrasi Akademik</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isRegistrasiOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isRegistrasiOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -778,10 +846,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsPelaksanaanOpen(!isPelaksanaanOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Pelaksanaan Akademik"
+              aria-label="Pelaksanaan Akademik"
             >
-              <span>Pelaksanaan Akademik</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.62 48.62 0 0112 20.904a48.62 48.62 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.636 50.636 0 00-2.658-.813A59.906 59.906 0 0112 3.493a59.903 59.903 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Pelaksanaan Akademik</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isPelaksanaanOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isPelaksanaanOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -937,10 +1022,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsEvaluasiOpen(!isEvaluasiOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Evaluasi & Kelulusan"
+              aria-label="Evaluasi & Kelulusan"
             >
-              <span>Evaluasi & Kelulusan</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.746 3.746 0 01-1.043-3.296A3.746 3.746 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.746 3.746 0 0121 12z"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Evaluasi & Kelulusan</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isEvaluasiOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isEvaluasiOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1003,10 +1105,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsLaporanOpen(!isLaporanOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Laporan"
+              aria-label="Laporan"
             >
-              <span>Laporan</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Laporan</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isLaporanOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isLaporanOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1331,10 +1450,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsLayananOpen(!isLayananOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Layanan Mahasiswa"
+              aria-label="Layanan Mahasiswa"
             >
-              <span>Layanan Mahasiswa</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 21a9 9 0 100-18 9 9 0 000 18zm0-6a3 3 0 100-6 3 3 0 000 6z"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Layanan Mahasiswa</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isLayananOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isLayananOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1517,10 +1653,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsAdmisiOpen(!isAdmisiOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Admisi"
+              aria-label="Admisi"
             >
-              <span>Admisi</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 13.5v-1.5a3.75 3.75 0 00-3.75-3.75h-1.5a1.5 1.5 0 01-1.5-1.5v-1.5a3.75 3.75 0 00-7.5 0v1.5c0 .552.448 1 1 1H6.75a3.75 3.75 0 00-3.75 3.75v1.5A11.25 11.25 0 006 19.5m12-6v6m3-3h-6"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Admisi</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isAdmisiOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1769,10 +1922,27 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
             <button
               onClick={() => setIsKonfigurasiOpen(!isKonfigurasiOpen())}
               class="w-full flex items-center justify-between px-3 py-2 text-fine font-semibold text-secondary-300 hover:text-action-ondark uppercase tracking-widest focus:outline-none"
+              title="Konfigurasi"
+              aria-label="Konfigurasi"
             >
-              <span>Konfigurasi</span>
+              <span class="flex min-w-0 items-center gap-2">
+                <svg
+                  class="sidebar-section-icon hidden w-5 h-5 shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010.255.963c-.008.378.137.75.43.992l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.397-1.11-.94l-.213-1.28c-.062-.375-.312-.687-.644-.87a6.52 6.52 0 01-.22-.128c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.281zM15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span class="sidebar-section-label truncate">Konfigurasi</span>
+              </span>
               <svg
-                class={`w-3.5 h-3.5 transition-transform duration-200 ${isKonfigurasiOpen() ? 'transform rotate-90' : ''}`}
+                class={`sidebar-section-chevron w-3.5 h-3.5 transition-transform duration-200 ${isKonfigurasiOpen() ? 'transform rotate-90' : ''}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
