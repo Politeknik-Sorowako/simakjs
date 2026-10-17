@@ -121,7 +121,12 @@ export class PddiktiController {
       return { error: 'Entitas pull tidak valid' };
     }
     try {
-      return await FeederPullService.apply(entity, feederIds, conflictResolution, { filter });
+      // `appliedByUserId` dipakai entitas yang mewajibkan kolom created_by
+      // (mis. aktivitas MBKM hasil pull).
+      return await FeederPullService.apply(entity, feederIds, conflictResolution, {
+        filter,
+        appliedByUserId: user.id,
+      });
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal menerapkan data Feeder ke lokal' };

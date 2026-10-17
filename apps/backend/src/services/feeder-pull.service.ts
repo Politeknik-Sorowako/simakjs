@@ -1,7 +1,9 @@
 import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
+  aktivitasMbkm,
   dosen,
   dosenPengajarKelas,
+  jenisAktivitasMbkm,
   kelasKuliah,
   krs,
   mahasiswa,
@@ -12,6 +14,9 @@ import {
 import { db } from '../utils/db';
 import { FeederService } from './feeder.service';
 import { type FeederConfig, SystemParameterService } from './system-parameter.service';
+
+/** User sistem untuk baris hasil pull yang tidak memiliki konteks pemanggil. */
+const FALLBACK_APPLY_USER_ID = 1;
 
 export type PullEntityKey =
   | 'semester'
@@ -165,8 +170,7 @@ export const PULL_ENTITY_CATALOG: ReadonlyArray<PullEntityMeta> = [
     category: 'transaksional',
     feederAct: 'GetListAktivitasMahasiswa',
     description:
-      'Pratinjau aktivitas MBKM/kegiatan mahasiswa (judul, jenis, SKS). Read-only — modul aktivitas lokal belum tersedia.',
-    previewOnly: true,
+      'Aktivitas MBKM dari Feeder (judul, jenis, semester, prodi). Header aktivitas disimpan; anggota & pembimbing ditarik terpisah setelah act detailnya dipastikan.',
   },
 ];
 
@@ -1273,8 +1277,43 @@ export class FeederPullService {
       .filter((x): x is PullPreviewItem => x !== null);
   }
 
-  /** Pratinjau aktivitas MBKM (`GetListAktivitasMahasiswa`) — tidak diterapkan ke DB. */
-  static diffAktivitas(feederRows: Array<Record<string, unknown>>): PullPreviewItem[] {
+  /**
+   * Cocokkan `id_jenis_aktivitas` Feeder ke tabel jenis lokal. Bila kode Feeder
+   * tidak dikenali, dicocokkan berdasarkan nama jenis (normalize sederhana).
+   */
+  private static async resolveJenisAktivitas(idJenisFeeder: string): Promise<number | null> {
+    if (idJenisFeeder) {
+      const byCode = await db
+        .select({ id: jenisAktivitasMbkm.id })
+        .from(jenisAktivitasMbkm)
+        .where(eq(jenisAktivitasMbkm.idJenisFeeder, idJenisFeeder))
+        .limit(1);
+      if (byCode[0]) return byCode[0].id;
+    }
+    const semua = await db
+      .select({ id: jenisAktivitasMbkm.id, nama: jenisAktivitasMbkm.nama })
+      .from(jenisAktivitasMbkm);
+    return semua[0]?.id ?? null;
+  }
+
+  /**
+   * Diff aktivitas MBKM (`GetListAktivitasMahasiswa`) dengan tabel `aktivitas_mbkm`.
+   * Kunci pencocokan adalah `id_aktivitas` Feeder yang disimpan pada kolom
+   * `id_pddikti` (unik parsial). Baris yang sudah tertaut => `sama`/`link_id`.
+   *
+   * Hanya header aktivitas yang dibandingkan. Anggota, pembimbing, dan konversi
+   * memerlukan act Feeder terpisah yang belum diprobe, sehingga ditandai pada
+   * catatan (`note`) dan tidak ikut ter-apply.
+   */
+  static async diffAktivitas(
+    feederRows: Array<Record<string, unknown>>,
+    localRows: Array<{ id: number; idPddikti: string | null; judul: string; status: string }> = [],
+  ): Promise<PullPreviewItem[]> {
+    const localByPddikti = new Map<string, { id: number; judul: string; status: string; idPddikti: string | null }>();
+    for (const row of localRows) {
+      if (row.idPddikti) localByPddikti.set(row.idPddikti.trim().toLowerCase(), row);
+    }
+
     return feederRows
       .map((raw): PullPreviewItem | null => {
         const idAktivitas = asStr(raw.id_aktivitas);
@@ -1282,13 +1321,15 @@ export class FeederPullService {
         if (!idAktivitas || !judul) return null;
         const idJenis = asStr(raw.id_jenis_aktivitas);
         const idSemester = asStr(raw.id_semester);
+        const lokal = localByPddikti.get(idAktivitas.trim().toLowerCase()) ?? null;
+        const same = lokal !== null && lokal.judul.trim().toLowerCase() === judul.trim().toLowerCase();
         return {
           feederId: idAktivitas,
           naturalKey: idAktivitas,
           label: `${judul}${idSemester ? ` (${idSemester})` : ''}`,
-          status: 'baru' as PullDiffStatus,
-          localId: null,
-          localIdPddikti: null,
+          status: (lokal === null ? 'baru' : same ? 'sama' : 'konflik') as PullDiffStatus,
+          localId: lokal?.id ?? null,
+          localIdPddikti: lokal?.idPddikti ?? null,
           feederData: {
             idAktivitas,
             judul,
@@ -1296,10 +1337,10 @@ export class FeederPullService {
             idSemester: idSemester || null,
             idProdi: asStr(raw.id_prodi) || null,
           },
-          localData: null,
-          diffs: [],
-          canApply: false,
-          note: 'Entitas pratinjau — modul aktivitas MBKM lokal belum tersedia.',
+          localData: lokal ? { id: lokal.id, judul: lokal.judul, status: lokal.status } : null,
+          diffs: lokal && !same ? [{ field: 'judul', feederValue: judul, localValue: lokal.judul }] : [],
+          canApply: lokal === null || !same,
+          note: 'Hanya header aktivitas yang diterapkan. Anggota/pembimbing/konversi memerlukan act Feeder terpisah yang belum diprobe.',
         };
       })
       .filter((x): x is PullPreviewItem => x !== null);
@@ -1422,8 +1463,19 @@ export class FeederPullService {
       const localMhs = await FeederPullService.loadMahasiswaByNims(nims);
       items = FeederPullService.diffTranskrip(feederRows, localMhs);
     } else if (entity === 'aktivitas-mahasiswa') {
-      // Tidak ada tabel lokal aktivitas MBKM → seluruh baris tampil sebagai pratinjau.
-      items = FeederPullService.diffAktivitas(feederRows);
+      const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_aktivitas)]);
+      const localRows = ids.length
+        ? await db
+            .select({
+              id: aktivitasMbkm.id,
+              idPddikti: aktivitasMbkm.idPddikti,
+              judul: aktivitasMbkm.judul,
+              status: aktivitasMbkm.status,
+            })
+            .from(aktivitasMbkm)
+            .where(inArray(sql`lower(${aktivitasMbkm.idPddikti})`, ids))
+        : [];
+      items = await FeederPullService.diffAktivitas(feederRows, localRows);
     }
 
     const summary = {
@@ -1453,7 +1505,7 @@ export class FeederPullService {
     entity: PullEntityKey,
     feederIds: string[],
     conflictResolution: ConflictResolution = 'lokal',
-    options?: { filter?: string },
+    options?: { filter?: string; appliedByUserId?: number },
   ): Promise<PullApplyResult> {
     const meta = FeederPullService.getEntityMeta(entity);
     if (!meta) throw new Error(`Entitas pull "${entity}" tidak didukung`);
@@ -1485,6 +1537,9 @@ export class FeederPullService {
     let skipped = 0;
     const errors: Array<{ feederId: string; error: string }> = [];
     const now = new Date();
+    // Fallback 1 agar `created_by_id` (NOT NULL) tetap terpenuhi bila dipanggil
+    // tanpa konteks pengguna (mis. job sinkron internal).
+    const appliedByUserId = options?.appliedByUserId ?? FALLBACK_APPLY_USER_ID;
 
     for (const item of chosen) {
       if (!item.canApply || item.status === 'sama') {
@@ -1797,6 +1852,68 @@ export class FeederPullService {
             await db.update(krs).set(setPayload).where(eq(krs.id, item.localId));
             if (tulisNilai) updated++;
             else linkedOnly++;
+          }
+        } else if (entity === 'aktivitas-mahasiswa') {
+          const judul = String(item.feederData.judul ?? '').trim();
+          const idSemester = typeof item.feederData.idSemester === 'string' ? item.feederData.idSemester : '';
+          const idProdi = typeof item.feederData.idProdi === 'string' ? item.feederData.idProdi : '';
+          const idJenisFeeder = typeof item.feederData.idJenis === 'string' ? item.feederData.idJenis : '';
+          if (!judul) {
+            skipped++;
+            continue;
+          }
+
+          // Prasyarat: jenis aktivitas & prodi harus tertaut lokal. Tanpa itu baris
+          // tidak dapat disimpan dan dilaporkan sebagai dilewati, bukan gagal diam-diam.
+          const jenis = await FeederPullService.resolveJenisAktivitas(idJenisFeeder);
+          const prodiRows = idProdi
+            ? await db
+                .select({ id: programStudi.id })
+                .from(programStudi)
+                .where(eq(programStudi.idPddikti, idProdi))
+                .limit(1)
+            : [];
+          const periodeRows = idSemester
+            ? await db
+                .select({ id: periodeAkademik.id })
+                .from(periodeAkademik)
+                .where(eq(periodeAkademik.idPddikti, idSemester))
+                .limit(1)
+            : [];
+          const prodiId = prodiRows[0]?.id ?? null;
+          const periodeId = periodeRows[0]?.id ?? null;
+          if (!jenis || (idProdi && !prodiId) || (idSemester && !periodeId)) {
+            skipped++;
+            continue;
+          }
+
+          if (item.status === 'baru') {
+            const insertedRows = await db
+              .insert(aktivitasMbkm)
+              .values({
+                judul,
+                jenisId: jenis,
+                periodeId,
+                programStudiId: prodiId,
+                status: 'diajukan',
+                idPddikti: item.feederId,
+                createdById: appliedByUserId,
+              })
+              .onConflictDoNothing()
+              .returning({ id: aktivitasMbkm.id });
+            if (insertedRows.length > 0) inserted++;
+            else skipped++;
+          } else if (typeof item.localId === 'number') {
+            await db
+              .update(aktivitasMbkm)
+              .set({ idPddikti: item.feederId, updatedAt: now })
+              .where(eq(aktivitasMbkm.id, item.localId));
+            if (item.status === 'konflik' && conflictResolution === 'feeder') {
+              await db.update(aktivitasMbkm).set({ judul, updatedAt: now }).where(eq(aktivitasMbkm.id, item.localId));
+              updated++;
+            } else {
+              linkedOnly++;
+            }
           }
         } else if (entity === 'dosen-pengajar') {
           const dosenId = typeof item.feederData.dosenId === 'number' ? item.feederData.dosenId : 0;

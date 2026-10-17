@@ -8,6 +8,7 @@ import { auditAfterResponse, auditBeforeHandle } from './plugins/audit.plugin';
 import { jwtPlugin } from './plugins/jwt.plugin';
 import { admisiRoutes } from './routes/admisi.routes';
 import { admisiAdminRoutes } from './routes/admisi-admin.routes';
+import { aktivitasMbkmRoutes } from './routes/aktivitas-mbkm.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { apelRoutes } from './routes/apel.routes';
 import { auditRoutes } from './routes/audit.routes';
@@ -470,6 +471,7 @@ export const app = new Elysia()
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
   .use(pembimbingRoutes)
+  .use(aktivitasMbkmRoutes)
   .use(bkdRoutes)
   .use(settingsRoutes)
   .use(skpiRoutes)

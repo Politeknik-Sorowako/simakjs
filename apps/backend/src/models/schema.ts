@@ -744,6 +744,9 @@ export const bimbingan = pgTable('bimbingan', {
   tanggalBimbingan: date('tanggal_bimbingan', { mode: 'string' }),
   statusBkd: boolean('status_bkd').default(false).notNull(),
   kategori: varchar('kategori', { length: 20 }).default('PA').notNull(),
+  // Tautan ke aktivitas MBKM asal bila baris ini dibuat otomatis oleh modul
+  // Aktivitas MBKM (kategori MAGANG). NULL untuk bimbingan PA/TA yang dicatat manual.
+  aktivitasMbkmId: integer('aktivitas_mbkm_id'),
   isReadByMahasiswa: boolean('is_read_by_mahasiswa').default(false).notNull(),
   readAtMahasiswa: timestamp('read_at_mahasiswa'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -3464,5 +3467,211 @@ export const pembimbingMahasiswaRelations = relations(pembimbingMahasiswa, ({ on
   ditetapkanOleh: one(users, {
     fields: [pembimbingMahasiswa.ditetapkanOlehId],
     references: [users.id],
+  }),
+}));
+
+// ─── AKTIVITAS MAHASISWA (MBKM) ───────────────────────────────────────────────
+// Mirror model data Neo Feeder PDDIKTI `aktivitas_mahasiswa` beserta tabel
+// turunannya: `anggota_aktivitas_mahasiswa` (peserta),
+// `bimbing_mahasiswa` (dosen pembimbing), dan `konversi_aktivitas`
+// (rekognisi SKS ke mata kuliah). MBKM pada Feeder BUKAN atribut mata kuliah —
+// ia adalah entitas kegiatan, sehingga tidak ada flag/tag MBKM di `mata_kuliah`.
+//
+// Alur lokal:
+//   draft → diajukan → disetujui | ditolak → selesai
+// Saat aktivitas disetujui, sistem membuat/menaut baris `bimbingan` kategori
+// `MAGANG` per (pembimbing × anggota) sehingga sesi bimbingannya otomatis
+// tercatat dan tetap ter-kredit ke rekap BKD lewat `sesi_bimbingan.status_bkd`
+// (logika BKD sendiri tidak diubah).
+//
+// `id_pddikti` menyimpan UUID aktivitas dari Feeder sebagai kunci sinkron; unik
+// parsial agar nilai NULL tidak saling bentrok (feed pulled lewat
+// `POST /pddikti/pull/apply` entitas `aktivitas-mahasiswa`).
+
+export const JENIS_AKTIVITAS_MBKM_FLAGSHP = [
+  'Magang',
+  'Praktik Kerja Lapangan',
+  'Praktik Kerja Lapangan (Industri)',
+  'Kuliah Kerja Praktik',
+  'Kuliah Kerja Nyanyi',
+  'Kuliah Kerja Wichakana',
+  'Kuliah Kerja Taruna',
+  'Proyek Pengairedan',
+] as const;
+
+export const jenisAktivitasMbkm = pgTable(
+  'jenis_aktivitas_mbkm',
+  {
+    id: serial('id').primaryKey(),
+    nama: varchar('nama', { length: 100 }).notNull().unique(),
+    kode: varchar('kode', { length: 50 }),
+    // Kode `id_jenis_aktivitas` dari Feeder; null untuk jenis lokal/non-flagship.
+    idJenisFeeder: varchar('id_jenis_aktivitas_feeder', { length: 100 }),
+    isFlagship: boolean('is_flagship').default(false).notNull(),
+    isAktif: boolean('is_aktif').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index('idx_jenis_aktivitas_kode').on(t.kode)],
+);
+
+export const aktivitasMbkm = pgTable(
+  'aktivitas_mbkm',
+  {
+    id: serial('id').primaryKey(),
+    judul: varchar('judul', { length: 255 }).notNull(),
+    jenisId: integer('jenis_id')
+      .notNull()
+      .references(() => jenisAktivitasMbkm.id, { onDelete: 'restrict' }),
+    periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
+    programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'set null' }),
+    lokasi: varchar('lokasi', { length: 255 }),
+    institusi: varchar('institusi', { length: 255 }),
+    // Calendar date 'YYYY-MM-DD' (mode string) — jangan new Date().toISOString()
+    tanggalMulai: date('tanggal_mulai', { mode: 'string' }),
+    tanggalSelesai: date('tanggal_selesai', { mode: 'string' }),
+    sks: integer('sks').default(0).notNull(),
+    // 'draft' | 'diajukan' | 'disetujui' | 'ditolak' | 'selesai'
+    status: varchar('status', { length: 20 }).notNull().default('draft'),
+    deskripsi: text('deskripsi'),
+    // UUID aktivitas dari Feeder (kunci sinkron; unik parsial bila tidak null).
+    idPddikti: varchar('id_pddikti', { length: 50 }),
+    createdById: integer('created_by_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    disetujuiOlehId: integer('disetujui_oleh_id').references(() => users.id, { onDelete: 'set null' }),
+    disetujuiAt: timestamp('disetujui_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_aktivitas_mbkm_status').on(t.status),
+    index('idx_aktivitas_mbkm_periode').on(t.periodeId),
+    index('idx_aktivitas_mbkm_prodi').on(t.programStudiId),
+  ],
+);
+
+export const anggotaAktivitasMbkm = pgTable(
+  'anggota_aktivitas_mbkm',
+  {
+    id: serial('id').primaryKey(),
+    aktivitasId: integer('aktivitas_id')
+      .notNull()
+      .references(() => aktivitasMbkm.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    // 'ketua' | 'anggota'
+    peran: varchar('peran', { length: 20 }).notNull().default('anggota'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    unique('anggota_aktivitas_mhs_unique').on(t.aktivitasId, t.mahasiswaId),
+    index('idx_anggota_aktivitas_mhs').on(t.mahasiswaId),
+  ],
+);
+
+export const bimbinganAktivitasMbkm = pgTable(
+  'bimbing_aktivitas_mbkm',
+  {
+    id: serial('id').primaryKey(),
+    aktivitasId: integer('aktivitas_id')
+      .notNull()
+      .references(() => aktivitasMbkm.id, { onDelete: 'cascade' }),
+    dosenId: integer('dosen_id')
+      .notNull()
+      .references(() => dosen.id, { onDelete: 'cascade' }),
+    // 'pembimbing' | 'pendamping'
+    kategori: varchar('kategori', { length: 20 }).notNull().default('pembimbing'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    unique('bimbing_aktivitas_dosen_unique').on(t.aktivitasId, t.dosenId),
+    index('idx_bimbing_aktivitas_dosen').on(t.dosenId),
+  ],
+);
+
+/** Rekognisi SKS aktivitas ke mata kuliah (cerminan `konversi_aktivitas` Feeder). */
+export const konversiAktivitasMbkm = pgTable(
+  'konversi_aktivitas_mbkm',
+  {
+    id: serial('id').primaryKey(),
+    aktivitasId: integer('aktivitas_id')
+      .notNull()
+      .references(() => aktivitasMbkm.id, { onDelete: 'cascade' }),
+    mataKuliahId: integer('mata_kuliah_id')
+      .notNull()
+      .references(() => mataKuliah.id, { onDelete: 'restrict' }),
+    sksDiakui: integer('sks_diakui').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    unique('konversi_aktivitas_mk_unique').on(t.aktivitasId, t.mataKuliahId),
+    index('idx_konversi_aktivitas_mk').on(t.mataKuliahId),
+  ],
+);
+
+export const jenisAktivitasMbkmRelations = relations(jenisAktivitasMbkm, ({ many }) => ({
+  aktivitas: many(aktivitasMbkm),
+}));
+
+export const aktivitasMbkmRelations = relations(aktivitasMbkm, ({ one, many }) => ({
+  jenis: one(jenisAktivitasMbkm, {
+    fields: [aktivitasMbkm.jenisId],
+    references: [jenisAktivitasMbkm.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [aktivitasMbkm.periodeId],
+    references: [periodeAkademik.id],
+  }),
+  programStudi: one(programStudi, {
+    fields: [aktivitasMbkm.programStudiId],
+    references: [programStudi.id],
+  }),
+  createdBy: one(users, {
+    fields: [aktivitasMbkm.createdById],
+    references: [users.id],
+  }),
+  anggota: many(anggotaAktivitasMbkm),
+  pembimbing: many(bimbinganAktivitasMbkm),
+  konversi: many(konversiAktivitasMbkm),
+}));
+
+export const anggotaAktivitasMbkmRelations = relations(anggotaAktivitasMbkm, ({ one }) => ({
+  aktivitas: one(aktivitasMbkm, {
+    fields: [anggotaAktivitasMbkm.aktivitasId],
+    references: [aktivitasMbkm.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [anggotaAktivitasMbkm.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+}));
+
+export const bimbinganAktivitasMbkmRelations = relations(bimbinganAktivitasMbkm, ({ one }) => ({
+  aktivitas: one(aktivitasMbkm, {
+    fields: [bimbinganAktivitasMbkm.aktivitasId],
+    references: [aktivitasMbkm.id],
+  }),
+  dosen: one(dosen, {
+    fields: [bimbinganAktivitasMbkm.dosenId],
+    references: [dosen.id],
+  }),
+}));
+
+export const konversiAktivitasMbkmRelations = relations(konversiAktivitasMbkm, ({ one }) => ({
+  aktivitas: one(aktivitasMbkm, {
+    fields: [konversiAktivitasMbkm.aktivitasId],
+    references: [aktivitasMbkm.id],
+  }),
+  mataKuliah: one(mataKuliah, {
+    fields: [konversiAktivitasMbkm.mataKuliahId],
+    references: [mataKuliah.id],
   }),
 }));
