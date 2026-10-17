@@ -44,20 +44,6 @@ const TABLE_HEADER_TITLES = [
   ...SLOTS.map((s) => s.label),
 ];
 
-/**
- * Lebar kolom (persentase, total 100%). Dengan `table-fixed`, header dan body
- * memakai lebar kolom yang identik sehingga keduanya tidak dapat bergeser.
- */
-/**
- * Lebar kolom (persentase, WAJIB total 100%). NIM sengaja dibuat sempit
- * (11%) — kolom NIM hanya berisi kode pendek berfont mono, sehingga lebar
- * berlebihnya hanya mendorong kolom lain dan membuat header terlihat tidak
- * selaras dengan body. Ruang diberikan ke Nama/Prodi yang isinya panjang.
- * Jumlahnya harus sama dengan jumlah header; `Table` otomatis mengabaikan
- * `colWidths` bila tidak cocok, sehingga tabel tidak pernah salah sejajar.
- */
-const COL_WIDTHS = ['11%', '22%', '8%', '17%', '14%', '9%', '9.5%', '9.5%'];
-
 interface DosenOpsi {
   id: number;
   nama: string;
@@ -259,10 +245,8 @@ export default function PenetapanPembimbing() {
       <div class="flex flex-col gap-6">
         {/*
           Kepala halaman (judul + aksi utama + filter) ditulis sebagai satu blok
-          mengalir normal, BUKAN sticky. Alasannya: header tabel dibuat sticky
-          (`stickyHeader`) agar selalu sejajar dengan kolom body saat digulir —
-          bila kepala halaman ikut menempel, keduanya bertumpuk dan header
-          tabel justru tertutup.
+          mengalir normal, BUKAN sticky, agar tabel dapat naik penuh ke atas
+          saat digulir dan seluruh baris data tetap terlihat.
         */}
         <div class="-mx-4 px-4 pb-4 md:-mx-8 md:px-8">
           <div class="flex flex-col gap-3 py-4">
@@ -372,15 +356,7 @@ export default function PenetapanPembimbing() {
         </div>
 
         <Show when={!list.loading} fallback={<p class="text-sm text-secondary-500">Memuat data…</p>}>
-          <Table
-            headers={TABLE_HEADERS}
-            // Lebar kolom eksplisit + table-fixed: header dan body memakai lebar
-            // kolom yang sama persis, sehingga tidak bisa bergeser saat tabel
-            // digeser horizontal atau pada viewport sempit.
-            colWidths={COL_WIDTHS}
-            headerTitles={TABLE_HEADER_TITLES}
-            stickyHeader
-          >
+          <Table headers={TABLE_HEADERS} headerTitles={TABLE_HEADER_TITLES}>
             <tbody>
               <For
                 each={list()?.data ?? []}
