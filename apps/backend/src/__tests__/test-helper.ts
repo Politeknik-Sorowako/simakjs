@@ -3,6 +3,8 @@ import { app } from '../app';
 import {
   admissionSessionProdis,
   admissionSessions,
+  aktivitasMbkm,
+  anggotaAktivitasMbkm,
   angkatanKurikulum,
   angsuranTagihan,
   announcements,
@@ -14,6 +16,7 @@ import {
   bapPraktikum,
   bapTopik,
   bimbingan,
+  bimbinganAktivitasMbkm,
   bimbinganAttachments,
   bimbinganThread,
   cpl,
@@ -27,6 +30,7 @@ import {
   emailVerificationCodes,
   feedbackComments,
   feedbackLikes,
+  jenisAktivitasMbkm,
   kategoriBimbingan,
   kategoriKegiatanSkpi,
   kegiatanMahasiswaSkpi,
@@ -36,6 +40,7 @@ import {
   ketidakhadiranMahasiswa,
   kompensasiBayar,
   komponenNilai,
+  konversiAktivitasMbkm,
   konversiNilai,
   krs,
   kurikulum,
@@ -131,6 +136,11 @@ export interface MahasiswaSuccessResponse {
 export async function clearDatabase() {
   tokenCache.clear();
   await db.delete(auditLogs);
+  await db.delete(konversiAktivitasMbkm);
+  await db.delete(bimbinganAktivitasMbkm);
+  await db.delete(anggotaAktivitasMbkm);
+  await db.delete(aktivitasMbkm);
+  await db.delete(jenisAktivitasMbkm);
   await db.delete(announcements);
   await db.delete(applications);
   await db.delete(documentRequirements);

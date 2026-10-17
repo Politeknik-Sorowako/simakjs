@@ -610,6 +610,13 @@
       "when": 1789886666000,
       "tag": "0087_pembimbing_mahasiswa",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1789886667000,
+      "tag": "0088_aktivitas_mbkm",
+      "breakpoints": true
     }
   ]
 }

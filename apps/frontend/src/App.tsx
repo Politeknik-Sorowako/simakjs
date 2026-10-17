@@ -47,6 +47,7 @@ const AdmisiVABanks = lazy(() => import('./routes/admisi/AdmisiVABanks'));
 const AdmisiVerifikasi = lazy(() => import('./routes/admisi/AdmisiVerifikasi'));
 const BahanKajian = lazy(() => import('./routes/BahanKajian'));
 const BapPresensi = lazy(() => import('./routes/BapPresensi'));
+const AktivitasMbkm = lazy(() => import('./routes/AktivitasMbkm'));
 const Bimbingan = lazy(() => import('./routes/Bimbingan'));
 const BobotPenilaianObe = lazy(() => import('./routes/BobotPenilaianObe'));
 const Cpl = lazy(() => import('./routes/Cpl'));
@@ -429,6 +430,16 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
                 <MonitoringBimbingan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/aktivitas-mbkm"
+            element={
+              <ProtectedRoute
+                allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'kemahasiswaan', 'dosen', 'mahasiswa']}
+              >
+                <AktivitasMbkm />
               </ProtectedRoute>
             }
           />

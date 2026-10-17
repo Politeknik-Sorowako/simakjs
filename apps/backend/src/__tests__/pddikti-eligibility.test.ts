@@ -961,10 +961,14 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
         }),
       );
       expect(prevAktivitas.status).toBe(200);
-      const aktivitasBody = (await prevAktivitas.json()) as { items: Array<{ canApply: boolean; label: string }> };
+      const aktivitasBody = (await prevAktivitas.json()) as {
+        items: Array<{ canApply: boolean; label: string; status: string; feederId: string }>;
+      };
       expect(aktivitasBody.items.length).toBe(1);
       expect(aktivitasBody.items[0].label).toContain('Magang Industri');
-      expect(aktivitasBody.items[0].canApply).toBe(false);
+      // Sejak modul Aktivitas MBKM tersedia, entitas ini bisa di-apply (bukan pratinjau saja).
+      expect(aktivitasBody.items[0].canApply).toBe(true);
+      expect(aktivitasBody.items[0].status).toBe('baru');
 
       const applyPreviewOnly = await app.handle(
         new Request('http://localhost/pddikti/pull/apply', {
