@@ -527,6 +527,7 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
         'mahasiswa',
         'kelas',
         'krs-nilai',
+        'dosen-pengajar',
         'transkrip',
         'aktivitas-mahasiswa',
       ]);
@@ -976,6 +977,163 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
 
       // 4) Semua interaksi Feeder tetap read-only
       expect(actsCalled.length).toBeGreaterThan(0);
+      expect(actsCalled.every((a) => a === 'GetToken' || a.startsWith('Get'))).toBe(true);
+    });
+
+    it('pulls dosen pengajar kelas and fills empty SKS beban mengajar', async () => {
+      const actsCalled: string[] = [];
+      // Prasyarat: dosen, prodi & kelas sudah tertaut ke ID PDDIKTI.
+      await app.handle(
+        new Request('http://localhost/system/parameters/FEEDER_PASSWORD', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 'dummy-secret' }),
+        }),
+      );
+      await db.update(programStudi).set({ idPddikti: 'uuid-prodi-ti' }).where(eq(programStudi.id, prodiId));
+      await db.update(dosen).set({ idPddikti: 'uuid-dosen-1' }).where(eq(dosen.id, dosenId));
+
+      // Penugasan lokal sudah ada tetapi SKS beban mengajar masih kosong.
+      const [kelasIsi] = await db
+        .insert(kelasKuliah)
+        .values({ mataKuliahId: mkId, periodeId, namaKelas: 'Kelas Isi SKS', idPddikti: 'uuid-kelas-isi' })
+        .returning();
+      const [pdKosong] = await db
+        .insert(dosenPengajarKelas)
+        .values({ dosenId, kelasKuliahId: kelasIsi.id, idPddikti: 'uuid-akt-isi' })
+        .returning();
+      // Penugasan lokal dengan SKS berbeda dari Feeder → konflik.
+      const [kelasKonflik] = await db
+        .insert(kelasKuliah)
+        .values({ mataKuliahId: mkId, periodeId, namaKelas: 'Kelas Konflik SKS', idPddikti: 'uuid-kelas-konflik' })
+        .returning();
+      const [pdKonflik] = await db
+        .insert(dosenPengajarKelas)
+        .values({ dosenId, kelasKuliahId: kelasKonflik.id, sksBebanMengajar: 40, idPddikti: 'uuid-akt-konflik' })
+        .returning();
+
+      FeederService.setTestTransport(async (_cfg, body) => {
+        const act = String(body.act);
+        actsCalled.push(act);
+        if (act === 'GetToken') return { error_code: 0, data: { token: 'tok-dp' } };
+        if (act === 'GetAktivitasMengajarDosen') {
+          return {
+            error_code: 0,
+            data: [
+              // Dua substansi untuk pasangan yang sama → diagregasi (2 + 2 SKS).
+              {
+                id_aktivitas: 'uuid-akt-isi',
+                id_dosen: 'uuid-dosen-1',
+                id_kelas_kuliah: 'uuid-kelas-isi',
+                nama_substansi: 'Tatap muka',
+                sks_substansi_total: 2,
+              },
+              {
+                id_aktivitas: 'uuid-akt-isi-2',
+                id_dosen: 'uuid-dosen-1',
+                id_kelas_kuliah: 'uuid-kelas-isi',
+                nama_substansi: 'Praktik',
+                sks_substansi_total: 2,
+              },
+              // SKS bertentangan dengan lokal (40 → 50) → konflik
+              {
+                id_aktivitas: 'uuid-akt-konflik',
+                id_dosen: 'uuid-dosen-1',
+                id_kelas_kuliah: 'uuid-kelas-konflik',
+                sks_substansi_total: 50,
+              },
+              // Dosen belum terautau di aplikasi → tidak dapat diterapkan
+              {
+                id_aktivitas: 'uuid-akt-luar',
+                id_dosen: 'uuid-dosen-lain',
+                id_kelas_kuliah: 'uuid-kelas-isi',
+                sks_substansi_total: 2,
+              },
+              // Kelas belum tertaut di aplikasi → tidak dapat diterapkan
+              {
+                id_aktivitas: 'uuid-akt-kelas-baru',
+                id_dosen: 'uuid-dosen-1',
+                id_kelas_kuliah: 'uuid-kelas-baru',
+                sks_substansi_total: 4,
+              },
+            ],
+          };
+        }
+        return { error_code: 0, data: [] };
+      });
+
+      const prev = await app.handle(
+        new Request('http://localhost/pddikti/pull/preview?entity=dosen-pengajar', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(prev.status).toBe(200);
+      const prevBody = (await prev.json()) as {
+        items: Array<{
+          feederId: string;
+          status: string;
+          canApply: boolean;
+          note?: string;
+          feederData: Record<string, unknown>;
+        }>;
+        summary: { totalFeeder: number; isi: number; konflik: number; baru: number };
+      };
+      // Dua baris substansi kelas "isi" diagregasi menjadi satu penugasan.
+      expect(prevBody.summary.totalFeeder).toBe(4);
+      expect(prevBody.summary.isi).toBe(1);
+      expect(prevBody.summary.konflik).toBe(1);
+      expect(prevBody.summary.baru).toBe(2);
+
+      const itemIsi = prevBody.items.find((i) => i.feederId === 'uuid-akt-isi');
+      expect(itemIsi?.status).toBe('isi');
+      expect(itemIsi?.canApply).toBe(true);
+      expect(itemIsi?.feederData.sksBebanMengajar).toBe(4); // 2 + 2 diagregasi
+      const blocked = prevBody.items.filter((i) => !i.canApply);
+      expect(blocked.length).toBe(2);
+      expect(blocked.some((i) => i.note?.includes('Dosen uuid-dosen-lain'))).toBe(true);
+      expect(blocked.some((i) => i.note?.includes('Kelas kuliah uuid-kelas-baru'))).toBe(true);
+
+      // Apply default (lokal): SKS kosong diisi, konflik dipertahankan.
+      const applyDp = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'dosen-pengajar',
+            feederIds: ['uuid-akt-isi', 'uuid-akt-konflik', 'uuid-akt-luar', 'uuid-akt-kelas-baru'],
+          }),
+        }),
+      );
+      expect(applyDp.status).toBe(200);
+      const dpResult = (await applyDp.json()) as { updated: number; linkedOnly: number; skipped: number };
+      expect(dpResult.updated).toBe(1); // SKS diisi
+      expect(dpResult.linkedOnly).toBe(1); // konflik dipertahankan lokal
+      expect(dpResult.skipped).toBe(2); // dosen & kelas belum tertaut
+
+      const [pdTerisi] = await db.select().from(dosenPengajarKelas).where(eq(dosenPengajarKelas.id, pdKosong.id));
+      expect(pdTerisi.sksBebanMengajar).toBe(4);
+
+      const [pdDitahan] = await db.select().from(dosenPengajarKelas).where(eq(dosenPengajarKelas.id, pdKonflik.id));
+      expect(pdDitahan.sksBebanMengajar).toBe(40); // tetap lokal
+
+      // Konflik + resolusi "feeder" → SKS ditimpa
+      const applyFeeder = await app.handle(
+        new Request('http://localhost/pddikti/pull/apply', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'dosen-pengajar',
+            feederIds: ['uuid-akt-konflik'],
+            conflictResolution: 'feeder',
+          }),
+        }),
+      );
+      expect(applyFeeder.status).toBe(200);
+      const [pdDitimpa] = await db.select().from(dosenPengajarKelas).where(eq(dosenPengajarKelas.id, pdKonflik.id));
+      expect(pdDitimpa.sksBebanMengajar).toBe(50);
+
+      // Semua interaksi Feeder tetap read-only
       expect(actsCalled.every((a) => a === 'GetToken' || a.startsWith('Get'))).toBe(true);
     });
   });

@@ -232,7 +232,8 @@ export function PddiktiSync() {
               </Show>
             </div>
             <p class="text-sm text-secondary-500 dark:text-secondary-200">
-              Tarik data referensi & master dari Neo Feeder PDDIKTI (read-only Get*) dan pantau kesiapan data lokal
+              Tarik data referensi, master, & transaksional dari Neo Feeder PDDIKTI (read-only Get*) dan pantau kesiapan
+              data lokal
             </p>
           </div>
           <button
@@ -259,8 +260,8 @@ export function PddiktiSync() {
                   </h2>
                   <p class="text-xs text-secondary-500 dark:text-secondary-400">
                     Tahap 1: Referensi (Periode/Semester & Program Studi) dan Master (Mata Kuliah, Dosen, Mahasiswa).
-                    Operasi ke Feeder murni baca (<code class="font-mono">Get*</code>) lalu diterapkan ke database
-                    lokal.
+                    Tahap 2: Transaksional (Kelas Kuliah, KRS & Nilai, Penugasan Dosen Pengajar). Operasi ke Feeder
+                    murni baca (<code class="font-mono">Get*</code>) lalu diterapkan ke database lokal.
                   </p>
                 </div>
                 <a

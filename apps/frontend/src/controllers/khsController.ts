@@ -241,6 +241,7 @@ export type PullEntityKey =
   | 'mahasiswa'
   | 'kelas'
   | 'krs-nilai'
+  | 'dosen-pengajar'
   | 'transkrip'
   | 'aktivitas-mahasiswa';
 /**
