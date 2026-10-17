@@ -72,8 +72,39 @@ export class SettingsController {
       }
 
       const { key, value, description } = body as { key: string; value: string; description?: string };
-      const updated = await SettingsService.set(key, value, description);
-      return { message: 'Pengaturan berhasil diperbarui', data: updated };
+      if (!key || typeof key !== 'string') {
+        set.status = 400;
+        return { error: 'key wajib diisi' };
+      }
+      if (!/^[A-Za-z0-9_]+$/.test(key)) {
+        set.status = 400;
+        return { error: 'key hanya boleh mengandung huruf, angka, dan underscore' };
+      }
+      if (value === null || value === undefined) {
+        set.status = 400;
+        return { error: 'value wajib diisi' };
+      }
+      // Validasi & normalisasi sama seperti endpoint utama `PUT /system/parameters/:key`
+      // (mis. URL/timeout/write guard Feeder) agar parameter tidak bisa diset sebarang.
+      const validated = SystemParameterService.validateParamValue(key, String(value));
+      if (!validated.ok) {
+        set.status = 400;
+        return { error: validated.error };
+      }
+      if (validated.keepExisting) {
+        // Password rahasia dikosongkan → pertahankan nilai tersimpan (tak ditimpa).
+        return {
+          message: 'Pengaturan berhasil diperbarui',
+          data: { key, value: '', description: description ?? null, updatedAt: null },
+        };
+      }
+      // Tulis via SystemParameterService (bukan SettingsService langsung) agar nilai
+      // rahasia dienkripsi at-rest dan cache parameter ikut diinvalidasi.
+      const updated = await SystemParameterService.set(key, validated.value, undefined, description);
+      return {
+        message: 'Pengaturan berhasil diperbarui',
+        data: SECRET_PARAM_KEYS.has(key) ? { ...updated, value: '' } : updated,
+      };
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memperbarui pengaturan' };

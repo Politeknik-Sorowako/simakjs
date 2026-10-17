@@ -1,6 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
 import { db } from '../utils/db';
+import { decryptSecret, encryptSecret, isSecretEncrypted } from '../utils/secret-crypto';
+
+/** Bentuk nilai parameter yang sudah tervalidasi, siap disimpan. */
+export type ParamValueValidation =
+  | { ok: true; value: string /** true = pertahankan nilai lama (mis. password dikosongkan) */; keepExisting?: boolean }
+  | { ok: false; error: string };
 
 const cache = new Map<string, { value: string; at: number }>();
 const CACHE_TTL_MS = 10_000;
@@ -213,8 +219,11 @@ export class SystemParameterService {
         if (def) return def.value;
         return null;
       }
-      cache.set(key, { value: row.value, at: Date.now() });
-      return row.value;
+      // Parameter rahasia (atau nilai bertanda `enc:v1:`) didekripsi saat dibaca agar
+      // seluruh consumer (Feeder, dst.) tetap menerima nilai asli.
+      const plain = SECRET_PARAM_KEYS.has(key) || isSecretEncrypted(row.value) ? decryptSecret(row.value) : row.value;
+      cache.set(key, { value: plain, at: Date.now() });
+      return plain;
     } catch {
       // Tabel opsional belum tersedia atau query gagal: gunakan default agar path
       // yang bergantung pada parameter (mis. audit log) tidak ikut gagal.
@@ -395,18 +404,101 @@ export class SystemParameterService {
     return await db.select().from(systemSettings).orderBy(systemSettings.key);
   }
 
+  /**
+   * Menyimpan parameter. Nilai bertanda rahasia (`SECRET_PARAM_KEYS`) dienkripsi
+   * at-rest sebelum masuk DB (lihat `utils/secret-crypto.ts`). Nilai KOSONG untuk
+   * parameter rahasia juga ditulis apa adanya (caller menangani makna "pertahankan
+   * nilai lama" sebelum memanggil fungsi ini).
+   */
   static async set(key: string, value: string, updatedBy?: number, description?: string) {
     const type: ParamType = DEFAULT_PARAMS[key]?.type ?? 'string';
+    const stored = SECRET_PARAM_KEYS.has(key) && value !== '' ? encryptSecret(value) : value;
     const [row] = await db
       .insert(systemSettings)
-      .values({ key, value, description, updatedBy, paramType: type })
+      .values({ key, value: stored, description, updatedBy, paramType: type })
       .onConflictDoUpdate({
         target: systemSettings.key,
-        set: { value, updatedBy, description, updatedAt: new Date() },
+        set: { value: stored, updatedBy, description, updatedAt: new Date() },
       })
       .returning();
     SystemParameterService.invalidate(key);
     return row;
+  }
+
+  /**
+   * Validasi & normalisasi nilai parameter sebelum disimpan (dipakai bersama oleh
+   * `PUT /system/parameters/:key` dan legacy `PUT /settings`). Mengembalikan
+   * `{ ok: false, error }` bila nilai tidak sah.
+   */
+  static validateParamValue(key: string, rawValue: string): ParamValueValidation {
+    const value = String(rawValue);
+    if (key === 'SESSION_DURATION_MINUTES') {
+      const minutes = Number(value);
+      if (!Number.isFinite(minutes) || minutes < SESSION_DURATION_MIN || minutes > SESSION_DURATION_MAX) {
+        return {
+          ok: false,
+          error: `Durasi sesi harus berupa angka antara ${SESSION_DURATION_MIN} dan ${SESSION_DURATION_MAX} menit`,
+        };
+      }
+      return { ok: true, value: String(Math.floor(minutes)) };
+    }
+    if (key === 'SESSION_EPOCH') {
+      return { ok: false, error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
+    }
+    if (key === 'FEEDER_URL') {
+      const trimmed = value.trim();
+      if (!/^https?:\/\/\S+$/i.test(trimmed)) {
+        return { ok: false, error: 'Alamat Feeder harus berupa URL http(s) yang valid' };
+      }
+      if (trimmed.length > 500) {
+        return { ok: false, error: 'Alamat Feeder terlalu panjang (maks 500 karakter)' };
+      }
+      return { ok: true, value: trimmed };
+    }
+    if (key === 'FEEDER_USERNAME') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return { ok: false, error: 'Username Feeder wajib diisi' };
+      }
+      if (trimmed.length > 200) {
+        return { ok: false, error: 'Username Feeder terlalu panjang (maks 200 karakter)' };
+      }
+      return { ok: true, value: trimmed };
+    }
+    if (key === 'FEEDER_PASSWORD') {
+      // Nilai kosong = pertahankan password lama (form tidak menampilkan nilai tersimpan).
+      if (value.trim() === '') {
+        return { ok: true, value: '', keepExisting: true };
+      }
+      if (value.length > 200) {
+        return { ok: false, error: 'Password Feeder terlalu panjang (maks 200 karakter)' };
+      }
+      return { ok: true, value };
+    }
+    if (key === 'FEEDER_TIMEOUT_MS') {
+      const ms = Number(value);
+      if (!Number.isFinite(ms) || ms < 5000 || ms > 60000) {
+        return { ok: false, error: 'Timeout Feeder harus berupa angka antara 5000 dan 60000 ms' };
+      }
+      return { ok: true, value: String(Math.floor(ms)) };
+    }
+    if (key === 'FEEDER_PAGE_SIZE') {
+      const size = Number(value);
+      if (!Number.isFinite(size) || size < 50 || size > 500) {
+        return { ok: false, error: 'Page size Feeder harus berupa angka antara 50 dan 500' };
+      }
+      return { ok: true, value: String(Math.floor(size)) };
+    }
+    if (key === 'FEEDER_WRITE_GUARD' || key === 'FEEDER_AUTO_APPROVE_KRS') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true') return { ok: true, value: 'true' };
+      if (normalized === 'false') return { ok: true, value: 'false' };
+      if (key === 'FEEDER_WRITE_GUARD') {
+        return { ok: false, error: 'FEEDER_WRITE_GUARD harus bernilai true atau false' };
+      }
+      return { ok: false, error: 'FEEDER_AUTO_APPROVE_KRS harus bernilai true atau false' };
+    }
+    return { ok: true, value };
   }
 
   static descriptions(): Record<string, { type: ParamType; description: string; defaultValue: string }> {
