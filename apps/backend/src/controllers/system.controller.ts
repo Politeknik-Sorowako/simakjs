@@ -99,7 +99,7 @@ export class SystemController {
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
     const key = (params as Record<string, unknown>)?.key as string;
-    let value = ((body as Record<string, unknown>)?.value as string) ?? null;
+    const value = ((body as Record<string, unknown>)?.value as string) ?? null;
     const description = ((body as Record<string, unknown>)?.description as string) ?? undefined;
     if (!key || value === null || value === undefined) {
       set.status = 400;
@@ -109,78 +109,18 @@ export class SystemController {
       set.status = 400;
       return { error: 'key hanya boleh mengandung huruf, angka, dan underscore' };
     }
-    if (key === 'SESSION_DURATION_MINUTES') {
-      const minutes = Number(value);
-      if (!Number.isFinite(minutes) || minutes < 15 || minutes > 10080) {
-        set.status = 400;
-        return { error: 'Durasi sesi harus berupa angka antara 15 dan 10080 menit' };
-      }
-      value = String(Math.floor(minutes));
-    }
-    if (key === 'SESSION_EPOCH') {
+    // Validasi & normalisasi bersama dengan legacy `PUT /settings`.
+    const validated = SystemParameterService.validateParamValue(key, String(value));
+    if (!validated.ok) {
       set.status = 400;
-      return { error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
+      return { error: validated.error };
     }
-    if (key === 'FEEDER_URL') {
-      const trimmed = value.trim();
-      if (!/^https?:\/\/\S+$/i.test(trimmed)) {
-        set.status = 400;
-        return { error: 'Alamat Feeder harus berupa URL http(s) yang valid' };
-      }
-      if (trimmed.length > 500) {
-        set.status = 400;
-        return { error: 'Alamat Feeder terlalu panjang (maks 500 karakter)' };
-      }
-      value = trimmed;
-    }
-    if (key === 'FEEDER_USERNAME') {
-      const trimmed = value.trim();
-      if (!trimmed) {
-        set.status = 400;
-        return { error: 'Username Feeder wajib diisi' };
-      }
-      if (trimmed.length > 200) {
-        set.status = 400;
-        return { error: 'Username Feeder terlalu panjang (maks 200 karakter)' };
-      }
-      value = trimmed;
-    }
-    if (key === 'FEEDER_PASSWORD') {
-      // Nilai kosong = pertahankan password lama (form tidak menampilkan nilai tersimpan).
-      if (value.trim() === '') {
-        return { key, value: '' };
-      }
-      if (value.length > 200) {
-        set.status = 400;
-        return { error: 'Password Feeder terlalu panjang (maks 200 karakter)' };
-      }
-    }
-    if (key === 'FEEDER_TIMEOUT_MS') {
-      const ms = Number(value);
-      if (!Number.isFinite(ms) || ms < 5000 || ms > 60000) {
-        set.status = 400;
-        return { error: 'Timeout Feeder harus berupa angka antara 5000 dan 60000 ms' };
-      }
-      value = String(Math.floor(ms));
-    }
-    if (key === 'FEEDER_PAGE_SIZE') {
-      const size = Number(value);
-      if (!Number.isFinite(size) || size < 50 || size > 500) {
-        set.status = 400;
-        return { error: 'Page size Feeder harus berupa angka antara 50 dan 500' };
-      }
-      value = String(Math.floor(size));
-    }
-    if (key === 'FEEDER_WRITE_GUARD') {
-      const normalized = value.trim().toLowerCase();
-      if (normalized !== 'true' && normalized !== 'false') {
-        set.status = 400;
-        return { error: 'FEEDER_WRITE_GUARD harus bernilai true atau false' };
-      }
-      value = normalized;
+    if (validated.keepExisting) {
+      // Password rahasia dikosongkan → pertahankan nilai tersimpan (tak ditimpa).
+      return { key, value: '' };
     }
     try {
-      const row = await SystemParameterService.set(key, String(value), user.id, description);
+      const row = await SystemParameterService.set(key, validated.value, user.id, description);
       return { key: row.key, value: SECRET_PARAM_KEYS.has(key) ? '' : row.value };
     } catch (e: unknown) {
       set.status = 500;
