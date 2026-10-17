@@ -84,17 +84,34 @@ export const syncPddiktiSchema = {
   },
 };
 
+const ENTITY_UNION = [
+  t.Literal('semester'),
+  t.Literal('prodi'),
+  t.Literal('matkul'),
+  t.Literal('dosen'),
+  t.Literal('mahasiswa'),
+  t.Literal('kelas'),
+  t.Literal('krs-nilai'),
+  t.Literal('transkrip'),
+  t.Literal('aktivitas-mahasiswa'),
+];
+
+const PULL_ENTITY_KEYS = {
+  entity: t.Union(ENTITY_UNION),
+};
+
 export const getPullEntitiesSchema = {
   response: {
     200: t.Object({
       writeGuard: t.Boolean(),
       entities: t.Array(
         t.Object({
-          key: t.String(),
+          key: t.Union(ENTITY_UNION),
           label: t.String(),
-          category: t.Union([t.Literal('referensi'), t.Literal('master')]),
+          category: t.Union([t.Literal('referensi'), t.Literal('master'), t.Literal('transaksional')]),
           feederAct: t.String(),
           description: t.String(),
+          previewOnly: t.Optional(t.Boolean()),
         }),
       ),
     }),
@@ -104,21 +121,23 @@ export const getPullEntitiesSchema = {
   detail: {
     tags: ['PDDIKTI'],
     summary: 'Daftar Entitas Pull Neo Feeder PDDIKTI',
-    description: 'Mengambil katalog entitas referensi & master yang dapat ditarik (read-only Get*) dari Neo Feeder.',
+    description:
+      'Mengambil katalog entitas referensi, master, & transaksional yang dapat ditarik (read-only Get*) dari Neo Feeder.',
   },
 };
 
 const scalarNullable = t.Union([t.String(), t.Number(), t.Boolean(), t.Null()]);
+const STATUS_UNION = t.Union([
+  t.Literal('baru'),
+  t.Literal('isi'),
+  t.Literal('link_id'),
+  t.Literal('konflik'),
+  t.Literal('sama'),
+]);
 
 export const getPullPreviewSchema = {
   query: t.Object({
-    entity: t.Union([
-      t.Literal('semester'),
-      t.Literal('prodi'),
-      t.Literal('matkul'),
-      t.Literal('dosen'),
-      t.Literal('mahasiswa'),
-    ]),
+    ...PULL_ENTITY_KEYS,
     filter: t.Optional(t.String()),
   }),
   response: {
@@ -129,6 +148,7 @@ export const getPullPreviewSchema = {
       summary: t.Object({
         totalFeeder: t.Integer(),
         baru: t.Integer(),
+        isi: t.Integer(),
         linkId: t.Integer(),
         konflik: t.Integer(),
         sama: t.Integer(),
@@ -138,7 +158,7 @@ export const getPullPreviewSchema = {
           feederId: t.String(),
           naturalKey: t.String(),
           label: t.String(),
-          status: t.Union([t.Literal('baru'), t.Literal('link_id'), t.Literal('konflik'), t.Literal('sama')]),
+          status: STATUS_UNION,
           localId: t.Union([t.String(), t.Number(), t.Null()]),
           localIdPddikti: t.Union([t.String(), t.Null()]),
           feederData: t.Record(t.String(), scalarNullable),
@@ -170,13 +190,7 @@ export const getPullPreviewSchema = {
 
 export const applyPullSchema = {
   body: t.Object({
-    entity: t.Union([
-      t.Literal('semester'),
-      t.Literal('prodi'),
-      t.Literal('matkul'),
-      t.Literal('dosen'),
-      t.Literal('mahasiswa'),
-    ]),
+    ...PULL_ENTITY_KEYS,
     feederIds: t.Array(t.String(), { minItems: 1, maxItems: 2000 }),
     conflictResolution: t.Optional(t.Union([t.Literal('feeder'), t.Literal('lokal')])),
     filter: t.Optional(t.String()),
