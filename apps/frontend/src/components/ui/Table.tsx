@@ -1,4 +1,4 @@
-import { For, type JSX } from 'solid-js';
+import { For, type JSX, onMount } from 'solid-js';
 
 interface TableProps {
   headers: (string | JSX.Element)[];
@@ -10,13 +10,16 @@ interface TableProps {
 /**
  * Kartu tabel dasbor.
  *
- * SENGaja tidak ada lebar kolom eksplisit (`colgroup` + `table-fixed`) maupun
- * `position: sticky` pada header di sini. Keduanya pernah dicoba dan gagal:
- * saat `<colgroup>` berada di dalam JSX tabel, kompilasi Solid menaruhnya
- * sebagai saudara `<table>` (bukan anaknya), sehingga lebar kolom tidak pernah
- * diterapkan dan tabel jatuh ke layout otomatis — header pun bergeser dari
- * kolom body. Karena itu alignment dijamin oleh model HTML itu sendiri: header
- * dan body berada dalam satu `<table>`, jadi lebarnya selalu sama.
+ * KONTRAK CHILDREN: `children` harus berisi BARIS tabel (`<tr>` / `<For>`),
+ * bukan `<tbody>`. Komponen ini sudah menyediakan satu `<tbody>` sendiri.
+ * Nested `<tbody>` membuat browser membentuk kisi kolom TERPISA untuk body,
+ * sehingga header bergeser jauh dari isi kolomnya (terukur offset > 900px di
+ * Chromium). Bug senyap inilah yang membuat `/penetapan-pembimbing` dan
+ * `/aktivitas-mbkm` tidak sejajar; guard di bawah menangkap regresinya.
+ *
+ * Lebar kolom TIDAK diatur eksplisit (`colgroup` + `table-fixed`) maupun
+ * `position: sticky` pada header. Alignment dijamin oleh satu `<table>` dengan
+ * satu kisi kolom, bukan lewat lebar kolom.
  *
  * Agar kolom tetap rapi tanpa `colgroup`:
  * - header harus PENDEK (nama panjang dipindah ke tooltip `headerTitles`),
@@ -24,6 +27,17 @@ interface TableProps {
  * - tabel dibungkus `overflow-x-auto` agar melebar ke samping, bukan squeezing.
  */
 export function Table(props: TableProps) {
+  let bodyRef: HTMLTableSectionElement | undefined;
+
+  onMount(() => {
+    if (!import.meta.env.DEV || !bodyRef) return;
+    if (bodyRef.querySelector(':scope > tbody')) {
+      console.error(
+        '[Table] children memuat <tbody> di dalam <tbody>. Baris tabel harus dikirim langsung (tanpa pembungkus <tbody>), jika tidak header akan bergeser dari body.',
+      );
+    }
+  });
+
   return (
     // DESIGN.md: kartu utilitas = hairline 1px + radius 18px, TANPA shadow.
     // Elevasi hanya dari perbedaan permukaan; baris memakai hairline pemisah lembut.
@@ -44,7 +58,9 @@ export function Table(props: TableProps) {
               </For>
             </tr>
           </thead>
-          <tbody class="divide-y divide-secondary-100 dark:divide-secondary-800/60">{props.children}</tbody>
+          <tbody ref={bodyRef} class="divide-y divide-secondary-100 dark:divide-secondary-800/60">
+            {props.children}
+          </tbody>
         </table>
       </div>
     </div>

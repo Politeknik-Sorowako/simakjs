@@ -233,53 +233,51 @@ export default function AktivitasMbkm() {
 
         <Show when={!list.loading} fallback={<p class="text-sm text-secondary-500">Memuat data…</p>}>
           <Table headers={['Judul', 'Jenis', 'SKS', 'Anggota', 'Pembimbing', 'Status', 'Aksi']}>
-            <tbody>
-              <For
-                each={list()?.data ?? []}
-                fallback={
-                  <tr>
-                    <td colspan={7} class="px-6 py-6 text-center text-sm text-secondary-500">
-                      Belum ada aktivitas pada filter ini.
-                    </td>
-                  </tr>
-                }
-              >
-                {(row) => (
-                  <tr class="border-b border-secondary-100 last:border-0 dark:border-secondary-800">
-                    <td class="px-6 py-3 text-table font-medium text-secondary-800 dark:text-white">
-                      {row.judul}
-                      <Show when={row.prodiNama}>
-                        <span class="block text-fine text-secondary-500">{row.prodiNama}</span>
-                      </Show>
-                    </td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      {row.jenisNama ?? '-'}
-                    </td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">{row.sks}</td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      {row.anggota.length} mahasiswa
-                    </td>
-                    <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      {row.pembimbing.length} dosen
-                    </td>
-                    <td class="px-6 py-3">
-                      <Badge variant={STATUS_META[row.status].variant} size="sm">
-                        {STATUS_META[row.status].label}
-                      </Badge>
-                    </td>
-                    <td class="px-6 py-3">
-                      <button
-                        type="button"
-                        class="text-fine font-semibold text-action hover:underline dark:text-action-ondark"
-                        onClick={() => setDetailId(row.id)}
-                      >
-                        Kelola
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              </For>
-            </tbody>
+            <For
+              each={list()?.data ?? []}
+              fallback={
+                <tr>
+                  <td colspan={7} class="px-6 py-6 text-center text-sm text-secondary-500">
+                    Belum ada aktivitas pada filter ini.
+                  </td>
+                </tr>
+              }
+            >
+              {(row) => (
+                <tr class="border-b border-secondary-100 last:border-0 dark:border-secondary-800">
+                  <td class="px-6 py-3 text-table font-medium text-secondary-800 dark:text-white">
+                    {row.judul}
+                    <Show when={row.prodiNama}>
+                      <span class="block text-fine text-secondary-500">{row.prodiNama}</span>
+                    </Show>
+                  </td>
+                  <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    {row.jenisNama ?? '-'}
+                  </td>
+                  <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">{row.sks}</td>
+                  <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    {row.anggota.length} mahasiswa
+                  </td>
+                  <td class="px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    {row.pembimbing.length} dosen
+                  </td>
+                  <td class="px-6 py-3">
+                    <Badge variant={STATUS_META[row.status].variant} size="sm">
+                      {STATUS_META[row.status].label}
+                    </Badge>
+                  </td>
+                  <td class="px-6 py-3">
+                    <button
+                      type="button"
+                      class="text-fine font-semibold text-action hover:underline dark:text-action-ondark"
+                      onClick={() => setDetailId(row.id)}
+                    >
+                      Kelola
+                    </button>
+                  </td>
+                </tr>
+              )}
+            </For>
           </Table>
 
           <Pagination

@@ -357,97 +357,95 @@ export default function PenetapanPembimbing() {
 
         <Show when={!list.loading} fallback={<p class="text-sm text-secondary-500">Memuat data…</p>}>
           <Table headers={TABLE_HEADERS} headerTitles={TABLE_HEADER_TITLES}>
-            <tbody>
-              <For
-                each={list()?.data ?? []}
-                fallback={
-                  <tr>
-                    <td colspan={5 + SLOTS.length} class="px-6 py-6 text-center text-sm text-secondary-500">
-                      Tidak ada data mahasiswa pada filter ini.
-                    </td>
-                  </tr>
-                }
-              >
-                {(item) => (
-                  <tr class="border-b border-secondary-100 last:border-0 dark:border-secondary-800">
-                    <td class="align-top px-6 py-3 font-mono text-caption text-secondary-600 dark:text-secondary-300">
-                      {item.nim}
-                    </td>
-                    <td class="align-top px-6 py-3 text-table font-medium text-secondary-800 dark:text-white">
-                      <span class="block truncate" title={item.namaMahasiswa}>
-                        {item.namaMahasiswa}
-                      </span>
-                    </td>
-                    <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      {item.angkatan ?? '-'}
-                    </td>
-                    <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      <span class="block truncate" title={item.prodiNama ?? undefined}>
-                        {item.prodiNama ?? '-'}
-                      </span>
-                    </td>
-                    <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
-                      <span class="block truncate" title={item.dosenPaNama ?? 'Belum ada PA'}>
-                        {item.dosenPaNama ?? 'Belum ada PA'}
-                      </span>
-                    </td>
-                    <For each={SLOTS}>
-                      {(slot) => {
-                        const detail = () => item.pembimbing[slot.key];
-                        return (
-                          <td class="align-top px-6 py-3">
-                            <div class="flex flex-col items-start gap-1">
-                              <span
-                                class="block max-w-full truncate text-caption text-secondary-700 dark:text-secondary-200"
-                                title={describePembimbing(item, slot.key)}
-                              >
-                                {describePembimbing(item, slot.key)}
-                              </span>
-                              <Show
-                                when={detail()}
-                                fallback={
+            <For
+              each={list()?.data ?? []}
+              fallback={
+                <tr>
+                  <td colspan={5 + SLOTS.length} class="px-6 py-6 text-center text-sm text-secondary-500">
+                    Tidak ada data mahasiswa pada filter ini.
+                  </td>
+                </tr>
+              }
+            >
+              {(item) => (
+                <tr class="border-b border-secondary-100 last:border-0 dark:border-secondary-800">
+                  <td class="align-top px-6 py-3 font-mono text-caption text-secondary-600 dark:text-secondary-300">
+                    {item.nim}
+                  </td>
+                  <td class="align-top px-6 py-3 text-table font-medium text-secondary-800 dark:text-white">
+                    <span class="block truncate" title={item.namaMahasiswa}>
+                      {item.namaMahasiswa}
+                    </span>
+                  </td>
+                  <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    {item.angkatan ?? '-'}
+                  </td>
+                  <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    <span class="block truncate" title={item.prodiNama ?? undefined}>
+                      {item.prodiNama ?? '-'}
+                    </span>
+                  </td>
+                  <td class="align-top px-6 py-3 text-caption text-secondary-600 dark:text-secondary-300">
+                    <span class="block truncate" title={item.dosenPaNama ?? 'Belum ada PA'}>
+                      {item.dosenPaNama ?? 'Belum ada PA'}
+                    </span>
+                  </td>
+                  <For each={SLOTS}>
+                    {(slot) => {
+                      const detail = () => item.pembimbing[slot.key];
+                      return (
+                        <td class="align-top px-6 py-3">
+                          <div class="flex flex-col items-start gap-1">
+                            <span
+                              class="block max-w-full truncate text-caption text-secondary-700 dark:text-secondary-200"
+                              title={describePembimbing(item, slot.key)}
+                            >
+                              {describePembimbing(item, slot.key)}
+                            </span>
+                            <Show
+                              when={detail()}
+                              fallback={
+                                <button
+                                  type="button"
+                                  class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
+                                  onClick={() => openModal(item, slot.key)}
+                                >
+                                  Tetapkan
+                                </button>
+                              }
+                            >
+                              {(d) => (
+                                <div class="flex items-center gap-2">
+                                  <Badge variant={d().dosenId ? 'info' : 'warning'} size="sm">
+                                    {d().dosenId ? 'Dosen' : 'Eksternal'}
+                                  </Badge>
                                   <button
                                     type="button"
                                     class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
                                     onClick={() => openModal(item, slot.key)}
                                   >
-                                    Tetapkan
+                                    Ubah
                                   </button>
-                                }
-                              >
-                                {(d) => (
-                                  <div class="flex items-center gap-2">
-                                    <Badge variant={d().dosenId ? 'info' : 'warning'} size="sm">
-                                      {d().dosenId ? 'Dosen' : 'Eksternal'}
-                                    </Badge>
-                                    <button
-                                      type="button"
-                                      class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-action transition-colors hover:bg-action-50 active:scale-95 dark:text-action-ondark dark:hover:bg-action-ondark/10"
-                                      onClick={() => openModal(item, slot.key)}
-                                    >
-                                      Ubah
-                                    </button>
-                                    <button
-                                      type="button"
-                                      class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-danger-600 transition-colors hover:bg-danger-50 active:scale-95 dark:text-danger-400 dark:hover:bg-danger-500/10"
-                                      onClick={() =>
-                                        setCabutTarget({ id: d().id, label: `${item.namaMahasiswa} — ${slot.label}` })
-                                      }
-                                    >
-                                      Cabut
-                                    </button>
-                                  </div>
-                                )}
-                              </Show>
-                            </div>
-                          </td>
-                        );
-                      }}
-                    </For>
-                  </tr>
-                )}
-              </For>
-            </tbody>
+                                  <button
+                                    type="button"
+                                    class="inline-flex min-h-[44px] items-center rounded-full px-3 text-caption font-medium text-danger-600 transition-colors hover:bg-danger-50 active:scale-95 dark:text-danger-400 dark:hover:bg-danger-500/10"
+                                    onClick={() =>
+                                      setCabutTarget({ id: d().id, label: `${item.namaMahasiswa} — ${slot.label}` })
+                                    }
+                                  >
+                                    Cabut
+                                  </button>
+                                </div>
+                              )}
+                            </Show>
+                          </div>
+                        </td>
+                      );
+                    }}
+                  </For>
+                </tr>
+              )}
+            </For>
           </Table>
 
           <Pagination
