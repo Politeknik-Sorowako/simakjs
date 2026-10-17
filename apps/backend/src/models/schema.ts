@@ -3401,3 +3401,68 @@ export const lampiranKegiatanSkpiRelations = relations(lampiranKegiatanSkpi, ({ 
     references: [kegiatanMahasiswaSkpi.id],
   }),
 }));
+
+// ─── PENETAPAN PEMBIMBING MAHASISWA (PKL / MAGANG & TUGAS AKHIR) ─────────────
+// PA tetap memakai kolom `mahasiswa.dosenPaId` (tidak diubah demi kompatibilitas
+// scoping Bimbingan/KRS/Cuti/SKPI). Modul ini menangani jenis pembimbing lain:
+//   - `PKL`            : pembimbing PKL/magang — dapat berupa dosen kampus
+//                        maupun pembimbing lapangan eksternal (industri).
+//   - `TA_UTAMA`       : Pembimbing 1 Tugas Akhir.
+//   - `TA_PENDAMPING`  : Pembimbing 2 Tugas Akhir.
+// Pembimbing eksternal dicatat terstruktur (`nama_eksternal` + `instansi_eksternal`)
+// sehingga pembimbing lapangan industri tetap punya identitas meski bukan dosen
+// di tabel `dosen`. Validasi "dosen internal ⇒ kolom eksternal kosong" ditegakkan di
+// service (`pembimbing.service.ts`) karena bersyarat nilai.
+//
+// Pergantian pembimbing tidak menghapus riwayat: baris lama dinonaktifkan
+// (`status_aktif = false`) dan baris baru di-insert. Unik parsial
+// `(mahasiswa_id, jenis) WHERE status_aktif` dibuat di SQL migrasi (Drizzle tidak
+// mendukung unique index parsial).
+
+/** Jenis penetapan pembimbing yang dikelola modul ini (PA bukan termasuk; lihat `mahasiswa.dosenPaId`). */
+export const PEMBIMBING_JENIS = ['PKL', 'TA_UTAMA', 'TA_PENDAMPING'] as const;
+
+export type PembimbingJenis = (typeof PEMBIMBING_JENIS)[number];
+
+export const pembimbingMahasiswa = pgTable(
+  'pembimbing_mahasiswa',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    // null = pembimbing eksternal (industri/noncek), identitas ada di kolom *_eksternal.
+    dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'set null' }),
+    namaEksternal: varchar('nama_eksternal', { length: 100 }),
+    instansiEksternal: varchar('instansi_eksternal', { length: 255 }),
+    jenis: varchar('jenis', { length: 20 }).notNull(), // 'PKL' | 'TA_UTAMA' | 'TA_PENDAMPING'
+    statusAktif: boolean('status_aktif').default(true).notNull(),
+    ditetapkanOlehId: integer('ditetapkan_oleh_id').references(() => users.id, { onDelete: 'set null' }),
+    catatan: text('catatan'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_pembimbing_mhs_jenis').on(t.mahasiswaId, t.jenis),
+    index('idx_pembimbing_dosen').on(t.dosenId),
+    index('idx_pembimbing_aktif').on(t.statusAktif),
+  ],
+);
+
+export const pembimbingMahasiswaRelations = relations(pembimbingMahasiswa, ({ one }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [pembimbingMahasiswa.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  dosen: one(dosen, {
+    fields: [pembimbingMahasiswa.dosenId],
+    references: [dosen.id],
+  }),
+  ditetapkanOleh: one(users, {
+    fields: [pembimbingMahasiswa.ditetapkanOlehId],
+    references: [users.id],
+  }),
+}));

@@ -48,6 +48,7 @@ import { obeReportRoutes } from './routes/obe-report.routes';
 import { pasalPelanggaranRoutes } from './routes/pasal-pelanggaran.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
+import { pembimbingRoutes } from './routes/pembimbing.routes';
 import { pengumumanRoutes } from './routes/pengumuman.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
@@ -468,6 +469,7 @@ export const app = new Elysia()
   .use(nilaiPraktikRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
+  .use(pembimbingRoutes)
   .use(bkdRoutes)
   .use(settingsRoutes)
   .use(skpiRoutes)

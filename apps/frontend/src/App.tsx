@@ -77,6 +77,7 @@ const MahasiswaKeluar = lazy(() => import('./routes/MahasiswaKeluar'));
 const ManajemenCuti = lazy(() => import('./routes/ManajemenCuti'));
 const MataKuliah = lazy(() => import('./routes/MataKuliah'));
 const MonitoringBimbingan = lazy(() => import('./routes/MonitoringBimbingan'));
+const PenetapanPembimbing = lazy(() => import('./routes/PenetapanPembimbing'));
 const PddiktiSync = lazy(() => import('./routes/PddiktiSync').then((m) => ({ default: m.PddiktiSync })));
 const Pelanggaran = lazy(() => import('./routes/Pelanggaran'));
 const Pengguna = lazy(() => import('./routes/Pengguna'));
@@ -428,6 +429,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'dosen', 'prodi']}>
                 <MonitoringBimbingan />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/penetapan-pembimbing"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
+                <PenetapanPembimbing />
               </ProtectedRoute>
             }
           />

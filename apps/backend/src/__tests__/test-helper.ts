@@ -51,6 +51,7 @@ import {
   pasalPelanggaran,
   passwordResets,
   pelanggaran,
+  pembimbingMahasiswa,
   pengajuanCuti,
   pengajuanYudisium,
   periodeAkademik,
@@ -139,6 +140,7 @@ export async function clearDatabase() {
   await db.delete(lampiranKegiatanSkpi);
   await db.delete(kegiatanMahasiswaSkpi);
   await db.delete(kategoriKegiatanSkpi);
+  await db.delete(pembimbingMahasiswa);
   await db.delete(mahasiswaKeluar);
   await db.delete(angsuranTagihan);
   await db.delete(tagihan);
