@@ -48,7 +48,15 @@ const TABLE_HEADER_TITLES = [
  * Lebar kolom (persentase, total 100%). Dengan `table-fixed`, header dan body
  * memakai lebar kolom yang identik sehingga keduanya tidak dapat bergeser.
  */
-const COL_WIDTHS = ['14%', '20%', '9%', '16%', '13%', '9.5%', '9.5%', '9%'];
+/**
+ * Lebar kolom (persentase, WAJIB total 100%). NIM sengaja dibuat sempit
+ * (11%) — kolom NIM hanya berisi kode pendek berfont mono, sehingga lebar
+ * berlebihnya hanya mendorong kolom lain dan membuat header terlihat tidak
+ * selaras dengan body. Ruang diberikan ke Nama/Prodi yang isinya panjang.
+ * Jumlahnya harus sama dengan jumlah header; `Table` otomatis mengabaikan
+ * `colWidths` bila tidak cocok, sehingga tabel tidak pernah salah sejajar.
+ */
+const COL_WIDTHS = ['11%', '22%', '8%', '17%', '14%', '9%', '9.5%', '9.5%'];
 
 interface DosenOpsi {
   id: number;

@@ -23,7 +23,15 @@ interface TableProps {
 }
 
 export function Table(props: TableProps) {
-  const fixed = () => Array.isArray(props.colWidths) && props.colWidths.length > 0;
+  /**
+   * Lebar kolom HANYA dipakai bila jumlahnya sama persis dengan jumlah header.
+   * Bila tidak, `table-fixed` + `<colgroup>` akan memetakan lebar ke kolom yang
+   * salah sehingga header terlihat tidak selaras dengan body — lebih aman
+   * kembali ke layout otomatis daripada menampilkan kolom yang bergeser.
+   */
+  const widths = () =>
+    Array.isArray(props.colWidths) && props.colWidths.length === props.headers.length ? props.colWidths : undefined;
+  const fixed = () => widths() !== undefined;
 
   return (
     // DESIGN.md: kartu utilitas = hairline 1px + radius 18px, TANPA shadow.
@@ -38,12 +46,12 @@ export function Table(props: TableProps) {
             // Dengannya: `table-fixed` + lebar minimum, sehingga pada layar sempit
             // terjadi scroll horizontal (bukan kolom tergencet) dan header tetap
             // persis sejajar dengan body.
-            fixed() ? 'table-fixed min-w-[880px]' : 'min-w-full'
+            fixed() ? 'table-fixed min-w-[960px]' : 'min-w-full'
           }`}
         >
           <Show when={fixed()}>
             <colgroup>
-              <For each={props.colWidths ?? []}>{(w) => <col style={{ width: w }} />}</For>
+              <For each={widths() ?? []}>{(w) => <col style={{ width: w }} />}</For>
             </colgroup>
           </Show>
           <thead class={props.stickyHeader ? 'sticky top-0 z-10 bg-parchment dark:bg-secondary-800' : undefined}>
