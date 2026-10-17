@@ -133,6 +133,51 @@ describe('System Settings — Enkripsi Nilai Rahasia', () => {
     expect(await SystemParameterService.getRaw('FEEDER_TIMEOUT_MS')).toBe('15000');
   });
 
+  it('menolak penulisan kunci env-only lewat endpoint utama maupun legacy PUT /settings', async () => {
+    const kunciEnvOnly = ['SETTINGS_SECRET_KEY', 'JWT_SECRET', 'SIGN_HMAC_KEYS', 'SIGN_ACTIVE_KID', 'VERIFY_BASE_URL'];
+
+    for (const key of kunciEnvOnly) {
+      const mainRes = await app.handle(
+        new Request(`http://localhost/system/parameters/${key}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: 'nilai-akali-13243546' }),
+        }),
+      );
+      expect(mainRes.status).toBe(400);
+      const mainBody = (await mainRes.json()) as { error: string };
+      expect(mainBody.error).toContain('environment server');
+
+      const legacyRes = await app.handle(
+        new Request('http://localhost/settings', {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value: 'nilai-akali-13243546' }),
+        }),
+      );
+      expect(legacyRes.status).toBe(400);
+      const legacyBody = (await legacyRes.json()) as { error: string };
+      expect(legacyBody.error).toContain('environment server');
+    }
+
+    // Tidak ada baris yang tersimpan untuk key tersebut.
+    const rows = await db.select().from(systemSettings);
+    expect(rows.some((r) => kunciEnvOnly.includes(r.key))).toBe(false);
+  });
+
+  it('env yang sudah diset tidak berubah lewat aplikasi', async () => {
+    const sebelum = process.env.SETTINGS_SECRET_KEY;
+    const res = await app.handle(
+      new Request('http://localhost/system/parameters/SETTINGS_SECRET_KEY', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: 'a'.repeat(64) }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(process.env.SETTINGS_SECRET_KEY).toBe(sebelum);
+  });
+
   it('GET /system/settings tidak pernah mengembalikan nilai rahasia', async () => {
     await SystemParameterService.set('FEEDER_PASSWORD', 'jangan-ditampilkan', 1);
     const res = await app.handle(

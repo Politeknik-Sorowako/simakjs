@@ -176,6 +176,32 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
 /** Parameter yang nilainya bersifat rahasia (di-mask pada respons API). */
 export const SECRET_PARAM_KEYS: ReadonlySet<string> = new Set(['FEEDER_PASSWORD']);
 
+/**
+ * Parameter yang HANYA dibaca dari environment server (`.env`), bukan dari
+ * `system_settings`. Menulisnya lewat aplikasi tidak berkefek apa pun — kode
+ * hanya melihat `process.env`. Selain itu, menyimpan kunci kriptografi di tabel
+ * yang sama justru membatalkan gunanya: kunci untuk membuka data terenkripsi
+ * harus berada di lapisan akses berbeda (pemilik OS/container), bukan di lapisan
+ * data yang justru ingin dilindungi. Karena itu penulisan key ini DITOLAK
+ * (400) pada `PUT /system/parameters/:key` maupun legacy `PUT /settings`,
+ * supaya admin tidak sempat mengira nilai yang diabaikan tersebut aktif.
+ */
+export const ENV_ONLY_PARAM_KEYS: ReadonlySet<string> = new Set([
+  // Kunci enkripsi parameter rahasia (PR #563)
+  'SETTINGS_SECRET_KEY',
+  // Autentikasi
+  'JWT_SECRET',
+  // Tanda tangan dokumen (QR signed-hash)
+  'SIGN_HMAC_KEYS',
+  'SIGN_ACTIVE_KID',
+  'VERIFY_BASE_URL',
+  // Integrasi pihak ketiga
+  'RESEND_API_KEY',
+  'EMAIL_FROM',
+  'TURNSTILE_SECRET_KEY',
+  'GOOGLE_CLIENT_SECRET',
+]);
+
 /** Konfigurasi ter-resolve untuk integrasi Neo Feeder PDDIKTI. */
 export interface FeederConfig {
   url: string;
@@ -432,6 +458,15 @@ export class SystemParameterService {
    */
   static validateParamValue(key: string, rawValue: string): ParamValueValidation {
     const value = String(rawValue);
+    // Kunci & kredensial yang hanya dibaca dari environment server tidak boleh
+    // ditulis lewat aplikasi — nilai di tabel akan diabaikan dan dapat memberi
+    // kesan aman yang palsu (lihat ENV_ONLY_PARAM_KEYS).
+    if (ENV_ONLY_PARAM_KEYS.has(key)) {
+      return {
+        ok: false,
+        error: `Parameter "${key}" hanya dapat diatur melalui environment server (.env) dan tidak dapat diubah dari aplikasi. Putuskan barisnya dari berkas .env lalu mulai ulang backend.`,
+      };
+    }
     if (key === 'SESSION_DURATION_MINUTES') {
       const minutes = Number(value);
       if (!Number.isFinite(minutes) || minutes < SESSION_DURATION_MIN || minutes > SESSION_DURATION_MAX) {
