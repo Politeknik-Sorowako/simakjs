@@ -28,6 +28,15 @@ const SLOTS: SlotMeta[] = [
   },
 ];
 
+/** Header tabel (dipakai juga sebagai tooltip saat header tidak boleh wrap). */
+const TABLE_HEADERS = ['NIM', 'Mahasiswa', 'Angkatan', 'Program Studi', 'Dosen PA', ...SLOTS.map((s) => s.label)];
+
+/**
+ * Lebar kolom (persentase, total 100%). Dengan `table-fixed`, header dan body
+ * memakai lebar kolom yang identik sehingga keduanya tidak dapat bergeser.
+ */
+const COL_WIDTHS = ['13%', '19%', '9%', '15%', '12%', '11%', '10.5%', '10.5%'];
+
 interface DosenOpsi {
   id: number;
   nama: string;
@@ -234,7 +243,7 @@ export default function PenetapanPembimbing() {
           dan filter lain ditulis langsung sebagai baris kontrol, bukan kartu
           terpisah, agar hierarki tetap tenang.
         */}
-        <div class="sticky top-16 z-30 -mx-4 px-4 sm:-mx-6 sm:px-6 bg-parchment/80 dark:bg-secondary-950/80 backdrop-blur-md border-b border-hairline dark:border-secondary-800">
+        <div class="sticky top-16 z-30 -mx-4 px-4 md:-mx-8 md:px-8 bg-parchment/80 dark:bg-secondary-950/80 backdrop-blur-md border-b border-hairline dark:border-secondary-800">
           <div class="flex flex-col gap-3 py-4">
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div class="min-w-0">
@@ -342,7 +351,14 @@ export default function PenetapanPembimbing() {
         </div>
 
         <Show when={!list.loading} fallback={<p class="text-sm text-secondary-500">Memuat data…</p>}>
-          <Table headers={['NIM', 'Mahasiswa', 'Angkatan', 'Prodi', 'Dosen PA', ...SLOTS.map((s) => s.label)]}>
+          <Table
+            headers={TABLE_HEADERS}
+            // Lebar kolom eksplisit + table-fixed: header dan body memakai lebar
+            // kolom yang sama persis, sehingga tidak bisa bergeser saat tabel
+            // digeser horizontal atau pada viewport sempit.
+            colWidths={COL_WIDTHS}
+            headerTitles={TABLE_HEADERS}
+          >
             <tbody>
               <For
                 each={list()?.data ?? []}

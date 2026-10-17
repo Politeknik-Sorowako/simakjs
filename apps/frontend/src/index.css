@@ -139,6 +139,26 @@
     height: 1.25rem;
   }
 
+  /*
+   * Saat collapsed, tiap grup menu menampilkan IKON SEKSI yang bermakna
+   * (database, kalender, toga, grafik, dll) alih-alih chevron panah `>` yang
+   * tidak menjelaskan apa pun. Chevron disembunyikan; perilaku klik tetap sama
+   * (klik grup → sidebar expand lewat onExpand).
+   */
+  aside.sidebar-collapsed .sidebar-section-chevron {
+    display: none;
+  }
+
+  aside.sidebar-collapsed .sidebar-section-icon {
+    display: block;
+    color: #cccccc;
+  }
+
+  aside.sidebar-collapsed nav button:hover .sidebar-section-icon,
+  aside.sidebar-collapsed nav button:focus-visible .sidebar-section-icon {
+    color: #2997ff;
+  }
+
   aside.sidebar-collapsed .sidebar-section-title,
   aside.sidebar-collapsed .sidebar-submenu,
   aside.sidebar-collapsed .sidebar-brand-text,
