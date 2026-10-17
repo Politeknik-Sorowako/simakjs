@@ -92,6 +92,7 @@ const ENTITY_UNION = [
   t.Literal('mahasiswa'),
   t.Literal('kelas'),
   t.Literal('krs-nilai'),
+  t.Literal('dosen-pengajar'),
   t.Literal('transkrip'),
   t.Literal('aktivitas-mahasiswa'),
 ];

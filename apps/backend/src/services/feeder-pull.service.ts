@@ -1,5 +1,14 @@
 import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
-import { dosen, kelasKuliah, krs, mahasiswa, mataKuliah, periodeAkademik, programStudi } from '../models/schema';
+import {
+  dosen,
+  dosenPengajarKelas,
+  kelasKuliah,
+  krs,
+  mahasiswa,
+  mataKuliah,
+  periodeAkademik,
+  programStudi,
+} from '../models/schema';
 import { db } from '../utils/db';
 import { FeederService } from './feeder.service';
 import { type FeederConfig, SystemParameterService } from './system-parameter.service';
@@ -12,6 +21,7 @@ export type PullEntityKey =
   | 'mahasiswa'
   | 'kelas'
   | 'krs-nilai'
+  | 'dosen-pengajar'
   | 'transkrip'
   | 'aktivitas-mahasiswa';
 export type PullEntityCategory = 'referensi' | 'master' | 'transaksional';
@@ -131,6 +141,14 @@ export const PULL_ENTITY_CATALOG: ReadonlyArray<PullEntityMeta> = [
     feederAct: 'GetRiwayatNilaiMahasiswa',
     description:
       'Menarik KRS & nilai mahasiswa yang sudah dilaporkan ke Feeder. KRS baru dibuat sebagai "sudah disetujui"; nilai hanya diisi bila kosong (atau ditimpa bila resolusi konflik = Feeder). Butuh Mahasiswa + Kelas Kuliah tertaut.',
+  },
+  {
+    key: 'dosen-pengajar',
+    label: 'Penugasan Dosen Pengajar Kelas',
+    category: 'transaksional',
+    feederAct: 'GetAktivitasMengajarDosen',
+    description:
+      'Menarik penugasan dosen pengajar per kelas kuliah dari Feeder dan menautkannya ke Dosen + Kelas lokal. SKS beban mengajar diisi bila kosong. Butuh Master (Dosen) & Kelas Kuliah sudah tertaut.',
   },
   {
     key: 'transkrip',
@@ -802,6 +820,29 @@ export class FeederPullService {
       .where(and(inArray(krs.mahasiswaId, mahasiswaIds), inArray(krs.kelasKuliahId, kelasKuliahIds)));
   }
 
+  /** Baris Dosen lokal yang cocok dengan id_dosen Feeder. */
+  private static async loadDosenByFeederIds(ids: string[]): Promise<Array<typeof dosen.$inferSelect>> {
+    if (ids.length === 0) return [];
+    return await db
+      .select()
+      .from(dosen)
+      .where(inArray(sql`lower(${dosen.idPddikti})`, ids));
+  }
+
+  /** Baris penugasan dosen pengajar lokal untuk kombinasi dosen & kelas yang disebut baris Feeder. */
+  private static async loadDosenPengajarScoped(
+    dosenIds: number[],
+    kelasKuliahIds: number[],
+  ): Promise<Array<typeof dosenPengajarKelas.$inferSelect>> {
+    if (dosenIds.length === 0 || kelasKuliahIds.length === 0) return [];
+    return await db
+      .select()
+      .from(dosenPengajarKelas)
+      .where(
+        and(inArray(dosenPengajarKelas.dosenId, dosenIds), inArray(dosenPengajarKelas.kelasKuliahId, kelasKuliahIds)),
+      );
+  }
+
   /** Bandingkan baris `GetListKelasKuliah` dengan `kelas_kuliah` lokal. */
   static diffKelas(
     feederRows: Array<Record<string, unknown>>,
@@ -1057,7 +1098,148 @@ export class FeederPullService {
     return items;
   }
 
-  /** Pratinjau ringkasan transkrip (`GetTranskripMahasiswa`) — tidak diterapkan ke DB. */
+  /**
+   * Bandingkan baris `GetAktivitasMengajarDosen` (penugasan dosen per kelas) dengan
+   * tabel `dosen_pengajar_kelas` lokal. Feeder dapat mengembalikan beberapa substansi
+   * untuk pasangan dosen+kelas yang sama; barisnya diagregasi menjadi satu penugasan
+   * (SKS dijumlahkan) agar tidak dibuat penugasan ganda.
+   */
+  static diffDosenPengajar(
+    feederRows: Array<Record<string, unknown>>,
+    localRows: Array<typeof dosenPengajarKelas.$inferSelect>,
+    localDosen: Array<typeof dosen.$inferSelect>,
+    localKelas: Array<typeof kelasKuliah.$inferSelect>,
+  ): PullPreviewItem[] {
+    const dosenByPddikti = new Map<string, typeof dosen.$inferSelect>();
+    for (const d of localDosen) {
+      if (d.idPddikti) dosenByPddikti.set(d.idPddikti.trim().toLowerCase(), d);
+    }
+    const kelasByPddikti = new Map<string, typeof kelasKuliah.$inferSelect>();
+    for (const k of localKelas) {
+      if (k.idPddikti) kelasByPddikti.set(k.idPddikti.trim().toLowerCase(), k);
+    }
+    const dpkByPddikti = new Map<string, typeof dosenPengajarKelas.$inferSelect>();
+    const dpkByDosenKelas = new Map<string, typeof dosenPengajarKelas.$inferSelect>();
+    for (const r of localRows) {
+      if (r.idPddikti) dpkByPddikti.set(r.idPddikti.trim().toLowerCase(), r);
+      dpkByDosenKelas.set(`${r.dosenId}:${r.kelasKuliahId}`, r);
+    }
+
+    // Agregasi per pasangan (dosen, kelas): SKS tiap substansi dijumlahkan,
+    // baris pertama menentukan id_aktivitas yang dipakai sebagai id penautan.
+    const agg = new Map<string, { first: Record<string, unknown>; sks: number }>();
+    for (const raw of feederRows) {
+      const idDosen = asStr(raw.id_dosen);
+      const idKelas = asStr(raw.id_kelas_kuliah);
+      if (!idDosen || !idKelas) continue;
+      const key = `${idDosen}:${idKelas}`;
+      const sks = asInt(raw.sks_beban_mengajar) || asInt(raw.sks_substansi_total) || asInt(raw.sks_tatap_muka);
+      const prev = agg.get(key);
+      if (prev) prev.sks += sks;
+      else agg.set(key, { first: raw, sks });
+    }
+
+    const items: PullPreviewItem[] = [];
+    for (const { first, sks } of agg.values()) {
+      const idAktivitas = asStr(first.id_aktivitas);
+      const idDosen = asStr(first.id_dosen);
+      const idKelas = asStr(first.id_kelas_kuliah);
+      if (!idAktivitas) continue;
+
+      const dosenRef = dosenByPddikti.get(idDosen.toLowerCase()) ?? null;
+      const kelasRef = kelasByPddikti.get(idKelas.toLowerCase()) ?? null;
+      const labelDosen = dosenRef?.nama ?? `Dosen ${idDosen}`;
+      const labelKelas = kelasRef ? kelasRef.namaKelas : `Kelas ${idKelas}`;
+      const label = `${labelDosen} — ${labelKelas}`;
+      const sksBebanMengajar = sks > 0 ? sks : null;
+
+      if (!dosenRef) {
+        items.push({
+          feederId: idAktivitas,
+          naturalKey: `${idDosen}:${idKelas}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idDosen, idKelas },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: `Dosen ${idDosen} belum tertaut di aplikasi — tarik Master (Dosen) terlebih dahulu.`,
+        });
+        continue;
+      }
+      if (!kelasRef) {
+        items.push({
+          feederId: idAktivitas,
+          naturalKey: `${idDosen}:${idKelas}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idDosen, idKelas },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: `Kelas kuliah ${idKelas} belum tertaut di aplikasi — tarik Transaksional (Kelas Kuliah) terlebih dahulu.`,
+        });
+        continue;
+      }
+
+      const feederData = {
+        dosenId: dosenRef.id,
+        kelasKuliahId: kelasRef.id,
+        sksBebanMengajar,
+      };
+      const local =
+        dpkByPddikti.get(idAktivitas.toLowerCase()) ?? dpkByDosenKelas.get(`${dosenRef.id}:${kelasRef.id}`) ?? null;
+
+      if (!local) {
+        items.push({
+          feederId: idAktivitas,
+          naturalKey: `${dosenRef.id}:${kelasRef.id}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData,
+          localData: null,
+          diffs: [],
+          canApply: true,
+          note: 'Penugasan belum ada di aplikasi — akan dibuat beserta SKS beban mengajarnya.',
+        });
+        continue;
+      }
+
+      const localData = {
+        dosenId: local.dosenId,
+        kelasKuliahId: local.kelasKuliahId,
+        sksBebanMengajar: local.sksBebanMengajar ?? null,
+      };
+      const diffs = FeederPullService.computeDiffs(['sksBebanMengajar'], feederData, localData);
+      const idLinked = (local.idPddikti ?? '').trim().toLowerCase() === idAktivitas.toLowerCase();
+      const status: PullDiffStatus =
+        diffs.length > 0 ? (local.sksBebanMengajar === null ? 'isi' : 'konflik') : idLinked ? 'sama' : 'link_id';
+
+      items.push({
+        feederId: idAktivitas,
+        naturalKey: `${local.dosenId}:${local.kelasKuliahId}`,
+        label,
+        status,
+        localId: local.id,
+        localIdPddikti: local.idPddikti ?? null,
+        feederData,
+        localData,
+        diffs,
+        canApply: status !== 'sama',
+        note:
+          status === 'isi'
+            ? 'SKS beban mengajar lokal masih kosong — akan diisi dari nilai yang dilaporkan ke Feeder.'
+            : undefined,
+      });
+    }
+    return items;
+  }
   static diffTranskrip(
     feederRows: Array<Record<string, unknown>>,
     localMahasiswa: Array<typeof mahasiswa.$inferSelect>,
@@ -1223,6 +1405,18 @@ export class FeederPullService {
         localKelas.map((k) => k.id),
       );
       items = FeederPullService.diffKrsNilai(feederRows, localKrs, localMhs, localKelas);
+    } else if (entity === 'dosen-pengajar') {
+      const dosenIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_dosen)]);
+      const kelasIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_kelas_kuliah)]);
+      const [localDosen, localKelas] = await Promise.all([
+        FeederPullService.loadDosenByFeederIds(dosenIds),
+        FeederPullService.loadKelasScoped(kelasIds, []),
+      ]);
+      const localRows = await FeederPullService.loadDosenPengajarScoped(
+        localDosen.map((d) => d.id),
+        localKelas.map((k) => k.id),
+      );
+      items = FeederPullService.diffDosenPengajar(feederRows, localRows, localDosen, localKelas);
     } else if (entity === 'transkrip') {
       const nims = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nim) || asStr(r.nipd)]);
       const localMhs = await FeederPullService.loadMahasiswaByNims(nims);
@@ -1602,6 +1796,47 @@ export class FeederPullService {
             }
             await db.update(krs).set(setPayload).where(eq(krs.id, item.localId));
             if (tulisNilai) updated++;
+            else linkedOnly++;
+          }
+        } else if (entity === 'dosen-pengajar') {
+          const dosenId = typeof item.feederData.dosenId === 'number' ? item.feederData.dosenId : 0;
+          const kelasKuliahId = typeof item.feederData.kelasKuliahId === 'number' ? item.feederData.kelasKuliahId : 0;
+          // SKS Feeder teragregasi menjadi bilangan bulat; 0/null → null (tidak diketahui).
+          const sksRaw = typeof item.feederData.sksBebanMengajar === 'number' ? item.feederData.sksBebanMengajar : 0;
+          const sksBebanMengajar = sksRaw > 0 ? Math.round(sksRaw) : null;
+          if (!dosenId || !kelasKuliahId) {
+            skipped++;
+            continue;
+          }
+
+          if (item.status === 'baru') {
+            const insertedRows = await db
+              .insert(dosenPengajarKelas)
+              .values({
+                dosenId,
+                kelasKuliahId,
+                sksBebanMengajar,
+                idPddikti: item.feederId,
+                isSynced: true,
+                lastSyncAt: now,
+              })
+              .onConflictDoNothing()
+              .returning({ id: dosenPengajarKelas.id });
+            if (insertedRows.length > 0) inserted++;
+            else skipped++;
+          } else if (typeof item.localId === 'number') {
+            const setPayload: Partial<typeof dosenPengajarKelas.$inferInsert> = {
+              idPddikti: item.feederId,
+              isSynced: true,
+              lastSyncAt: now,
+            };
+            // 'isi' (SKS lokal masih kosong) atau konflik yang dipilih mengikuti Feeder → tulis SKS.
+            const tulisSks = item.status === 'isi' || (item.status === 'konflik' && conflictResolution === 'feeder');
+            if (tulisSks && sksBebanMengajar !== null) {
+              setPayload.sksBebanMengajar = sksBebanMengajar;
+            }
+            await db.update(dosenPengajarKelas).set(setPayload).where(eq(dosenPengajarKelas.id, item.localId));
+            if (tulisSks && sksBebanMengajar !== null) updated++;
             else linkedOnly++;
           }
         }
