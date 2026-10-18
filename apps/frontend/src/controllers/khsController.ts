@@ -243,7 +243,10 @@ export type PullEntityKey =
   | 'krs-nilai'
   | 'dosen-pengajar'
   | 'transkrip'
-  | 'aktivitas-mahasiswa';
+  | 'aktivitas-mahasiswa'
+  | 'anggota-aktivitas'
+  | 'pembimbing-aktivitas'
+  | 'konversi-aktivitas';
 /**
  * `isi` → baris lokal sudah ada tetapi field target masih kosong (nilai diisi dari Feeder).
  * `link_id`` → hanya menautkan id_pddikti, nilai lokal dipertahankan.

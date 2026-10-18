@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { useToast } from '../contexts/ToastContext';
+import { type AktivitasMbkm, aktivitasMbkmController } from '../controllers/aktivitasMbkmController';
 import {
   type ConflictResolution,
   khsController,
@@ -35,9 +36,20 @@ export function PddiktiSync() {
 
   const [selectedEntity, setSelectedEntity] = createSignal<PullEntityKey>('semester');
   const [feederFilter, setFeederFilter] = createSignal('');
+  const [selectedAktivitasPddiktiId, setSelectedAktivitasPddiktiId] = createSignal('');
   const [statusFilter, setStatusFilter] = createSignal<'actionable' | 'all' | PullDiffStatus>('actionable');
   const [searchQuery, setSearchQuery] = createSignal('');
   const [conflictResolution, setConflictResolution] = createSignal<ConflictResolution>('lokal');
+
+  // Daftar Aktivitas MBKM lokal yang sudah memiliki idPddikti untuk dropdown filter rincian
+  const [aktivitasList] = createResource(async () => {
+    try {
+      const res = await aktivitasMbkmController.list({ limit: 100 });
+      return res.data.filter((a) => Boolean(a.idPddikti));
+    } catch {
+      return [];
+    }
+  });
 
   const [confirmingPull, setConfirmingPull] = createSignal(false);
   const [loadingPreview, setLoadingPreview] = createSignal(false);
@@ -46,6 +58,7 @@ export function PddiktiSync() {
   const [previewData, setPreviewData] = createSignal<PullPreviewResult | null>(null);
   const [selectedIds, setSelectedIds] = createSignal<string[]>([]);
   const [applyResult, setApplyResult] = createSignal<PullApplyResult | null>(null);
+  const [applyProgress, setApplyProgress] = createSignal<string | null>(null);
 
   const [isSyncing, setIsSyncing] = createSignal(false);
   const [syncLogs, setSyncLogs] = createSignal<string[]>([]);
@@ -102,6 +115,7 @@ export function PddiktiSync() {
     setSelectedIds([]);
     setPreviewError('');
     setApplyResult(null);
+    setSelectedAktivitasPddiktiId('');
   };
 
   const executeFetchPreview = async () => {
@@ -133,27 +147,69 @@ export function PddiktiSync() {
     }
     setApplyingPull(true);
     setPreviewError('');
+    setApplyProgress(null);
+
+    const CHUNK_SIZE = 25;
+    const total = ids.length;
+    let accumulatedInserted = 0;
+    let accumulatedUpdated = 0;
+    let accumulatedLinkedOnly = 0;
+    let accumulatedSkipped = 0;
+    const accumulatedErrors: Array<{ feederId: string; error: string }> = [];
+
     try {
-      const res = await khsController.applyPull({
+      for (let i = 0; i < total; i += CHUNK_SIZE) {
+        const chunk = ids.slice(i, i + CHUNK_SIZE);
+        const chunkNum = Math.floor(i / CHUNK_SIZE) + 1;
+        const totalChunks = Math.ceil(total / CHUNK_SIZE);
+
+        if (totalChunks > 1) {
+          setApplyProgress(
+            `Menerapkan baris ${i + 1}–${Math.min(i + CHUNK_SIZE, total)} dari ${total} data (Batch ${chunkNum}/${totalChunks})...`,
+          );
+        }
+
+        const res = await khsController.applyPull({
+          entity: selectedEntity(),
+          feederIds: chunk,
+          conflictResolution: conflictResolution(),
+          filter: feederFilter(),
+        });
+
+        accumulatedInserted += res.inserted;
+        accumulatedUpdated += res.updated;
+        accumulatedLinkedOnly += res.linkedOnly;
+        accumulatedSkipped += res.skipped;
+        if (res.errors && res.errors.length > 0) {
+          accumulatedErrors.push(...res.errors);
+        }
+      }
+
+      const combinedResult: PullApplyResult = {
         entity: selectedEntity(),
-        feederIds: ids,
         conflictResolution: conflictResolution(),
-        filter: feederFilter(),
-      });
+        inserted: accumulatedInserted,
+        updated: accumulatedUpdated,
+        linkedOnly: accumulatedLinkedOnly,
+        skipped: accumulatedSkipped,
+        errors: accumulatedErrors,
+      };
+
       toast.showToast(
-        `Berhasil menerapkan data (${res.inserted} baru, ${res.linkedOnly} ditautkan, ${res.updated} diperbarui).`,
+        `Berhasil menerapkan data (${accumulatedInserted} baru, ${accumulatedLinkedOnly} ditautkan, ${accumulatedUpdated} diperbarui).`,
         'success',
       );
       refetchStats();
       await executeFetchPreview();
       // Setelah refresh preview (yang mereset applyResult) baru tampilkan ringkasan hasil.
-      setApplyResult(res);
+      setApplyResult(combinedResult);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Gagal menerapkan data Feeder ke lokal';
       setPreviewError(msg);
       toast.showToast(msg, 'error');
     } finally {
       setApplyingPull(false);
+      setApplyProgress(null);
     }
   };
 
@@ -326,8 +382,51 @@ export function PddiktiSync() {
                         </Show>
                       </div>
                       <p class="text-xs text-secondary-600 dark:text-secondary-300">{meta().description}</p>
+
+                      {/* Dropdown pemilih aktivitas untuk rincian MBKM (mencegah timeout Feeder) */}
+                      <Show
+                        when={
+                          selectedEntity() === 'anggota-aktivitas' ||
+                          selectedEntity() === 'pembimbing-aktivitas' ||
+                          selectedEntity() === 'konversi-aktivitas'
+                        }
+                      >
+                        <div class="rounded-lg border border-brand-200 bg-brand-50/60 p-3 dark:border-brand-800 dark:bg-brand-900/20">
+                          <label class="flex flex-col gap-1 text-xs font-semibold text-secondary-700 dark:text-secondary-200">
+                            Pilih Aktivitas MBKM Lokal (Filter Cepat)
+                            <select
+                              class="rounded-lg border border-secondary-300 bg-white px-3 py-2 text-xs text-secondary-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-800 dark:text-white"
+                              value={selectedAktivitasPddiktiId()}
+                              onChange={(e) => {
+                                const val = e.currentTarget.value;
+                                setSelectedAktivitasPddiktiId(val);
+                                if (val) {
+                                  setFeederFilter(`id_aktivitas = '${val}'`);
+                                } else {
+                                  setFeederFilter('');
+                                }
+                              }}
+                            >
+                              <option value="">Semua Aktivitas Lokal Tertaut (Otomatis)</option>
+                              <For each={aktivitasList() ?? []}>
+                                {(akt) => (
+                                  <option value={akt.idPddikti ?? ''}>
+                                    {akt.periodeId ? `[${akt.periodeId}] ` : ''}
+                                    {akt.judul} ({akt.jenisNama ?? 'MBKM'})
+                                  </option>
+                                )}
+                              </For>
+                            </select>
+                          </label>
+                          <p class="mt-1 text-[11px] text-secondary-500 dark:text-secondary-400">
+                            💡 Memilih 1 aktivitas membuat penarikan data selesai dalam hitungan detik. Jika dibiarkan
+                            otomatis, sistem akan mengambil rincian dari aktivitas lokal yang sudah ditarik.
+                          </p>
+                        </div>
+                      </Show>
+
                       <label class="flex flex-col gap-1 text-xs font-semibold text-secondary-600 dark:text-secondary-300">
-                        Filter Feeder Opsional (klausa filter WS Feeder, kosongkan untuk semua)
+                        Filter Feeder (klausa filter WS Feeder, terisi otomatis saat memilih aktivitas)
                         <Input
                           type="text"
                           value={feederFilter()}
@@ -516,6 +615,14 @@ export function PddiktiSync() {
                         </div>
 
                         <div class="flex items-center justify-end gap-2">
+                          <Show when={applyProgress()}>
+                            {(prog) => (
+                              <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-action dark:text-brand-400 animate-pulse">
+                                <span class="inline-block h-2 w-2 rounded-full bg-action animate-ping" />
+                                {prog()}
+                              </span>
+                            )}
+                          </Show>
                           <span class="text-xs text-secondary-500 dark:text-secondary-400">
                             {selectedIds().length} baris dipilih
                           </span>

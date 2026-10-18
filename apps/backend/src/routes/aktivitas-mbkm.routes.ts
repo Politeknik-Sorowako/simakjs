@@ -39,4 +39,5 @@ export const aktivitasMbkmRoutes = new Elysia({ prefix: '/aktivitas-mbkm' })
   // Override status di luar alur normal (admin/super_admin/prodi/kaprodi).
   // Alasan wajib dan tersimpan permanen di `aktivitas_mbkm_status_log`.
   .post('/:id/override-status', AktivitasMbkmController.overrideStatus, overrideStatusSchema)
-  .get('/:id/status-log', AktivitasMbkmController.getStatusLog, statusLogSchema);
+  .get('/:id/status-log', AktivitasMbkmController.getStatusLog, statusLogSchema)
+  .post('/:id/sync-feeder', AktivitasMbkmController.syncFeeder, aktivitasIdSchema);

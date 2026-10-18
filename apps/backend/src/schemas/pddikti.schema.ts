@@ -95,6 +95,9 @@ const ENTITY_UNION = [
   t.Literal('dosen-pengajar'),
   t.Literal('transkrip'),
   t.Literal('aktivitas-mahasiswa'),
+  t.Literal('anggota-aktivitas'),
+  t.Literal('pembimbing-aktivitas'),
+  t.Literal('konversi-aktivitas'),
 ];
 
 const PULL_ENTITY_KEYS = {

@@ -530,6 +530,9 @@ describe('PDDIKTI Feeder & Exam Eligibility API', () => {
         'dosen-pengajar',
         'transkrip',
         'aktivitas-mahasiswa',
+        'anggota-aktivitas',
+        'pembimbing-aktivitas',
+        'konversi-aktivitas',
       ]);
 
       // 2. Preview & Apply Semester (20231 konflik nama, 20241 baru)

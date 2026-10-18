@@ -429,22 +429,60 @@ describe('Modul Aktivitas MBKM', () => {
     expect(rows[0].periodeId).toBe(periodeId);
     expect(rows[0].programStudiId).toBe(prodiId);
 
-    // Relasi detail (anggota, pembimbing, konversi) tersinkron penuh
+    // Preview dan Apply Anggota Aktivitas MBKM
+    const previewAnggota = await FeederPullService.preview('anggota-aktivitas');
+    expect(previewAnggota.summary.totalFeeder).toBe(1);
+    expect(previewAnggota.items[0].status).toBe('baru');
+    expect(previewAnggota.items[0].canApply).toBe(true);
+
+    const appliedAnggota = await FeederPullService.apply('anggota-aktivitas', ['UUID-ANG-1'], 'lokal', {
+      appliedByUserId: actorId,
+    });
+    expect(appliedAnggota.inserted).toBe(1);
+
     const anggotaRows = await db.select().from(anggotaAktivitasMbkm);
     expect(anggotaRows.length).toBe(1);
     expect(anggotaRows[0].mahasiswaId).toBe(mhsId);
     expect(anggotaRows[0].peran).toBe('ketua');
+
+    // Preview dan Apply Pembimbing Aktivitas MBKM
+    const previewBimbingan = await FeederPullService.preview('pembimbing-aktivitas');
+    expect(previewBimbingan.summary.totalFeeder).toBe(1);
+    expect(previewBimbingan.items[0].status).toBe('baru');
+    expect(previewBimbingan.items[0].canApply).toBe(true);
+
+    const appliedBimbingan = await FeederPullService.apply('pembimbing-aktivitas', ['UUID-BIMB-1'], 'lokal', {
+      appliedByUserId: actorId,
+    });
+    expect(appliedBimbingan.inserted).toBe(1);
 
     const bimbinganRows = await db.select().from(bimbinganAktivitasMbkm);
     expect(bimbinganRows.length).toBe(1);
     expect(bimbinganRows[0].dosenId).toBe(dosenId);
     expect(bimbinganRows[0].kategori).toBe('pembimbing');
 
+    // Preview dan Apply Konversi Aktivitas MBKM
+    const previewKonversi = await FeederPullService.preview('konversi-aktivitas');
+    expect(previewKonversi.summary.totalFeeder).toBe(1);
+    expect(previewKonversi.items[0].status).toBe('baru');
+    expect(previewKonversi.items[0].canApply).toBe(true);
+
+    const appliedKonversi = await FeederPullService.apply('konversi-aktivitas', ['UUID-KONV-1'], 'lokal', {
+      appliedByUserId: actorId,
+    });
+    expect(appliedKonversi.inserted).toBe(1);
+
     const konversiRows = await db.select().from(konversiAktivitasMbkm);
     expect(konversiRows.length).toBe(1);
     expect(konversiRows[0].sksDiakui).toBe(20);
 
-    // Preview kedua → 'sama'; apply ulang tidak menggandakan baris.
+    // Uji coba endpoint POST /aktivitas-mbkm/:id/sync-feeder
+    const syncRes = await post(`/aktivitas-mbkm/${rows[0].id}/sync-feeder`, adminToken, {});
+    expect(syncRes.status).toBe(200);
+    const syncJson = (await syncRes.json()) as { message: string; data: { anggota: number } };
+    expect(syncJson.data.anggota).toBe(1);
+
+    // Preview kedua aktivitas → 'sama'; apply ulang tidak menggandakan baris.
     const preview2 = await FeederPullService.preview('aktivitas-mahasiswa');
     expect(preview2.items[0].status).toBe('sama');
     const applied2 = await FeederPullService.apply('aktivitas-mahasiswa', ['UUID-AKT-1'], 'lokal', {
