@@ -253,13 +253,30 @@ export class TugasAkhirSidangService {
   }
 
   /**
+   * Konversi Nilai Skala 0 - 10 ke Huruf Mutu Resmi BPA Politeknik Sorowako
+   */
+  static konversiNilaiBpa(nilai: number): { huruf: string; indeks: number; keterangan: string } {
+    if (nilai >= 8.5) return { huruf: 'A', indeks: 4.0, keterangan: 'Sangat Istimewa (Lulus)' };
+    if (nilai >= 8.0) return { huruf: 'A-', indeks: 3.7, keterangan: 'Istimewa (Lulus)' };
+    if (nilai >= 7.5) return { huruf: 'B+', indeks: 3.3, keterangan: 'Sangat Baik (Lulus)' };
+    if (nilai >= 7.0) return { huruf: 'B', indeks: 3.0, keterangan: 'Baik (Lulus)' };
+    if (nilai >= 6.3) return { huruf: 'B-', indeks: 2.7, keterangan: 'Cukup Baik (Lulus)' };
+    if (nilai >= 5.7) return { huruf: 'C+', indeks: 2.3, keterangan: 'Lebih dari Cukup (Lulus Bersyarat)' };
+    if (nilai >= 5.1) return { huruf: 'C', indeks: 2.0, keterangan: 'Cukup (Lulus Bersyarat)' };
+    if (nilai >= 4.6) return { huruf: 'D+', indeks: 1.5, keterangan: 'Kurang (Sidang Ulang)' };
+    if (nilai >= 4.0) return { huruf: 'D', indeks: 1.0, keterangan: 'Sangat Kurang (Sidang Ulang)' };
+    return { huruf: 'E', indeks: 0.0, keterangan: 'Gagal / Tidak Lulus' };
+  }
+
+  /**
    * Mengambil kriteria rubrik penilaian untuk prodi & jenis sidang
+   * Mengakomodasi Kategori A (Pembimbingan - Individu 30%), B (Alat/Mesin - Kelompok 35%), C (Laporan - Kelompok 35%)
    */
   static async getRubrikKriteria(taId: number, jenisSidang: string) {
     const [ta] = await db.select().from(tugasAkhir).where(eq(tugasAkhir.id, taId)).limit(1);
     if (!ta) throw new Error('Data tugas akhir tidak ditemukan.');
 
-    let kriteria = await db
+    const kriteria = await db
       .select()
       .from(tugasAkhirRubrikKriteria)
       .where(
@@ -271,21 +288,218 @@ export class TugasAkhirSidangService {
       )
       .orderBy(asc(tugasAkhirRubrikKriteria.urutan));
 
-    // Jika prodi belum punya rubrik custom, sediakan rubrik standar vokasi
+    // Jika prodi belum punya rubrik custom di database, sediakan rubrik standar formulir vokasi resmi
     if (kriteria.length === 0) {
       if (jenisSidang === 'proposal') {
         return [
-          { id: 1, kode: 'K1', nama: 'Sistematika & Kerapian Dokumen Proposal', bobot: 20, isIndividu: false },
-          { id: 2, kode: 'K2', nama: 'Urgensi Masalah & Relevansi Vokasi', bobot: 25, isIndividu: false },
-          { id: 3, kode: 'K3', nama: 'Ketepatan Metodologi & Rancangan Desain', bobot: 25, isIndividu: false },
-          { id: 4, kode: 'K4', nama: 'Presentasi & Penguasaan Materi Ilmiah', bobot: 30, isIndividu: true },
+          {
+            id: 101,
+            kode: 'P.1',
+            kategori: 'umum',
+            nama: 'Sistematika & Kerapian Dokumen Proposal',
+            bobot: 20,
+            isIndividu: false,
+            urutan: 1,
+          },
+          {
+            id: 102,
+            kode: 'P.2',
+            kategori: 'umum',
+            nama: 'Urgensi Masalah & Relevansi Vokasi',
+            bobot: 25,
+            isIndividu: false,
+            urutan: 2,
+          },
+          {
+            id: 103,
+            kode: 'P.3',
+            kategori: 'umum',
+            nama: 'Ketepatan Metodologi & Rancangan Desain',
+            bobot: 25,
+            isIndividu: false,
+            urutan: 3,
+          },
+          {
+            id: 104,
+            kode: 'P.4',
+            kategori: 'umum',
+            nama: 'Presentasi & Penguasaan Materi Ilmiah',
+            bobot: 30,
+            isIndividu: true,
+            urutan: 4,
+          },
         ];
       }
+
+      // Standar Sidang Akhir / Tugas Akhir Vokasi (Kategori A, B, C)
       return [
-        { id: 5, kode: 'K5', nama: 'Fungsionalitas & Realisasi Prototipe / Produk', bobot: 35, isIndividu: false },
-        { id: 6, kode: 'K6', nama: 'Kualitas Analisis & Pembahasan Data Pengujian', bobot: 25, isIndividu: false },
-        { id: 7, kode: 'K7', nama: 'Format Laporan & Luaran Publikasi/HAKI', bobot: 15, isIndividu: false },
-        { id: 8, kode: 'K8', nama: 'Penguasaan Individu & Tanya Jawab Komprehensif', bobot: 25, isIndividu: true },
+        // KATEGORI A: PEMBIMBINGAN (Individu, Total Bobot 30%)
+        {
+          id: 201,
+          kode: 'A.1',
+          kategori: 'pembimbingan',
+          nama: 'Kehadiran dan Keaktifan',
+          bobot: 20,
+          isIndividu: true,
+          urutan: 1,
+        },
+        {
+          id: 202,
+          kode: 'A.2',
+          kategori: 'pembimbingan',
+          nama: 'Inisiatif, Kreatifitas, Kemampuan Akademis dan Kecepatan Kerja/Tugas',
+          bobot: 30,
+          isIndividu: true,
+          urutan: 2,
+        },
+        {
+          id: 203,
+          kode: 'A.3',
+          kategori: 'pembimbingan',
+          nama: 'Sikap dan Perilaku',
+          bobot: 15,
+          isIndividu: true,
+          urutan: 3,
+        },
+        {
+          id: 204,
+          kode: 'A.4',
+          kategori: 'pembimbingan',
+          nama: 'Kedisiplinan',
+          bobot: 15,
+          isIndividu: true,
+          urutan: 4,
+        },
+        {
+          id: 205,
+          kode: 'A.5',
+          kategori: 'pembimbingan',
+          nama: 'Kerjasama Kelompok',
+          bobot: 20,
+          isIndividu: true,
+          urutan: 5,
+        },
+
+        // KATEGORI B: ALAT / MESIN (Kelompok, Total Bobot 35%)
+        {
+          id: 206,
+          kode: 'B.1',
+          kategori: 'alat_mesin',
+          nama: 'Konstruksi alat dan tingkat kompleksitas',
+          bobot: 35,
+          isIndividu: false,
+          urutan: 6,
+        },
+        {
+          id: 207,
+          kode: 'B.2',
+          kategori: 'alat_mesin',
+          nama: 'Pengoperasian dan fungsi alat/ mesin',
+          bobot: 40,
+          isIndividu: false,
+          urutan: 7,
+        },
+        {
+          id: 208,
+          kode: 'B.3',
+          kategori: 'alat_mesin',
+          nama: 'Estetika dan keamanan',
+          bobot: 25,
+          isIndividu: false,
+          urutan: 8,
+        },
+
+        // KATEGORI C: LAPORAN TUGAS AKHIR (Kelompok, Total Bobot 35%)
+        {
+          id: 209,
+          kode: 'C.1',
+          kategori: 'laporan',
+          nama: 'Bagian awal (sampul, daftar isi, dll)',
+          bobot: 5,
+          isIndividu: false,
+          urutan: 9,
+        },
+        {
+          id: 210,
+          kode: 'C.2',
+          kategori: 'laporan',
+          nama: 'Bab 1. Pendahuluan (latar belakang, tujuan dll)',
+          bobot: 10,
+          isIndividu: false,
+          urutan: 10,
+        },
+        {
+          id: 211,
+          kode: 'C.3',
+          kategori: 'laporan',
+          nama: 'Bab 2. Tinjauan Pustaka',
+          bobot: 10,
+          isIndividu: false,
+          urutan: 11,
+        },
+        {
+          id: 212,
+          kode: 'C.4',
+          kategori: 'laporan',
+          nama: 'Bab 3. Metodologi Penelitian',
+          bobot: 15,
+          isIndividu: false,
+          urutan: 12,
+        },
+        {
+          id: 213,
+          kode: 'C.5.A',
+          kategori: 'laporan',
+          nama: 'Bab 4. Hasil & Pembahasan: Pemilihan dan Perhitungan Kekuatan Bahan',
+          bobot: 15,
+          isIndividu: false,
+          urutan: 13,
+        },
+        {
+          id: 214,
+          kode: 'C.5.B',
+          kategori: 'laporan',
+          nama: 'Bab 4. Hasil & Pembahasan: Data Pengujian alat/ mesin',
+          bobot: 10,
+          isIndividu: false,
+          urutan: 14,
+        },
+        {
+          id: 215,
+          kode: 'C.6',
+          kategori: 'laporan',
+          nama: 'Bab 5. Kesimpulan & Saran',
+          bobot: 5,
+          isIndividu: false,
+          urutan: 15,
+        },
+        {
+          id: 216,
+          kode: 'C.7',
+          kategori: 'laporan',
+          nama: 'Daftar Pustaka',
+          bobot: 5,
+          isIndividu: false,
+          urutan: 16,
+        },
+        {
+          id: 217,
+          kode: 'C.8',
+          kategori: 'laporan',
+          nama: 'Gambar Susunan & Gambar Bagian',
+          bobot: 15,
+          isIndividu: false,
+          urutan: 17,
+        },
+        {
+          id: 218,
+          kode: 'C.9',
+          kategori: 'laporan',
+          nama: 'Pemakaian tata bahasa dan sistematika penulisan',
+          bobot: 10,
+          isIndividu: false,
+          urutan: 18,
+        },
       ];
     }
 
@@ -293,14 +507,15 @@ export class TugasAkhirSidangService {
   }
 
   /**
-   * Dosen Penguji menginput nilai kriteria & catatan revisi
+   * Dosen Penguji / Pembimbing menginput nilai kriteria & catatan revisi
+   * Mendukung skala 0 - 10 dan perhitungan bobot kategori (30% A + 35% B + 35% C)
    */
   static async inputNilaiPenguji(taId: number, sidangId: number, input: InputNilaiSidangInput, user: UserPayload) {
     const isStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi', 'lppm']);
     const isDosen = hasRole(user, ['dosen']);
 
     if (!isStaff && !isDosen) {
-      throw new Error('Akses ditolak. Hanya dosen penguji atau prodi yang dapat mengisi nilai sidang.');
+      throw new Error('Akses ditolak. Hanya dosen penguji, pembimbing, atau prodi yang dapat mengisi nilai sidang.');
     }
 
     let pengujiRow: { id: number; dosenId: number } | null = null;
@@ -333,13 +548,105 @@ export class TugasAkhirSidangService {
       throw new Error('Entitas tim penguji tidak ditemukan.');
     }
 
+    const [sidang] = await db.select().from(tugasAkhirSidang).where(eq(tugasAkhirSidang.id, sidangId)).limit(1);
+    if (!sidang) throw new Error('Sidang tidak ditemukan.');
+
+    const kriteriaList = await this.getRubrikKriteria(taId, sidang.jenisSidang);
+    const kriteriaMap = new Map(kriteriaList.map((k) => [k.id, k]));
+
     return await db.transaction(async (tx) => {
-      // Hitung total nilai rata-rata dari input
-      let sumNilai = 0;
+      // 1. Simpan detail per kriteria jika ada di DB
+      // Kriteria mock (id >= 100) jika belum ada di DB dilewati untuk insert detail agar tidak melanggar foreign key
       for (const item of input.nilaiList) {
-        sumNilai += Number(item.nilai);
+        const krit = kriteriaMap.get(item.kriteriaId);
+        if (krit && 'createdAt' in krit) {
+          // Kriteria resmi tersimpan di DB
+          await tx
+            .insert(tugasAkhirNilaiDetail)
+            .values({
+              pengujiId: pengujiRow!.id,
+              mahasiswaId: item.mahasiswaId,
+              kriteriaId: item.kriteriaId,
+              nilai: String(item.nilai),
+            })
+            .onConflictDoUpdate({
+              target: [
+                tugasAkhirNilaiDetail.pengujiId,
+                tugasAkhirNilaiDetail.mahasiswaId,
+                tugasAkhirNilaiDetail.kriteriaId,
+              ],
+              set: {
+                nilai: String(item.nilai),
+                updatedAt: new Date(),
+              },
+            });
+        }
       }
-      const avgNilai = input.nilaiList.length > 0 ? (sumNilai / input.nilaiList.length).toFixed(2) : '0';
+
+      // 2. Hitung nilai total penguji berbobot
+      // Cek apakah rubrik memiliki kategori pembimbingan / alat / laporan
+      const hasCategories = Array.from(kriteriaMap.values()).some(
+        (k) => k.kategori === 'pembimbingan' || k.kategori === 'alat_mesin' || k.kategori === 'laporan',
+      );
+
+      let avgNilai = '0.00';
+      if (hasCategories) {
+        // Hitung Subtotal A, B, C berbobot
+        let subtotalA = 0;
+        let bobotA = 0;
+        let subtotalB = 0;
+        let bobotB = 0;
+        let subtotalC = 0;
+        let bobotC = 0;
+
+        for (const item of input.nilaiList) {
+          const krit = kriteriaMap.get(item.kriteriaId);
+          if (!krit) continue;
+          const val = Number(item.nilai);
+          const weight = Number(krit.bobot) || 0;
+
+          if (krit.kategori === 'pembimbingan') {
+            subtotalA += (val * weight) / 100;
+            bobotA += weight;
+          } else if (krit.kategori === 'alat_mesin') {
+            subtotalB += (val * weight) / 100;
+            bobotB += weight;
+          } else if (krit.kategori === 'laporan') {
+            subtotalC += (val * weight) / 100;
+            bobotC += weight;
+          }
+        }
+
+        // Normalisasi jika bobot terisi
+        const normA = bobotA > 0 ? (subtotalA / bobotA) * 100 : 0;
+        const normB = bobotB > 0 ? (subtotalB / bobotB) * 100 : 0;
+        const normC = bobotC > 0 ? (subtotalC / bobotC) * 100 : 0;
+
+        // Formula resmi: 30% A + 35% B + 35% C
+        let calculated = 0;
+        if (bobotA > 0 && (bobotB > 0 || bobotC > 0)) {
+          calculated = 0.3 * normA + 0.35 * normB + 0.35 * normC;
+        } else if (bobotB > 0 || bobotC > 0) {
+          // Jika murni penguji (hanya menilai alat & naskah laporan 50:50 dari bobot 70%)
+          const sumWeightBC = (bobotB > 0 ? 0.35 : 0) + (bobotC > 0 ? 0.35 : 0);
+          calculated = sumWeightBC > 0 ? (0.35 * normB + 0.35 * normC) / sumWeightBC : 0;
+        } else if (bobotA > 0) {
+          calculated = normA;
+        }
+
+        avgNilai = calculated.toFixed(2);
+      } else {
+        // Fallback rubrik proporsional sederhana
+        let sumNilai = 0;
+        let totalBobot = 0;
+        for (const item of input.nilaiList) {
+          const krit = kriteriaMap.get(item.kriteriaId);
+          const weight = krit ? Number(krit.bobot) || 1 : 1;
+          sumNilai += Number(item.nilai) * weight;
+          totalBobot += weight;
+        }
+        avgNilai = totalBobot > 0 ? (sumNilai / totalBobot).toFixed(2) : '0.00';
+      }
 
       await tx
         .update(tugasAkhirPenguji)
@@ -350,15 +657,20 @@ export class TugasAkhirSidangService {
         })
         .where(eq(tugasAkhirPenguji.id, pengujiRow!.id));
 
+      const mutu = TugasAkhirSidangService.konversiNilaiBpa(Number(avgNilai));
+
       return {
         message: 'Nilai ujian dan catatan penguji berhasil disimpan.',
         nilaiTotal: avgNilai,
+        hurufMutu: mutu.huruf,
+        indeksMutu: mutu.indeks,
       };
     });
   }
 
   /**
    * Finalisasi Sidang & Penentuan Hasil (Lulus / Sidang Ulang) oleh Kaprodi / Tim Penguji
+   * Skala Nilai 0 - 10 & Konversi Huruf Mutu BPA
    */
   static async finalisasiSidang(taId: number, sidangId: number, input: FinalisasiSidangInput, user: UserPayload) {
     const isStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi', 'lppm']);
@@ -391,15 +703,7 @@ export class TugasAkhirSidangService {
 
       const finalAngka = count > 0 ? (totalNilai / count).toFixed(2) : '0.00';
       const num = Number(finalAngka);
-      let huruf = 'E';
-      if (num >= 85) huruf = 'A';
-      else if (num >= 80) huruf = 'A-';
-      else if (num >= 75) huruf = 'B+';
-      else if (num >= 70) huruf = 'B';
-      else if (num >= 65) huruf = 'B-';
-      else if (num >= 60) huruf = 'C+';
-      else if (num >= 55) huruf = 'C';
-      else if (num >= 40) huruf = 'D';
+      const { huruf } = TugasAkhirSidangService.konversiNilaiBpa(num);
 
       const isLulus = ['lulus_tanpa_revisi', 'lulus_dengan_revisi'].includes(input.statusHasil);
 

@@ -330,7 +330,7 @@ export const tugasAkhirController = {
   },
 
   async getRubrikKriteria(id: number, jenisSidang?: string): Promise<RubrikKriteriaItem[]> {
-    const qs = jenisSidang ? `?jenisSidang=${jenisSidang}` : '';
+    const qs = jenisSidang ? `?jenis=${jenisSidang}` : '';
     const res = await fetchApi<{ data: RubrikKriteriaItem[] }>(`/tugas-akhir/${id}/sidang/rubrik${qs}`);
     return res.data || [];
   },
@@ -466,9 +466,14 @@ export interface JadwalSidangPayload {
 
 export interface RubrikKriteriaItem {
   id: number;
-  namaKriteria: string;
+  kode?: string;
+  nama?: string;
+  namaKriteria?: string;
+  kategori?: 'pembimbingan' | 'alat_mesin' | 'laporan' | 'umum';
   deskripsi: string | null;
-  bobotPersen: number;
+  bobot?: number;
+  bobotPersen?: number;
+  isIndividu?: boolean;
   urutan: number;
 }
 
