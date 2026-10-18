@@ -109,6 +109,7 @@ const LaporanRekapNilai = lazy(() => import('./routes/reports/LaporanRekapNilai'
 const LaporanYudisium = lazy(() => import('./routes/reports/LaporanYudisium'));
 const VisiMisiProdi = lazy(() => import('./routes/VisiMisiProdi'));
 const Yudisium = lazy(() => import('./routes/Yudisium'));
+const TugasAkhir = lazy(() => import('./routes/TugasAkhir'));
 
 import { queryClient } from './utils/queryClient';
 
@@ -440,6 +441,14 @@ function AppContent() {
                 allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'kemahasiswaan', 'dosen', 'mahasiswa']}
               >
                 <AktivitasMbkm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tugas-akhir"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'lppm', 'dosen', 'mahasiswa']}>
+                <TugasAkhir />
               </ProtectedRoute>
             }
           />
