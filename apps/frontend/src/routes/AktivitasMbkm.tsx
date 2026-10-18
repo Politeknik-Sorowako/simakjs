@@ -704,6 +704,21 @@ export default function AktivitasMbkm() {
                         Hapus Aktivitas
                       </Button>
                     </Show>
+                    <Show when={d().idPddikti}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={busy()}
+                        onClick={async () => {
+                          await runAction(async () => {
+                            const res = await aktivitasMbkmController.syncFeeder(d().id);
+                            return res;
+                          }, 'Detail dari Feeder berhasil disinkronkan');
+                        }}
+                      >
+                        Tarik Detail dari Feeder
+                      </Button>
+                    </Show>
                   </div>
                 </Show>
                 <Show when={canOverrideStatus()}>

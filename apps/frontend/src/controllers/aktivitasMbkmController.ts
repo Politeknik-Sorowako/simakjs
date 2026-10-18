@@ -217,4 +217,13 @@ export const aktivitasMbkmController = {
     const res = await fetchApi<{ data: StatusLogAktivitas[] }>(`/aktivitas-mbkm/${id}/status-log`);
     return res.data;
   },
+
+  async syncFeeder(id: number) {
+    return fetchApi<{
+      message: string;
+      data: { anggota: number; pembimbing: number; konversi: number };
+    }>(`/aktivitas-mbkm/${id}/sync-feeder`, {
+      method: 'POST',
+    });
+  },
 };
