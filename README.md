@@ -14,15 +14,19 @@ Proyek ini menggunakan arsitektur **Monorepo** yang memisahkan aplikasi ke dalam
 
 ## Brand Color System
 
-Desain UI menggunakan 3 skema warna dominan dari politekniksorowako.ac.id:
+Sejak rebrand global, sistem desain mengikuti [DESIGN.md](./DESIGN.md): estetika Apple-inspired dengan **satu aksen interaktif tunggal** (Action Blue). Warna lama Navy/Golden masih tersedia sebagai token `brand-*`/`accent-*` untuk chrome sidebar dan identitas kampus, bukan sebagai aksen aksi.
 
-| Color | Hex | Penggunaan |
+| Token | Hex | Penggunaan |
 |-------|-----|------------|
-| Navy Blue | `#042d59` | Primary — navbar, sidebar, heading, buttons |
-| Golden Yellow | `#fcb900` | Accent — active states, highlights, IPK display |
-| Cool Gray | `#6c757d` | Neutral — borders, secondary text, backgrounds |
+| Action Blue | `#0066cc` | Satu-satunya warna interaktif — link, pill CTA, fokus |
+| Focus Blue | `#0071e3` | Focus ring keyboard pada tombol |
+| Action Blue (dark) | `#2997ff` | Varian aksen pada permukaan gelap |
+| Ink | `#1d1d1f` | Teks utama, heading |
+| Parchment | `#f5f5f7` | Kanvas halaman |
+| Pearl | `#fafafc` | Permukaan kartu/modal |
+| Hairline | `#e0e0e0` | Garis pemisah tipis (tanpa shadow pada chrome) |
 
-Variasi turunan (50-950) didefinisikan di `tailwind.config.js` sebagai `brand-*`, `accent-*`, dan `brand-gray-*`.
+Prinsip: tidak ada shadow pada chrome (elevasi dari perbedaan permukaan), tombol berbentuk pill (`rounded-full`), micro-interaction `active:scale-95`, dan tidak ada warna aksen kedua. Token didefinisikan di `apps/frontend/tailwind.config.js` (`action-*`, `brand-*`, `accent-*`) dan `apps/frontend/src/index.css`.
 
 ## Struktur Folder
 
@@ -33,48 +37,49 @@ simakjs/
 ├── apps/
 │   ├── backend/               # REST API Backend
 │   │   ├── src/
-│   │   │   ├── index.ts       # Entry point & route definitions
+│   │   │   ├── index.ts       # Entry point
 │   │   │   ├── app.ts         # Elysia app instance & middleware
-│   │   │   ├── controllers/   # Request handlers (auth, mahasiswa, dosen, krs, etc.)
+│   │   │   ├── controllers/   # Request handlers
 │   │   │   ├── services/      # Business logic layer
+│   │   │   ├── routes/        # Definisi endpoint per modul
+│   │   │   ├── schemas/       # Validasi TypeBox (Elysia `t.*`)
+│   │   │   ├── plugins/       # Plugin custom (audit log otomatis)
 │   │   │   ├── middlewares/   # Auth middleware, rate limiter
-│   │   │   ├── utils/         # Helpers (pagination, types)
-│   │   │   └── db/
-│   │   │       ├── index.ts   # Database connection
-│   │   │       └── schema.ts  # Drizzle ORM table schemas
-│   │   ├── drizzle/           # Generated migrations
+│   │   │   ├── utils/         # Helpers (timezone, role, grade-calc, dosen-scope, dll.)
+│   │   │   ├── scripts/       # Seed, backup, pre-test, safe-migrate
+│   │   │   ├── models/
+│   │   │   │   └── schema.ts  # Drizzle ORM table schemas (tabel, enum, relasi)
+│   │   │   └── __tests__/     # Test suite backend (Bun Test)
+│   │   ├── drizzle/           # Migrasi SQL + meta/_journal.json
 │   │   ├── drizzle.config.ts
 │   │   ├── Dockerfile
 │   │   └── package.json
 │   └── frontend/              # Solid.js SPA Frontend
 │       ├── src/
-│       │   ├── App.tsx        # Root component with routes
+│       │   ├── App.tsx        # Router utama + ProtectedRoute per role
 │       │   ├── index.tsx      # Entry point
-│       │   ├── index.css      # Global styles, Tailwind directives, CSS variables
+│       │   ├── index.css      # Design tokens & Tailwind directives
 │       │   ├── components/
 │       │   │   ├── ui/        # Reusable UI components
-│       │   │   │   ├── Button.tsx       # 7 variants, 3 sizes, loading state
-│       │   │   │   ├── Input.tsx        # Text/select, dark mode, error states
-│       │   │   │   ├── Modal.tsx        # Backdrop blur, scale animation
-│       │   │   │   ├── Table.tsx        # Brand-50 header, dark mode
-│       │   │   │   ├── SearchableSelect.tsx  # Filterable dropdown, keyboard nav
-│       │   │   │   ├── Card.tsx         # 4 variants (default/bordered/elevated/ghost)
-│       │   │   │   ├── Badge.tsx        # 6 variants (success/warning/danger/info/accent)
-│       │   │   │   ├── Spinner.tsx      # 4 sizes with optional label
+│       │   │   │   ├── Button.tsx            # Pill, 7 varian, 3 ukuran
+│       │   │   │   ├── Input.tsx             # Text/select, dark mode, error state
+│       │   │   │   ├── Modal.tsx
+│       │   │   │   ├── Table.tsx             # children = <tr> (tanpa <tbody> sendiri)
+│       │   │   │   ├── SearchableSelect.tsx  # Dropdown dengan pencarian + paging
+│       │   │   │   ├── MultiSearchableSelect.tsx
+│       │   │   │   ├── Pagination.tsx
+│       │   │   │   ├── Badge.tsx
 │       │   │   │   └── ImportCsvModal.tsx
 │       │   │   ├── MainLayout.tsx       # App shell with sidebar + navbar
-│       │   │   ├── Navbar.tsx           # Backdrop-blur, theme toggle, global filters
-│       │   │   ├── Sidebar.tsx          # Navy gradient, collapsible sections
+│       │   │   ├── Navbar.tsx           # Theme toggle, global filters
+│       │   │   ├── Sidebar.tsx          # Collapsible sections + icon mode
 │       │   │   └── ProtectedRoute.tsx   # Role-based access control
-│       │   ├── contexts/      # Solid.js contexts
-│       │   │   ├── AuthContext.tsx
-│       │   │   ├── ToastContext.tsx
-│       │   │   └── WorkspaceContext.tsx
-│       │   ├── controllers/   # API client functions (18 controllers)
-│       │   └── routes/        # Page components (27 route pages)
+│       │   ├── contexts/      # Auth, Toast, Theme, Workspace
+│       │   ├── controllers/   # API client per modul
+│       │   └── routes/        # Page components per fitur
 │       ├── index.html
 │       ├── nginx.conf
-│       ├── tailwind.config.js # Custom theme (brand/accent/brand-gray, shadows, animations)
+│       ├── tailwind.config.js # Design tokens (action/brand/accent, animasi)
 │       ├── vite.config.ts
 │       ├── Dockerfile
 │       └── package.json
@@ -85,6 +90,8 @@ simakjs/
 **Ekosistem Utama:**
 - **Bun**: JavaScript runtime, package manager, test runner, dan bundler.
 - **Docker**: Kontainerisasi aplikasi (Backend, Frontend, Database).
+- **Biome**: Linter + formatter terpadu (menggantikan ESLint & Prettier).
+- **Playwright**: E2E test frontend.
 
 **Backend (`apps/backend`):**
 - **Elysia.js**: Framework web berkinerja tinggi berbasis Bun.
@@ -94,15 +101,31 @@ simakjs/
 - **@elysiajs/jwt & @elysiajs/cookie**: Autentikasi JWT via HttpOnly Cookie.
 - **@elysiajs/cors**: Middleware CORS.
 - **Resend**: Pengiriman email transaksional (aktivasi akun, reset password) dengan sender `EMAIL_FROM` (default `SIMAK <postman@politekniksorowako.ac.id>`).
+- **qrcode**: Pembuatan QR untuk TTE (QR signed-hash).
 
 **Frontend (`apps/frontend`):**
 - **Solid.js**: Framework UI deklaratif reaktif tanpa Virtual DOM.
+- **@tanstack/solid-query**: Async state & caching.
+- **Eden Treaty (`@elysiajs/eden`)**: Type-safe API client end-to-end ke backend.
 - **Vite**: Build tool dan dev server.
-- **Tailwind CSS**: Utility-first CSS framework dengan custom theme brand.
+- **Tailwind CSS**: Utility-first CSS dengan design token (Action Blue, surface, hairline).
 - **Zod**: Client-side schema validation.
 - **Solid Router**: Routing untuk Solid.js.
-- **Biome**: Linter dan formatter (menggantikan ESLint + Prettier).
 - **Nginx**: Web server untuk production serving.
+- **Chart.js / jsPDF + AutoTable / XLSX / qrcode**: Visualisasi dan ekspor dokumen.
+
+## Environment Penting
+
+| Env | Kegunaan |
+|-----|----------|
+| `DATABASE_URL` | Koneksi PostgreSQL |
+| `JWT_SECRET` | Penandatanganan token sesi |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Pengiriman email transaksional |
+| `SETTINGS_SECRET_KEY` | Enkripsi at-rest parameter rahasia (mis. `FEEDER_PASSWORD`). Bila kosong, penyimpanan jatuh ke plaintext dengan peringatan (tidak memblokir boot) |
+| `SIGN_HMAC_KEYS`, `SIGN_ACTIVE_KID`, `VERIFY_BASE_URL` | Kunci & domain verifikasi TTE |
+| `FEEDER_URL`, `FEEDER_USERNAME`, `FEEDER_PASSWORD` | Integrasi PDDIKTI Neo Feeder |
+
+Semua env di atas bersifat **env-only**: penulisannya lewat `PUT /system/parameters/:key` ditolak (400) agar admin tidak mengira nilainya bisa diubah dari UI.
 
 ## Skema Database
 
@@ -125,6 +148,14 @@ Database menggunakan PostgreSQL dengan tabel-tabel utama:
 15. **`yudisium`** — Evaluasi kelulusan
 16. **`komponen_nilai`** — Komponen penilaian per kelas
 17. **`nilai`** — Input nilai mahasiswa
+18. **`pembimbing_mahasiswa`** — Penetapan pembimbing PKL/magang, TA 1, dan TA 2 (internal maupun eksternal/industri)
+19. **`jenis_aktivitas_mbkm`** — Master jenis kegiatan MBKM (Magang, PKL, KKP, dst.)
+20. **`aktivitas_mbkm`** — Kegiatan MBKM (magang/KKP) mahasiswa beserta status persetujuan
+21. **`anggota_aktivitas_mbkm`**, **`bimbing_aktivitas_mbkm`**, **`konversi_aktivitas_mbkm`** — Peserta, dosen pembimbing, dan rekognisi SKS ke mata kuliah
+22. **`aktivitas_mbkm_status_log`** — Jejak override status persetujuan MBKM beserta alasan dan pelakunya
+23. **`document_signatures`** — Tanda tangan elektronik (TTE) dokumen cetak via QR signed-hash
+
+> **Catatan migrasi:** setiap file `apps/backend/drizzle/*.sql` **wajib** terdaftar di `drizzle/meta/_journal.json`. `drizzle-kit migrate` hanya menjalankan entri yang ada di journal — file SQL yang tidak terdaftar akan dilewati **tanpa error**, sehingga tabel tidak pernah dibuat di staging/produksi meskipun deploy "sukses". Dijaga oleh test `apps/backend/src/__tests__/drizzle-journal.test.ts`.
 
 ## Status Implementasi
 
@@ -134,6 +165,10 @@ Database menggunakan PostgreSQL dengan tabel-tabel utama:
 - **[✅] Fase 4 (KHS & Kelayakan Ujian):** Cetak Kartu Ujian, validasi syarat kehadiran >= 80%, auto-generate KHS.
 - **[✅] Fase 5 (Yudisium & PDDIKTI):** Penguncian nilai, evaluasi Yudisium, sinkronisasi ke Neo Feeder PDDIKTI.
 - **[✅] Fase 6 (UI/UX Redesign):** Implementasi brand color system politekniksorowako.ac.id, redesign seluruh komponen UI dan halaman route.
+- **[✅] Fase 7 (Rebrand & Design System):** Migrasi ke estetika Apple-inspired sesuai `DESIGN.md` — aksen tunggal Action Blue, tombol pill, hairline tanpa shadow, micro-interaction scale.
+- **[✅] Fase 8 (Penetapan Pembimbing):** Penetapan pembimbing PKL/magang dan Tugas Akhir 1 & 2, termasuk pembimbing lapangan eksternal/industri.
+- **[✅] Fase 9 (Aktivitas MBKM):** Modul magang/KKP dengan anggota, pembimbing, rekognisi SKS ke mata kuliah, auto-taut bimbingan PKL ke rekap BKD, serta override status persetujuan oleh admin/prodi/kaprodi yang tercatat permanen.
+- **[✅] Fase 10 (PDDIKTI Neo Feeder):** Konfigurasi & uji koneksi, write guard, penarikan data referensi/master, data transaksional (kelas, KRS & nilai, transkrip, aktivitas MBKM), dan penugasan dosen pengajar. `FEEDER_PASSWORD` disimpan terenkripsi at-rest.
 
 ## Daftar API Endpoints
 
@@ -158,12 +193,17 @@ Backend berjalan pada `http://localhost:3000`. Swagger docs: `http://localhost:3
 - `/pelanggaran/*` — Catatan kedisiplinan
 - `/kurikulum/*` — Manajemen kurikulum
 - `/rps/*` — Rencana Pembelajaran Semester
+- `/pembimbing/*` — Penetapan pembimbing PKL/magang & Tugas Akhir (set, bulk, impor CSV, nonaktifkan)
+- `/aktivitas-mbkm/*` — Kegiatan MBKM: anggota, pembimbing, rekognisi SKS, alur `ajukan → setujui/tolak → selesai`, `POST /:id/override-status` (admin/prodi/kaprodi), dan `GET /:id/status-log`
+
+### Tanda Tangan & Verifikasi
+- `/document-signatures/*` — TTE QR signed-hash (KHS), termasuk `GET /verify/:uuid` **publik** (tanpa sesi)
 
 ### Evaluasi & Keuangan
 - `/tagihan/*` — SPP/UKT Mahasiswa
 - `/khs/*` — Kelayakan ujian & rekap KHS
 - `/yudisium/*` — Komponen nilai, input nilai, locking kelas
-- `/pddikti/*` — Sinkronisasi Neo Feeder PDDIKTI
+- `/pddikti/*` — Neo Feeder: `POST /test-connection`, `GET /pull/entities`, `GET /pull/preview`, `POST /pull/apply`, `POST /sync`
 
 ## Cara Setup & Menjalankan
 
@@ -183,7 +223,7 @@ docker compose up -d
 cd apps/backend
 bun install
 bun run db:generate
-bun run db:push
+bun run db:safe-migrate
 ```
 
 ### Development Mode
@@ -440,7 +480,7 @@ docker compose up -d
 cd apps/backend
 bun install
 bun run db:generate
-bun run db:push
+bun run db:safe-migrate
 ```
 
 ### Development Mode
