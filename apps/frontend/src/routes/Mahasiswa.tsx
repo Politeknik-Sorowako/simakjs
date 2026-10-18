@@ -150,6 +150,7 @@ export default function Mahasiswa() {
   const [nim, setNim] = createSignal('');
   const [nama, setNama] = createSignal('');
   const [email, setEmail] = createSignal('');
+  const [angkatan, setAngkatan] = createSignal('');
   const [prodiId, setProdiId] = createSignal<number>(0);
   const [dosenPaId, setDosenPaId] = createSignal<number | null>(null);
   const [status, setStatus] = createSignal('aktif');
@@ -171,6 +172,7 @@ export default function Mahasiswa() {
     setNim('');
     setNama('');
     setEmail('');
+    setAngkatan('');
     const firstProdi = prodis()?.data?.[0]?.id || 0;
     setProdiId(firstProdi);
     setDosenPaId(null);
@@ -195,6 +197,7 @@ export default function Mahasiswa() {
     setNim(item.nim);
     setNama(item.nama);
     setEmail(item.email);
+    setAngkatan(item.angkatan || '');
     setProdiId(item.programStudiId || 0);
     setDosenPaId(item.dosenPaId || null);
     setStatus(item.status);
@@ -221,6 +224,7 @@ export default function Mahasiswa() {
         nim: nim(),
         nama: nama(),
         email: email(),
+        angkatan: angkatan().trim() || null,
         programStudiId: Number(prodiId()),
         dosenPaId: dosenPaId() ? Number(dosenPaId()) : null,
         status: status(),
@@ -714,6 +718,13 @@ export default function Mahasiswa() {
                 value={prodiId()}
                 onChange={(e) => setProdiId(Number(e.currentTarget.value))}
                 selectOptions={prodis()?.data.map((p) => ({ label: `${p.jenjang} - ${p.nama}`, value: p.id })) || []}
+              />
+              <Input
+                label="Tahun Angkatan"
+                value={angkatan()}
+                onInput={(e) => setAngkatan(e.currentTarget.value)}
+                placeholder="Contoh: 2024"
+                maxLength={4}
               />
               <Input
                 label="NIK (16 Digit)"

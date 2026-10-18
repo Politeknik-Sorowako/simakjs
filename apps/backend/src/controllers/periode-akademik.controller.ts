@@ -10,7 +10,7 @@ export class PeriodeAkademikController {
     const limit = q?.limit ? parseInt(String(q.limit)) : 10;
     const search = q?.search || '';
     const sortBy = q?.sortBy || 'id';
-    const sortOrder: 'asc' | 'desc' = q?.sortOrder === 'desc' ? 'desc' : 'asc';
+    const sortOrder: 'asc' | 'desc' = q?.sortOrder === 'asc' ? 'asc' : 'desc';
     return await PeriodeAkademikService.getAll(page, limit, search, sortBy, sortOrder);
   }
 
