@@ -180,6 +180,13 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const isCalonMhs = () => auth.hasRole(['calon_mahasiswa']);
   const isSuperAdmin = () => auth.hasRole(['super_admin']);
   const isAdminMgmt = () => auth.hasRole(['admin', 'super_admin']);
+  /**
+   * Penetapan Pembimbing tidak lagi dibuka untuk role dosen murni — verifikasi
+   * pembimbing PKL/TA dilakukan dari menu Bimbingan. Dosen yang sekaligus
+   * memegang role admin/kaprodi/prodi tetap melihat menu ini lewat role
+   * tersebut, sejalan dengan `allowedRoles` route di `App.tsx`.
+   */
+  const canSetPembimbing = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi', 'mahasiswa']);
   const notGuest = () => !auth.hasRole(['guest']);
   const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
@@ -973,7 +980,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                     Monitoring Bimbingan
                   </A>
                 </Show>
-                <Show when={isAdmin() || isDosen() || isMahasiswa() || isProdi()}>
+                <Show when={canSetPembimbing()}>
                   <A
                     href="/penetapan-pembimbing"
                     onClick={() => props.onClose()}
