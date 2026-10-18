@@ -19,7 +19,9 @@ Sistem ini mencakup siklus akademik end-to-end:
 - **Pengajuan Cuti Akademik & Yudisium/Kelulusan**
 - **Evaluasi Sistem & Feedback Pengguna**
 - **Audit Log & Riwayat Aktivitas Sistem**
-- **Integrasi PDDIKTI Neo Feeder**
+- **Integrasi PDDIKTI Neo Feeder** (konfigurasi & uji koneksi, write guard, penarikan referensi/master, data transaksional, penugasan dosen pengajar)
+- **Penetapan Pembimbing** (PKL/magang, Tugas Akhir 1 & 2, termasuk pembimbing lapangan eksternal/industri)
+- **Aktivitas MBKM** (magang/KKP dengan anggota, pembimbing, rekognisi SKS, auto-taut bimbingan PKL ke BKD, dan override status persetujuan yang tercatat)
 - **Tanda Tangan Elektronik (TTE) & Verifikasi Dokumen** (QR Signed-Hash internal Fase 1 untuk KHS + halaman publik verifikasi QR)
 
 ---
@@ -52,9 +54,9 @@ simakjs/
 │   │   ├── src/
 │   │   │   ├── app.ts               # Inisialisasi Elysia app, plugin, CORS, & Swagger
 │   │   │   ├── index.ts             # Entry point runner Bun
-│   │   │   ├── controllers/         # Handler HTTP request (57 file controller)
-│   │   │   ├── services/            # Logika bisnis & query Drizzle (63 file service)
-│   │   │   ├── routes/              # Definisi endpoint Elysia (58 file route)
+│   │   │   ├── controllers/         # Handler HTTP request (61 file controller)
+│   │   │   ├── services/            # Logika bisnis & query Drizzle (70 file service)
+│   │   │   ├── routes/              # Definisi endpoint Elysia (62 file route)
 │   │   │   ├── models/
 │   │   │   │   └── schema.ts        # Skema Drizzle ORM (tabel, enum, relasi DB)
 │   │   │   ├── middlewares/         # Auth & context middlewares
@@ -72,7 +74,7 @@ simakjs/
 │       │   ├── App.tsx              # Router utama & provider wrapper
 │       │   ├── index.css            # Custom CSS tokens & utilities
 │       │   ├── components/          # Komponen UI (Layout, Sidebar, Modal, UI primitives, Pagination)
-│       │   ├── controllers/         # Signal/resource wrappers memanggil Eden API (48 file)
+│       │   ├── controllers/         # Signal/resource wrappers memanggil Eden API (52 file)
 │       │   ├── routes/              # Halaman UI / Views per fitur
 │       │   ├── contexts/            # Reactivity contexts (Auth, Theme, Toast, Workspace)
 │       │   ├── hooks/               # Custom hooks SolidJS (e.g. usePagination)
@@ -155,6 +157,16 @@ Seluruh entitas database dikelola melalui Drizzle ORM pada file [schema.ts](file
    - `systemFeedbacks`: Umpan balik dan evaluasi pengguna terhadap kinerja sistem (`/evaluasi-sistem`).
    - `documentSignatures`: TTE Fase 1 — tanda tangan QR signed-hash dokumen cetak (KHS, dst.). Multi-tenant; menyimpan `docHash` (SHA-256 kanonik snapshot payload), `signature` (HMAC-SHA256 dari `<kid>:<docHash>`), `kid`, `verifyUuid` unik, identitas penandatangan, `payloadSnapshot` (jsonb), dan `revokedAt`.
 
+9. **Penetapan Pembimbing:**
+   - `pembimbingMahasiswa` (`pembimbing_mahasiswa`): penetapan pembimbing per mahasiswa untuk slot `PKL`, `TA_UTAMA`, dan `TA_PENDAMPING`. Mendukung pembimbing internal (`dosenId`) maupun eksternal (`namaEksternal` + `instansiEksternal`) serta status aktif.
+
+10. **Aktivitas MBKM (Magang & Kuliah Kerja):**
+   - `jenisAktivitasMbkm` (`jenis_aktivitas_mbkm`): master jenis kegiatan (Magang, PKL, KKP, dst.) beserta `kode`, `idJenisFeeder`, `isFlagship`, `isAktif`.
+   - `aktivitasMbkm` (`aktivitas_mbkm`): kegiatan MBKM — `judul`, `jenisId`, `periodeId`, `programStudiId`, tanggal mulai/selesai, `sks`, `status` (`draft`/`diajukan`/`disetujui`/`ditolak`/`selesai`), `idPddikti`, `createdById`, `disetujuiOlehId`, `disetujuiAt`.
+   - `anggotaAktivitasMbkm`, `bimbinganAktivitasMbkm`, `konversiAktivitasMbkm`: peserta (`peran` ketua/anggota), dosen pembimbing (`kategori` pembimbing/pendamping), dan rekognisi SKS ke `mataKuliah` (`sksDiakui`, unik per aktivitas × MK).
+   - `aktivitasMbkmStatusLog` (`aktivitas_mbkm_status_log`): jejak override status manual — `dariStatus`, `keStatus`, `alasan` (wajib), `olehUserId`, `createdAt`. Audit log otomatis tidak menyimpan alasan, sehingga riwayat ini sumber kebenarannya.
+   - Tautan `bimbingan.aktivitasMbkmId` (FK `ON DELETE SET NULL`) menandai baris bimbingan kategori `MAGANG` yang dibuat otomatis dari aktivitas MBKM.
+
 ---
 
 ## 5. Core Business Logic Reference
@@ -188,6 +200,8 @@ Seluruh entitas database dikelola melalui Drizzle ORM pada file [schema.ts](file
 - **Multi-Role Allowed**: User staf seperti `admin`, `kaprodi`, `prodi`, `dosen`, `keuangan`, `plp`, `instruktur` dapat memiliki kombinasi beberapa role sekaligus.
 - **Prodi Scoping**: Pengguna non-admin dibatasi akses data berdasarkan `programStudiId` yang ditautkan.
 - **Dosen Scoping (`dosen-scope.ts`)**: Method `guardMkScope`, `guardKelasScope`, dan `guardRombelScope` memastikan dosen/instruktur hanya dapat mengelola MK, kelas, dan rombel yang benar-benar mereka ampu.
+- **Override Status MBKM**: `admin`/`super_admin`/`prodi`/`kaprodi` boleh memaksa status persetujuan aktivitas MBKM di luar alur normal (`OVERRIDE_ROLES`). `kemahasiswaan` sengaja dikecualikan.
+- **Penetapan Pembimbing**: menu & route `/penetapan-pembimbing` tidak dibuka untuk role `dosen` murni; dosen yang juga memegang `admin`/`kaprodi`/`prodi` tetap punya akses karena `hasRole()` mengevaluasi seluruh daftar `roles`.
 
 ### F. Audit Logging Otomatis (`audit.plugin.ts`)
 - Plugin audit global secara otomatis mengintersep dan mencatat setiap operasi mutasi (`POST`, `PUT`, `PATCH`, `DELETE`) ke tabel `audit_logs`.
@@ -212,6 +226,37 @@ Seluruh entitas database dikelola melalui Drizzle ORM pada file [schema.ts](file
 - **Kunci & domain**: satu kunci kampus HMAC-SHA256 ber-versi via `kid` (env `SIGN_HMAC_KEYS` JSON, `SIGN_ACTIVE_KID`, default `k1`). Domain verifikasi final `https://verify.politekniksorowako.ac.id` (env `VERIFY_BASE_URL`); QR mengarah ke `/v/:uuid`; halaman publik frontend `/verifikasi/:uuid` & `/v/:uuid`.
 - **Infrastruktur domain (produksi)**: `https://verify.politekniksorowako.ac.id` sudah live dan disajikan oleh frontend produksi + proxy `/api` ke backend produksi; TLS Let's Encrypt dengan auto-renew (`certbot.timer`). `VERIFY_BASE_URL` dipin eksplisit di `.env` produksi. Route `/v/:uuid` & endpoint verifikasi publik aktif begitu produksi memuat build berisi kode TTE.
 - Dirancang agar mudah diekstrak menjadi `sign-service` bersama SIMAK+ERP (pola Strangler) pada fase berikutnya. Migrasi `0079_document_signatures.sql`; dependensi `qrcode` (backend & frontend).
+
+### K. Alur Persetujuan Aktivitas MBKM & Auto-Taut Bimbingan PKL
+- Alur normal: `draft → diajukan → disetujui | ditolak → selesai`. Transisi dijaga ketat di `AktivitasMbkmService` (`ajukan`, `setujui`, `tolak`, `setSelesai`), masing-masing memeriksa status asal.
+- Prasyarat `ajukan`: `periodeId` terisi, `sks > 0`, minimal satu anggota, dan minimal satu pembimbing. Karena itu form frontend mengisi **periode akademik aktif secara default**.
+- Saat **disetujui**, `linkBimbing()` membuat/menaut baris `bimbingan` kategori `MAGANG` untuk tiap pasangan (pembimbing × anggota) secara **idempoten** — baris yang sudah tertaut tidak ditimpa (`aktivitas_mbkm_id IS NULL`), sehingga approve ulang tidak menggandakan. Sesi bimbingan dan kredit BKD memakai alur bimbingan yang sudah ada (`status_bkd`), sehingga logika BKD tidak diubah.
+- Rekognisi SKS (`konversiAktivitasMbkm`) hanya boleh ditambah setelah aktivitas meninggalkan `draft`/`diajukan`, unik per (aktivitas × mata kuliah), dan total `sksDiakui` tidak boleh melebihi `sks` aktivitas.
+
+### L. Override Status Persetujuan MBKM
+- `POST /aktivitas-mbkm/:id/override-status` memaksa status ke salah satu dari 5 status, **di luar** alur normal, untuk koreksi data lapangan (pengajuan tersesat / persetujuan keliru).
+- **Role**: `admin`, `super_admin`, `prodi`, `kaprodi` (`OVERRIDE_ROLES`) — sengaja **tanpa** `kemahasiswaan` karena ini keputusan akademik; tetap dibatasi scoping prodi lewat `loadOwned()`.
+- **Alasan wajib** 10–500 karakter dan disimpan permanen di `aktivitas_mbkm_status_log`. Audit log otomatis hanya mencatat pelaku + endpoint, bukan alasan maupun status asal, sehingga tabel ini sumber kebenaran riwayat.
+- Efek samping: naik ke `disetujui` tetap menjalankan `linkBimbing()` dan menstempel `disetujuiOlehId/At`; turun ke `draft`/`diajukan`/`ditolak` **memutus** `bimbingan.aktivitas_mbkm_id` (baris bimbingan, sesi, dan kredit BKD tetap tersimpan sebagai riwayat) serta membersihkan stempel persetujuan. Status tujuan sama dengan status saat ini ditolak (400).
+
+### M. Penarikan Data PDDIKTI Neo Feeder
+- Endpoint: `POST /pddikti/test-connection`, `GET /pddikti/pull/entities`, `GET /pddikti/pull/preview`, `POST /pddikti/pull/apply`, `POST /pddikti/sync`.
+- Alur pull bersifat **preview → apply**: admin melihat ringkasan (`baru`/`berubah`/`sama`) dan memilih entitas sebelum data ditulis. Apply bersifat idempoten terhadap kunci `idPddikti`.
+- **Write guard**: operasi tulis ke Feeder dibatasi lewat konfigurasi, sehingga penarikan data tidak serta-merta mengubah data di Feeder.
+- `FEEDER_PASSWORD` disimpan **terenkripsi at-rest** (`enc:v1:` + AES-256-GCM); nilai plaintext lama tetap terbaca (fallback pass-through) agar deploy tanpa env baru tidak memutus koneksi.
+
+### N. Enkripsi Parameter Rahasia (`SETTINGS_SECRET_KEY`)
+- Helper terpusat `apps/backend/src/utils/secret-crypto.ts` (`encryptSecret`/`decryptSecret`). Kunci menerima hex 64 karakter, base64 32 byte, atau utf-8 32 karakter.
+- Bila env tidak tersedia/invalid, penyimpanan **jatuh ke plaintext dengan satu warning** (fail-open) supaya deployment baru tidak rusak; sebaliknya, nilai terenkripsi tanpa kunci akan didekripsi menjadi string kosong agar kunci salah tidak terkirim ke server eksternal.
+- Key env-only (`SETTINGS_SECRET_KEY`, `JWT_SECRET`, `SIGN_*`, `VERIFY_BASE_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `FEEDER_*`) **ditolak (400)** bila ditulis via `PUT /system/parameters/:key` (`ENV_ONLY_PARAM_KEYS` di `system-parameter.service.ts`), agar admin tidak menyangka perubahan dari UI berpengaruh.
+
+### O. Disiplin Migrasi Database (Journal Drizzle)
+- `drizzle-kit migrate` **hanya** menjalankan entri yang terdaftar di `drizzle/meta/_journal.json`. File `*.sql` yang tidak terdaftar **dilewati tanpa error**.
+- Akibatnya pernah terjadi insiden produksi: tabel `aktivitas_mbkm_status_log` (migrasi `0089`) tidak pernah dibuat karena entri journal-nya lupa ditambahkan, sehingga `GET /aktivitas-mbkm` mengembalikan **500** sementara deploy terlihat sukses. Test lokal tidak menangkapnya karena `pre-test.ts` memakai `drizzle-kit push` yang menyinkronkan skema langsung dari `schema.ts` dan tidak membaca journal.
+- Karena itu: setiap migrasi baru **wajib** didaftarkan di journal, dan dijaga oleh test `apps/backend/src/__tests__/drizzle-journal.test.ts` (gagal bila ada file migrasi lebih baru yang tidak terdaftar, atau entri journal tanpa file).
+- Diketahui masih ada satu orphan historis: `0078_add_hadir_to_ketidakhadiran_status.sql` tidak terdaftar di journal (nomor 0078 dilewati). Efeknya tertutupi `ensure-enums.ts` yang menambahkan enum `HADIR` saat runtime.
+- Semua migrasi WAJIB idempotent (`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, guard constraint) karena `safe-migrate` dapat dijalankan berulang.
+
 
 ---
 
