@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -22,6 +23,7 @@ import {
   tugasAkhirController,
 } from '../controllers/tugasAkhirController';
 import { usePagination } from '../hooks/usePagination';
+import { formatMahasiswaOption } from '../utils/format';
 
 const STATUS_META: Record<
   TugasAkhirStatus,
@@ -102,6 +104,8 @@ export default function TugasAkhirPage() {
 
   // Modal State: Pengusulan Topik
   const [showCreateModal, setShowCreateModal] = createSignal(false);
+  const [targetMahasiswaId, setTargetMahasiswaId] = createSignal<number | null>(null);
+  const [mhsSearchQuery, setMhsSearchQuery] = createSignal('');
   const [judul, setJudul] = createSignal('');
   const [judulInggris, setJudulInggris] = createSignal('');
   const [tipe, setTipe] = createSignal<TugasAkhirTipe>('individu');
@@ -115,6 +119,24 @@ export default function TugasAkhirPage() {
   const [mitraIndustri, setMitraIndustri] = createSignal('');
   const [usulanPembimbing1, setUsulanPembimbing1] = createSignal<number | null>(null);
   const [usulanPembimbing2, setUsulanPembimbing2] = createSignal<number | null>(null);
+
+  // Active student list for staff creating on behalf of student
+  const [activeMahasiswaList] = createResource(
+    () => ({ search: mhsSearchQuery(), prodiId: programStudiId() }),
+    async ({ search, prodiId }) => {
+      try {
+        const res = await mahasiswaController.getAll(search || undefined, 1, 50, prodiId || undefined, {
+          filterStatus: 'aktif',
+        });
+        return (res.data || []).map((m) => ({
+          value: m.id,
+          label: formatMahasiswaOption(m),
+        }));
+      } catch {
+        return [];
+      }
+    },
+  );
 
   // Rekan tim (kelompok)
   const [anggotaNimInput, setAnggotaNimInput] = createSignal('');
@@ -141,6 +163,8 @@ export default function TugasAkhirPage() {
 
   // Reset form pengusulan
   const resetCreateForm = () => {
+    setTargetMahasiswaId(null);
+    setMhsSearchQuery('');
     setJudul('');
     setJudulInggris('');
     setTipe('individu');
@@ -164,17 +188,21 @@ export default function TugasAkhirPage() {
     if (!nim) return;
     try {
       setIsSearchingMhs(true);
-      const res = await mahasiswaController.getAll(nim, 1, 1);
+      const res = await mahasiswaController.getAll(nim, 1, 1, undefined, { filterStatus: 'aktif' });
       const mhs = res.data?.find((m: { nim: string }) => m.nim === nim);
       if (!mhs) {
-        showToast(`Mahasiswa dengan NIM ${nim} tidak ditemukan.`, 'error');
+        showToast(`Mahasiswa aktif dengan NIM ${nim} tidak ditemukan.`, 'error');
         return;
       }
       if (selectedAnggota().some((a) => a.id === mhs.id)) {
         showToast('Mahasiswa ini sudah ada dalam daftar tim.', 'error');
         return;
       }
-      setSelectedAnggota([...selectedAnggota(), { id: mhs.id, nim: mhs.nim, nama: mhs.nama }]);
+      if (!isMahasiswa() && targetMahasiswaId() === mhs.id) {
+        showToast('Mahasiswa ini sudah dipilih sebagai ketua tim.', 'error');
+        return;
+      }
+      setSelectedAnggota([...selectedAnggota(), { id: mhs.id, nim: mhs.nim, nama: formatMahasiswaOption(mhs) }]);
       setAnggotaNimInput('');
       showToast(`Mahasiswa ${mhs.nama} ditambahkan ke tim.`, 'success');
     } catch {
@@ -199,6 +227,10 @@ export default function TugasAkhirPage() {
       showToast('Program studi wajib dipilih.', 'error');
       return;
     }
+    if (!isMahasiswa() && !targetMahasiswaId()) {
+      showToast('Mahasiswa pengusul (Ketua) wajib dipilih.', 'error');
+      return;
+    }
 
     const usulan: CreateTugasAkhirPayload['usulanPembimbing'] = [];
     if (usulanPembimbing1()) {
@@ -220,6 +252,7 @@ export default function TugasAkhirPage() {
       metodologi: metodologi().trim() || undefined,
       mitraIndustri: mitraIndustri().trim() || undefined,
       programStudiId: programStudiId()!,
+      mahasiswaId: !isMahasiswa() ? targetMahasiswaId()! : undefined,
       anggotaMahasiswaIds: tipe() === 'kelompok' ? selectedAnggota().map((a) => a.id) : undefined,
       usulanPembimbing: usulan.length > 0 ? usulan : undefined,
     };
@@ -342,14 +375,12 @@ export default function TugasAkhirPage() {
             </p>
           </div>
           <div class="flex items-center gap-3">
-            <Show when={isMahasiswa()}>
-              <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-                <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Usulkan Topik Baru
-              </Button>
-            </Show>
+            <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+              <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+              </svg>
+              {isMahasiswa() ? 'Usulkan Topik Baru' : 'Tambah Tugas Akhir'}
+            </Button>
           </div>
         </div>
 
@@ -542,12 +573,30 @@ export default function TugasAkhirPage() {
       {/* MODAL PENGUSULAN TOPIK */}
       <Show when={showCreateModal()}>
         <Modal
-          title="Pengusulan Topik Tugas Akhir"
+          title={isMahasiswa() ? 'Pengusulan Topik Tugas Akhir' : 'Tambah Tugas Akhir Mahasiswa'}
           isOpen={showCreateModal()}
           onClose={() => setShowCreateModal(false)}
           maxWidth="lg"
         >
           <form onSubmit={handleCreateSubmit} class="space-y-4 max-h-[75vh] overflow-y-auto px-1">
+            <Show when={!isMahasiswa()}>
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                  Mahasiswa Pengusul (Ketua) *
+                </label>
+                <SearchableSelect
+                  placeholder="Ketik NIM atau nama mahasiswa..."
+                  options={activeMahasiswaList() || []}
+                  value={targetMahasiswaId() || undefined}
+                  onChange={(val) => setTargetMahasiswaId(Number(val))}
+                  onSearch={(q) => setMhsSearchQuery(q)}
+                />
+                <span class="text-fine text-secondary-500 mt-1 block">
+                  Hanya mahasiswa berstatus aktif yang ditampilkan sesuai format standar.
+                </span>
+              </div>
+            </Show>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Tipe Kepesertaan *</label>

@@ -113,6 +113,7 @@ export interface CreateTugasAkhirPayload {
   programStudiId: number;
   periodeId?: string;
   fileProposalTopikUrl?: string;
+  mahasiswaId?: number;
   anggotaMahasiswaIds?: number[];
   usulanPembimbing?: {
     peran: 'pembimbing_1' | 'pembimbing_2';

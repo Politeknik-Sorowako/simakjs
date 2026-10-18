@@ -37,6 +37,7 @@ export interface CreateTugasAkhirInput {
   programStudiId: number;
   periodeId?: string;
   fileProposalTopikUrl?: string;
+  mahasiswaId?: number;
   anggotaMahasiswaIds?: number[];
   usulanPembimbing?: UsulanPembimbingInput[];
 }
@@ -105,6 +106,18 @@ export class TugasAkhirService {
 
       if (!mhsRow) {
         throw new Error('Data profil mahasiswa tidak ditemukan.');
+      }
+      ketuaMhsId = mhsRow.id;
+    } else if (input.mahasiswaId) {
+      // Didaftarkan oleh Admin / Prodi / Kaprodi / LPPM / Dosen atas nama mahasiswa
+      const [mhsRow] = await db
+        .select({ id: mahasiswa.id, programStudiId: mahasiswa.programStudiId })
+        .from(mahasiswa)
+        .where(eq(mahasiswa.id, input.mahasiswaId))
+        .limit(1);
+
+      if (!mhsRow) {
+        throw new Error('Mahasiswa yang dipilih tidak ditemukan.');
       }
       ketuaMhsId = mhsRow.id;
     }

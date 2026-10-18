@@ -21,6 +21,7 @@ import { mataKuliahController } from '../controllers/mataKuliahController';
 import { periodeAkademikController } from '../controllers/periodeAkademikController';
 import { prodiController } from '../controllers/prodiController';
 import { usePagination } from '../hooks/usePagination';
+import { formatMahasiswaOption } from '../utils/format';
 
 const STATUS_META: Record<
   StatusAktivitasMbkm,
@@ -183,9 +184,11 @@ export default function AktivitasMbkm() {
   const [mhsPageData] = createResource(
     () => (isManager() ? { q: mhsQuery(), page: mhsPage() } : null),
     async ({ q, page: p }) => {
-      const res = await mahasiswaController.getAll(q || undefined, p, PICK_PAGE_SIZE);
+      const res = await mahasiswaController.getAll(q || undefined, p, PICK_PAGE_SIZE, undefined, {
+        filterStatus: 'aktif',
+      });
       setMhsHasMore(res.data.length === PICK_PAGE_SIZE);
-      return res.data.map((m): SelectOption => ({ label: `${m.nim} — ${m.nama}`, value: m.id }));
+      return res.data.map((m): SelectOption => ({ label: formatMahasiswaOption(m), value: m.id }));
     },
   );
 
