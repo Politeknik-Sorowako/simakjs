@@ -764,6 +764,8 @@ export class TugasAkhirService {
       instansiEksternal: string | null;
       statusPersetujuan: string;
       catatan: string | null;
+      accSidangProposal: boolean;
+      accSidangAkhir: boolean;
       dosenNama: string | null;
       dosenNip: string | null;
     }[] = [];
@@ -790,6 +792,8 @@ export class TugasAkhirService {
           instansiEksternal: tugasAkhirPembimbing.instansiEksternal,
           statusPersetujuan: tugasAkhirPembimbing.statusPersetujuan,
           catatan: tugasAkhirPembimbing.catatan,
+          accSidangProposal: tugasAkhirPembimbing.accSidangProposal,
+          accSidangAkhir: tugasAkhirPembimbing.accSidangAkhir,
           dosenNama: dosen.nama,
           dosenNip: dosen.nip,
         })

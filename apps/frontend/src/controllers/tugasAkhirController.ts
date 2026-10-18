@@ -39,6 +39,10 @@ export interface TugasAkhirPembimbing {
   namaEksternal: string | null;
   instansiEksternal: string | null;
   catatan: string | null;
+  accSidangProposal?: boolean;
+  accSidangProposalAt?: string | null;
+  accSidangAkhir?: boolean;
+  accSidangAkhirAt?: string | null;
   dosenNama?: string;
   dosenNip?: string;
 }
@@ -248,4 +252,110 @@ export const tugasAkhirController = {
       body: JSON.stringify({ statusKonfirmasi }),
     });
   },
+
+  // Milestone 2: Ruang Bimbingan & Logbook TA
+  async getLogbooks(id: number): Promise<TugasAkhirLogbook[]> {
+    const res = await fetchApi<{ data: TugasAkhirLogbook[] }>(`/tugas-akhir/${id}/logbooks`);
+    return res.data || [];
+  },
+
+  async createLogbook(id: number, payload: CreateLogbookPayload): Promise<TugasAkhirLogbook> {
+    const res = await fetchApi<{ data: TugasAkhirLogbook; message: string }>(`/tugas-akhir/${id}/logbooks`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  },
+
+  async updateLogbook(id: number, logbookId: number, payload: UpdateLogbookPayload): Promise<TugasAkhirLogbook> {
+    const res = await fetchApi<{ data: TugasAkhirLogbook; message: string }>(
+      `/tugas-akhir/${id}/logbooks/${logbookId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    );
+    return res.data;
+  },
+
+  async deleteLogbook(id: number, logbookId: number): Promise<{ message: string }> {
+    const res = await fetchApi<{ message: string }>(`/tugas-akhir/${id}/logbooks/${logbookId}`, {
+      method: 'DELETE',
+    });
+    return res;
+  },
+
+  async reviewLogbook(id: number, logbookId: number, payload: ReviewLogbookPayload): Promise<TugasAkhirLogbook> {
+    const res = await fetchApi<{ data: TugasAkhirLogbook; message: string }>(
+      `/tugas-akhir/${id}/logbooks/${logbookId}/review`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+    return res.data;
+  },
+
+  async accSidang(id: number, payload: AccSidangPayload): Promise<{ message: string }> {
+    const res = await fetchApi<{ message: string }>(`/tugas-akhir/${id}/acc-sidang`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res;
+  },
 };
+
+export interface TugasAkhirLogbook {
+  id: number;
+  tugasAkhirId: number;
+  mahasiswaId: number;
+  dosenId: number | null;
+  pertemuanKe: number;
+  tanggalBimbingan: string;
+  topik: string;
+  deskripsiKemajuan: string;
+  kendala: string | null;
+  catatanDosen: string | null;
+  statusBimbingan: 'menunggu' | 'disetujui' | 'perlu_revisi';
+  fileDraftUrl: string | null;
+  fileRevisiUrl: string | null;
+  statusBkd: boolean;
+  createdAt: string;
+  updatedAt: string;
+  mahasiswaNama?: string | null;
+  mahasiswaNim?: string | null;
+  dosenNama?: string | null;
+  dosenNip?: string | null;
+}
+
+export interface CreateLogbookPayload {
+  dosenId?: number | null;
+  pertemuanKe: number;
+  tanggalBimbingan: string;
+  topik: string;
+  deskripsiKemajuan: string;
+  kendala?: string | null;
+  fileDraftUrl?: string | null;
+}
+
+export interface UpdateLogbookPayload {
+  dosenId?: number | null;
+  pertemuanKe?: number;
+  tanggalBimbingan?: string;
+  topik?: string;
+  deskripsiKemajuan?: string;
+  kendala?: string | null;
+  fileDraftUrl?: string | null;
+}
+
+export interface ReviewLogbookPayload {
+  statusBimbingan: 'disetujui' | 'perlu_revisi' | 'menunggu';
+  catatanDosen?: string | null;
+  fileRevisiUrl?: string | null;
+}
+
+export interface AccSidangPayload {
+  jenisSidang: 'proposal' | 'akhir';
+  statusAcc: boolean;
+  catatan?: string | null;
+}

@@ -121,3 +121,64 @@ export const responUndanganSchema = {
   params: tugasAkhirIdParam,
   body: responUndanganBody,
 };
+
+export const createLogbookBody = t.Object({
+  dosenId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  pertemuanKe: t.Integer({ minimum: 1, maximum: 50 }),
+  tanggalBimbingan: t.String({ minLength: 10, maxLength: 10 }), // YYYY-MM-DD
+  topik: t.String({ minLength: 3, maxLength: 500 }),
+  deskripsiKemajuan: t.String({ minLength: 5 }),
+  kendala: t.Optional(t.Union([t.String(), t.Null()])),
+  fileDraftUrl: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const updateLogbookBody = t.Object({
+  dosenId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  pertemuanKe: t.Optional(t.Integer({ minimum: 1, maximum: 50 })),
+  tanggalBimbingan: t.Optional(t.String({ minLength: 10, maxLength: 10 })),
+  topik: t.Optional(t.String({ minLength: 3, maxLength: 500 })),
+  deskripsiKemajuan: t.Optional(t.String({ minLength: 5 })),
+  kendala: t.Optional(t.Union([t.String(), t.Null()])),
+  fileDraftUrl: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const reviewLogbookBody = t.Object({
+  statusBimbingan: t.Union([t.Literal('disetujui'), t.Literal('perlu_revisi'), t.Literal('menunggu')]),
+  catatanDosen: t.Optional(t.Union([t.String(), t.Null()])),
+  fileRevisiUrl: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const accSidangBody = t.Object({
+  jenisSidang: t.Union([t.Literal('proposal'), t.Literal('akhir')]),
+  statusAcc: t.Boolean(),
+  catatan: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const logbookIdParam = t.Object({
+  id: t.Numeric(),
+  logbookId: t.Numeric(),
+});
+
+export const createLogbookSchema = {
+  params: tugasAkhirIdParam,
+  body: createLogbookBody,
+};
+
+export const updateLogbookSchema = {
+  params: logbookIdParam,
+  body: updateLogbookBody,
+};
+
+export const reviewLogbookSchema = {
+  params: logbookIdParam,
+  body: reviewLogbookBody,
+};
+
+export const deleteLogbookSchema = {
+  params: logbookIdParam,
+};
+
+export const accSidangSchema = {
+  params: tugasAkhirIdParam,
+  body: accSidangBody,
+};
