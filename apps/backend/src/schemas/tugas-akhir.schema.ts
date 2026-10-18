@@ -2,54 +2,54 @@ import { t } from 'elysia';
 
 export const usulanPembimbingItem = t.Object({
   peran: t.Union([t.Literal('pembimbing_1'), t.Literal('pembimbing_2')]),
-  dosenId: t.Optional(t.Integer()),
-  namaEksternal: t.Optional(t.String({ maxLength: 100 })),
-  instansiEksternal: t.Optional(t.String({ maxLength: 255 })),
-  catatan: t.Optional(t.String()),
+  dosenId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  namaEksternal: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
+  instansiEksternal: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
+  catatan: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const createTugasAkhirBody = t.Object({
-  judul: t.String({ minLength: 5, maxLength: 500 }),
-  judulInggris: t.Optional(t.String({ maxLength: 500 })),
+  judul: t.String({ minLength: 3, maxLength: 500 }),
+  judulInggris: t.Optional(t.Union([t.String({ maxLength: 500 }), t.Null()])),
   tipe: t.Union([t.Literal('individu'), t.Literal('kelompok')], { default: 'individu' }),
   jenisKarya: t.Union(
     [t.Literal('skripsi'), t.Literal('prototipe'), t.Literal('proyek_rekayasa'), t.Literal('rancang_bangun')],
     { default: 'skripsi' },
   ),
-  bidangKajian: t.Optional(t.String({ maxLength: 100 })),
-  latarBelakang: t.Optional(t.String()),
-  rumusanMasalah: t.Optional(t.String()),
-  tujuan: t.Optional(t.String()),
-  metodologi: t.Optional(t.String()),
-  mitraIndustri: t.Optional(t.String({ maxLength: 255 })),
-  programStudiId: t.Integer(),
-  periodeId: t.Optional(t.String({ maxLength: 5 })),
-  fileProposalTopikUrl: t.Optional(t.String()),
-  mahasiswaId: t.Optional(t.Integer()),
-  anggotaMahasiswaIds: t.Optional(t.Array(t.Integer())),
-  usulanPembimbing: t.Optional(t.Array(usulanPembimbingItem)),
+  bidangKajian: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
+  latarBelakang: t.Optional(t.Union([t.String(), t.Null()])),
+  rumusanMasalah: t.Optional(t.Union([t.String(), t.Null()])),
+  tujuan: t.Optional(t.Union([t.String(), t.Null()])),
+  metodologi: t.Optional(t.Union([t.String(), t.Null()])),
+  mitraIndustri: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
+  programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  periodeId: t.Optional(t.Union([t.String({ maxLength: 5 }), t.Null()])),
+  fileProposalTopikUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  mahasiswaId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  anggotaMahasiswaIds: t.Optional(t.Union([t.Array(t.Integer()), t.Null()])),
+  usulanPembimbing: t.Optional(t.Union([t.Array(usulanPembimbingItem), t.Null()])),
 });
 
 export const updateTugasAkhirBody = t.Object({
-  judul: t.Optional(t.String({ minLength: 5, maxLength: 500 })),
-  judulInggris: t.Optional(t.String({ maxLength: 500 })),
+  judul: t.Optional(t.Union([t.String({ minLength: 3, maxLength: 500 }), t.Null()])),
+  judulInggris: t.Optional(t.Union([t.String({ maxLength: 500 }), t.Null()])),
   tipe: t.Optional(t.Union([t.Literal('individu'), t.Literal('kelompok')])),
   jenisKarya: t.Optional(
     t.Union([t.Literal('skripsi'), t.Literal('prototipe'), t.Literal('proyek_rekayasa'), t.Literal('rancang_bangun')]),
   ),
-  bidangKajian: t.Optional(t.String({ maxLength: 100 })),
-  latarBelakang: t.Optional(t.String()),
-  rumusanMasalah: t.Optional(t.String()),
-  tujuan: t.Optional(t.String()),
-  metodologi: t.Optional(t.String()),
-  mitraIndustri: t.Optional(t.String({ maxLength: 255 })),
-  fileProposalTopikUrl: t.Optional(t.String()),
+  bidangKajian: t.Optional(t.Union([t.String({ maxLength: 100 }), t.Null()])),
+  latarBelakang: t.Optional(t.Union([t.String(), t.Null()])),
+  rumusanMasalah: t.Optional(t.Union([t.String(), t.Null()])),
+  tujuan: t.Optional(t.Union([t.String(), t.Null()])),
+  metodologi: t.Optional(t.Union([t.String(), t.Null()])),
+  mitraIndustri: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
+  fileProposalTopikUrl: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const reviewTopikBody = t.Object({
   status: t.Union([t.Literal('disetujui'), t.Literal('ditolak'), t.Literal('revisi_proposal_topik')]),
-  catatanProdi: t.Optional(t.String()),
-  pembimbing: t.Optional(t.Array(usulanPembimbingItem)),
+  catatanProdi: t.Optional(t.Union([t.String(), t.Null()])),
+  pembimbing: t.Optional(t.Union([t.Array(usulanPembimbingItem), t.Null()])),
 });
 
 export const overrideStatusBody = t.Object({
@@ -74,7 +74,7 @@ export const getTugasAkhirQuery = t.Object({
 
 export const tambahAnggotaBody = t.Object({
   mahasiswaId: t.Integer(),
-  bagianPengerjaan: t.Optional(t.String()),
+  bagianPengerjaan: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
 export const responUndanganBody = t.Object({

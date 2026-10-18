@@ -215,7 +215,30 @@ export const app = new Elysia()
   .onError(({ code, error, set }) => {
     if (code === 'VALIDATION') {
       set.status = 422;
-      return { success: false, error: 'Validasi gagal', message: error.message };
+      let detail = 'Validasi payload gagal';
+      // biome-ignore lint/suspicious/noExplicitAny: Elysia validation error inspection
+      const allErrors = (error as any)?.all;
+      if (Array.isArray(allErrors) && allErrors.length > 0) {
+        const errorMap = new Map<string, string>();
+        for (const item of allErrors) {
+          const field = item.path?.replace(/^\//, '') || 'field';
+          if (!errorMap.has(field)) {
+            errorMap.set(field, item.summary || item.message || 'tidak valid');
+          }
+        }
+        detail = Array.from(errorMap.entries())
+          .map(([f, msg]) => `${f}: ${msg}`)
+          .join('; ');
+      } else if (error.message) {
+        detail = error.message;
+      }
+      return {
+        success: false,
+        error: `Validasi gagal: ${detail}`,
+        message: detail,
+        // biome-ignore lint/suspicious/noExplicitAny: Elysia validation error inspection
+        details: (error as any)?.all,
+      };
     }
     // biome-ignore lint/suspicious/noExplicitAny: Elysia error handling requires any for cause inspection
     const err = (error as any)?.cause || (error as any);

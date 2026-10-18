@@ -363,4 +363,49 @@ describe('Tugas Akhir - Milestone 1: Pengusulan Topik (Individu & Kelompok)', ()
     expect(anggota[0].mahasiswaId).toBe(mhsId2);
     expect(anggota[0].peran).toBe('ketua');
   });
+
+  it('8. Mahasiswa berhasil mengajukan topik dengan prodi otomatis dari profil dan nullable fields', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/tugas-akhir', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'Sistem Deteksi Anomali Suhu Sensor Mesin Otomasi',
+          tipe: 'individu',
+          jenisKarya: 'skripsi',
+          judulInggris: null,
+          bidangKajian: null,
+          latarBelakang: null,
+          rumusanMasalah: null,
+          tujuan: null,
+          metodologi: null,
+          mitraIndustri: null,
+          programStudiId: null, // Harus otomatis resolve dari profil mhs (prodiId)
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { data: { id: number; programStudiId: number } };
+    expect(body.data.programStudiId).toBe(prodiId);
+  });
+
+  it('9. Validasi gagal mengembalikan status 422 dan pesan error detail field', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/tugas-akhir', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'A', // Terlalu pendek (kurang dari 3 karakter)
+          tipe: 'invalid_tipe',
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(422);
+    const body = (await res.json()) as { success: boolean; error: string; message: string };
+    expect(body.success).toBe(false);
+    expect(body.error).toContain('Validasi gagal:');
+    expect(body.error).toContain('judul');
+  });
 });
