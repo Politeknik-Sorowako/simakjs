@@ -4,6 +4,7 @@ import {
   admissionSessionProdis,
   admissionSessions,
   aktivitasMbkm,
+  aktivitasMbkmStatusLog,
   anggotaAktivitasMbkm,
   angkatanKurikulum,
   angsuranTagihan,
@@ -136,6 +137,7 @@ export interface MahasiswaSuccessResponse {
 export async function clearDatabase() {
   tokenCache.clear();
   await db.delete(auditLogs);
+  await db.delete(aktivitasMbkmStatusLog);
   await db.delete(konversiAktivitasMbkm);
   await db.delete(bimbinganAktivitasMbkm);
   await db.delete(anggotaAktivitasMbkm);

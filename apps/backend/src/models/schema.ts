@@ -3617,6 +3617,29 @@ export const konversiAktivitasMbkm = pgTable(
   ],
 );
 
+/**
+ * Jejak perubahan status yang dilakukan manual oleh admin/super_admin/prodi/
+ * kaprodi lewat endpoint override. Alur normal tidak menulis di sini karena
+ * transisinya sudah dapat direkonstruksi dari `status` + `disetujui_at`;
+ * yang tidak terekam di sana adalah alasan override — karena itu alasannya
+ * disimpan permanen bersama pelaku dan waktu.
+ */
+export const aktivitasMbkmStatusLog = pgTable(
+  'aktivitas_mbkm_status_log',
+  {
+    id: serial('id').primaryKey(),
+    aktivitasId: integer('aktivitas_id')
+      .notNull()
+      .references(() => aktivitasMbkm.id, { onDelete: 'cascade' }),
+    dariStatus: varchar('dari_status', { length: 20 }),
+    keStatus: varchar('ke_status', { length: 20 }).notNull(),
+    alasan: text('alasan').notNull(),
+    olehUserId: integer('oleh_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('idx_aktivitas_mbkm_status_log_aktivitas').on(t.aktivitasId)],
+);
+
 export const jenisAktivitasMbkmRelations = relations(jenisAktivitasMbkm, ({ many }) => ({
   aktivitas: many(aktivitasMbkm),
 }));
@@ -3641,6 +3664,7 @@ export const aktivitasMbkmRelations = relations(aktivitasMbkm, ({ one, many }) =
   anggota: many(anggotaAktivitasMbkm),
   pembimbing: many(bimbinganAktivitasMbkm),
   konversi: many(konversiAktivitasMbkm),
+  statusLog: many(aktivitasMbkmStatusLog),
 }));
 
 export const anggotaAktivitasMbkmRelations = relations(anggotaAktivitasMbkm, ({ one }) => ({
@@ -3673,5 +3697,16 @@ export const konversiAktivitasMbkmRelations = relations(konversiAktivitasMbkm, (
   mataKuliah: one(mataKuliah, {
     fields: [konversiAktivitasMbkm.mataKuliahId],
     references: [mataKuliah.id],
+  }),
+}));
+
+export const aktivitasMbkmStatusLogRelations = relations(aktivitasMbkmStatusLog, ({ one }) => ({
+  aktivitas: one(aktivitasMbkm, {
+    fields: [aktivitasMbkmStatusLog.aktivitasId],
+    references: [aktivitasMbkm.id],
+  }),
+  oleh: one(users, {
+    fields: [aktivitasMbkmStatusLog.olehUserId],
+    references: [users.id],
   }),
 }));

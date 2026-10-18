@@ -3,7 +3,9 @@ import { eq, sql } from 'drizzle-orm';
 import { app } from '../app';
 import {
   aktivitasMbkm,
+  aktivitasMbkmStatusLog,
   anggotaAktivitasMbkm,
+  bimbingan,
   bimbinganAktivitasMbkm,
   dosen,
   jenisAktivitasMbkm,
@@ -380,5 +382,123 @@ describe('Modul Aktivitas MBKM', () => {
     const rows2 = await db.select().from(aktivitasMbkm);
     expect(rows2.length).toBe(1);
     FeederService.setTestTransport(null);
+  });
+
+  // ── Override status (koreksi manual oleh admin/prodi/kaprodi) ──────────────
+  describe('override status', () => {
+    /** Buat aktivitas lengkap (anggota + pembimbing) dalam status draft. */
+    async function buatDraftSiapDisetujui(sks = 20): Promise<number> {
+      const create = await post('/aktivitas-mbkm', adminToken, {
+        judul: 'Magang Uji Override',
+        jenisId,
+        periodeId,
+        programStudiId: prodiId,
+        sks,
+      });
+      const { data } = (await create.json()) as { data: { id: number } };
+      await post(`/aktivitas-mbkm/${data.id}/anggota`, adminToken, { mahasiswaId: mhsId });
+      await post(`/aktivitas-mbkm/${data.id}/pembimbing`, adminToken, { dosenId });
+      return data.id;
+    }
+
+    const bimbinganTertautCount = async (aktivitasId: number) =>
+      (await db.select({ id: bimbingan.id }).from(bimbingan).where(eq(bimbingan.aktivitasMbkmId, aktivitasId))).length;
+
+    it('mengubah status bebas ke lima status dan mencatat alasan', async () => {
+      const id = await buatDraftSiapDisetujui();
+      const alasan = 'Koreksi: pengajuan terlewat, disetujui manual oleh kaprodi.';
+
+      const res = await post(`/aktivitas-mbkm/${id}/override-status`, adminToken, { status: 'disetujui', alasan });
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { status: string; disetujuiOlehId: number | null } };
+      expect(body.data.status).toBe('disetujui');
+      // Menempel stempel persetujuan beserta pelaku override.
+      expect(body.data.disetujuiOlehId).not.toBeNull();
+
+      // Turun ke draft → tautan bimbingan diputus, stempel dibersihkan.
+      const turun = await post(`/aktivitas-mbkm/${id}/override-status`, adminToken, {
+        status: 'draft',
+        alasan: 'Koreksi: pada periode sebelumnya disetujui tidak sengaja, dikembalikan ke draft.',
+      });
+      expect(turun.status).toBe(200);
+      const row = await db.select().from(aktivitasMbkm).where(eq(aktivitasMbkm.id, id));
+      expect(row[0].status).toBe('draft');
+      expect(row[0].disetujuiOlehId).toBeNull();
+      expect(row[0].disetujuiAt).toBeNull();
+      expect(await bimbinganTertautCount(id)).toBe(0);
+
+      // Keduanya tercatat permanen beserta alasan dan pelaku.
+      const logs = await db.select().from(aktivitasMbkmStatusLog).where(eq(aktivitasMbkmStatusLog.aktivitasId, id));
+      expect(logs.length).toBe(2);
+      expect(logs.map((l) => l.keStatus).sort()).toEqual(['disetujui', 'draft']);
+      for (const l of logs) expect(l.alasan.length).toBeGreaterThanOrEqual(10);
+      expect(logs.every((l) => l.olehUserId !== null)).toBe(true);
+      const turunLog = logs.find((l) => l.keStatus === 'draft');
+      expect(turunLog?.dariStatus).toBe('disetujui');
+    });
+
+    it('menjalankan linkBimbingan saat override naik ke disetujui', async () => {
+      const id = await buatDraftSiapDisetujui();
+      const res = await post(`/aktivitas-mbkm/${id}/override-status`, adminToken, {
+        status: 'disetujui',
+        alasan: 'Koreksi: aktivitas disetujui setelah verifikasi lisan dekan.',
+      });
+      expect(res.status).toBe(200);
+      // 1 pembimbing × 1 anggota = 1 baris bimbingan MAGANG tertaut.
+      expect(await bimbinganTertautCount(id)).toBe(1);
+
+      // Override lagi ke status sama ditolak (tidak generates log baru).
+      const sama = await post(`/aktivitas-mbkm/${id}/override-status`, adminToken, {
+        status: 'disetujui',
+        alasan: 'Percobaan override ke status yang sama seharusnya ditolak.',
+      });
+      expect(sama.status).toBe(400);
+      const logs = await db.select().from(aktivitasMbkmStatusLog).where(eq(aktivitasMbkmStatusLog.aktivitasId, id));
+      expect(logs.length).toBe(1);
+    });
+
+    it('menolak alasan kosong dan role non-pengoverride', async () => {
+      const id = await buatDraftSiapDisetujui();
+
+      const kosong = await post(`/aktivitas-mbkm/${id}/override-status`, adminToken, {
+        status: 'disetujui',
+        alasan: 'pendek',
+      });
+      expect(kosong.status).toBe(422);
+
+      const dosenToken = await getAuthToken('dosen-mbkm@test.com', 'dosen');
+      const denied = await post(`/aktivitas-mbkm/${id}/override-status`, dosenToken, {
+        status: 'disetujui',
+        alasan: 'Dosen tidak boleh melakukan override status aktivitas.',
+      });
+      expect(denied.status).toBe(403);
+
+      const logs = await db.select().from(aktivitasMbkmStatusLog).where(eq(aktivitasMbkmStatusLog.aktivitasId, id));
+      expect(logs.length).toBe(0);
+    });
+
+    it('menampilkan riwayat status lewat endpoint baca', async () => {
+      const id = await buatDraftSiapDisetujui();
+      await post(`/aktivitas-mbkm/${id}/override-status`, adminToken, {
+        status: 'diajukan',
+        alasan: 'Koreksi: status diajukan diisi manual oleh admin prodi.',
+      });
+
+      const res = await app.handle(
+        new Request(`http://localhost/aktivitas-mbkm/${id}/status-log`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        data: Array<{ keStatus: string; dariStatus: string | null; alasan: string; olehNama: string | null }>;
+      };
+      expect(body.data.length).toBe(1);
+      expect(body.data[0].keStatus).toBe('diajukan');
+      expect(body.data[0].dariStatus).toBe('draft');
+      expect(body.data[0].alasan).toContain('Koreksi');
+      expect(body.data[0].olehNama).not.toBeNull();
+    });
   });
 });

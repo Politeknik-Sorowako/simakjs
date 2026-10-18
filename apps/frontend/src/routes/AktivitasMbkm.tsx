@@ -141,6 +141,13 @@ export default function AktivitasMbkm() {
   const { page, setPage, limit, setLimit, resetPage } = usePagination(20);
 
   const isManager = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi', 'kemahasiswaan']);
+  /**
+   * Override status bersifat keputusan akademik bertanda tangan, jadi hanya
+   * dibuka untuk admin/super_admin/prodi/kaprodi — bukan `kemahasiswaan`.
+   * Harus sejalan dengan `OVERRIDE_ROLES` di backend
+   * (`controllers/aktivitas-mbkm.controller.ts`).
+   */
+  const canOverrideStatus = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi']);
 
   const [statusFilter, setStatusFilter] = createSignal<StatusAktivitasMbkm | ''>('');
   const [prodiFilter, setProdiFilter] = createSignal('');
@@ -433,9 +440,9 @@ export default function AktivitasMbkm() {
   };
 
   // ── Hapus aktivitas ────────────────────────────────────────────────────────
-  // Hanya draft/ditolak dan belum punya bimbingan tertaut: kolom
-  // `bimbingan.aktivitas_mbkm_id` tidak ber-FK, sehingga aktivitas yang pernah
-  // disetujui tidak boleh dihapus lewat UI agar tidak meninggalkan tautan yatim.
+  // Hanya draft/ditolak dan belum punya bimbingan tertaut: aktivitas yang pernah
+  // disetujui sudah memiliki baris bimbingan yang ter-kredit BKD, sehingga
+  // menghapusnya akan memutus jejaknya tanpa sisa catatan.
   const [deleteTarget, setDeleteTarget] = createSignal<AktivitasMbkm | null>(null);
 
   const canEdit = (d: AktivitasMbkm) => isManager() && d.status === 'draft';
@@ -480,6 +487,61 @@ export default function AktivitasMbkm() {
       return;
     }
     await runAction(() => aktivitasMbkmController.ajukan(d.id), 'Aktivitas diajukan');
+  };
+
+  // ── Override status ────────────────────────────────────────────────────────
+  // Alur normal (`ajukan/setujui/tolak/selesai`) tetap dipakai; override hanya
+  // untuk koreksi data (mis. pengajuan tersesat atau persetujuan keliru) dan
+  // selalu wajib beralasan karena backend menyimpannya permanen.
+  const [overrideOpen, setOverrideOpen] = createSignal(false);
+  const [overrideTarget, setOverrideTarget] = createSignal<StatusAktivitasMbkm | ''>('');
+  const [overrideAlasan, setOverrideAlasan] = createSignal('');
+  const [overrideError, setOverrideError] = createSignal('');
+
+  /** Status tujuan override: selain status saat ini. */
+  const overrideTargetOptions = (current: StatusAktivitasMbkm): StatusAktivitasMbkm[] =>
+    (Object.keys(STATUS_META) as StatusAktivitasMbkm[]).filter((s) => s !== current);
+
+  const openOverrideModal = (d: AktivitasMbkm) => {
+    setOverrideTarget('');
+    setOverrideAlasan('');
+    setOverrideError('');
+    setOverrideOpen(true);
+  };
+
+  const submitOverride = async () => {
+    const d = detail();
+    if (!d) return;
+    const target = overrideTarget();
+    if (!target) {
+      setOverrideError('Pilih status tujuan terlebih dahulu.');
+      return;
+    }
+    const alasan = overrideAlasan().trim();
+    if (alasan.length < 10) {
+      setOverrideError('Alasan wajib diisi minimal 10 karakter.');
+      return;
+    }
+    setBusy(true);
+    setOverrideError('');
+    try {
+      await aktivitasMbkmController.overrideStatus(d.id, target, alasan);
+      toast.showToast(`Status aktivitas diubah menjadi ${STATUS_META[target].label}`, 'success');
+      setOverrideOpen(false);
+      refreshDetail();
+    } catch (e: unknown) {
+      setOverrideError(e instanceof Error ? e.message : 'Gagal melakukan override status.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Dampak turunan dari target: menuruni status memutus tautan bimbingan PKL. */
+  const overrideMemutusBimbingan = () => {
+    const d = detail();
+    if (!d) return false;
+    if (d.bimbinganTertaut.length === 0) return false;
+    return overrideTarget() === 'draft' || overrideTarget() === 'diajukan' || overrideTarget() === 'ditolak';
   };
 
   const handleAddKonversi = async (d: AktivitasMbkm) => {
@@ -617,12 +679,12 @@ export default function AktivitasMbkm() {
           />
         </Show>
 
-        {/* Detail */}
-        {/* Modal ubah & konfirmasi hapus menimpa detail: `Modal` memasang
-            listener Escape global, sehingga dua modal yang terbuka bersamaan akan
-            tertutup sekaligus. Detail ditutup selama modal anak aktif. */}
+        {/* Modal ubah, override, dan konfirmasi hapus menimpa detail: `Modal`
+            memasang listener Escape global, sehingga dua modal yang terbuka
+            bersamaan akan tertutup sekaligus. Detail ditutup selama modal anak
+            aktif agar tidak terjadi double-close. */}
         <Modal
-          isOpen={detailId() !== null && !editOpen() && deleteTarget() === null}
+          isOpen={detailId() !== null && !editOpen() && !overrideOpen() && deleteTarget() === null}
           onClose={() => setDetailId(null)}
           title={detail()?.judul ?? 'Detail Aktivitas'}
           maxWidth="lg"
@@ -642,6 +704,16 @@ export default function AktivitasMbkm() {
                         Hapus Aktivitas
                       </Button>
                     </Show>
+                  </div>
+                </Show>
+                <Show when={canOverrideStatus()}>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => openOverrideModal(d())}>
+                      Override Status
+                    </Button>
+                    <p class="text-fine text-secondary-500">
+                      Untuk koreksi data di luar alur normal. Setiap perubahan wajib beralasan dan tercatat permanen.
+                    </p>
                   </div>
                 </Show>
 
@@ -936,6 +1008,35 @@ export default function AktivitasMbkm() {
                     </Show>
                   </div>
                 </Show>
+
+                {/* Riwayat override status — hanya relevan bila pernah di-override.
+                    `?? []` menjaga UI tetap tampil bila backend belum memuat
+                    field ini (mis. saat rolling deploy: frontend baru sempat
+                    ter-deploy sebelum backend ikut ter-restart). */}
+                <Show when={canOverrideStatus() && (d().riwayatStatus?.length ?? 0) > 0}>
+                  <div>
+                    <p class="mb-1 font-semibold text-secondary-700 dark:text-secondary-200">
+                      Riwayat Override Status ({d().riwayatStatus?.length ?? 0})
+                    </p>
+                    <For each={d().riwayatStatus ?? []}>
+                      {(log) => (
+                        <div class="border-b border-secondary-100 py-1.5 text-caption dark:border-secondary-800">
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <Show when={log.dariStatus !== null}>
+                              <span class="text-secondary-500">{STATUS_META[log.dariStatus ?? 'draft'].label}</span>
+                              <span class="text-secondary-400">→</span>
+                            </Show>
+                            <Badge variant={STATUS_META[log.keStatus].variant} size="sm">
+                              {STATUS_META[log.keStatus].label}
+                            </Badge>
+                            <span class="text-fine text-secondary-400">oleh {log.olehNama ?? 'pengguna dihapus'}</span>
+                          </div>
+                          <p class="mt-0.5 text-secondary-700 dark:text-secondary-200">{log.alasan}</p>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
               </div>
             )}
           </Show>
@@ -1093,6 +1194,81 @@ export default function AktivitasMbkm() {
               </Button>
             </div>
           </div>
+        </Modal>
+
+        {/* Override status */}
+        <Modal
+          isOpen={overrideOpen()}
+          onClose={() => setOverrideOpen(false)}
+          title="Override Status Aktivitas"
+          maxWidth="md"
+        >
+          <Show when={detail()}>
+            {(d) => (
+              <div class="flex flex-col gap-4">
+                <div class="rounded-xl bg-secondary-50 p-3 text-caption dark:bg-secondary-800">
+                  <p class="text-secondary-700 dark:text-secondary-200">
+                    Status saat ini:{' '}
+                    <Badge variant={STATUS_META[d().status].variant} size="sm">
+                      {STATUS_META[d().status].label}
+                    </Badge>
+                  </p>
+                  <p class="mt-1 text-secondary-600 dark:text-secondary-300">
+                    Override memaksa alur normal untuk koreksi data. Gunakan hanya bila pengajuan tersesat atau
+                    persetujuan keliru. Setiap perubahan tercatat permanen beserta alasan dan pelaku.
+                  </p>
+                </div>
+
+                <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
+                  Status tujuan
+                  <select
+                    value={overrideTarget()}
+                    onChange={(e) => setOverrideTarget(e.currentTarget.value as StatusAktivitasMbkm | '')}
+                    class="rounded-lg border border-secondary-200 bg-white px-3 py-2 dark:border-secondary-700 dark:bg-secondary-800"
+                  >
+                    <option value="">— Pilih status —</option>
+                    <For each={overrideTargetOptions(d().status)}>
+                      {(s) => <option value={s}>{STATUS_META[s].label}</option>}
+                    </For>
+                  </select>
+                </label>
+
+                <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
+                  Alasan override (wajib, minimal 10 karakter)
+                  <textarea
+                    value={overrideAlasan()}
+                    onInput={(e) => setOverrideAlasan(e.currentTarget.value)}
+                    rows={3}
+                    maxLength={500}
+                    placeholder="Contoh: Pengajuan tidak tercatat pada sistem, disetujui manual berdasarkan bukti di luar sistem."
+                    class="rounded-lg border border-secondary-200 bg-white px-3 py-2 text-sm dark:border-secondary-700 dark:bg-secondary-800"
+                  />
+                  <span class="text-fine text-secondary-400">{overrideAlasan().length}/500</span>
+                </label>
+
+                <Show when={overrideMemutusBimbingan()}>
+                  <p class="rounded-xl bg-warning-50 p-3 text-caption text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">
+                    Status tujuan akan memutus tautan {d().bimbinganTertaut.length} bimbingan PKL dari aktivitas ini.
+                    Baris bimbingan dan kredit BKD tetap tersimpan sebagai riwayat, namun klaim &quot;dihasilkan oleh
+                    aktivitas ini&quot; akan dilepas.
+                  </p>
+                </Show>
+
+                <Show when={overrideError()}>
+                  <p class="text-caption text-danger-600 dark:text-danger-400">{overrideError()}</p>
+                </Show>
+
+                <div class="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setOverrideOpen(false)}>
+                    Batal
+                  </Button>
+                  <Button size="sm" loading={busy()} onClick={() => void submitOverride()}>
+                    Simpan Override
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Show>
         </Modal>
 
         {/* Konfirmasi hapus */}

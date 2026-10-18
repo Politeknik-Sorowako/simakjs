@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, isNotNull, sql } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core';
 import {
   aktivitasMbkm,
+  aktivitasMbkmStatusLog,
   anggotaAktivitasMbkm,
   bimbingan,
   bimbinganAktivitasMbkm,
@@ -18,6 +19,8 @@ import { db } from '../utils/db';
 
 /** Alias agar pembuat dan penyetuju aktivitas bisa ditampilkan terpisah. */
 const usersDisetujui = alias(users, 'users_disetujui_aktivitas');
+/** Alias untuk nama pelaku override status (bisa berbeda dari penyetuju approve). */
+const usersOverride = alias(users, 'users_override_aktivitas');
 
 export const STATUS_AKTIVITAS = ['draft', 'diajukan', 'disetujui', 'ditolak', 'selesai'] as const;
 export type StatusAktivitas = (typeof STATUS_AKTIVITAS)[number];
@@ -106,6 +109,22 @@ export interface AktivitasDetail {
   }>;
   /** Baris bimbingan (kategori MAGANG) yang dibuat otomatis dari aktivitas ini. */
   bimbinganTertaut: Array<{ id: number; mahasiswaId: number; periodeId: string }>;
+  /** Jejak perubahan status manual (override) oleh admin/prodi/kaprodi. */
+  riwayatStatus: StatusLogItem[];
+}
+
+export interface StatusLogItem {
+  id: number;
+  dariStatus: StatusAktivitas | null;
+  keStatus: StatusAktivitas;
+  alasan: string;
+  olehNama: string | null;
+  createdAt: Date;
+}
+
+export interface OverrideStatusInput {
+  status: StatusAktivitas;
+  alasan: string;
 }
 
 export class AktivitasMbkmService {
@@ -364,6 +383,122 @@ export class AktivitasMbkmService {
     return row;
   }
 
+  /**
+   * Override status aktivitas di luar alur normal. Hanya untuk koreksi data di
+   * lapangan (mis. pengajuan tersesat atau persetujuan keliru), dan setiap
+   * override wajib menyertakan alasan yang tersimpan permanen.
+   *
+   * Perbedaan dari alur normal:
+   * - Melompat ke `disetujui` TIDAK mensyaratkan periode/anggota/pembimbing,
+   *   tetapi tetap menjalankan `linkBimbingan` agar bimbingan PKL tercipta dan
+   *   ter-kredit BKD sama seperti approve normal.
+   * - Turun ke status non-`disetujui`/`selesai` (draft/diajukan/ditolak)
+   *   MEMUTUS tautan `bimbingan.aktivitas_mbkm_id` pada baris terkait. Baris
+   *   bimbingan, sesi, dan kredit BKD-nya tetap ada sebagai riwayat — hanya
+   *   klaim "dihasilkan oleh aktivitas ini" yang dicabut, supaya tidak terjadi
+   *   tautan yatim yang menyesatkan saat aktivitas di-override lagi nanti.
+   * - Beralih ke `disetujui` juga menstempel `disetujuiOlehId/At`; turun dari
+   *   `disetujui`/`selesai` membersihkannya supaya kolom tidak menyesatkan.
+   */
+  static async overrideStatus(
+    id: number,
+    input: OverrideStatusInput,
+    olehUserId: number,
+    scopedProdiIds?: number[] | null,
+  ) {
+    const existing = await AktivitasMbkmService.loadOwned(id, scopedProdiIds);
+    if (!existing) throw new Error('Data aktivitas tidak ditemukan.');
+    if (existing.status === input.status) {
+      throw new Error(`Status aktivitas sudah '${input.status}'. Pilih status yang berbeda.`);
+    }
+    const alasan = input.alasan.trim();
+    if (alasan.length < 10) throw new Error('Alasan override minimal 10 karakter.');
+    if (alasan.length > 500) throw new Error('Alasan override maksimal 500 karakter.');
+
+    const detail = await AktivitasMbkmService.composeItems([id], { includeHistory: false }).then((rows) => rows[0]);
+    if (!detail) throw new Error('Data aktivitas tidak ditemukan.');
+
+    const dariStatus = detail.status;
+    const menujuDisetujui = input.status === 'disetujui' || input.status === 'selesai';
+
+    // Penautan bimbingan dijalankan DI LUAR transaksi: `linkBimbingan` memakai
+    // pool `db` sendiri (sama seperti `setujui`), jadi memanggilnya di dalam
+    // `db.transaction` akan memakai koneksi kedua dan berisiko lock. Tabrakan
+    // tidak mungkin karena tautan hanya ditulis bila `aktivitas_mbkm_id` masih
+    // NULL, dan operasi ini idempoten.
+    let bimbinganDibuat = 0;
+    let bimbinganDilewati = 0;
+    if (input.status === 'disetujui') {
+      const linked = await AktivitasMbkmService.linkBimbing(detail);
+      bimbinganDibuat = linked.created;
+      bimbinganDilewati = linked.skipped;
+    }
+
+    return await db.transaction(async (tx) => {
+      let bimbinganDiputus = 0;
+
+      // Turun ke draft/diajukan/ditolak → putus tautan bimbingan PKL.
+      if (!menujuDisetujui) {
+        const diputus = await tx
+          .update(bimbingan)
+          .set({ aktivitasMbkmId: null, updatedAt: new Date() })
+          .where(eq(bimbingan.aktivitasMbkmId, id))
+          .returning({ id: bimbingan.id });
+        bimbinganDiputus = diputus.length;
+      }
+
+      const [row] = await tx
+        .update(aktivitasMbkm)
+        .set({
+          status: input.status,
+          // Stempel persetujuan hanya relevan bila berstatus disetujui/selesai;
+          // di bawah itu dibersihkan agar tidak tampak sudah pernah disetujui.
+          disetujuiOlehId: menujuDisetujui ? olehUserId : null,
+          disetujuiAt: menujuDisetujui ? new Date() : null,
+          updatedAt: new Date(),
+        })
+        .where(eq(aktivitasMbkm.id, id))
+        .returning();
+
+      await tx.insert(aktivitasMbkmStatusLog).values({
+        aktivitasId: id,
+        dariStatus,
+        keStatus: input.status,
+        alasan,
+        olehUserId,
+      });
+
+      return {
+        row,
+        bimbinganDibuat,
+        bimbinganDilewati,
+        bimbinganDiputus,
+      };
+    });
+  }
+
+  /** Riwayat perubahan status manual untuk satu aktivitas (terbaru lebih dulu). */
+  static async listStatusLog(id: number): Promise<StatusLogItem[]> {
+    const rows = await db
+      .select({
+        id: aktivitasMbkmStatusLog.id,
+        dariStatus: aktivitasMbkmStatusLog.dariStatus,
+        keStatus: aktivitasMbkmStatusLog.keStatus,
+        alasan: aktivitasMbkmStatusLog.alasan,
+        olehNama: sql<string | null>`${usersOverride.nama}`,
+        createdAt: aktivitasMbkmStatusLog.createdAt,
+      })
+      .from(aktivitasMbkmStatusLog)
+      .leftJoin(usersOverride, eq(aktivitasMbkmStatusLog.olehUserId, usersOverride.id))
+      .where(eq(aktivitasMbkmStatusLog.aktivitasId, id))
+      .orderBy(desc(aktivitasMbkmStatusLog.createdAt));
+    return rows.map((r) => ({
+      ...r,
+      dariStatus: (r.dariStatus as StatusAktivitas | null) ?? null,
+      keStatus: r.keStatus as StatusAktivitas,
+    }));
+  }
+
   static async setSelesai(id: number, scopedProdiIds?: number[] | null) {
     const existing = await AktivitasMbkmService.loadOwned(id, scopedProdiIds);
     if (!existing) throw new Error('Data aktivitas tidak ditemukan.');
@@ -559,6 +694,21 @@ export class AktivitasMbkmService {
       .from(bimbingan)
       .where(and(inArray(bimbingan.aktivitasMbkmId, ids), isNotNull(bimbingan.aktivitasMbkmId)));
 
+    const statusLogRows = await db
+      .select({
+        aktivitasId: aktivitasMbkmStatusLog.aktivitasId,
+        id: aktivitasMbkmStatusLog.id,
+        dariStatus: aktivitasMbkmStatusLog.dariStatus,
+        keStatus: aktivitasMbkmStatusLog.keStatus,
+        alasan: aktivitasMbkmStatusLog.alasan,
+        olehNama: sql<string | null>`${usersOverride.nama}`,
+        createdAt: aktivitasMbkmStatusLog.createdAt,
+      })
+      .from(aktivitasMbkmStatusLog)
+      .leftJoin(usersOverride, eq(aktivitasMbkmStatusLog.olehUserId, usersOverride.id))
+      .where(inArray(aktivitasMbkmStatusLog.aktivitasId, ids))
+      .orderBy(desc(aktivitasMbkmStatusLog.createdAt));
+
     return heads.map((h) => ({
       id: h.id,
       judul: h.judul,
@@ -592,6 +742,16 @@ export class AktivitasMbkmService {
           sksDiakui: k.sksDiakui,
         })),
       bimbinganTertaut: bimbinganRows.filter((b) => b.aktivitasId === h.id),
+      riwayatStatus: statusLogRows
+        .filter((s) => s.aktivitasId === h.id)
+        .map((s) => ({
+          id: s.id,
+          dariStatus: (s.dariStatus as StatusAktivitas | null) ?? null,
+          keStatus: s.keStatus as StatusAktivitas,
+          alasan: s.alasan,
+          olehNama: s.olehNama,
+          createdAt: s.createdAt,
+        })),
     }));
   }
 }
