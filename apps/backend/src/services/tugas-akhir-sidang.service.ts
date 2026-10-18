@@ -276,17 +276,25 @@ export class TugasAkhirSidangService {
     const [ta] = await db.select().from(tugasAkhir).where(eq(tugasAkhir.id, taId)).limit(1);
     if (!ta) throw new Error('Data tugas akhir tidak ditemukan.');
 
-    const kriteria = await db
-      .select()
-      .from(tugasAkhirRubrikKriteria)
-      .where(
-        and(
-          eq(tugasAkhirRubrikKriteria.programStudiId, ta.programStudiId),
-          eq(tugasAkhirRubrikKriteria.jenisSidang, jenisSidang),
-          eq(tugasAkhirRubrikKriteria.isAktif, true),
-        ),
-      )
-      .orderBy(asc(tugasAkhirRubrikKriteria.urutan));
+    let kriteria: Array<typeof tugasAkhirRubrikKriteria.$inferSelect> = [];
+    try {
+      kriteria = await db
+        .select()
+        .from(tugasAkhirRubrikKriteria)
+        .where(
+          and(
+            eq(tugasAkhirRubrikKriteria.programStudiId, ta.programStudiId),
+            eq(tugasAkhirRubrikKriteria.jenisSidang, jenisSidang),
+            eq(tugasAkhirRubrikKriteria.isAktif, true),
+          ),
+        )
+        .orderBy(asc(tugasAkhirRubrikKriteria.urutan));
+    } catch (err: unknown) {
+      console.warn(
+        `[TugasAkhirSidangService] Failed to load rubrik kriteria from DB, falling back to default template: ${(err as Error).message}`,
+      );
+      kriteria = [];
+    }
 
     // Jika prodi belum punya rubrik custom di database, sediakan rubrik standar formulir vokasi resmi
     if (kriteria.length === 0) {
