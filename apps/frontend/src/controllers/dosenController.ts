@@ -5,7 +5,9 @@ import { PaginatedResponse, Prodi } from './prodiController';
 export interface Dosen {
   id: number;
   nip: string;
+  gelarDepan?: string | null;
   nama: string;
+  gelarBelakang?: string | null;
   email: string;
   programStudiId: number | null;
   nidn?: string | null;

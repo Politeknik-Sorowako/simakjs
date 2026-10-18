@@ -488,4 +488,25 @@ export class AktivitasMbkmController {
       return { error: err instanceof Error ? err.message : 'Riwayat status tidak ditemukan' };
     }
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async syncFeeder({ params, set, getCurrentUser }: AuthContext<any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      const denied = AktivitasMbkmController.denyIfAuthorizationFallback(user);
+      if (denied || !user) {
+        set.status = user ? 403 : 401;
+        return { error: denied ?? 'Silakan login terlebih dahulu' };
+      }
+      const scopedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+      const res = await AktivitasMbkmService.syncFeederDetails(Number(params.id), scopedProdiIds);
+      return {
+        message: `Sinkronisasi detail Feeder berhasil: ${res.anggota} anggota, ${res.pembimbing} pembimbing, ${res.konversi} konversi rekognisi disinkronkan.`,
+        data: res,
+      };
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal sinkron detail dari Feeder' };
+    }
+  }
 }

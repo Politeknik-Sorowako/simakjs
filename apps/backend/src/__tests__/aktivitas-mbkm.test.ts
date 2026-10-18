@@ -332,6 +332,17 @@ describe('Modul Aktivitas MBKM', () => {
     const [adminUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, 'admin-mbkm@test.com'));
     const actorId = adminUser.id;
 
+    await db.insert(mataKuliah).values({
+      kode: 'MK-MBK-1',
+      nama: 'Magang Industri',
+      sksTotal: 20,
+      sksTatapMuka: 0,
+      sksPraktek: 20,
+      sksPraktekLapangan: 0,
+      sksSimulasi: 0,
+      programStudiId: prodiId,
+    });
+
     FeederService.setTestTransport(async (_cfg, body) => {
       if (body.act === 'GetToken') return { error_code: 0, data: { token: 'tok' } };
       if (body.act === 'GetListAktivitasMahasiswa') {
@@ -344,6 +355,52 @@ describe('Modul Aktivitas MBKM', () => {
               id_jenis_aktivitas: '',
               id_semester: '20251',
               id_prodi: 'prodi-feeder-1',
+            },
+          ],
+        };
+      }
+      if (body.act === 'GetAnggotaAktivitasMahasiswa') {
+        return {
+          error_code: 0,
+          data: [
+            {
+              id_anggota: 'UUID-ANG-1',
+              id_aktivitas: 'UUID-AKT-1',
+              nim: '8100001',
+              nama_mahasiswa: 'Mhs MBKM 1',
+              jenis_peran: '1',
+              nama_jenis_peran: 'Ketua',
+            },
+          ],
+        };
+      }
+      if (body.act === 'GetBimbingMahasiswa') {
+        return {
+          error_code: 0,
+          data: [
+            {
+              id_bimbing_mahasiswa: 'UUID-BIMB-1',
+              id_aktivitas: 'UUID-AKT-1',
+              id_dosen: 'feeder-dosen-1',
+              nidn: 'MBK001',
+              nama_dosen: 'Dosen Pembimbing MBKM',
+              pembimbing_ke: '1',
+              nama_kategori_kegiatan: 'Pembimbing',
+            },
+          ],
+        };
+      }
+      if (body.act === 'GetKonversiKampusMerdeka') {
+        return {
+          error_code: 0,
+          data: [
+            {
+              id_konversi_aktivitas: 'UUID-KONV-1',
+              id_aktivitas: 'UUID-AKT-1',
+              id_matkul: 'feeder-mk-1',
+              kode_mata_kuliah: 'MK-MBK-1',
+              nama_mata_kuliah: 'Magang Industri',
+              sks_mata_kuliah: 20,
             },
           ],
         };
@@ -372,7 +429,60 @@ describe('Modul Aktivitas MBKM', () => {
     expect(rows[0].periodeId).toBe(periodeId);
     expect(rows[0].programStudiId).toBe(prodiId);
 
-    // Preview kedua → 'sama'; apply ulang tidak menggandakan baris.
+    // Preview dan Apply Anggota Aktivitas MBKM
+    const previewAnggota = await FeederPullService.preview('anggota-aktivitas');
+    expect(previewAnggota.summary.totalFeeder).toBe(1);
+    expect(previewAnggota.items[0].status).toBe('baru');
+    expect(previewAnggota.items[0].canApply).toBe(true);
+
+    const appliedAnggota = await FeederPullService.apply('anggota-aktivitas', ['UUID-ANG-1'], 'lokal', {
+      appliedByUserId: actorId,
+    });
+    expect(appliedAnggota.inserted).toBe(1);
+
+    const anggotaRows = await db.select().from(anggotaAktivitasMbkm);
+    expect(anggotaRows.length).toBe(1);
+    expect(anggotaRows[0].mahasiswaId).toBe(mhsId);
+    expect(anggotaRows[0].peran).toBe('ketua');
+
+    // Preview dan Apply Pembimbing Aktivitas MBKM
+    const previewBimbingan = await FeederPullService.preview('pembimbing-aktivitas');
+    expect(previewBimbingan.summary.totalFeeder).toBe(1);
+    expect(previewBimbingan.items[0].status).toBe('baru');
+    expect(previewBimbingan.items[0].canApply).toBe(true);
+
+    const appliedBimbingan = await FeederPullService.apply('pembimbing-aktivitas', ['UUID-BIMB-1'], 'lokal', {
+      appliedByUserId: actorId,
+    });
+    expect(appliedBimbingan.inserted).toBe(1);
+
+    const bimbinganRows = await db.select().from(bimbinganAktivitasMbkm);
+    expect(bimbinganRows.length).toBe(1);
+    expect(bimbinganRows[0].dosenId).toBe(dosenId);
+    expect(bimbinganRows[0].kategori).toBe('pembimbing');
+
+    // Preview dan Apply Konversi Aktivitas MBKM
+    const previewKonversi = await FeederPullService.preview('konversi-aktivitas');
+    expect(previewKonversi.summary.totalFeeder).toBe(1);
+    expect(previewKonversi.items[0].status).toBe('baru');
+    expect(previewKonversi.items[0].canApply).toBe(true);
+
+    const appliedKonversi = await FeederPullService.apply('konversi-aktivitas', ['UUID-KONV-1'], 'lokal', {
+      appliedByUserId: actorId,
+    });
+    expect(appliedKonversi.inserted).toBe(1);
+
+    const konversiRows = await db.select().from(konversiAktivitasMbkm);
+    expect(konversiRows.length).toBe(1);
+    expect(konversiRows[0].sksDiakui).toBe(20);
+
+    // Uji coba endpoint POST /aktivitas-mbkm/:id/sync-feeder
+    const syncRes = await post(`/aktivitas-mbkm/${rows[0].id}/sync-feeder`, adminToken, {});
+    expect(syncRes.status).toBe(200);
+    const syncJson = (await syncRes.json()) as { message: string; data: { anggota: number } };
+    expect(syncJson.data.anggota).toBe(1);
+
+    // Preview kedua aktivitas → 'sama'; apply ulang tidak menggandakan baris.
     const preview2 = await FeederPullService.preview('aktivitas-mahasiswa');
     expect(preview2.items[0].status).toBe('sama');
     const applied2 = await FeederPullService.apply('aktivitas-mahasiswa', ['UUID-AKT-1'], 'lokal', {

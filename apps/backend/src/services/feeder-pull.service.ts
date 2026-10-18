@@ -1,10 +1,13 @@
-import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, or, type SQL, sql } from 'drizzle-orm';
 import {
   aktivitasMbkm,
+  anggotaAktivitasMbkm,
+  bimbinganAktivitasMbkm,
   dosen,
   dosenPengajarKelas,
   jenisAktivitasMbkm,
   kelasKuliah,
+  konversiAktivitasMbkm,
   krs,
   mahasiswa,
   mataKuliah,
@@ -12,6 +15,7 @@ import {
   programStudi,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { formatNamaGelar, parseNamaGelar } from '../utils/nama-gelar';
 import { FeederService } from './feeder.service';
 import { type FeederConfig, SystemParameterService } from './system-parameter.service';
 
@@ -28,7 +32,10 @@ export type PullEntityKey =
   | 'krs-nilai'
   | 'dosen-pengajar'
   | 'transkrip'
-  | 'aktivitas-mahasiswa';
+  | 'aktivitas-mahasiswa'
+  | 'anggota-aktivitas'
+  | 'pembimbing-aktivitas'
+  | 'konversi-aktivitas';
 export type PullEntityCategory = 'referensi' | 'master' | 'transaksional';
 /**
  * `isi`  → baris lokal sudah ada (dicocokkan lewat kunci alami) tetapi field target
@@ -121,7 +128,8 @@ export const PULL_ENTITY_CATALOG: ReadonlyArray<PullEntityMeta> = [
     label: 'Dosen',
     category: 'master',
     feederAct: 'GetListDosen',
-    description: 'Menarik data master dosen (NIDN, NIP, nama, tgl lahir, gender) dan menautkan id_dosen PDDIKTI.',
+    description:
+      'Menarik data master dosen (NIDN, NUPTK, NIP, gelar depan, nama asli, gelar belakang, tgl lahir, gender) dan menautkan id_dosen PDDIKTI.',
   },
   {
     key: 'mahasiswa',
@@ -166,11 +174,35 @@ export const PULL_ENTITY_CATALOG: ReadonlyArray<PullEntityMeta> = [
   },
   {
     key: 'aktivitas-mahasiswa',
-    label: 'Aktivitas MBKM Mahasiswa',
+    label: 'Aktivitas MBKM Mahasiswa (Header)',
     category: 'transaksional',
     feederAct: 'GetListAktivitasMahasiswa',
     description:
-      'Aktivitas MBKM dari Feeder (judul, jenis, semester, prodi). Header aktivitas disimpan; anggota & pembimbing ditarik terpisah setelah act detailnya dipastikan.',
+      'Menarik header aktivitas MBKM dari Feeder (judul, jenis, semester, prodi) ke tabel aktivitas_mbkm. Proses penarikan terisolasi dan cepat.',
+  },
+  {
+    key: 'anggota-aktivitas',
+    label: 'Anggota Aktivitas MBKM',
+    category: 'transaksional',
+    feederAct: 'GetAnggotaAktivitasMahasiswa',
+    description:
+      'Menarik mahasiswa peserta/ketua aktivitas MBKM dari Feeder dan menautkannya ke Aktivitas MBKM + Mahasiswa lokal.',
+  },
+  {
+    key: 'pembimbing-aktivitas',
+    label: 'Pembimbing Aktivitas MBKM',
+    category: 'transaksional',
+    feederAct: 'GetBimbingMahasiswa',
+    description:
+      'Menarik dosen pembimbing/pendamping aktivitas MBKM dari Feeder dan menautkannya ke Aktivitas MBKM + Dosen lokal.',
+  },
+  {
+    key: 'konversi-aktivitas',
+    label: 'Konversi / Rekognisi MBKM',
+    category: 'transaksional',
+    feederAct: 'GetKonversiKampusMerdeka',
+    description:
+      'Menarik rekognisi mata kuliah dan SKS diakui aktivitas MBKM dari Feeder dan menautkannya ke Aktivitas MBKM + Mata Kuliah lokal.',
   },
 ];
 
@@ -589,49 +621,82 @@ export class FeederPullService {
   ): PullPreviewItem[] {
     const byPddikti = new Map<string, typeof dosen.$inferSelect>();
     const byNidn = new Map<string, typeof dosen.$inferSelect>();
+    const byNuptk = new Map<string, typeof dosen.$inferSelect>();
     const byNip = new Map<string, typeof dosen.$inferSelect>();
     const byNama = new Map<string, typeof dosen.$inferSelect>();
+    const byFullFormatted = new Map<string, typeof dosen.$inferSelect>();
 
     for (const d of localRows) {
       if (d.idPddikti) byPddikti.set(d.idPddikti.trim().toLowerCase(), d);
       if (d.nidn) byNidn.set(d.nidn.trim().toLowerCase(), d);
+      if (d.nuptk) byNuptk.set(d.nuptk.trim().toLowerCase(), d);
       if (d.nip) byNip.set(d.nip.trim().toLowerCase(), d);
       byNama.set(d.nama.trim().toLowerCase(), d);
+      const full = formatNamaGelar(d.nama, d.gelarDepan, d.gelarBelakang);
+      if (full) byFullFormatted.set(full.trim().toLowerCase(), d);
     }
 
     const items: PullPreviewItem[] = [];
     for (const raw of feederRows) {
       const idDosen = asStr(raw.id_dosen);
-      const nama = asStr(raw.nama_dosen);
+      const rawNamaDosen = asStr(raw.nama_dosen);
       const nidn = asStr(raw.nidn) || null;
-      const nip = asStr(raw.nip) || nidn || idDosen.slice(0, 18);
+      const nuptk = asStr(raw.nuptk) || asStr(raw.NUPTK) || null;
+      const nip = asStr(raw.nip) || nidn || nuptk || idDosen.slice(0, 18);
       const jenisKelamin = normalizeGender(raw.jenis_kelamin);
       const tanggalLahir = normalizeFeederDate(raw.tanggal_lahir);
       const idAgama =
         raw.id_agama !== undefined && raw.id_agama !== null && asStr(raw.id_agama) !== '' ? asInt(raw.id_agama) : null;
-      if (!idDosen || !nama) continue;
+      if (!idDosen || !rawNamaDosen) continue;
+
+      // Ekstrak gelar depan & belakang: prioritaskan field feeder bila ada, fallback ke parser
+      let gelarDepan = asStr(raw.gelar_depan) || asStr(raw.gelardepan) || null;
+      let gelarBelakang = asStr(raw.gelar_belakang) || asStr(raw.gelarbelakang) || null;
+      let nama = rawNamaDosen;
+
+      if (!gelarDepan && !gelarBelakang) {
+        const parsed = parseNamaGelar(rawNamaDosen);
+        gelarDepan = parsed.gelarDepan;
+        nama = parsed.nama;
+        gelarBelakang = parsed.gelarBelakang;
+      }
 
       const feederData = {
         nip,
         nidn,
+        nuptk,
+        gelarDepan,
         nama,
+        gelarBelakang,
         jenisKelamin,
         tanggalLahir,
         idAgama,
       };
 
+      const formattedFeederName = formatNamaGelar(nama, gelarDepan, gelarBelakang).trim().toLowerCase();
+
       const local =
         byPddikti.get(idDosen.toLowerCase()) ??
         (nidn ? byNidn.get(nidn.toLowerCase()) : undefined) ??
+        (nuptk ? byNuptk.get(nuptk.toLowerCase()) : undefined) ??
+        (nuptk ? byNip.get(nuptk.toLowerCase()) : undefined) ??
         (nip ? byNip.get(nip.toLowerCase()) : undefined) ??
+        (nip ? byNuptk.get(nip.toLowerCase()) : undefined) ??
         byNama.get(nama.toLowerCase()) ??
+        byFullFormatted.get(formattedFeederName) ??
+        byNama.get(rawNamaDosen.toLowerCase()) ??
         null;
+
+      const displayFormatted = formatNamaGelar(nama, gelarDepan, gelarBelakang);
+      const idTag = nidn ? ` (NIDN: ${nidn})` : nuptk ? ` (NUPTK: ${nuptk})` : '';
+      const label = `${displayFormatted}${idTag}`;
+      const naturalKey = nidn || nuptk || nip;
 
       if (!local) {
         items.push({
           feederId: idDosen,
-          naturalKey: nidn || nip,
-          label: `${nama}${nidn ? ` (NIDN: ${nidn})` : ''}`,
+          naturalKey,
+          label,
           status: 'baru',
           localId: null,
           localIdPddikti: null,
@@ -646,20 +711,36 @@ export class FeederPullService {
       const localData = {
         nip: local.nip,
         nidn: local.nidn ?? null,
+        nuptk: local.nuptk ?? null,
+        gelarDepan: local.gelarDepan ?? null,
         nama: local.nama,
+        gelarBelakang: local.gelarBelakang ?? null,
         jenisKelamin: local.jenisKelamin ?? null,
         tanggalLahir: local.tanggalLahir ?? null,
         idAgama: local.idAgama ?? null,
       };
 
-      const diffs = FeederPullService.computeDiffs(['nama', 'nidn'], feederData, localData);
+      // Hitung diffs untuk field yang diisi di Feeder vs Lokal
+      // Jika salah satu sisi bernilai null/kosong dan sisi lain punya nilai, deteksi sebagai diff/update
+      const diffFields: string[] = ['nama'];
+      if (feederData.gelarDepan || localData.gelarDepan) diffFields.push('gelarDepan');
+      if (feederData.gelarBelakang || localData.gelarBelakang) diffFields.push('gelarBelakang');
+      if (feederData.nidn || localData.nidn) diffFields.push('nidn');
+      if (feederData.nuptk && localData.nuptk) {
+        diffFields.push('nuptk');
+      } else if (!localData.nuptk && feederData.nuptk && local.nip !== feederData.nuptk) {
+        // NUPTK baru dari Feeder yang belum ada di lokal
+        diffFields.push('nuptk');
+      }
+
+      const diffs = FeederPullService.computeDiffs(diffFields, feederData, localData);
       const idLinked = (local.idPddikti ?? '').toLowerCase() === idDosen.toLowerCase();
       const status: PullDiffStatus = diffs.length > 0 ? 'konflik' : idLinked ? 'sama' : 'link_id';
 
       items.push({
         feederId: idDosen,
-        naturalKey: nidn || local.nip,
-        label: `${nama}${nidn ? ` (NIDN: ${nidn})` : ''}`,
+        naturalKey: nidn || nuptk || local.nip,
+        label,
         status,
         localId: local.id,
         localIdPddikti: local.idPddikti ?? null,
@@ -1340,10 +1421,560 @@ export class FeederPullService {
           localData: lokal ? { id: lokal.id, judul: lokal.judul, status: lokal.status } : null,
           diffs: lokal && !same ? [{ field: 'judul', feederValue: judul, localValue: lokal.judul }] : [],
           canApply: lokal === null || !same,
-          note: 'Hanya header aktivitas yang diterapkan. Anggota/pembimbing/konversi memerlukan act Feeder terpisah yang belum diprobe.',
+          note: lokal === null ? 'Header aktivitas akan disinkronkan ke tabel aktivitas_mbkm lokal.' : undefined,
         };
       })
       .filter((x): x is PullPreviewItem => x !== null);
+  }
+
+  /**
+   * Diff peserta/anggota MBKM (`GetAnggotaAktivitasMahasiswa`) dengan tabel `anggota_aktivitas_mbkm`.
+   * Memerlukan aktivitas MBKM dan mahasiswa lokal sudah tertaut ke PDDIKTI.
+   */
+  static diffAnggotaAktivitas(
+    feederRows: Array<Record<string, unknown>>,
+    localAnggota: Array<typeof anggotaAktivitasMbkm.$inferSelect>,
+    localAktivitas: Array<{ id: number; idPddikti: string | null; judul: string }>,
+    localMahasiswa: Array<{ id: number; nim: string; idPddikti: string | null; nama: string }>,
+  ): PullPreviewItem[] {
+    const aktByPddikti = new Map<string, { id: number; judul: string }>();
+    for (const a of localAktivitas) {
+      if (a.idPddikti) aktByPddikti.set(a.idPddikti.trim().toLowerCase(), a);
+    }
+
+    const mhsByNim = new Map<string, { id: number; nama: string; idPddikti: string | null }>();
+    const mhsByPddikti = new Map<string, { id: number; nama: string; idPddikti: string | null }>();
+    for (const m of localMahasiswa) {
+      mhsByNim.set(m.nim.trim().toLowerCase(), m);
+      if (m.idPddikti) mhsByPddikti.set(m.idPddikti.trim().toLowerCase(), m);
+    }
+
+    const anggotaMap = new Map<string, typeof anggotaAktivitasMbkm.$inferSelect>();
+    for (const row of localAnggota) {
+      anggotaMap.set(`${row.aktivitasId}:${row.mahasiswaId}`, row);
+    }
+
+    const items: PullPreviewItem[] = [];
+    for (const raw of feederRows) {
+      const idAnggota = asStr(raw.id_anggota) || `${asStr(raw.id_aktivitas)}:${asStr(raw.nim)}`;
+      const idAktivitas = asStr(raw.id_aktivitas);
+      const nim = asStr(raw.nim);
+      const idReg = asStr(raw.id_registrasi_mahasiswa);
+      const namaMhs = asStr(raw.nama_mahasiswa);
+      if (!idAktivitas || (!nim && !idReg)) continue;
+
+      const jenisPeran = asStr(raw.jenis_peran);
+      const namaPeranRaw = asStr(raw.nama_jenis_peran);
+      const peran = jenisPeran === '1' || namaPeranRaw.toLowerCase().includes('ketua') ? 'ketua' : 'anggota';
+
+      const akt = aktByPddikti.get(idAktivitas.toLowerCase());
+      const mhs =
+        (nim ? mhsByNim.get(nim.toLowerCase()) : null) ?? (idReg ? mhsByPddikti.get(idReg.toLowerCase()) : null);
+
+      const label = `${nim ? `${nim} — ` : ''}${namaMhs || 'Mahasiswa'} (${peran === 'ketua' ? 'Ketua' : 'Anggota'})${akt ? ` • ${akt.judul}` : ''}`;
+
+      if (!akt) {
+        items.push({
+          feederId: idAnggota,
+          naturalKey: `${idAktivitas}:${nim || idReg}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idAktivitas, nim, idReg, peran },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: 'Aktivitas MBKM belum ada di SIMAK — tarik Aktivitas MBKM Mahasiswa (Header) terlebih dahulu.',
+        });
+        continue;
+      }
+
+      if (!mhs) {
+        items.push({
+          feederId: idAnggota,
+          naturalKey: `${idAktivitas}:${nim || idReg}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idAktivitas, nim, idReg, peran, aktivitasId: akt.id },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: `Mahasiswa NIM ${nim || idReg} belum ada di SIMAK — tarik Master (Mahasiswa) terlebih dahulu.`,
+        });
+        continue;
+      }
+
+      const feederData = {
+        aktivitasId: akt.id,
+        mahasiswaId: mhs.id,
+        peran,
+      };
+
+      const local = anggotaMap.get(`${akt.id}:${mhs.id}`) ?? null;
+      if (!local) {
+        items.push({
+          feederId: idAnggota,
+          naturalKey: `${akt.id}:${mhs.id}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData,
+          localData: null,
+          diffs: [],
+          canApply: true,
+          note: 'Anggota belum ada di aktivitas lokal — akan ditambahkan.',
+        });
+        continue;
+      }
+
+      const localData = {
+        aktivitasId: local.aktivitasId,
+        mahasiswaId: local.mahasiswaId,
+        peran: local.peran,
+      };
+
+      const diffs = FeederPullService.computeDiffs(['peran'], feederData, localData);
+      const status: PullDiffStatus = diffs.length > 0 ? 'konflik' : 'sama';
+
+      items.push({
+        feederId: idAnggota,
+        naturalKey: `${akt.id}:${mhs.id}`,
+        label,
+        status,
+        localId: local.id,
+        localIdPddikti: null,
+        feederData,
+        localData,
+        diffs,
+        canApply: status !== 'sama',
+        note: status === 'konflik' ? 'Peran anggota berbeda antara Feeder dan lokal.' : undefined,
+      });
+    }
+    return items;
+  }
+
+  /**
+   * Diff pembimbing/pendamping MBKM (`GetBimbingMahasiswa`) dengan tabel `bimbing_aktivitas_mbkm`.
+   */
+  static diffPembimbingAktivitas(
+    feederRows: Array<Record<string, unknown>>,
+    localPembimbing: Array<typeof bimbinganAktivitasMbkm.$inferSelect>,
+    localAktivitas: Array<{ id: number; idPddikti: string | null; judul: string }>,
+    localDosen: Array<typeof dosen.$inferSelect>,
+  ): PullPreviewItem[] {
+    const aktByPddikti = new Map<string, { id: number; judul: string }>();
+    for (const a of localAktivitas) {
+      if (a.idPddikti) aktByPddikti.set(a.idPddikti.trim().toLowerCase(), a);
+    }
+
+    const dsnByPddikti = new Map<string, typeof dosen.$inferSelect>();
+    const dsnByNidn = new Map<string, typeof dosen.$inferSelect>();
+    const dsnByNuptk = new Map<string, typeof dosen.$inferSelect>();
+    const dsnByNip = new Map<string, typeof dosen.$inferSelect>();
+    for (const d of localDosen) {
+      if (d.idPddikti) dsnByPddikti.set(d.idPddikti.trim().toLowerCase(), d);
+      if (d.nidn) dsnByNidn.set(d.nidn.trim().toLowerCase(), d);
+      if (d.nuptk) dsnByNuptk.set(d.nuptk.trim().toLowerCase(), d);
+      if (d.nip) dsnByNip.set(d.nip.trim().toLowerCase(), d);
+    }
+
+    const bimbingMap = new Map<string, typeof bimbinganAktivitasMbkm.$inferSelect>();
+    for (const row of localPembimbing) {
+      bimbingMap.set(`${row.aktivitasId}:${row.dosenId}`, row);
+    }
+
+    const items: PullPreviewItem[] = [];
+    for (const raw of feederRows) {
+      const idBimbing =
+        asStr(raw.id_bimbing_mahasiswa) || `${asStr(raw.id_aktivitas)}:${asStr(raw.id_dosen || raw.nidn)}`;
+      const idAktivitas = asStr(raw.id_aktivitas);
+      const idDosenFeeder = asStr(raw.id_dosen);
+      const nidn = asStr(raw.nidn);
+      const namaDosen = asStr(raw.nama_dosen);
+      if (!idAktivitas || (!idDosenFeeder && !nidn)) continue;
+
+      const namaKatRaw = asStr(raw.nama_kategori_kegiatan).toLowerCase();
+      const kategori = namaKatRaw.includes('pendamping') ? 'pendamping' : 'pembimbing';
+
+      const akt = aktByPddikti.get(idAktivitas.toLowerCase());
+      const dsn =
+        (idDosenFeeder ? dsnByPddikti.get(idDosenFeeder.toLowerCase()) : null) ??
+        (nidn
+          ? (dsnByNidn.get(nidn.toLowerCase()) ??
+            dsnByNuptk.get(nidn.toLowerCase()) ??
+            dsnByNip.get(nidn.toLowerCase()))
+          : null);
+
+      const label = `${namaDosen || nidn || 'Dosen'} (${kategori === 'pendamping' ? 'Pendamping' : 'Pembimbing'})${akt ? ` • ${akt.judul}` : ''}`;
+
+      if (!akt) {
+        items.push({
+          feederId: idBimbing,
+          naturalKey: `${idAktivitas}:${idDosenFeeder || nidn}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idAktivitas, idDosenFeeder, nidn, kategori },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: 'Aktivitas MBKM belum ada di SIMAK — tarik Aktivitas MBKM Mahasiswa (Header) terlebih dahulu.',
+        });
+        continue;
+      }
+
+      if (!dsn) {
+        items.push({
+          feederId: idBimbing,
+          naturalKey: `${idAktivitas}:${idDosenFeeder || nidn}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idAktivitas, idDosenFeeder, nidn, kategori, aktivitasId: akt.id },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: `Dosen ${namaDosen || nidn} belum terdaftar di SIMAK — tarik Master (Dosen) terlebih dahulu.`,
+        });
+        continue;
+      }
+
+      const feederData = {
+        aktivitasId: akt.id,
+        dosenId: dsn.id,
+        kategori,
+      };
+
+      const local = bimbingMap.get(`${akt.id}:${dsn.id}`) ?? null;
+      if (!local) {
+        items.push({
+          feederId: idBimbing,
+          naturalKey: `${akt.id}:${dsn.id}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData,
+          localData: null,
+          diffs: [],
+          canApply: true,
+          note: 'Pembimbing belum ada di aktivitas lokal — akan ditambahkan.',
+        });
+        continue;
+      }
+
+      const localData = {
+        aktivitasId: local.aktivitasId,
+        dosenId: local.dosenId,
+        kategori: local.kategori,
+      };
+
+      const diffs = FeederPullService.computeDiffs(['kategori'], feederData, localData);
+      const status: PullDiffStatus = diffs.length > 0 ? 'konflik' : 'sama';
+
+      items.push({
+        feederId: idBimbing,
+        naturalKey: `${akt.id}:${dsn.id}`,
+        label,
+        status,
+        localId: local.id,
+        localIdPddikti: null,
+        feederData,
+        localData,
+        diffs,
+        canApply: status !== 'sama',
+        note: status === 'konflik' ? 'Kategori pembimbing berbeda antara Feeder dan lokal.' : undefined,
+      });
+    }
+    return items;
+  }
+
+  /**
+   * Diff konversi / rekognisi mata kuliah MBKM (`GetKonversiKampusMerdeka`) dengan tabel `konversi_aktivitas_mbkm`.
+   */
+  static diffKonversiAktivitas(
+    feederRows: Array<Record<string, unknown>>,
+    localKonversi: Array<typeof konversiAktivitasMbkm.$inferSelect>,
+    localAktivitas: Array<{ id: number; idPddikti: string | null; judul: string }>,
+    localMk: Array<{ id: number; kode: string; idPddikti: string | null; nama: string }>,
+  ): PullPreviewItem[] {
+    const aktByPddikti = new Map<string, { id: number; judul: string }>();
+    for (const a of localAktivitas) {
+      if (a.idPddikti) aktByPddikti.set(a.idPddikti.trim().toLowerCase(), a);
+    }
+
+    const mkByPddikti = new Map<string, { id: number; kode: string; nama: string }>();
+    const mkByKode = new Map<string, { id: number; kode: string; nama: string }>();
+    for (const m of localMk) {
+      if (m.idPddikti) mkByPddikti.set(m.idPddikti.trim().toLowerCase(), m);
+      mkByKode.set(m.kode.trim().toLowerCase(), m);
+    }
+
+    const konversiMap = new Map<string, typeof konversiAktivitasMbkm.$inferSelect>();
+    for (const row of localKonversi) {
+      konversiMap.set(`${row.aktivitasId}:${row.mataKuliahId}`, row);
+    }
+
+    const items: PullPreviewItem[] = [];
+    for (const raw of feederRows) {
+      const idKonversi =
+        asStr(raw.id_konversi_aktivitas) ||
+        `${asStr(raw.id_aktivitas)}:${asStr(raw.id_matkul || raw.kode_mata_kuliah)}`;
+      const idAktivitas = asStr(raw.id_aktivitas);
+      const idMatkul = asStr(raw.id_matkul);
+      const kodeMk = asStr(raw.kode_mata_kuliah);
+      const namaMk = asStr(raw.nama_mata_kuliah);
+      const sks = asInt(raw.sks_mata_kuliah) || asInt(raw.sks_aktivitas) || asInt(raw.sks_diakui) || 0;
+      if (!idAktivitas || (!idMatkul && !kodeMk)) continue;
+
+      const akt = aktByPddikti.get(idAktivitas.toLowerCase());
+      const mk =
+        (idMatkul ? mkByPddikti.get(idMatkul.toLowerCase()) : null) ??
+        (kodeMk ? mkByKode.get(kodeMk.toLowerCase()) : null);
+
+      const label = `${kodeMk ? `${kodeMk} — ` : ''}${namaMk || 'Mata Kuliah'} (${sks} SKS)${akt ? ` • ${akt.judul}` : ''}`;
+
+      if (!akt) {
+        items.push({
+          feederId: idKonversi,
+          naturalKey: `${idAktivitas}:${idMatkul || kodeMk}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idAktivitas, idMatkul, kodeMk, sksDiakui: sks },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: 'Aktivitas MBKM belum ada di SIMAK — tarik Aktivitas MBKM Mahasiswa (Header) terlebih dahulu.',
+        });
+        continue;
+      }
+
+      if (!mk) {
+        items.push({
+          feederId: idKonversi,
+          naturalKey: `${idAktivitas}:${idMatkul || kodeMk}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData: { idAktivitas, idMatkul, kodeMk, sksDiakui: sks, aktivitasId: akt.id },
+          localData: null,
+          diffs: [],
+          canApply: false,
+          note: `Mata kuliah ${kodeMk || idMatkul} belum ada di SIMAK — tarik Master (Mata Kuliah) terlebih dahulu.`,
+        });
+        continue;
+      }
+
+      const feederData = {
+        aktivitasId: akt.id,
+        mataKuliahId: mk.id,
+        sksDiakui: sks,
+      };
+
+      const local = konversiMap.get(`${akt.id}:${mk.id}`) ?? null;
+      if (!local) {
+        items.push({
+          feederId: idKonversi,
+          naturalKey: `${akt.id}:${mk.id}`,
+          label,
+          status: 'baru',
+          localId: null,
+          localIdPddikti: null,
+          feederData,
+          localData: null,
+          diffs: [],
+          canApply: true,
+          note: 'Rekognisi mata kuliah belum ada di aktivitas lokal — akan ditambahkan.',
+        });
+        continue;
+      }
+
+      const localData = {
+        aktivitasId: local.aktivitasId,
+        mataKuliahId: local.mataKuliahId,
+        sksDiakui: local.sksDiakui,
+      };
+
+      const diffs = FeederPullService.computeDiffs(['sksDiakui'], feederData, localData);
+      const status: PullDiffStatus = diffs.length > 0 ? 'konflik' : 'sama';
+
+      items.push({
+        feederId: idKonversi,
+        naturalKey: `${akt.id}:${mk.id}`,
+        label,
+        status,
+        localId: local.id,
+        localIdPddikti: null,
+        feederData,
+        localData,
+        diffs,
+        canApply: status !== 'sama',
+        note: status === 'konflik' ? 'SKS rekognisi berbeda antara Feeder dan lokal.' : undefined,
+      });
+    }
+    return items;
+  }
+
+  /**
+   * Tarik relasi detail aktivitas MBKM dari Feeder dan sinkronkan ke DB lokal:
+   * 1. Anggota: `GetAnggotaAktivitasMahasiswa`
+   * 2. Pembimbing: `GetBimbingMahasiswa`
+   * 3. Konversi: `GetKonversiKampusMerdeka`
+   */
+  static async syncAktivitasDetails(
+    config: FeederConfig,
+    idAktivitasFeeder: string,
+    localAktivitasId: number,
+  ): Promise<{ anggota: number; pembimbing: number; konversi: number }> {
+    let anggota = 0;
+    let pembimbing = 0;
+    let konversi = 0;
+
+    // 1. Anggota Aktivitas
+    try {
+      const anggotaRows = await FeederPullService.fetchFeederRows(config, 'GetAnggotaAktivitasMahasiswa', {
+        filter: `id_aktivitas = '${idAktivitasFeeder}'`,
+        maxPages: 3,
+      });
+      for (const row of anggotaRows) {
+        const nim = asStr(row.nim);
+        const idReg = asStr(row.id_registrasi_mahasiswa);
+        if (!nim && !idReg) continue;
+
+        const conds: SQL[] = [];
+        if (nim) conds.push(eq(sql`lower(${mahasiswa.nim})`, nim.toLowerCase()));
+        if (idReg) conds.push(eq(sql`lower(${mahasiswa.idPddikti})`, idReg.toLowerCase()));
+
+        const mhsRows = await db
+          .select({ id: mahasiswa.id })
+          .from(mahasiswa)
+          .where(or(...conds))
+          .limit(1);
+
+        const mhsId = mhsRows[0]?.id;
+        if (!mhsId) continue;
+
+        const jenisPeran = asStr(row.jenis_peran);
+        const namaPeran = asStr(row.nama_jenis_peran).toLowerCase();
+        const peran = jenisPeran === '1' || namaPeran.includes('ketua') ? 'ketua' : 'anggota';
+
+        await db
+          .insert(anggotaAktivitasMbkm)
+          .values({
+            aktivitasId: localAktivitasId,
+            mahasiswaId: mhsId,
+            peran,
+          })
+          .onConflictDoUpdate({
+            target: [anggotaAktivitasMbkm.aktivitasId, anggotaAktivitasMbkm.mahasiswaId],
+            set: { peran },
+          });
+        anggota++;
+      }
+    } catch (e: unknown) {
+      console.warn(`[FeederPull] Gagal sync anggota aktivitas ${idAktivitasFeeder}:`, e);
+    }
+
+    // 2. Pembimbing Aktivitas
+    try {
+      const bimbingRows = await FeederPullService.fetchFeederRows(config, 'GetBimbingMahasiswa', {
+        filter: `id_aktivitas = '${idAktivitasFeeder}'`,
+        maxPages: 3,
+      });
+      for (const row of bimbingRows) {
+        const idDosen = asStr(row.id_dosen);
+        const nidn = asStr(row.nidn);
+        if (!idDosen && !nidn) continue;
+
+        const conds: SQL[] = [];
+        if (idDosen) conds.push(eq(sql`lower(${dosen.idPddikti})`, idDosen.toLowerCase()));
+        if (nidn) {
+          conds.push(eq(sql`lower(${dosen.nidn})`, nidn.toLowerCase()));
+          conds.push(eq(sql`lower(${dosen.nuptk})`, nidn.toLowerCase()));
+          conds.push(eq(sql`lower(${dosen.nip})`, nidn.toLowerCase()));
+        }
+
+        const dsnRows = await db
+          .select({ id: dosen.id })
+          .from(dosen)
+          .where(or(...conds))
+          .limit(1);
+
+        const dsnId = dsnRows[0]?.id;
+        if (!dsnId) continue;
+
+        const namaKategori = asStr(row.nama_kategori_kegiatan).toLowerCase();
+        const kategori = namaKategori.includes('pendamping') ? 'pendamping' : 'pembimbing';
+
+        await db
+          .insert(bimbinganAktivitasMbkm)
+          .values({
+            aktivitasId: localAktivitasId,
+            dosenId: dsnId,
+            kategori,
+          })
+          .onConflictDoUpdate({
+            target: [bimbinganAktivitasMbkm.aktivitasId, bimbinganAktivitasMbkm.dosenId],
+            set: { kategori },
+          });
+        pembimbing++;
+      }
+    } catch (e: unknown) {
+      console.warn(`[FeederPull] Gagal sync pembimbing aktivitas ${idAktivitasFeeder}:`, e);
+    }
+
+    // 3. Konversi Aktivitas
+    try {
+      const konversiRows = await FeederPullService.fetchFeederRows(config, 'GetKonversiKampusMerdeka', {
+        filter: `id_aktivitas = '${idAktivitasFeeder}'`,
+        maxPages: 3,
+      });
+      for (const row of konversiRows) {
+        const idMatkul = asStr(row.id_matkul);
+        const kodeMk = asStr(row.kode_mata_kuliah);
+        const sks = asInt(row.sks_mata_kuliah) || asInt(row.sks_aktivitas) || asInt(row.sks_diakui) || 0;
+        if ((!idMatkul && !kodeMk) || sks <= 0) continue;
+
+        const conds: SQL[] = [];
+        if (idMatkul) conds.push(eq(sql`lower(${mataKuliah.idPddikti})`, idMatkul.toLowerCase()));
+        if (kodeMk) conds.push(eq(sql`lower(${mataKuliah.kode})`, kodeMk.toLowerCase()));
+
+        const mkRows = await db
+          .select({ id: mataKuliah.id })
+          .from(mataKuliah)
+          .where(or(...conds))
+          .limit(1);
+
+        const mkId = mkRows[0]?.id;
+        if (!mkId) continue;
+
+        await db
+          .insert(konversiAktivitasMbkm)
+          .values({
+            aktivitasId: localAktivitasId,
+            mataKuliahId: mkId,
+            sksDiakui: sks,
+          })
+          .onConflictDoUpdate({
+            target: [konversiAktivitasMbkm.aktivitasId, konversiAktivitasMbkm.mataKuliahId],
+            set: { sksDiakui: sks },
+          });
+        konversi++;
+      }
+    } catch (e: unknown) {
+      console.warn(`[FeederPull] Gagal sync konversi aktivitas ${idAktivitasFeeder}:`, e);
+    }
+
+    return { anggota, pembimbing, konversi };
   }
 
   /** Buat preview diff antara data Feeder (`Get*`) dan tabel lokal tanpa mengubah DB. */
@@ -1353,8 +1984,39 @@ export class FeederPullService {
       throw new Error(`Entitas pull "${entity}" tidak didukung`);
     }
     const config = await SystemParameterService.getFeederConfig();
+
+    let effectiveFilter = (options?.filter ?? '').trim();
+    // Khusus entitas relasi anak MBKM, jika filter kosong, sistem otomatis membatasi
+    // ke id_aktivitas dari aktivitas_mbkm lokal yang sudah bertaut ke PDDIKTI.
+    // Query unbounded tanpa filter memicu timeout 20000 ms pada server Neo Feeder.
+    if (
+      !effectiveFilter &&
+      (entity === 'anggota-aktivitas' || entity === 'pembimbing-aktivitas' || entity === 'konversi-aktivitas')
+    ) {
+      const localAktWithPddikti = await db
+        .select({ idPddikti: aktivitasMbkm.idPddikti })
+        .from(aktivitasMbkm)
+        .where(isNotNull(aktivitasMbkm.idPddikti))
+        .orderBy(desc(aktivitasMbkm.id))
+        .limit(50);
+
+      const validPddiktiIds = localAktWithPddikti.map((a) => (a.idPddikti ?? '').trim()).filter((id) => id.length > 0);
+
+      if (validPddiktiIds.length === 0) {
+        throw new Error(
+          'Belum ada Aktivitas MBKM lokal yang tertaut ke PDDIKTI. Tarik/sinkronkan Header Aktivitas MBKM terlebih dahulu sebelum menarik rincian anggota/pembimbing/konversi.',
+        );
+      }
+
+      if (validPddiktiIds.length === 1) {
+        effectiveFilter = `id_aktivitas = '${validPddiktiIds[0]}'`;
+      } else {
+        effectiveFilter = `id_aktivitas in (${validPddiktiIds.map((id) => `'${id}'`).join(',')})`;
+      }
+    }
+
     const feederRows = await FeederPullService.fetchFeederRows(config, meta.feederAct, {
-      filter: options?.filter,
+      filter: effectiveFilter,
     });
 
     // Query lokal dibatasi (scoped) hanya pada kunci yang muncul di data Feeder —
@@ -1399,12 +2061,20 @@ export class FeederPullService {
     } else if (entity === 'dosen') {
       const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_dosen)]);
       const nidns = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nidn)]);
+      const nuptks = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nuptk) || asStr(r.NUPTK)]);
       const nips = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nip)]);
-      const namas = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nama_dosen)]);
+      const namas = FeederPullService.uniqueLower(feederRows, (r) => {
+        const rawNama = asStr(r.nama_dosen);
+        const parsed = parseNamaGelar(rawNama);
+        return [rawNama, parsed.nama];
+      });
       const where = FeederPullService.combinePredicates([
         ...(ids.length ? [inArray(sql`lower(${dosen.idPddikti})`, ids)] : []),
         ...(nidns.length ? [inArray(sql`lower(${dosen.nidn})`, nidns)] : []),
-        ...(nips.length ? [inArray(sql`lower(${dosen.nip})`, nips)] : []),
+        ...(nuptks.length
+          ? [inArray(sql`lower(${dosen.nuptk})`, nuptks), inArray(sql`lower(${dosen.nip})`, nuptks)]
+          : []),
+        ...(nips.length ? [inArray(sql`lower(${dosen.nip})`, nips), inArray(sql`lower(${dosen.nuptk})`, nips)] : []),
         ...(namas.length ? [inArray(sql`lower(${dosen.nama})`, namas)] : []),
       ]);
       const localRows = where ? await db.select().from(dosen).where(where) : [];
@@ -1476,6 +2146,140 @@ export class FeederPullService {
             .where(inArray(sql`lower(${aktivitasMbkm.idPddikti})`, ids))
         : [];
       items = await FeederPullService.diffAktivitas(feederRows, localRows);
+    } else if (entity === 'anggota-aktivitas') {
+      const aktIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_aktivitas)]);
+      const nims = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nim)]);
+      const mhsFeederIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_registrasi_mahasiswa)]);
+
+      const [localAktivitas, localMahasiswa] = await Promise.all([
+        aktIds.length
+          ? db
+              .select({ id: aktivitasMbkm.id, idPddikti: aktivitasMbkm.idPddikti, judul: aktivitasMbkm.judul })
+              .from(aktivitasMbkm)
+              .where(inArray(sql`lower(${aktivitasMbkm.idPddikti})`, aktIds))
+          : [],
+        nims.length || mhsFeederIds.length
+          ? db
+              .select({ id: mahasiswa.id, nim: mahasiswa.nim, idPddikti: mahasiswa.idPddikti, nama: mahasiswa.nama })
+              .from(mahasiswa)
+              .where(
+                or(
+                  nims.length ? inArray(sql`lower(${mahasiswa.nim})`, nims) : undefined,
+                  mhsFeederIds.length ? inArray(sql`lower(${mahasiswa.idPddikti})`, mhsFeederIds) : undefined,
+                ),
+              )
+          : [],
+      ]);
+
+      const localAktIds = localAktivitas.map((a) => a.id);
+      const localMhsIds = localMahasiswa.map((m) => m.id);
+      const localAnggota =
+        localAktIds.length && localMhsIds.length
+          ? await db
+              .select()
+              .from(anggotaAktivitasMbkm)
+              .where(
+                and(
+                  inArray(anggotaAktivitasMbkm.aktivitasId, localAktIds),
+                  inArray(anggotaAktivitasMbkm.mahasiswaId, localMhsIds),
+                ),
+              )
+          : [];
+
+      items = FeederPullService.diffAnggotaAktivitas(feederRows, localAnggota, localAktivitas, localMahasiswa);
+    } else if (entity === 'pembimbing-aktivitas') {
+      const aktIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_aktivitas)]);
+      const dosenFeederIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_dosen)]);
+      const nidns = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nidn)]);
+
+      const [localAktivitas, localDosen] = await Promise.all([
+        aktIds.length
+          ? db
+              .select({ id: aktivitasMbkm.id, idPddikti: aktivitasMbkm.idPddikti, judul: aktivitasMbkm.judul })
+              .from(aktivitasMbkm)
+              .where(inArray(sql`lower(${aktivitasMbkm.idPddikti})`, aktIds))
+          : [],
+        dosenFeederIds.length || nidns.length
+          ? db
+              .select()
+              .from(dosen)
+              .where(
+                or(
+                  dosenFeederIds.length ? inArray(sql`lower(${dosen.idPddikti})`, dosenFeederIds) : undefined,
+                  nidns.length
+                    ? or(
+                        inArray(sql`lower(${dosen.nidn})`, nidns),
+                        inArray(sql`lower(${dosen.nuptk})`, nidns),
+                        inArray(sql`lower(${dosen.nip})`, nidns),
+                      )
+                    : undefined,
+                ),
+              )
+          : [],
+      ]);
+
+      const localAktIds = localAktivitas.map((a) => a.id);
+      const localDsnIds = localDosen.map((d) => d.id);
+      const localPembimbing =
+        localAktIds.length && localDsnIds.length
+          ? await db
+              .select()
+              .from(bimbinganAktivitasMbkm)
+              .where(
+                and(
+                  inArray(bimbinganAktivitasMbkm.aktivitasId, localAktIds),
+                  inArray(bimbinganAktivitasMbkm.dosenId, localDsnIds),
+                ),
+              )
+          : [];
+
+      items = FeederPullService.diffPembimbingAktivitas(feederRows, localPembimbing, localAktivitas, localDosen);
+    } else if (entity === 'konversi-aktivitas') {
+      const aktIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_aktivitas)]);
+      const mkFeederIds = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_matkul)]);
+      const mkKodes = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.kode_mata_kuliah)]);
+
+      const [localAktivitas, localMk] = await Promise.all([
+        aktIds.length
+          ? db
+              .select({ id: aktivitasMbkm.id, idPddikti: aktivitasMbkm.idPddikti, judul: aktivitasMbkm.judul })
+              .from(aktivitasMbkm)
+              .where(inArray(sql`lower(${aktivitasMbkm.idPddikti})`, aktIds))
+          : [],
+        mkFeederIds.length || mkKodes.length
+          ? db
+              .select({
+                id: mataKuliah.id,
+                kode: mataKuliah.kode,
+                idPddikti: mataKuliah.idPddikti,
+                nama: mataKuliah.nama,
+              })
+              .from(mataKuliah)
+              .where(
+                or(
+                  mkFeederIds.length ? inArray(sql`lower(${mataKuliah.idPddikti})`, mkFeederIds) : undefined,
+                  mkKodes.length ? inArray(sql`lower(${mataKuliah.kode})`, mkKodes) : undefined,
+                ),
+              )
+          : [],
+      ]);
+
+      const localAktIds = localAktivitas.map((a) => a.id);
+      const localMkIds = localMk.map((m) => m.id);
+      const localKonversi =
+        localAktIds.length && localMkIds.length
+          ? await db
+              .select()
+              .from(konversiAktivitasMbkm)
+              .where(
+                and(
+                  inArray(konversiAktivitasMbkm.aktivitasId, localAktIds),
+                  inArray(konversiAktivitasMbkm.mataKuliahId, localMkIds),
+                ),
+              )
+          : [];
+
+      items = FeederPullService.diffKonversiAktivitas(feederRows, localKonversi, localAktivitas, localMk);
     }
 
     const summary = {
@@ -1530,6 +2334,7 @@ export class FeederPullService {
 
     const previewResult = await FeederPullService.preview(entity, options);
     const chosen = previewResult.items.filter((item) => selectedSet.has(item.feederId));
+    const config = await SystemParameterService.getFeederConfig();
 
     let inserted = 0;
     let updated = 0;
@@ -1675,17 +2480,23 @@ export class FeederPullService {
         } else if (entity === 'dosen') {
           const nip = String(item.feederData.nip ?? item.feederId.slice(0, 18));
           const nidn = item.feederData.nidn ? String(item.feederData.nidn) : null;
+          const nuptk = item.feederData.nuptk ? String(item.feederData.nuptk) : null;
+          const gelarDepan = item.feederData.gelarDepan ? String(item.feederData.gelarDepan) : null;
           const nama = String(item.feederData.nama ?? '');
+          const gelarBelakang = item.feederData.gelarBelakang ? String(item.feederData.gelarBelakang) : null;
           const jenisKelamin = (item.feederData.jenisKelamin as 'L' | 'P' | null) ?? null;
           const tanggalLahir = item.feederData.tanggalLahir ? String(item.feederData.tanggalLahir) : null;
           const idAgama = typeof item.feederData.idAgama === 'number' ? item.feederData.idAgama : null;
 
           if (item.status === 'baru') {
-            const emailLocal = sanitizeEmailLocal(nidn || nip, item.feederId.slice(0, 10));
+            const emailLocal = sanitizeEmailLocal(nidn || nuptk || nip, item.feederId.slice(0, 10));
             await db.insert(dosen).values({
               nip,
               nidn,
+              nuptk,
+              gelarDepan,
               nama,
+              gelarBelakang,
               email: `${emailLocal}@feeder.politekniksorowako.ac.id`,
               jenisKelamin,
               tanggalLahir,
@@ -1702,13 +2513,19 @@ export class FeederPullService {
               lastSyncAt: now,
             };
             if (!item.localData?.nidn && nidn) setPayload.nidn = nidn;
+            if (!item.localData?.nuptk && nuptk) setPayload.nuptk = nuptk;
+            if (!item.localData?.gelarDepan && gelarDepan) setPayload.gelarDepan = gelarDepan;
+            if (!item.localData?.gelarBelakang && gelarBelakang) setPayload.gelarBelakang = gelarBelakang;
             if (!item.localData?.jenisKelamin && jenisKelamin) setPayload.jenisKelamin = jenisKelamin;
             if (!item.localData?.tanggalLahir && tanggalLahir) setPayload.tanggalLahir = tanggalLahir;
             if (item.localData?.idAgama === null && idAgama !== null) setPayload.idAgama = idAgama;
 
             if (item.status === 'konflik' && conflictResolution === 'feeder') {
               setPayload.nama = nama;
+              if (gelarDepan) setPayload.gelarDepan = gelarDepan;
+              if (gelarBelakang) setPayload.gelarBelakang = gelarBelakang;
               if (nidn) setPayload.nidn = nidn;
+              if (nuptk) setPayload.nuptk = nuptk;
               await db.update(dosen).set(setPayload).where(eq(dosen.id, item.localId));
               updated++;
             } else {
@@ -1887,6 +2704,7 @@ export class FeederPullService {
             continue;
           }
 
+          let localAktivitasId: number | null = null;
           if (item.status === 'baru') {
             const insertedRows = await db
               .insert(aktivitasMbkm)
@@ -1901,15 +2719,107 @@ export class FeederPullService {
               })
               .onConflictDoNothing()
               .returning({ id: aktivitasMbkm.id });
-            if (insertedRows.length > 0) inserted++;
-            else skipped++;
+            if (insertedRows.length > 0) {
+              inserted++;
+              localAktivitasId = insertedRows[0].id;
+            } else {
+              skipped++;
+            }
           } else if (typeof item.localId === 'number') {
+            localAktivitasId = item.localId;
             await db
               .update(aktivitasMbkm)
               .set({ idPddikti: item.feederId, updatedAt: now })
               .where(eq(aktivitasMbkm.id, item.localId));
             if (item.status === 'konflik' && conflictResolution === 'feeder') {
               await db.update(aktivitasMbkm).set({ judul, updatedAt: now }).where(eq(aktivitasMbkm.id, item.localId));
+              updated++;
+            } else {
+              linkedOnly++;
+            }
+          }
+        } else if (entity === 'anggota-aktivitas') {
+          const aktivitasId = typeof item.feederData.aktivitasId === 'number' ? item.feederData.aktivitasId : 0;
+          const mahasiswaId = typeof item.feederData.mahasiswaId === 'number' ? item.feederData.mahasiswaId : 0;
+          const peran = item.feederData.peran === 'ketua' ? 'ketua' : 'anggota';
+          if (!aktivitasId || !mahasiswaId) {
+            skipped++;
+            continue;
+          }
+
+          if (item.status === 'baru') {
+            await db
+              .insert(anggotaAktivitasMbkm)
+              .values({
+                aktivitasId,
+                mahasiswaId,
+                peran,
+              })
+              .onConflictDoNothing();
+            inserted++;
+          } else if (typeof item.localId === 'number') {
+            if (item.status === 'konflik' && conflictResolution === 'feeder') {
+              await db.update(anggotaAktivitasMbkm).set({ peran }).where(eq(anggotaAktivitasMbkm.id, item.localId));
+              updated++;
+            } else {
+              linkedOnly++;
+            }
+          }
+        } else if (entity === 'pembimbing-aktivitas') {
+          const aktivitasId = typeof item.feederData.aktivitasId === 'number' ? item.feederData.aktivitasId : 0;
+          const dosenId = typeof item.feederData.dosenId === 'number' ? item.feederData.dosenId : 0;
+          const kategori = item.feederData.kategori === 'pendamping' ? 'pendamping' : 'pembimbing';
+          if (!aktivitasId || !dosenId) {
+            skipped++;
+            continue;
+          }
+
+          if (item.status === 'baru') {
+            await db
+              .insert(bimbinganAktivitasMbkm)
+              .values({
+                aktivitasId,
+                dosenId,
+                kategori,
+              })
+              .onConflictDoNothing();
+            inserted++;
+          } else if (typeof item.localId === 'number') {
+            if (item.status === 'konflik' && conflictResolution === 'feeder') {
+              await db
+                .update(bimbinganAktivitasMbkm)
+                .set({ kategori })
+                .where(eq(bimbinganAktivitasMbkm.id, item.localId));
+              updated++;
+            } else {
+              linkedOnly++;
+            }
+          }
+        } else if (entity === 'konversi-aktivitas') {
+          const aktivitasId = typeof item.feederData.aktivitasId === 'number' ? item.feederData.aktivitasId : 0;
+          const mataKuliahId = typeof item.feederData.mataKuliahId === 'number' ? item.feederData.mataKuliahId : 0;
+          const sksDiakui = typeof item.feederData.sksDiakui === 'number' ? item.feederData.sksDiakui : 0;
+          if (!aktivitasId || !mataKuliahId || sksDiakui <= 0) {
+            skipped++;
+            continue;
+          }
+
+          if (item.status === 'baru') {
+            await db
+              .insert(konversiAktivitasMbkm)
+              .values({
+                aktivitasId,
+                mataKuliahId,
+                sksDiakui,
+              })
+              .onConflictDoNothing();
+            inserted++;
+          } else if (typeof item.localId === 'number') {
+            if (item.status === 'konflik' && conflictResolution === 'feeder') {
+              await db
+                .update(konversiAktivitasMbkm)
+                .set({ sksDiakui })
+                .where(eq(konversiAktivitasMbkm.id, item.localId));
               updated++;
             } else {
               linkedOnly++;

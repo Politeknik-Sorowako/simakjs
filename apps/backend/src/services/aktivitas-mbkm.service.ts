@@ -741,6 +741,27 @@ export class AktivitasMbkmService {
         })),
     }));
   }
+
+  /**
+   * Tarik rincian detail (anggota, pembimbing, rekognisi konversi) dari WS Neo Feeder
+   * khusus untuk satu aktivitas MBKM yang sudah memiliki idPddikti.
+   */
+  static async syncFeederDetails(
+    id: number,
+    scopedProdiIds?: number[] | null,
+  ): Promise<{ anggota: number; pembimbing: number; konversi: number }> {
+    const detail = await AktivitasMbkmService.getById(id);
+    if (scopedProdiIds && detail.programStudiId && !scopedProdiIds.includes(detail.programStudiId)) {
+      throw new Error('Akses ditolak. Aktivitas berada di luar program studi yang diizinkan.');
+    }
+    if (!detail.idPddikti) {
+      throw new Error('Aktivitas MBKM belum tertaut ke PDDIKTI (idPddikti kosong).');
+    }
+    const { FeederPullService } = await import('./feeder-pull.service');
+    const { SystemParameterService } = await import('./system-parameter.service');
+    const config = await SystemParameterService.getFeederConfig();
+    return await FeederPullService.syncAktivitasDetails(config, detail.idPddikti, id);
+  }
 }
 
 /** Helper: kondisi `aktivitas_mbkm_id IS NULL` agar tautan tidak menimpa baris yang sudah tertaut. */

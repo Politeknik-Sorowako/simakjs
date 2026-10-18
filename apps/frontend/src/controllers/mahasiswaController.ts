@@ -85,6 +85,7 @@ export interface Mahasiswa {
   kodePos?: string | null;
   kewarganegaraan?: string | null;
   foto?: string | null;
+  angkatan?: string | null;
   programStudi?: Prodi | null;
   dosenPa?: { id: number; nama: string; nip: string; email: string } | null;
   idPddikti?: string | null;
