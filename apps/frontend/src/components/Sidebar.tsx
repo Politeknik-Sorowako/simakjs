@@ -113,7 +113,18 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     if (isMatch(['/krs', '/keuangan'])) {
       setIsRegistrasiOpen(true);
     }
-    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan', '/monitoring-bimbingan'])) {
+    if (
+      isMatch([
+        '/jurnal-presensi',
+        '/presensi-apel',
+        '/input-nilai',
+        '/bimbingan',
+        '/monitoring-bimbingan',
+        '/penetapan-pembimbing',
+        '/aktivitas-mbkm',
+        '/tugas-akhir',
+      ])
+    ) {
       setIsPelaksanaanOpen(true);
     }
     if (isMatch(['/khs', '/yudisium'])) {

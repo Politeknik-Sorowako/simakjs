@@ -21,6 +21,7 @@ import {
   type TugasAkhirStatus,
   type TugasAkhirTipe,
   tugasAkhirController,
+  type UpdateTugasAkhirPayload,
 } from '../controllers/tugasAkhirController';
 import { usePagination } from '../hooks/usePagination';
 import { formatMahasiswaOption } from '../utils/format';
@@ -71,7 +72,7 @@ export default function TugasAkhirPage() {
     async (params) => {
       try {
         const res = await tugasAkhirController.getAll(params);
-        setTotalItems(res.total);
+        setTotalItems(Number(res.total) || 0);
         return res.data;
       } catch (err: unknown) {
         showToast(err instanceof Error ? err.message : 'Gagal memuat data tugas akhir', 'error');
@@ -161,6 +162,127 @@ export default function TugasAkhirPage() {
   const [showOverrideModal, setShowOverrideModal] = createSignal(false);
   const [overrideTargetStatus, setOverrideTargetStatus] = createSignal<TugasAkhirStatus>('bimbingan');
   const [overrideAlasan, setOverrideAlasan] = createSignal('');
+
+  // Edit Modal
+  const [showEditModal, setShowEditModal] = createSignal(false);
+  const [editingTa, setEditingTa] = createSignal<TugasAkhir | null>(null);
+  const [editJudul, setEditJudul] = createSignal('');
+  const [editJudulInggris, setEditJudulInggris] = createSignal('');
+  const [editTipe, setEditTipe] = createSignal<TugasAkhirTipe>('individu');
+  const [editJenisKarya, setEditJenisKarya] = createSignal<TugasAkhirJenisKarya>('prototipe');
+  const [editBidangKajian, setEditBidangKajian] = createSignal('');
+  const [editLatarBelakang, setEditLatarBelakang] = createSignal('');
+  const [editRumusanMasalah, setEditRumusanMasalah] = createSignal('');
+  const [editTujuan, setEditTujuan] = createSignal('');
+  const [editMetodologi, setEditMetodologi] = createSignal('');
+  const [editMitraIndustri, setEditMitraIndustri] = createSignal('');
+  const [editUsulanPembimbing1, setEditUsulanPembimbing1] = createSignal<number | null>(null);
+  const [editUsulanPembimbing2, setEditUsulanPembimbing2] = createSignal<number | null>(null);
+
+  // Delete Modal
+  const [showDeleteModal, setShowDeleteModal] = createSignal(false);
+  const [deletingTa, setDeletingTa] = createSignal<TugasAkhir | null>(null);
+  const [isDeleting, setIsDeleting] = createSignal(false);
+
+  const canEdit = (ta: TugasAkhir) => {
+    if (isStaff()) return true;
+    return user()?.id === ta.createdById && ['draft', 'diajukan', 'revisi_proposal_topik'].includes(ta.status);
+  };
+
+  const canDelete = (ta: TugasAkhir) => {
+    if (isStaff()) return true;
+    return user()?.id === ta.createdById && ['draft', 'diajukan', 'revisi_proposal_topik'].includes(ta.status);
+  };
+
+  const openEditModal = (ta: TugasAkhir) => {
+    setEditingTa(ta);
+    setEditJudul(ta.judul);
+    setEditJudulInggris(ta.judulInggris || '');
+    setEditTipe(ta.tipe);
+    setEditJenisKarya(ta.jenisKarya);
+    setEditBidangKajian(ta.bidangKajian || '');
+    setEditLatarBelakang(ta.latarBelakang || '');
+    setEditRumusanMasalah(ta.rumusanMasalah || '');
+    setEditTujuan(ta.tujuan || '');
+    setEditMetodologi(ta.metodologi || '');
+    setEditMitraIndustri(ta.mitraIndustri || '');
+
+    const p1 = ta.pembimbing?.find((p) => p.peran === 'pembimbing_1');
+    const p2 = ta.pembimbing?.find((p) => p.peran === 'pembimbing_2');
+    setEditUsulanPembimbing1(p1?.dosenId || null);
+    setEditUsulanPembimbing2(p2?.dosenId || null);
+
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!editingTa()) return;
+    const judulTrimmed = editJudul().trim();
+    if (!judulTrimmed) {
+      showToast('Judul tugas akhir wajib diisi.', 'error');
+      return;
+    }
+    if (judulTrimmed.length < 3) {
+      showToast('Judul tugas akhir minimal 3 karakter.', 'error');
+      return;
+    }
+
+    const usulan: UpdateTugasAkhirPayload['usulanPembimbing'] = [];
+    if (editUsulanPembimbing1() && Number(editUsulanPembimbing1()) > 0) {
+      usulan.push({ peran: 'pembimbing_1', dosenId: Number(editUsulanPembimbing1()) });
+    }
+    if (editUsulanPembimbing2() && Number(editUsulanPembimbing2()) > 0) {
+      usulan.push({ peran: 'pembimbing_2', dosenId: Number(editUsulanPembimbing2()) });
+    }
+
+    const payload: UpdateTugasAkhirPayload = {
+      judul: judulTrimmed,
+      judulInggris: editJudulInggris().trim() || undefined,
+      tipe: editTipe(),
+      jenisKarya: editJenisKarya(),
+      bidangKajian: editBidangKajian().trim() || undefined,
+      latarBelakang: editLatarBelakang().trim() || undefined,
+      rumusanMasalah: editRumusanMasalah().trim() || undefined,
+      tujuan: editTujuan().trim() || undefined,
+      metodologi: editMetodologi().trim() || undefined,
+      mitraIndustri: editMitraIndustri().trim() || undefined,
+      usulanPembimbing: usulan.length > 0 ? usulan : undefined,
+    };
+
+    try {
+      setIsSubmitting(true);
+      await tugasAkhirController.update(editingTa()!.id, payload);
+      showToast('Data tugas akhir berhasil diperbarui!', 'success');
+      setShowEditModal(false);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui tugas akhir', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openDeleteModal = (ta: TugasAkhir) => {
+    setDeletingTa(ta);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingTa()) return;
+    try {
+      setIsDeleting(true);
+      await tugasAkhirController.delete(deletingTa()!.id);
+      showToast('Tugas akhir berhasil dihapus.', 'success');
+      setShowDeleteModal(false);
+      setDeletingTa(null);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus tugas akhir', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const [isSubmitting, setIsSubmitting] = createSignal(false);
 
@@ -530,7 +652,7 @@ export default function TugasAkhirPage() {
                         </Show>
                       </td>
                       <td class="py-4 px-4 text-right">
-                        <div class="flex items-center justify-end gap-2">
+                        <div class="flex items-center justify-end gap-1.5 flex-wrap">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -541,6 +663,11 @@ export default function TugasAkhirPage() {
                           >
                             Detail
                           </Button>
+                          <Show when={canEdit(item)}>
+                            <Button variant="secondary" size="sm" onClick={() => openEditModal(item)}>
+                              Edit
+                            </Button>
+                          </Show>
                           <Show when={isStaff()}>
                             <Button variant="secondary" size="sm" onClick={() => openReviewModal(item)}>
                               Review
@@ -554,6 +681,11 @@ export default function TugasAkhirPage() {
                               onClick={() => openOverrideModal(item)}
                             >
                               Override
+                            </Button>
+                          </Show>
+                          <Show when={canDelete(item)}>
+                            <Button variant="danger" size="sm" onClick={() => openDeleteModal(item)}>
+                              Hapus
                             </Button>
                           </Show>
                         </div>
@@ -1099,6 +1231,192 @@ export default function TugasAkhirPage() {
             <div class="flex justify-end pt-4 border-t border-hairline dark:border-hairline-dark">
               <Button type="button" variant="ghost" onClick={() => setShowDetailModal(false)}>
                 Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </Show>
+
+      {/* MODAL EDIT TUGAS AKHIR */}
+      <Show when={showEditModal() && editingTa()}>
+        <Modal
+          title={`Edit Tugas Akhir: ${editingTa()?.kodeTa}`}
+          isOpen={showEditModal()}
+          onClose={() => setShowEditModal(false)}
+          maxWidth="xl"
+        >
+          <form onSubmit={handleEditSubmit} class="space-y-4 max-h-[75vh] overflow-y-auto px-1">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Tipe Kepesertaan *</label>
+                <select
+                  value={editTipe()}
+                  onChange={(e) => setEditTipe(e.currentTarget.value as TugasAkhirTipe)}
+                  class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                >
+                  <option value="individu">Individu (Perorangan)</option>
+                  <option value="kelompok">Kelompok (Tim)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Jenis Karya *</label>
+                <select
+                  value={editJenisKarya()}
+                  onChange={(e) => setEditJenisKarya(e.currentTarget.value as TugasAkhirJenisKarya)}
+                  class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                >
+                  <option value="prototipe">Prototipe Fisik / Perangkat</option>
+                  <option value="proyek_rekayasa">Proyek Rekayasa / Sistem</option>
+                  <option value="rancang_bangun">Rancang Bangun Mesin</option>
+                  <option value="skripsi">Skripsi / Penelitian Terapan</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                Judul Tugas Akhir (Bahasa Indonesia) *
+              </label>
+              <Input
+                placeholder="Contoh: Rancang Bangun Sistem Konveyor..."
+                value={editJudul()}
+                onInput={(e) => setEditJudul(e.currentTarget.value)}
+                required
+              />
+            </div>
+
+            <div>
+              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                Judul Tugas Akhir (Bahasa Inggris)
+              </label>
+              <Input
+                placeholder="Example: Design and Implementation..."
+                value={editJudulInggris()}
+                onInput={(e) => setEditJudulInggris(e.currentTarget.value)}
+              />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Bidang Kajian</label>
+                <Input
+                  placeholder="Contoh: Otomasi Manufaktur"
+                  value={editBidangKajian()}
+                  onInput={(e) => setEditBidangKajian(e.currentTarget.value)}
+                />
+              </div>
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                  Mitra Industri (Jika Ada)
+                </label>
+                <Input
+                  placeholder="Contoh: PT Vale Indonesia Tbk"
+                  value={editMitraIndustri()}
+                  onInput={(e) => setEditMitraIndustri(e.currentTarget.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                Latar Belakang Singkat
+              </label>
+              <textarea
+                rows={3}
+                class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                placeholder="Jelaskan urgensi masalah..."
+                value={editLatarBelakang()}
+                onInput={(e) => setEditLatarBelakang(e.currentTarget.value)}
+              />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Rumusan Masalah</label>
+                <textarea
+                  rows={2}
+                  class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                  placeholder="Fokus persoalan teknis..."
+                  value={editRumusanMasalah()}
+                  onInput={(e) => setEditRumusanMasalah(e.currentTarget.value)}
+                />
+              </div>
+              <div>
+                <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Tujuan / Luaran</label>
+                <textarea
+                  rows={2}
+                  class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                  placeholder="Target spesifikasi atau kinerja..."
+                  value={editTujuan()}
+                  onInput={(e) => setEditTujuan(e.currentTarget.value)}
+                />
+              </div>
+            </div>
+
+            {/* Usulan Pembimbing */}
+            <div class="p-4 bg-pearl dark:bg-canvas-dark rounded-xl border border-hairline dark:border-hairline-dark space-y-3">
+              <label class="block text-caption font-bold text-ink dark:text-pearl">Dosen Pembimbing</label>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <span class="block text-fine font-semibold text-secondary-500 mb-1">Pembimbing 1 (Utama)</span>
+                  <select
+                    value={editUsulanPembimbing1() || ''}
+                    onChange={(e) => setEditUsulanPembimbing1(Number(e.currentTarget.value) || null)}
+                    class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                  >
+                    <option value="">Pilih Dosen</option>
+                    <For each={dosenList()}>{(d) => <option value={d.value}>{d.label}</option>}</For>
+                  </select>
+                </div>
+                <div>
+                  <span class="block text-fine font-semibold text-secondary-500 mb-1">Pembimbing 2 (Pendamping)</span>
+                  <select
+                    value={editUsulanPembimbing2() || ''}
+                    onChange={(e) => setEditUsulanPembimbing2(Number(e.currentTarget.value) || null)}
+                    class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                  >
+                    <option value="">Pilih Dosen</option>
+                    <For each={dosenList()}>{(d) => <option value={d.value}>{d.label}</option>}</For>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-hairline dark:border-hairline-dark">
+              <Button type="button" variant="ghost" onClick={() => setShowEditModal(false)}>
+                Batal
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmitting()}>
+                {isSubmitting() ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      </Show>
+
+      {/* MODAL KONFIRMASI HAPUS */}
+      <Show when={showDeleteModal() && deletingTa()}>
+        <Modal
+          title="Konfirmasi Hapus Tugas Akhir"
+          isOpen={showDeleteModal()}
+          onClose={() => setShowDeleteModal(false)}
+          maxWidth="md"
+        >
+          <div class="space-y-4">
+            <p class="text-table text-ink dark:text-pearl">
+              Apakah Anda yakin ingin menghapus tugas akhir: <span class="font-semibold">{deletingTa()?.judul}</span> (
+              {deletingTa()?.kodeTa})?
+            </p>
+            <p class="text-caption text-secondary-500">
+              Data yang dihapus meliputi relasi anggota kelompok, pembimbing, dan riwayat status tugas akhir ini.
+              Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div class="flex justify-end gap-3 pt-4 border-t border-hairline dark:border-hairline-dark">
+              <Button type="button" variant="ghost" onClick={() => setShowDeleteModal(false)}>
+                Batal
+              </Button>
+              <Button type="button" variant="danger" disabled={isDeleting()} onClick={handleDeleteConfirm}>
+                {isDeleting() ? 'Menghapus...' : 'Hapus Tugas Akhir'}
               </Button>
             </div>
           </div>

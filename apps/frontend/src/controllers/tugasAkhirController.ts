@@ -136,6 +136,13 @@ export interface UpdateTugasAkhirPayload {
   metodologi?: string;
   mitraIndustri?: string;
   fileProposalTopikUrl?: string;
+  usulanPembimbing?: {
+    peran: 'pembimbing_1' | 'pembimbing_2';
+    dosenId?: number;
+    namaEksternal?: string;
+    instansiEksternal?: string;
+    catatan?: string;
+  }[];
 }
 
 export interface ReviewTopikPayload {
@@ -168,8 +175,24 @@ export const tugasAkhirController = {
     if (params?.dosenId) q.append('dosenId', String(params.dosenId));
 
     const qs = q.toString() ? `?${q.toString()}` : '';
-    const res = await fetchApi<{ data: TugasAkhir[]; total: number; page: number; limit: number }>(`/tugas-akhir${qs}`);
-    return res;
+    const res = await fetchApi<{
+      data: TugasAkhir[];
+      total?: number;
+      page?: number;
+      limit?: number;
+      meta?: { total: number; page: number; limit: number };
+    }>(`/tugas-akhir${qs}`);
+
+    const total = res.total ?? res.meta?.total ?? (res.data ? res.data.length : 0);
+    const page = res.page ?? res.meta?.page ?? (params?.page || 1);
+    const limit = res.limit ?? res.meta?.limit ?? (params?.limit || 10);
+
+    return {
+      data: res.data || [],
+      total,
+      page,
+      limit,
+    };
   },
 
   async getById(id: number): Promise<TugasAkhir> {
@@ -191,6 +214,13 @@ export const tugasAkhirController = {
       body: JSON.stringify(payload),
     });
     return res.data;
+  },
+
+  async delete(id: number): Promise<{ message: string }> {
+    const res = await fetchApi<{ message: string }>(`/tugas-akhir/${id}`, {
+      method: 'DELETE',
+    });
+    return res;
   },
 
   async reviewTopik(id: number, payload: ReviewTopikPayload): Promise<TugasAkhir> {

@@ -103,6 +103,29 @@ export class TugasAkhirController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async delete({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const res = await TugasAkhirService.delete(id, user);
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghapus tugas akhir' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async reviewTopik({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
     try {
       const user = await getCurrentUser();

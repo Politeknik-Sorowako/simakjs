@@ -17,6 +17,7 @@ export const tugasAkhirRoutes = new Elysia({ prefix: '/tugas-akhir' })
   .get('/:id', TugasAkhirController.getById, tugasAkhirIdSchema)
   .post('/', TugasAkhirController.create, createTugasAkhirSchema)
   .put('/:id', TugasAkhirController.update, updateTugasAkhirSchema)
+  .delete('/:id', TugasAkhirController.delete, tugasAkhirIdSchema)
   .post('/:id/review', TugasAkhirController.reviewTopik, reviewTopikSchema)
   .post('/:id/override-status', TugasAkhirController.overrideStatus, overrideStatusSchema)
   .post('/:id/respon-undangan', TugasAkhirController.responUndangan, responUndanganSchema);

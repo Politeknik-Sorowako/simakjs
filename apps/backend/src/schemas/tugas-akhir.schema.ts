@@ -44,6 +44,7 @@ export const updateTugasAkhirBody = t.Object({
   metodologi: t.Optional(t.Union([t.String(), t.Null()])),
   mitraIndustri: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
   fileProposalTopikUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  usulanPembimbing: t.Optional(t.Union([t.Array(usulanPembimbingItem), t.Null()])),
 });
 
 export const reviewTopikBody = t.Object({
