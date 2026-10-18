@@ -3952,7 +3952,7 @@ export const tugasAkhirRubrikKriteria = pgTable(
     bobot: integer('bobot').notNull(), // e.g. 20 (percent)
     isIndividu: boolean('is_individu').default(false).notNull(), // true = nilai per individu mahasiswa; false = nilai kelompok
     urutan: integer('urutan').default(0).notNull(),
-    isActive: boolean('is_active').default(true).notNull(),
+    isAktif: boolean('is_aktif').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (t) => [index('idx_ta_rubrik_prodi').on(t.programStudiId), index('idx_ta_rubrik_jenis').on(t.jenisSidang)],

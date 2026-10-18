@@ -182,3 +182,83 @@ export const accSidangSchema = {
   params: tugasAkhirIdParam,
   body: accSidangBody,
 };
+
+// Milestone 3: Sidang Proposal & Sidang Akhir Schemas
+export const daftarSidangBody = t.Object({
+  jenisSidang: t.Union([t.Literal('proposal'), t.Literal('kemajuan'), t.Literal('akhir')], { default: 'proposal' }),
+  berkasProposalUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  buktiBebasKompensasiUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  buktiPlagiasiUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  catatanMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const pengujiPlottingItem = t.Object({
+  dosenId: t.Integer(),
+  peranPenguji: t.Union([
+    t.Literal('ketua_penguji'),
+    t.Literal('sekretaris'),
+    t.Literal('penguji_1'),
+    t.Literal('penguji_2'),
+    t.Literal('pembimbing_1'),
+    t.Literal('pembimbing_2'),
+  ]),
+});
+
+export const jadwalSidangBody = t.Object({
+  tanggalSidang: t.String({ minLength: 10, maxLength: 10 }), // YYYY-MM-DD
+  jamMulai: t.String({ minLength: 4, maxLength: 10 }), // e.g. "09:00"
+  jamSelesai: t.String({ minLength: 4, maxLength: 10 }), // e.g. "11:00"
+  ruangan: t.String({ minLength: 2, maxLength: 100 }),
+  timPenguji: t.Array(pengujiPlottingItem, { minItems: 1 }),
+});
+
+export const nilaiItemSchema = t.Object({
+  kriteriaId: t.Integer(),
+  mahasiswaId: t.Integer(),
+  nilai: t.Numeric({ minimum: 0, maximum: 100 }),
+});
+
+export const inputNilaiSidangBody = t.Object({
+  nilaiList: t.Array(nilaiItemSchema, { minItems: 1 }),
+  catatanRevisi: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const finalisasiSidangBody = t.Object({
+  statusHasil: t.Union([
+    t.Literal('lulus_tanpa_revisi'),
+    t.Literal('lulus_dengan_revisi'),
+    t.Literal('sidang_ulang'),
+    t.Literal('tidak_lulus'),
+  ]),
+  batasWaktuRevisi: t.Optional(t.Union([t.String({ minLength: 10, maxLength: 10 }), t.Null()])),
+  catatanSidang: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const sidangIdParam = t.Object({
+  id: t.Numeric(),
+  sidangId: t.Numeric(),
+});
+
+export const daftarSidangSchema = {
+  params: tugasAkhirIdParam,
+  body: daftarSidangBody,
+};
+
+export const jadwalSidangSchema = {
+  params: sidangIdParam,
+  body: jadwalSidangBody,
+};
+
+export const inputNilaiSidangSchema = {
+  params: sidangIdParam,
+  body: inputNilaiSidangBody,
+};
+
+export const finalisasiSidangSchema = {
+  params: sidangIdParam,
+  body: finalisasiSidangBody,
+};
+
+export const sidangIdSchema = {
+  params: sidangIdParam,
+};

@@ -5,8 +5,12 @@ import {
   accSidangSchema,
   createLogbookSchema,
   createTugasAkhirSchema,
+  daftarSidangSchema,
   deleteLogbookSchema,
+  finalisasiSidangSchema,
   getTugasAkhirSchema,
+  inputNilaiSidangSchema,
+  jadwalSidangSchema,
   overrideStatusSchema,
   responUndanganSchema,
   reviewLogbookSchema,
@@ -32,4 +36,11 @@ export const tugasAkhirRoutes = new Elysia({ prefix: '/tugas-akhir' })
   .put('/:id/logbooks/:logbookId', TugasAkhirController.updateLogbook, updateLogbookSchema)
   .delete('/:id/logbooks/:logbookId', TugasAkhirController.deleteLogbook, deleteLogbookSchema)
   .post('/:id/logbooks/:logbookId/review', TugasAkhirController.reviewLogbook, reviewLogbookSchema)
-  .post('/:id/acc-sidang', TugasAkhirController.accSidang, accSidangSchema);
+  .post('/:id/acc-sidang', TugasAkhirController.accSidang, accSidangSchema)
+  // Milestone 3: Pendaftaran & Penjadwalan Sidang Proposal
+  .get('/:id/sidang', TugasAkhirController.getSidangList, tugasAkhirIdSchema)
+  .post('/:id/sidang/daftar', TugasAkhirController.daftarSidang, daftarSidangSchema)
+  .post('/:id/sidang/:sidangId/jadwal', TugasAkhirController.jadwalkanSidang, jadwalSidangSchema)
+  .get('/:id/sidang/rubrik', TugasAkhirController.getRubrikKriteria, tugasAkhirIdSchema)
+  .post('/:id/sidang/:sidangId/nilai', TugasAkhirController.inputNilaiSidang, inputNilaiSidangSchema)
+  .post('/:id/sidang/:sidangId/finalisasi', TugasAkhirController.finalisasiSidang, finalisasiSidangSchema);

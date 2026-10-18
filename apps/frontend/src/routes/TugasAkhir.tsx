@@ -14,11 +14,16 @@ import { mahasiswaController } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
 import {
   type CreateTugasAkhirPayload,
+  type FinalisasiSidangPayload,
+  type InputNilaiSidangPayload,
+  type JadwalSidangPayload,
   type OverrideStatusPayload,
   type ReviewTopikPayload,
+  type RubrikKriteriaItem,
   type TugasAkhir,
   type TugasAkhirJenisKarya,
   type TugasAkhirLogbook,
+  type TugasAkhirSidang,
   type TugasAkhirStatus,
   type TugasAkhirTipe,
   tugasAkhirController,
@@ -174,6 +179,47 @@ export default function TugasAkhirPage() {
   );
   const [logbookCatatanDosen, setLogbookCatatanDosen] = createSignal<string>('');
   const [isSubmittingLogbookReview, setIsSubmittingLogbookReview] = createSignal(false);
+
+  // Sidang Proposal Modal (Pendaftaran, Jadwal, Penilaian, Finalisasi)
+  const [showSidangModal, setShowSidangModal] = createSignal(false);
+  const [sidangTa, setSidangTa] = createSignal<TugasAkhir | null>(null);
+  const [sidangList, setSidangList] = createSignal<TugasAkhirSidang[]>([]);
+  const [isLoadingSidang, setIsLoadingSidang] = createSignal(false);
+  const [sidangActiveTab, setSidangActiveTab] = createSignal<'daftar' | 'jadwal' | 'nilai' | 'hasil'>('daftar');
+
+  // Form Pendaftaran Sidang
+  const [daftarBerkasProposalUrl, setDaftarBerkasProposalUrl] = createSignal('');
+  const [daftarBuktiKompensasiUrl, setDaftarBuktiKompensasiUrl] = createSignal('');
+  const [daftarBuktiPlagiasiUrl, setDaftarBuktiPlagiasiUrl] = createSignal('');
+  const [daftarCatatanMhs, setDaftarCatatanMhs] = createSignal('');
+  const [isSubmittingDaftarSidang, setIsSubmittingDaftarSidang] = createSignal(false);
+
+  // Form Penjadwalan Sidang (Prodi/Staf)
+  const [selectedSidangForJadwal, setSelectedSidangForJadwal] = createSignal<TugasAkhirSidang | null>(null);
+  const [jadwalTanggal, setJadwalTanggal] = createSignal(new Date().toISOString().split('T')[0]);
+  const [jadwalJamMulai, setJadwalJamMulai] = createSignal('09:00');
+  const [jadwalJamSelesai, setJadwalJamSelesai] = createSignal('11:00');
+  const [jadwalRuangan, setJadwalRuangan] = createSignal('');
+  const [jadwalPenguji1, setJadwalPenguji1] = createSignal<number | null>(null);
+  const [jadwalPenguji2, setJadwalPenguji2] = createSignal<number | null>(null);
+  const [jadwalKetuaPenguji, setJadwalKetuaPenguji] = createSignal<number | null>(null);
+  const [jadwalSekretaris, setJadwalSekretaris] = createSignal<number | null>(null);
+  const [isSubmittingJadwal, setIsSubmittingJadwal] = createSignal(false);
+
+  // Form Penilaian Sidang (Penguji)
+  const [selectedSidangForNilai, setSelectedSidangForNilai] = createSignal<TugasAkhirSidang | null>(null);
+  const [rubrikKriteria, setRubrikKriteria] = createSignal<RubrikKriteriaItem[]>([]);
+  const [nilaiMap, setNilaiMap] = createSignal<Record<string, number>>({}); // key: `${kriteriaId}_${mhsId}`
+  const [nilaiCatatanRevisi, setNilaiCatatanRevisi] = createSignal('');
+  const [isSubmittingNilai, setIsSubmittingNilai] = createSignal(false);
+
+  // Form Finalisasi Sidang (Prodi/Kaprodi)
+  const [finalisasiStatusHasil, setFinalisasiStatusHasil] = createSignal<
+    'lulus_tanpa_revisi' | 'lulus_dengan_revisi' | 'sidang_ulang' | 'tidak_lulus'
+  >('lulus_dengan_revisi');
+  const [finalisasiBatasRevisi, setFinalisasiBatasRevisi] = createSignal('');
+  const [finalisasiCatatan, setFinalisasiCatatan] = createSignal('');
+  const [isSubmittingFinalisasi, setIsSubmittingFinalisasi] = createSignal(false);
 
   // Review Modal (Kaprodi / Prodi / Admin / LPPM)
   const [showReviewModal, setShowReviewModal] = createSignal(false);
@@ -708,6 +754,211 @@ export default function TugasAkhirPage() {
     }
   };
 
+  // =================== SIDANG PROPOSAL HANDLERS ===================
+  const openSidangModal = async (ta: TugasAkhir) => {
+    setSidangTa(ta);
+    setShowSidangModal(true);
+    await loadSidangData(ta.id);
+  };
+
+  const loadSidangData = async (taId: number) => {
+    try {
+      setIsLoadingSidang(true);
+      const list = await tugasAkhirController.getSidangList(taId);
+      setSidangList(list);
+
+      // Auto-pilih sidang proposal aktif jika ada
+      const propSidang = list.find((s) => s.jenisSidang === 'proposal') || list[0] || null;
+      if (propSidang) {
+        setSelectedSidangForJadwal(propSidang);
+        setSelectedSidangForNilai(propSidang);
+        if (propSidang.tanggalSidang) setJadwalTanggal(propSidang.tanggalSidang);
+        if (propSidang.jamMulai) setJadwalJamMulai(propSidang.jamMulai);
+        if (propSidang.jamSelesai) setJadwalJamSelesai(propSidang.jamSelesai);
+        if (propSidang.ruangan) setJadwalRuangan(propSidang.ruangan);
+        if (propSidang.statusHasil && propSidang.statusHasil !== 'belum_ditentukan') {
+          setFinalisasiStatusHasil(propSidang.statusHasil);
+        }
+        if (propSidang.batasWaktuRevisi) setFinalisasiBatasRevisi(propSidang.batasWaktuRevisi);
+        if (propSidang.catatanSidang) setFinalisasiCatatan(propSidang.catatanSidang);
+
+        // Pre-fill penguji jika sudah ada
+        if (propSidang.penguji && propSidang.penguji.length > 0) {
+          const p1 = propSidang.penguji.find((p) => p.peranPenguji === 'penguji_1');
+          const p2 = propSidang.penguji.find((p) => p.peranPenguji === 'penguji_2');
+          const ketua = propSidang.penguji.find((p) => p.peranPenguji === 'ketua_penguji');
+          const sek = propSidang.penguji.find((p) => p.peranPenguji === 'sekretaris');
+          if (p1) setJadwalPenguji1(p1.dosenId);
+          if (p2) setJadwalPenguji2(p2.dosenId);
+          if (ketua) setJadwalKetuaPenguji(ketua.dosenId);
+          if (sek) setJadwalSekretaris(sek.dosenId);
+        }
+
+        // Tentukan tab default berdasarkan status sidang
+        if (propSidang.statusSidang === 'mendaftar') {
+          setSidangActiveTab(isStaff() ? 'jadwal' : 'daftar');
+        } else if (propSidang.statusSidang === 'dijadwalkan' || propSidang.statusSidang === 'berlangsung') {
+          setSidangActiveTab(hasRole(['dosen']) ? 'nilai' : 'jadwal');
+        } else if (propSidang.statusSidang === 'selesai') {
+          setSidangActiveTab('hasil');
+        }
+      } else {
+        setSidangActiveTab('daftar');
+      }
+
+      // Load rubrik kriteria untuk proposal
+      const rubrik = await tugasAkhirController.getRubrikKriteria(taId, 'proposal');
+      setRubrikKriteria(rubrik);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal memuat data sidang', 'error');
+    } finally {
+      setIsLoadingSidang(false);
+    }
+  };
+
+  const handleDaftarSidangSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!sidangTa()) return;
+    try {
+      setIsSubmittingDaftarSidang(true);
+      await tugasAkhirController.daftarSidang(sidangTa()!.id, {
+        jenisSidang: 'proposal',
+        berkasProposalUrl: daftarBerkasProposalUrl().trim() || null,
+        buktiBebasKompensasiUrl: daftarBuktiKompensasiUrl().trim() || null,
+        buktiPlagiasiUrl: daftarBuktiPlagiasiUrl().trim() || null,
+        catatanMahasiswa: daftarCatatanMhs().trim() || null,
+      });
+      showToast('Pendaftaran sidang proposal berhasil diajukan!', 'success');
+      await loadSidangData(sidangTa()!.id);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mendaftar sidang proposal', 'error');
+    } finally {
+      setIsSubmittingDaftarSidang(false);
+    }
+  };
+
+  const handleJadwalkanSidangSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!sidangTa() || !selectedSidangForJadwal()) {
+      showToast('Pilih sesi sidang yang akan dijadwalkan', 'error');
+      return;
+    }
+    if (!jadwalTanggal() || !jadwalRuangan().trim()) {
+      showToast('Tanggal dan ruangan sidang wajib diisi', 'error');
+      return;
+    }
+
+    const timPenguji: {
+      dosenId: number;
+      peranPenguji: 'ketua_penguji' | 'sekretaris' | 'penguji_1' | 'penguji_2' | 'pembimbing_1' | 'pembimbing_2';
+    }[] = [];
+
+    if (jadwalPenguji1()) timPenguji.push({ dosenId: jadwalPenguji1()!, peranPenguji: 'penguji_1' });
+    if (jadwalPenguji2()) timPenguji.push({ dosenId: jadwalPenguji2()!, peranPenguji: 'penguji_2' });
+    if (jadwalKetuaPenguji()) timPenguji.push({ dosenId: jadwalKetuaPenguji()!, peranPenguji: 'ketua_penguji' });
+    if (jadwalSekretaris()) timPenguji.push({ dosenId: jadwalSekretaris()!, peranPenguji: 'sekretaris' });
+
+    // Tambahkan otomatis dosen pembimbing jika belum ada di list penguji
+    const p1 = sidangTa()?.pembimbing?.find((p) => p.peran === 'pembimbing_1')?.dosenId;
+    const p2 = sidangTa()?.pembimbing?.find((p) => p.peran === 'pembimbing_2')?.dosenId;
+    if (p1 && !timPenguji.some((tp) => tp.dosenId === p1)) {
+      timPenguji.push({ dosenId: p1, peranPenguji: 'pembimbing_1' });
+    }
+    if (p2 && !timPenguji.some((tp) => tp.dosenId === p2)) {
+      timPenguji.push({ dosenId: p2, peranPenguji: 'pembimbing_2' });
+    }
+
+    if (timPenguji.length === 0) {
+      showToast('Minimal tentukan 1 dosen penguji untuk jadwal sidang', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmittingJadwal(true);
+      await tugasAkhirController.jadwalkanSidang(sidangTa()!.id, selectedSidangForJadwal()!.id, {
+        tanggalSidang: jadwalTanggal(),
+        jamMulai: jadwalJamMulai(),
+        jamSelesai: jadwalJamSelesai(),
+        ruangan: jadwalRuangan().trim(),
+        timPenguji,
+      });
+      showToast('Jadwal sidang dan dewan penguji berhasil ditetapkan!', 'success');
+      await loadSidangData(sidangTa()!.id);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menjadwalkan sidang', 'error');
+    } finally {
+      setIsSubmittingJadwal(false);
+    }
+  };
+
+  const handleInputNilaiSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!sidangTa() || !selectedSidangForNilai()) return;
+
+    // Kumpulkan nilai berdasarkan rubrik & anggota
+    const ta = sidangTa()!;
+    const mhsIds: number[] = [];
+    if (ta.anggota && ta.anggota.length > 0) {
+      ta.anggota.forEach((a) => mhsIds.push(a.mahasiswaId));
+    }
+
+    const nilaiList: { kriteriaId: number; mahasiswaId: number; nilai: number }[] = [];
+    for (const crit of rubrikKriteria()) {
+      for (const mhsId of mhsIds) {
+        const val = nilaiMap()[`${crit.id}_${mhsId}`];
+        if (val !== undefined && val !== null) {
+          nilaiList.push({
+            kriteriaId: crit.id,
+            mahasiswaId: mhsId,
+            nilai: Number(val),
+          });
+        }
+      }
+    }
+
+    if (nilaiList.length === 0) {
+      showToast('Masukkan minimal satu nilai kriteria penilaian', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmittingNilai(true);
+      await tugasAkhirController.inputNilaiSidang(ta.id, selectedSidangForNilai()!.id, {
+        nilaiList,
+        catatanRevisi: nilaiCatatanRevisi().trim() || null,
+      });
+      showToast('Penilaian sidang berhasil disimpan!', 'success');
+      await loadSidangData(ta.id);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menyimpan nilai sidang', 'error');
+    } finally {
+      setIsSubmittingNilai(false);
+    }
+  };
+
+  const handleFinalisasiSidangSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!sidangTa() || !selectedSidangForJadwal()) return;
+    try {
+      setIsSubmittingFinalisasi(true);
+      await tugasAkhirController.finalisasiSidang(sidangTa()!.id, selectedSidangForJadwal()!.id, {
+        statusHasil: finalisasiStatusHasil(),
+        batasWaktuRevisi: finalisasiBatasRevisi() || null,
+        catatanSidang: finalisasiCatatan().trim() || null,
+      });
+      showToast('Hasil sidang proposal berhasil difinalisasi!', 'success');
+      await loadSidangData(sidangTa()!.id);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal finalisasi hasil sidang', 'error');
+    } finally {
+      setIsSubmittingFinalisasi(false);
+    }
+  };
+
   const tableHeaders = ['Kode & Judul', 'Tipe & Karya', 'Pengusul / Anggota', 'Pembimbing', 'Status', 'Aksi'];
 
   return (
@@ -897,6 +1148,30 @@ export default function TugasAkhirPage() {
                               onClick={() => openBimbinganModal(item)}
                             >
                               Bimbingan
+                            </Button>
+                          </Show>
+
+                          {/* Tombol Sidang Proposal (Sempro) */}
+                          <Show
+                            when={[
+                              'bimbingan',
+                              'sempro_diajukan',
+                              'sempro_dijadwalkan',
+                              'sempro_selesai',
+                              'sidang_diajukan',
+                              'sidang_dijadwalkan',
+                              'sidang_selesai',
+                              'revisi',
+                              'lulus',
+                            ].includes(item.status)}
+                          >
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              class="border-action/30 text-action hover:bg-action/10"
+                              onClick={() => openSidangModal(item)}
+                            >
+                              Sidang Sempro
                             </Button>
                           </Show>
                           <Button
@@ -2159,6 +2434,564 @@ export default function TugasAkhirPage() {
               </Button>
             </div>
           </form>
+        </Modal>
+      </Show>
+
+      {/* MODAL SIDANG PROPOSAL (PENDAFTARAN, JADWAL, PENILAIAN, FINALISASI) */}
+      <Show when={showSidangModal() && sidangTa()}>
+        <Modal
+          title={`Sidang Proposal: ${sidangTa()?.kodeTa}`}
+          isOpen={showSidangModal()}
+          onClose={() => setShowSidangModal(false)}
+          maxWidth="xl"
+        >
+          <div class="space-y-6 max-h-[82vh] overflow-y-auto px-1">
+            {/* Header Ringkasan Tugas Akhir */}
+            <div class="p-4 bg-pearl dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-2">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <span class="text-caption font-bold text-action uppercase tracking-wide">
+                    {sidangTa()?.kodeTa} • {sidangTa()?.tipe === 'kelompok' ? 'Kelompok' : 'Individu'}
+                  </span>
+                  <h3 class="text-table font-bold text-ink dark:text-pearl mt-0.5 leading-snug">{sidangTa()?.judul}</h3>
+                </div>
+                <Badge variant={STATUS_META[sidangTa()!.status]?.variant || 'default'}>
+                  {STATUS_META[sidangTa()!.status]?.label || sidangTa()!.status}
+                </Badge>
+              </div>
+
+              {/* Status ACC Pembimbing Check */}
+              <div class="pt-2 border-t border-hairline dark:border-hairline-dark flex items-center justify-between text-fine">
+                <span class="font-semibold text-secondary-500">Prasyarat ACC Pembimbing:</span>
+                <div class="flex items-center gap-2">
+                  <For each={sidangTa()?.pembimbing}>
+                    {(p) => (
+                      <Badge variant={p.accSidangProposal ? 'success' : 'default'} size="sm">
+                        {p.peran === 'pembimbing_1' ? 'P1' : 'P2'}: {p.accSidangProposal ? 'ACC ✓' : 'Belum ACC'}
+                      </Badge>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div class="flex border-b border-hairline dark:border-hairline-dark gap-2">
+              <button
+                type="button"
+                onClick={() => setSidangActiveTab('daftar')}
+                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
+                  sidangActiveTab() === 'daftar'
+                    ? 'border-action text-action'
+                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
+                }`}
+              >
+                1. Pendaftaran Sempro
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidangActiveTab('jadwal')}
+                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
+                  sidangActiveTab() === 'jadwal'
+                    ? 'border-action text-action'
+                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
+                }`}
+              >
+                2. Jadwal & Tim Penguji
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidangActiveTab('nilai')}
+                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
+                  sidangActiveTab() === 'nilai'
+                    ? 'border-action text-action'
+                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
+                }`}
+              >
+                3. Ruang Penilaian Penguji
+              </button>
+              <button
+                type="button"
+                onClick={() => setSidangActiveTab('hasil')}
+                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
+                  sidangActiveTab() === 'hasil'
+                    ? 'border-action text-action'
+                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
+                }`}
+              >
+                4. Hasil & Kelulusan
+              </button>
+            </div>
+
+            {/* TAB 1: PENDAFTARAN SIDANG */}
+            <Show when={sidangActiveTab() === 'daftar'}>
+              <div class="space-y-4">
+                <Show
+                  when={sidangList().find((s) => s.jenisSidang === 'proposal')}
+                  fallback={
+                    <form onSubmit={handleDaftarSidangSubmit} class="space-y-4">
+                      <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
+                        Pastikan seluruh pembimbing telah memberikan ACC Sidang Proposal sebelum mengajukan pendaftaran.
+                      </div>
+
+                      <div>
+                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                          Link Berkas Naskah Proposal (Cloud / Drive)
+                        </label>
+                        <Input
+                          type="url"
+                          placeholder="https://drive.google.com/..."
+                          value={daftarBerkasProposalUrl()}
+                          onInput={(e) => setDaftarBerkasProposalUrl(e.currentTarget.value)}
+                        />
+                      </div>
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                            Link Bukti Bebas Kompensasi (Opsional)
+                          </label>
+                          <Input
+                            type="url"
+                            placeholder="https://..."
+                            value={daftarBuktiKompensasiUrl()}
+                            onInput={(e) => setDaftarBuktiKompensasiUrl(e.currentTarget.value)}
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                            Link Bukti Cek Plagiasi (Turnitin)
+                          </label>
+                          <Input
+                            type="url"
+                            placeholder="https://..."
+                            value={daftarBuktiPlagiasiUrl()}
+                            onInput={(e) => setDaftarBuktiPlagiasiUrl(e.currentTarget.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                          Catatan Tambahan Mahasiswa
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Catatan atau pengantar untuk prodi..."
+                          value={daftarCatatanMhs()}
+                          onInput={(e) => setDaftarCatatanMhs(e.currentTarget.value)}
+                          class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                        />
+                      </div>
+
+                      <div class="flex justify-end pt-2">
+                        <Button type="submit" variant="primary" disabled={isSubmittingDaftarSidang()}>
+                          {isSubmittingDaftarSidang() ? 'Mendaftarkan...' : 'Daftarkan Sidang Proposal'}
+                        </Button>
+                      </div>
+                    </form>
+                  }
+                >
+                  {(s) => (
+                    <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-3">
+                      <div class="flex items-center justify-between">
+                        <span class="text-caption font-bold text-success-600 dark:text-success-400">
+                          Pendaftaran Sidang Proposal Terdaftar
+                        </span>
+                        <Badge variant="success" size="sm">
+                          {s().statusSidang.toUpperCase()}
+                        </Badge>
+                      </div>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-fine">
+                        <div>
+                          <span class="text-secondary-400 block">Berkas Proposal:</span>
+                          {s().berkasProposalUrl ? (
+                            <a
+                              href={s().berkasProposalUrl!}
+                              target="_blank"
+                              rel="noreferrer"
+                              class="text-action hover:underline truncate block"
+                            >
+                              Lihat Naskah Proposal ↗
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </div>
+                        <div>
+                          <span class="text-secondary-400 block">Bukti Plagiasi:</span>
+                          {s().buktiPlagiasiUrl ? (
+                            <a
+                              href={s().buktiPlagiasiUrl!}
+                              target="_blank"
+                              rel="noreferrer"
+                              class="text-action hover:underline truncate block"
+                            >
+                              Lihat Bukti Plagiasi ↗
+                            </a>
+                          ) : (
+                            '-'
+                          )}
+                        </div>
+                      </div>
+                      <Show when={s().catatanMahasiswa}>
+                        <div class="text-fine text-secondary-500 bg-secondary-50 dark:bg-secondary-900/30 p-2.5 rounded-lg">
+                          <span class="font-semibold">Catatan:</span> {s().catatanMahasiswa}
+                        </div>
+                      </Show>
+                    </div>
+                  )}
+                </Show>
+              </div>
+            </Show>
+
+            {/* TAB 2: JADWAL & PLOTTING PENGUJI */}
+            <Show when={sidangActiveTab() === 'jadwal'}>
+              <div class="space-y-4">
+                <Show
+                  when={isStaff()}
+                  fallback={
+                    <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-3">
+                      <h4 class="text-table font-bold text-ink dark:text-pearl">Jadwal & Dewan Penguji</h4>
+                      {selectedSidangForJadwal()?.tanggalSidang ? (
+                        <div class="space-y-2 text-fine">
+                          <p>
+                            <span class="font-semibold">Waktu:</span> {selectedSidangForJadwal()?.tanggalSidang},{' '}
+                            {selectedSidangForJadwal()?.jamMulai} - {selectedSidangForJadwal()?.jamSelesai} WITA
+                          </p>
+                          <p>
+                            <span class="font-semibold">Ruangan:</span> {selectedSidangForJadwal()?.ruangan}
+                          </p>
+                          <div class="pt-2 border-t border-hairline dark:border-hairline-dark">
+                            <span class="font-semibold block mb-1">Dewan Penguji:</span>
+                            <For each={selectedSidangForJadwal()?.penguji}>
+                              {(p) => (
+                                <div class="flex items-center justify-between py-1">
+                                  <span>{p.dosenNama}</span>
+                                  <Badge variant="default" size="sm">
+                                    {p.peranPenguji.replace('_', ' ').toUpperCase()}
+                                  </Badge>
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </div>
+                      ) : (
+                        <p class="text-caption text-secondary-500">
+                          Sidang belum dijadwalkan oleh Program Studi. Silakan tunggu informasi jadwal resmi.
+                        </p>
+                      )}
+                    </div>
+                  }
+                >
+                  {/* Form Penjadwalan oleh Prodi/Staf */}
+                  <form onSubmit={handleJadwalkanSidangSubmit} class="space-y-4">
+                    <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
+                      Atur tanggal, jam, ruangan, dan plot dewan penguji (Penguji 1 & 2, Ketua, dan Sekretaris).
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                          Tanggal Sidang *
+                        </label>
+                        <Input
+                          type="date"
+                          value={jadwalTanggal()}
+                          onInput={(e) => setJadwalTanggal(e.currentTarget.value)}
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                          Jam Mulai *
+                        </label>
+                        <Input
+                          type="time"
+                          value={jadwalJamMulai()}
+                          onInput={(e) => setJadwalJamMulai(e.currentTarget.value)}
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                          Jam Selesai *
+                        </label>
+                        <Input
+                          type="time"
+                          value={jadwalJamSelesai()}
+                          onInput={(e) => setJadwalJamSelesai(e.currentTarget.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                        Ruangan / Tempat Sidang *
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="Contoh: Lab Komputer 2 / Ruang Sidang A"
+                        value={jadwalRuangan()}
+                        onInput={(e) => setJadwalRuangan(e.currentTarget.value)}
+                      />
+                    </div>
+
+                    <div class="pt-2 border-t border-hairline dark:border-hairline-dark">
+                      <span class="text-caption font-bold text-ink dark:text-pearl block mb-2">
+                        Susunan Dewan Penguji
+                      </span>
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label class="block text-fine font-semibold text-secondary-600 dark:text-secondary-400 mb-1">
+                            Ketua Penguji
+                          </label>
+                          <SearchableSelect
+                            options={dosenList() || []}
+                            value={jadwalKetuaPenguji()}
+                            onChange={(val) => setJadwalKetuaPenguji(val ? Number(val) : null)}
+                            placeholder="Pilih Ketua Penguji..."
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-fine font-semibold text-secondary-600 dark:text-secondary-400 mb-1">
+                            Sekretaris Sidang
+                          </label>
+                          <SearchableSelect
+                            options={dosenList() || []}
+                            value={jadwalSekretaris()}
+                            onChange={(val) => setJadwalSekretaris(val ? Number(val) : null)}
+                            placeholder="Pilih Sekretaris..."
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-fine font-semibold text-secondary-600 dark:text-secondary-400 mb-1">
+                            Dosen Penguji 1 *
+                          </label>
+                          <SearchableSelect
+                            options={dosenList() || []}
+                            value={jadwalPenguji1()}
+                            onChange={(val) => setJadwalPenguji1(val ? Number(val) : null)}
+                            placeholder="Pilih Dosen Penguji 1..."
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-fine font-semibold text-secondary-600 dark:text-secondary-400 mb-1">
+                            Dosen Penguji 2
+                          </label>
+                          <SearchableSelect
+                            options={dosenList() || []}
+                            value={jadwalPenguji2()}
+                            onChange={(val) => setJadwalPenguji2(val ? Number(val) : null)}
+                            placeholder="Pilih Dosen Penguji 2..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                      <Button type="submit" variant="primary" disabled={isSubmittingJadwal()}>
+                        {isSubmittingJadwal() ? 'Menyimpan Jadwal...' : 'Tetapkan Jadwal & Tim Penguji'}
+                      </Button>
+                    </div>
+                  </form>
+                </Show>
+              </div>
+            </Show>
+
+            {/* TAB 3: RUANG PENILAIAN PENGUJI */}
+            <Show when={sidangActiveTab() === 'nilai'}>
+              <div class="space-y-4">
+                <Show
+                  when={rubrikKriteria().length > 0}
+                  fallback={
+                    <div class="text-center py-6 text-secondary-500">
+                      Rubrik penilaian proposal belum dikonfigurasi oleh sistem.
+                    </div>
+                  }
+                >
+                  <form onSubmit={handleInputNilaiSubmit} class="space-y-4">
+                    <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
+                      Setiap penguji menginput nilai skala 0-100 untuk tiap kriteria penilaian mahasiswa/tim.
+                    </div>
+
+                    <div class="space-y-3">
+                      <For each={sidangTa()?.anggota}>
+                        {(ang) => (
+                          <div class="p-4 bg-white dark:bg-canvas-dark rounded-xl border border-hairline dark:border-hairline-dark space-y-3">
+                            <div class="flex items-center justify-between">
+                              <span class="text-caption font-bold text-ink dark:text-pearl">
+                                Mahasiswa: {ang.mahasiswaNama} ({ang.mahasiswaNim})
+                              </span>
+                              <Badge variant="default" size="sm">
+                                {ang.peran === 'ketua' ? 'Ketua' : 'Anggota'}
+                              </Badge>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              <For each={rubrikKriteria()}>
+                                {(crit) => {
+                                  const key = `${crit.id}_${ang.mahasiswaId}`;
+                                  return (
+                                    <div>
+                                      <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                                        {crit.namaKriteria} ({crit.bobotPersen}%)
+                                      </label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        placeholder="0-100"
+                                        value={nilaiMap()[key] ?? ''}
+                                        onInput={(e) => {
+                                          const val = Number(e.currentTarget.value);
+                                          setNilaiMap((prev) => ({ ...prev, [key]: val }));
+                                        }}
+                                      />
+                                    </div>
+                                  );
+                                }}
+                              </For>
+                            </div>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+
+                    <div>
+                      <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                        Catatan Revisi dari Penguji
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Rincian perbaikan naskah atau metodologi yang harus direvisi..."
+                        value={nilaiCatatanRevisi()}
+                        onInput={(e) => setNilaiCatatanRevisi(e.currentTarget.value)}
+                        class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                      />
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                      <Button type="submit" variant="primary" disabled={isSubmittingNilai()}>
+                        {isSubmittingNilai() ? 'Menyimpan...' : 'Simpan Penilaian Penguji'}
+                      </Button>
+                    </div>
+                  </form>
+                </Show>
+              </div>
+            </Show>
+
+            {/* TAB 4: HASIL & KELULUSAN */}
+            <Show when={sidangActiveTab() === 'hasil'}>
+              <div class="space-y-4">
+                <Show when={selectedSidangForJadwal()}>
+                  {(sidang) => (
+                    <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-4">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <span class="text-caption font-bold text-secondary-500 uppercase">Status Kelulusan:</span>
+                          <h4 class="text-table font-bold text-ink dark:text-pearl">
+                            {sidang().statusHasil
+                              ? sidang().statusHasil.replace(/_/g, ' ').toUpperCase()
+                              : 'BELUM DITENTUKAN'}
+                          </h4>
+                        </div>
+                        <div class="text-right">
+                          <span class="text-fine text-secondary-400 block">Nilai Akhir:</span>
+                          <span class="text-title font-black text-action">
+                            {sidang().nilaiAkhirAngka ? Number(sidang().nilaiAkhirAngka).toFixed(2) : '-'} (
+                            {sidang().nilaiAkhirHuruf || '-'})
+                          </span>
+                        </div>
+                      </div>
+
+                      <Show when={sidang().batasWaktuRevisi}>
+                        <div class="p-3 bg-warning-50/70 dark:bg-warning-900/20 text-warning-800 dark:text-warning-200 rounded-xl text-fine border border-warning-200 dark:border-warning-800/40">
+                          <span class="font-bold">Batas Waktu Revisi: </span>
+                          {sidang().batasWaktuRevisi}
+                        </div>
+                      </Show>
+
+                      <Show when={sidang().catatanSidang}>
+                        <div class="p-3 bg-secondary-50 dark:bg-secondary-900/30 rounded-xl text-fine">
+                          <span class="font-bold text-ink dark:text-pearl block mb-1">Catatan Berita Acara:</span>
+                          {sidang().catatanSidang}
+                        </div>
+                      </Show>
+
+                      {/* Form Finalisasi untuk Staf/Kaprodi */}
+                      <Show when={isStaff()}>
+                        <form
+                          onSubmit={handleFinalisasiSidangSubmit}
+                          class="pt-4 border-t border-hairline dark:border-hairline-dark space-y-3"
+                        >
+                          <span class="text-caption font-bold text-ink dark:text-pearl block">
+                            Finalisasi Berita Acara & Kelulusan (Kaprodi / Pengelola)
+                          </span>
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                                Status Keputusan *
+                              </label>
+                              <select
+                                value={finalisasiStatusHasil()}
+                                onChange={(e) =>
+                                  setFinalisasiStatusHasil(
+                                    e.currentTarget.value as
+                                      | 'lulus_tanpa_revisi'
+                                      | 'lulus_dengan_revisi'
+                                      | 'sidang_ulang'
+                                      | 'tidak_lulus',
+                                  )
+                                }
+                                class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                              >
+                                <option value="lulus_tanpa_revisi">Lulus Tanpa Revisi</option>
+                                <option value="lulus_dengan_revisi">Lulus Dengan Revisi</option>
+                                <option value="sidang_ulang">Sidang Ulang</option>
+                                <option value="tidak_lulus">Tidak Lulus</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                                Batas Akhir Revisi
+                              </label>
+                              <Input
+                                type="date"
+                                value={finalisasiBatasRevisi()}
+                                onInput={(e) => setFinalisasiBatasRevisi(e.currentTarget.value)}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                              Catatan Keputusan Sidang
+                            </label>
+                            <textarea
+                              rows={2}
+                              placeholder="Keterangan berita acara kelulusan proposal..."
+                              value={finalisasiCatatan()}
+                              onInput={(e) => setFinalisasiCatatan(e.currentTarget.value)}
+                              class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                            />
+                          </div>
+                          <div class="flex justify-end pt-1">
+                            <Button type="submit" variant="primary" disabled={isSubmittingFinalisasi()}>
+                              {isSubmittingFinalisasi() ? 'Menyimpan...' : 'Finalisasi Hasil Sidang'}
+                            </Button>
+                          </div>
+                        </form>
+                      </Show>
+                    </div>
+                  )}
+                </Show>
+              </div>
+            </Show>
+
+            <div class="flex justify-end pt-4 border-t border-hairline dark:border-hairline-dark">
+              <Button type="button" variant="ghost" onClick={() => setShowSidangModal(false)}>
+                Tutup
+              </Button>
+            </div>
+          </div>
         </Modal>
       </Show>
     </MainLayout>

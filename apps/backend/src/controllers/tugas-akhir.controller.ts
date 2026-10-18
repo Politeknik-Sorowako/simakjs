@@ -11,6 +11,13 @@ import {
   TugasAkhirBimbinganService,
   type UpdateLogbookInput,
 } from '../services/tugas-akhir-bimbingan.service';
+import {
+  type DaftarSidangInput,
+  type FinalisasiSidangInput,
+  type InputNilaiSidangInput,
+  type JadwalSidangInput,
+  TugasAkhirSidangService,
+} from '../services/tugas-akhir-sidang.service';
 import type { AuthContext } from '../utils/types';
 
 export class TugasAkhirController {
@@ -342,6 +349,155 @@ export class TugasAkhirController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memperbarui status ACC sidang' };
+    }
+  }
+
+  // Milestone 3: Sidang Proposal & Sidang Akhir
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getSidangList({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const sidangs = await TugasAkhirSidangService.getSidangList(id);
+      return { data: sidangs };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil data sidang' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async daftarSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const created = await TugasAkhirSidangService.daftarSidang(id, body as DaftarSidangInput, user);
+      set.status = 201;
+      return { message: 'Pendaftaran sidang berhasil diajukan', data: created };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mendaftar sidang' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async jadwalkanSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const sidangId = parseInt(params.sidangId, 10);
+      if (isNaN(id) || isNaN(sidangId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const scheduled = await TugasAkhirSidangService.jadwalkanSidang(id, sidangId, body as JadwalSidangInput, user);
+      return { message: 'Jadwal sidang dan dewan penguji berhasil ditetapkan', data: scheduled };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menjadwalkan sidang' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getRubrikKriteria({ params, query, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const jenis = (query as Record<string, string | undefined>).jenis || 'proposal';
+      const kriteria = await TugasAkhirSidangService.getRubrikKriteria(id, jenis);
+      return { data: kriteria };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil kriteria rubrik' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async inputNilaiSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const sidangId = parseInt(params.sidangId, 10);
+      if (isNaN(id) || isNaN(sidangId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const res = await TugasAkhirSidangService.inputNilaiPenguji(id, sidangId, body as InputNilaiSidangInput, user);
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menginput nilai sidang' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async finalisasiSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const sidangId = parseInt(params.sidangId, 10);
+      if (isNaN(id) || isNaN(sidangId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const finalized = await TugasAkhirSidangService.finalisasiSidang(
+        id,
+        sidangId,
+        body as FinalisasiSidangInput,
+        user,
+      );
+      return { message: 'Hasil sidang berhasil difinalisasi', data: finalized };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memfinalisasi sidang' };
     }
   }
 }
