@@ -60,6 +60,23 @@ export function SearchableSelect(props: SearchableSelectProps) {
     });
   });
 
+  // Escape saat dropdown terbuka harus berhenti di elemen ini dan TIDAK
+  // menjebol ke `Modal`. Solid mendelegasikan `onKeyDown` ke listener global
+  // `document`, sehingga `stopPropagation()` di dalam `handleKeyDown` berjalan
+  // terlalu late untuk membatalkan listener `Modal` yang juga di `document`.
+  // Karena itu stopper dipasang terpisah di fase CAPTURE pada container:
+  // event dihentikan sebelum mencapai `document`, sehingga `Modal` tidak ikut
+  // menutup diri.
+  const stopEscapeAtContainer = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape' || !isOpen()) return;
+    e.stopPropagation();
+  };
+
+  onMount(() => {
+    containerRef?.addEventListener('keydown', stopEscapeAtContainer, true);
+    onCleanup(() => containerRef?.removeEventListener('keydown', stopEscapeAtContainer, true));
+  });
+
   const handleKeyDown = (e: KeyboardEvent) => {
     const options = filteredOptions();
     if (!isOpen()) {

@@ -446,7 +446,11 @@ function AppContent() {
           <Route
             path="/penetapan-pembimbing"
             element={
-              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'dosen', 'mahasiswa']}>
+              // Penetapan pembimbing ditutup untuk role dosen murni: verifikasi
+              // pembimbing PKL/TA cukup dari menu Bimbingan. Dosen yang juga
+              // memegang role admin/kaprodi/prodi tetap punya akses lewat role
+              // tersebut karena `hasRole` mengevaluasi seluruh daftar roles.
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'mahasiswa']}>
                 <PenetapanPembimbing />
               </ProtectedRoute>
             }
