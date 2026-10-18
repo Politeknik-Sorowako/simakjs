@@ -336,4 +336,31 @@ describe('Tugas Akhir - Milestone 1: Pengusulan Topik (Individu & Kelompok)', ()
 
     expect(res.status).toBe(400); // Service rejects unauthorized reviewer
   });
+
+  it('7. Admin berhasil menambahkan tugas akhir atas nama mahasiswa', async () => {
+    const adminToken = await getAuthToken('admin-ta-create@test.com', 'admin');
+
+    const res = await app.handle(
+      new Request('http://localhost/tugas-akhir', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'Rancang Bangun Mesin CNC Milling Mini Berbasis Open-Source Controller',
+          tipe: 'individu',
+          jenisKarya: 'rancang_bangun',
+          programStudiId: prodiId,
+          mahasiswaId: mhsId2,
+          usulanPembimbing: [{ peran: 'pembimbing_1', dosenId: dosenId2 }],
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { data: { id: number; judul: string } };
+
+    const anggota = await db.select().from(tugasAkhirAnggota).where(eq(tugasAkhirAnggota.tugasAkhirId, body.data.id));
+    expect(anggota.length).toBe(1);
+    expect(anggota[0].mahasiswaId).toBe(mhsId2);
+    expect(anggota[0].peran).toBe('ketua');
+  });
 });

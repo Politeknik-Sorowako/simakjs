@@ -24,7 +24,7 @@ import { Prodi, prodiController } from '../controllers/prodiController';
 import { systemController } from '../controllers/systemController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn, exportToExcel, exportToPDF } from '../utils/export';
-import { fmtTanggal, getTodayString } from '../utils/format';
+import { fmtTanggal, formatMahasiswaOption, getTodayString } from '../utils/format';
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -2021,7 +2021,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                 placeholder="Cari NIM atau Nama Mahasiswa Aktif..."
                 value={mahasiswaId()}
                 options={mahasiswaList().map((m) => ({
-                  label: `${m.nama} (${m.nim})${m.programStudi?.nama ? ` - ${m.programStudi.nama}` : ''}`,
+                  label: formatMahasiswaOption(m),
                   value: m.id,
                 }))}
                 onChange={(val) => setMahasiswaId(Number(val))}

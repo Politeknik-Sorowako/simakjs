@@ -25,6 +25,7 @@ export const createTugasAkhirBody = t.Object({
   programStudiId: t.Integer(),
   periodeId: t.Optional(t.String({ maxLength: 5 })),
   fileProposalTopikUrl: t.Optional(t.String()),
+  mahasiswaId: t.Optional(t.Integer()),
   anggotaMahasiswaIds: t.Optional(t.Array(t.Integer())),
   usulanPembimbing: t.Optional(t.Array(usulanPembimbingItem)),
 });
