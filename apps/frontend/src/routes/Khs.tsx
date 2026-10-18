@@ -124,7 +124,7 @@ export default function Khs() {
     }
   });
 
-  // Nama periode untuk ditampilkan pada cetakan KHS (mis. "Ganjil 2025/2026").
+  // Nama periode untuk ditampilkan pada cetakan KHS (mis."Ganjil 2025/2026").
   const periodeNama = () => {
     const pid = selectedPeriode();
     if (!pid) return '-';
@@ -618,7 +618,7 @@ export default function Khs() {
     <MainLayout>
       <div class="flex flex-col gap-6">
         {/* Header */}
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <div>
             <h1 class="page-title">Hasil Studi Akademik</h1>
             <p class="text-base text-secondary-500 dark:text-secondary-300">
@@ -629,20 +629,20 @@ export default function Khs() {
           <div class="flex gap-2">
             <button
               onClick={() => setActiveTab('khs')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'khs' ? 'bg-brand-600 text-white shadow-sm' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
+              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'khs' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
             >
               KHS Semester
             </button>
             <button
               onClick={() => setActiveTab('transkrip')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'transkrip' ? 'bg-brand-600 text-white shadow-sm' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
+              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'transkrip' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
             >
               Transkrip Nilai
             </button>
             <Show when={role() === 'admin'}>
               <button
                 onClick={() => setActiveTab('konversi')}
-                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'konversi' ? 'bg-brand-600 text-white shadow-sm' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
+                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'konversi' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
               >
                 Aturan Konversi Nilai
               </button>
@@ -650,7 +650,7 @@ export default function Khs() {
             <Show when={canSignMassal()}>
               <button
                 onClick={() => setActiveTab('ttd')}
-                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'ttd' ? 'bg-brand-600 text-white shadow-sm' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
+                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'ttd' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
               >
                 TTD Massal
               </button>
@@ -660,7 +660,7 @@ export default function Khs() {
 
         {/* Admin/Dosen Student Selector */}
         <Show when={role() !== 'mahasiswa' && activeTab() !== 'konversi' && activeTab() !== 'ttd'}>
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <h3 class="font-bold text-secondary-700 text-base">Pilih Mahasiswa & Periode</h3>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div class="flex flex-col gap-1.5">
@@ -670,7 +670,7 @@ export default function Khs() {
                 <select
                   value={selectedProdi()}
                   onChange={(e) => setSelectedProdi(e.currentTarget.value)}
-                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 >
                   <option value="">Semua Program Studi</option>
                   <For each={prodis() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
@@ -697,7 +697,7 @@ export default function Khs() {
                   <select
                     value={selectedPeriode()}
                     onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   >
                     <Show when={periodeOptions().length === 0}>
                       <option value="">Belum ada periode yang diikuti</option>
@@ -712,12 +712,12 @@ export default function Khs() {
 
         {/* Student Period Selector */}
         <Show when={role() === 'mahasiswa' && activeTab() === 'khs'}>
-          <div class="bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm flex items-center gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-4 rounded-2xl border border-secondary-100 flex items-center gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <span class="text-base font-bold text-secondary-700">Periode Akademik:</span>
             <select
               value={selectedPeriode()}
               onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
-              class="border border-secondary-200 rounded-xl px-3 py-1.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="border border-secondary-200 rounded-xl px-3 py-1.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
             >
               <Show when={periodeOptions().length === 0}>
                 <option value="">Belum ada periode yang diikuti</option>
@@ -752,7 +752,7 @@ export default function Khs() {
             return (
               <>
                 <Show when={overlappingIds.size > 0}>
-                  <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-rose-800 shadow-sm flex items-center gap-3 mb-4 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
+                  <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl text-rose-800 flex items-center gap-3 mb-4 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
                     <span class="text-xl">⚠</span>
                     <div>
                       <h4 class="font-bold text-caption">Peringatan: Rentang Nilai Beririsan</h4>
@@ -765,7 +765,7 @@ export default function Khs() {
                   </div>
                 </Show>
 
-                <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 shadow-sm mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
+                <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
                   <h3 class="font-bold text-secondary-800 dark:text-white">Aturan Konversi Nilai Akademik</h3>
                   <div class="flex items-center gap-2">
                     <button
@@ -785,14 +785,14 @@ export default function Khs() {
                         setPredikat('');
                         setShowKonversiModal(true);
                       }}
-                      class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-200 dark:bg-brand-700 dark:hover:bg-brand-600"
+                      class="px-4 py-2 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                     >
                       + Tambah Aturan Konversi
                     </button>
                   </div>
                 </div>
 
-                <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+                <div class="bg-white p-6 rounded-2xl border border-secondary-100 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
                   <table class="w-full text-left text-caption border-collapse">
                     <thead>
                       <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
@@ -830,7 +830,7 @@ export default function Khs() {
                               <td class="p-3 font-semibold text-secondary-800 dark:text-white">
                                 {konv.programStudi?.nama || 'GLOBAL (Semua Prodi)'}
                               </td>
-                              <td class="p-3 font-bold text-brand-600">{konv.nilaiHuruf}</td>
+                              <td class="p-3 font-bold text-action">{konv.nilaiHuruf}</td>
                               <td class="p-3 font-mono">{Number(konv.bobotIndeks ?? 0).toFixed(2)}</td>
                               <td class="p-3 font-mono">{Number(konv.nilaiMin ?? 0).toFixed(2)}</td>
                               <td class="p-3 font-mono">{Number(konv.nilaiMax ?? 0).toFixed(2)}</td>
@@ -839,7 +839,7 @@ export default function Khs() {
                                 <Show
                                   when={isOverlap}
                                   fallback={
-                                    <span class="px-2 py-0.5 rounded text-fine font-bold bg-accent-50 text-accent-700 border border-accent-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
+                                    <span class="px-2 py-0.5 rounded text-fine font-bold bg-action-50 text-action border border-action-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
                                       ✓ Valid
                                     </span>
                                   }
@@ -887,7 +887,7 @@ export default function Khs() {
         {/* Persetujuan Tanda Tangan KHS Massal (Kaprodi/Admin) */}
         <Show when={activeTab() === 'ttd' && canSignMassal()}>
           {/* Filter & Aksi */}
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
                 <h3 class="font-bold text-secondary-800 dark:text-white">Persetujuan Tanda Tangan KHS Massal</h3>
@@ -902,7 +902,7 @@ export default function Khs() {
                   <select
                     value={selectedPeriode()}
                     onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   >
                     <option value="">Pilih periode</option>
                     <For each={periodes() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
@@ -915,7 +915,7 @@ export default function Khs() {
                   <select
                     value={selectedProdi()}
                     onChange={(e) => setSelectedProdi(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   >
                     <option value="">Pilih prodi</option>
                     <For each={prodis() || []}>{(p) => <option value={p.id}>{p.nama}</option>}</For>
@@ -930,7 +930,7 @@ export default function Khs() {
                     value={signSearch()}
                     onInput={(e) => setSignSearch(e.currentTarget.value)}
                     placeholder="Ketik NIM atau nama..."
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -943,7 +943,7 @@ export default function Khs() {
                       setSignStatusFilter(e.currentTarget.value as 'all' | 'signed' | 'unsigned');
                       setSignPage(1);
                     }}
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   >
                     <option value="all">Semua</option>
                     <option value="signed">Sudah Ditandatangani</option>
@@ -960,7 +960,7 @@ export default function Khs() {
                       setSignLimit(Number(e.currentTarget.value));
                       setSignPage(1);
                     }}
-                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   >
                     <For each={PAGE_SIZE_OPTIONS}>{(n) => <option value={String(n)}>{n}</option>}</For>
                   </select>
@@ -976,7 +976,7 @@ export default function Khs() {
                   checked={allPageSignedSelected()}
                   onChange={toggleSignSelectAll}
                   disabled={unsignedPageIds().length === 0}
-                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                  class="rounded border-secondary-300 text-action focus:ring-action-focus h-4 w-4 cursor-pointer dark:border-secondary-700"
                 />
                 Centang semua yang belum ditandatangani di halaman ini
               </label>
@@ -1005,14 +1005,14 @@ export default function Khs() {
                 <button
                   onClick={() => setShowSignConfirm(true)}
                   disabled={unsignedSelectedIds().length === 0 || signBusy()}
-                  class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-4 py-2 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark disabled:opacity-50 active:scale-95 transition-all shadow-accent-100 dark:bg-action-dark dark:hover:bg-action"
                 >
                   {signBusy() ? 'Menandatangani...' : `Tandatangani Terpilih (${unsignedSelectedIds().length})`}
                 </button>
                 <button
                   onClick={() => setShowRevokeConfirm(true)}
                   disabled={signedSelected().length === 0 || revokeBusy()}
-                  class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-caption hover:bg-rose-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-rose-700 dark:hover:bg-rose-600"
+                  class="px-4 py-2 bg-rose-600 text-white font-bold rounded-xl text-caption hover:bg-rose-700 disabled:opacity-50 active:scale-95 transition-all shadow-accent-100 dark:bg-rose-700 dark:hover:bg-rose-600"
                 >
                   {revokeBusy() ? 'Mencabut...' : `Cabut TTD Terpilih (${signedSelected().length})`}
                 </button>
@@ -1021,7 +1021,7 @@ export default function Khs() {
           </div>
 
           {/* Daftar mahasiswa + status tanda tangan */}
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
             <Show
               when={selectedProdi() && selectedPeriode()}
               fallback={
@@ -1091,7 +1091,7 @@ export default function Khs() {
                   onInput={(e) => setSignRevokeReason(e.currentTarget.value)}
                   rows={3}
                   placeholder="mis. Koreksi nilai salah input / persetujuan ditarik pimpinan"
-                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  class="border border-secondary-200 rounded-xl px-4 py-2.5 text-base bg-white focus:outline-none focus:border-action dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 />
               </div>
               <div class="flex justify-end gap-2">
@@ -1115,7 +1115,7 @@ export default function Khs() {
           <Show
             when={selectedMhsId()}
             fallback={
-              <div class="bg-white p-12 rounded-2xl border border-secondary-100 shadow-sm text-center text-secondary-400 dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="bg-white p-12 rounded-2xl border border-secondary-100 text-center text-secondary-400 dark:bg-secondary-900 dark:border-secondary-800">
                 Silakan cari dan pilih mahasiswa terlebih dahulu untuk menampilkan data akademik.
               </div>
             }
@@ -1132,23 +1132,23 @@ export default function Khs() {
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* Summary Cards */}
                       <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
+                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                           <span class="text-caption font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
                             IP Semester
                           </span>
-                          <span class="text-3xl font-bold text-brand-600">
+                          <span class="text-3xl font-bold text-action">
                             {Number(khsData()?.summary?.ipSemester ?? 0).toFixed(2)}
                           </span>
                         </div>
-                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
+                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                           <span class="text-caption font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
                             IPK Kumulatif
                           </span>
-                          <span class="text-3xl font-bold text-accent-600">
+                          <span class="text-3xl font-bold text-action">
                             {Number(khsData()?.summary?.ipk ?? 0).toFixed(2)}
                           </span>
                         </div>
-                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
+                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                           <span class="text-caption font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
                             SKS Terkontrak
                           </span>
@@ -1156,7 +1156,7 @@ export default function Khs() {
                             {khsData()?.summary?.totalSks} SKS
                           </span>
                         </div>
-                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
+                        <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                           <span class="text-caption font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
                             SKS Kumulatif
                           </span>
@@ -1167,21 +1167,21 @@ export default function Khs() {
                       </div>
 
                       {/* KHS Table */}
-                      <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+                      <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
                         <div class="flex justify-between items-center border-b pb-2">
                           <h3 class="font-bold text-secondary-800 dark:text-white">Rincian Mata Kuliah & Nilai</h3>
                           <div class="flex gap-2">
                             <button
                               onClick={() => setShowPrintUjian(true)}
                               disabled={khsData()?.blocked}
-                              class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
+                              class="px-3 py-1.5 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark disabled:opacity-50 active:scale-95 transition-all shadow-accent-100 dark:bg-action-dark dark:hover:bg-action"
                             >
                               Cetak Kartu Ujian
                             </button>
                             <button
                               onClick={() => setShowPrintKhs(true)}
                               disabled={khsData()?.blocked}
-                              class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 disabled:opacity-50 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
+                              class="px-3 py-1.5 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark disabled:opacity-50 active:scale-95 transition-all shadow-accent-100 dark:bg-action-dark dark:hover:bg-action"
                             >
                               Cetak KHS
                             </button>
@@ -1189,7 +1189,7 @@ export default function Khs() {
                               <a
                                 href={`/khs/cetak/${selectedMhsId()}/${selectedPeriode()}`}
                                 target="_blank"
-                                class="px-3 py-1.5 border border-brand-600 text-brand-600 font-bold rounded-xl text-caption hover:bg-brand-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
+                                class="px-3 py-1.5 border border-action text-action font-bold rounded-xl text-caption hover:bg-action-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
                               >
                                 Cetak Mandiri
                               </a>
@@ -1246,9 +1246,9 @@ export default function Khs() {
                                       <span
                                         class={`px-2 py-0.5 rounded text-fine font-bold ${
                                           item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
-                                            ? 'bg-accent-50 text-accent-600 border border-accent-100'
+                                            ? 'bg-action-50 text-action border border-action-100'
                                             : item.nilaiHuruf === 'C+' || item.nilaiHuruf === 'C'
-                                              ? 'bg-accent-50 text-accent-600 border border-accent-100'
+                                              ? 'bg-action-50 text-action border border-action-100'
                                               : 'bg-rose-50 text-rose-600 border border-rose-100'
                                         }`}
                                       >
@@ -1270,7 +1270,7 @@ export default function Khs() {
                                         <button
                                           type="button"
                                           onClick={() => void pilihNilai(item.id)}
-                                          class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-fine hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                                          class="px-2.5 py-1 bg-action text-white font-bold rounded-lg text-fine hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                                         >
                                           Pilih untuk IPK
                                         </button>
@@ -1282,7 +1282,7 @@ export default function Khs() {
                                       <button
                                         type="button"
                                         onClick={() => openRincian(item)}
-                                        class="px-2.5 py-1 bg-brand-600 text-white font-bold rounded-lg text-fine hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                                        class="px-2.5 py-1 bg-action text-white font-bold rounded-lg text-fine hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                                       >
                                         Rincian
                                       </button>
@@ -1298,14 +1298,14 @@ export default function Khs() {
                   }
                 >
                   {/* Blocked View */}
-                  <div class="bg-rose-50 border border-rose-200 p-8 rounded-2xl text-rose-800 shadow-sm flex flex-col items-center justify-center text-center gap-4 max-w-2xl mx-auto my-8">
+                  <div class="bg-rose-50 border border-rose-200 p-8 rounded-2xl text-rose-800 flex flex-col items-center justify-center text-center gap-4 max-w-2xl mx-auto my-8">
                     <span class="text-5xl">⊘</span>
                     <h2 class="text-xl font-bold tracking-tight text-rose-900">Akses KHS Diblokir Sementara</h2>
                     <p class="text-base font-medium leading-relaxed max-w-md text-rose-700">
                       Sesuai dengan ketentuan Buku Panduan Akademik, Anda harus melunasi seluruh kewajiban administrasi
                       sebelum dapat mengakses nilai akhir KHS.
                     </p>
-                    <div class="bg-white border border-rose-100 rounded-xl p-4 w-full text-left flex flex-col gap-1.5 shadow-sm dark:bg-secondary-900 dark:border-rose-800">
+                    <div class="bg-white border border-rose-100 rounded-xl p-4 w-full text-left flex flex-col gap-1.5 dark:bg-secondary-900 dark:border-rose-800">
                       <span class="text-caption uppercase font-bold tracking-wider text-rose-500">
                         Penyebab Blokir:
                       </span>
@@ -1330,28 +1330,26 @@ export default function Khs() {
               <Show when={!transkripData.loading && transkripData()}>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
+                    <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                       <span class="text-caption font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
                         IPK Kumulatif (Transcript)
                       </span>
-                      <span class="text-3xl font-bold text-brand-600">
-                        {Number(transkripData()?.ipk || 0).toFixed(2)}
-                      </span>
+                      <span class="text-3xl font-bold text-action">{Number(transkripData()?.ipk || 0).toFixed(2)}</span>
                     </div>
-                    <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
+                    <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-1 dark:bg-secondary-900 dark:border-secondary-800">
                       <span class="text-caption font-semibold uppercase tracking-wider text-secondary-400 dark:text-secondary-300">
                         Total SKS Lulus
                       </span>
-                      <span class="text-3xl font-bold text-accent-600">{transkripData()?.totalSksLulus} SKS</span>
+                      <span class="text-3xl font-bold text-action">{transkripData()?.totalSksLulus} SKS</span>
                     </div>
                   </div>
 
-                  <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+                  <div class="lg:col-span-3 bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
                     <div class="flex justify-between items-center border-b pb-2">
                       <h3 class="font-bold text-secondary-800 dark:text-white">Transkrip Nilai Akademik Kumulatif</h3>
                       <button
                         onClick={() => setShowPrintTranskrip(true)}
-                        class="px-3 py-1.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
+                        class="px-3 py-1.5 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all shadow-accent-100 dark:bg-action-dark dark:hover:bg-action"
                       >
                         Cetak Transkrip
                       </button>
@@ -1394,8 +1392,8 @@ export default function Khs() {
                                   <span
                                     class={`px-2 py-0.5 rounded text-fine font-bold ${
                                       item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
-                                        ? 'bg-accent-50 text-accent-600 border border-accent-100'
-                                        : 'bg-accent-50 text-accent-600 border border-accent-100'
+                                        ? 'bg-action-50 text-action border border-action-100'
+                                        : 'bg-action-50 text-action border border-action-100'
                                     }`}
                                   >
                                     {item.nilaiHuruf}
@@ -1418,7 +1416,7 @@ export default function Khs() {
         {/* PRINTABLE OVERLAY MODALS */}
         <Show when={showPrintUjian()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - Kartu Ujian</h3>
                 <button
@@ -1459,13 +1457,12 @@ export default function Khs() {
                   </div>
                   <div class="text-right">
                     <p>
-                      Semester:{' '}
-                      <span class="font-bold text-brand-600 dark:text-white">{khsData()?.semester ?? '-'}</span>
+                      Semester: <span class="font-bold text-action dark:text-white">{khsData()?.semester ?? '-'}</span>
                     </p>
                     <p>
                       Bimbingan PA:{' '}
                       <span
-                        class={`font-bold ${eligibilityData()?.bimbingan?.eligible ? 'text-accent-600' : 'text-rose-600'}`}
+                        class={`font-bold ${eligibilityData()?.bimbingan?.eligible ? 'text-action' : 'text-rose-600'}`}
                       >
                         {eligibilityData()?.bimbingan?.eligible ? 'TERPENUHI' : 'BELUM TERPENUHI'}
                       </span>
@@ -1506,7 +1503,7 @@ export default function Khs() {
                             <span
                               class={`px-2 py-0.5 rounded text-fine font-bold ${
                                 c.eligible
-                                  ? 'bg-accent-50 text-accent-600 border border-accent-100'
+                                  ? 'bg-action-50 text-action border border-action-100'
                                   : 'bg-rose-50 text-rose-600 border border-rose-100'
                               }`}
                             >
@@ -1529,7 +1526,7 @@ export default function Khs() {
                 </button>
                 <button
                   onClick={() => window.print()}
-                  class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-4 py-2 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                 >
                   Cetak Sekarang
                 </button>
@@ -1540,7 +1537,7 @@ export default function Khs() {
 
         <Show when={showPrintKhs()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - KHS</h3>
                 <button
@@ -1580,18 +1577,17 @@ export default function Khs() {
                   </div>
                   <div class="text-right">
                     <p>
-                      Semester:{' '}
-                      <span class="font-bold text-brand-600 dark:text-white">{khsData()?.semester ?? '-'}</span>
+                      Semester: <span class="font-bold text-action dark:text-white">{khsData()?.semester ?? '-'}</span>
                     </p>
                     <p>
                       IP Semester:{' '}
-                      <span class="font-bold text-brand-600 dark:text-white">
+                      <span class="font-bold text-action dark:text-white">
                         {Number(khsData()?.summary?.ipSemester ?? 0).toFixed(2)}
                       </span>
                     </p>
                     <p>
                       IP Kumulatif:{' '}
-                      <span class="font-bold text-brand-600 dark:text-white">
+                      <span class="font-bold text-action dark:text-white">
                         {Number(khsData()?.summary?.ipk ?? 0).toFixed(2)}
                       </span>
                     </p>
@@ -1643,7 +1639,7 @@ export default function Khs() {
                 </button>
                 <button
                   onClick={() => window.print()}
-                  class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-4 py-2 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                 >
                   Cetak Sekarang
                 </button>
@@ -1654,7 +1650,7 @@ export default function Khs() {
 
         <Show when={showPrintTranskrip()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white print:static print:z-0">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 flex flex-col gap-4 print:shadow-none print:p-0 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2 print:hidden">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Print Preview - Transkrip Akademik</h3>
                 <button
@@ -1693,11 +1689,11 @@ export default function Khs() {
                   <div class="text-right">
                     <p>
                       Semester Terakhir:{' '}
-                      <span class="font-bold text-brand-600 dark:text-white">{khsData()?.semester ?? '-'}</span>
+                      <span class="font-bold text-action dark:text-white">{khsData()?.semester ?? '-'}</span>
                     </p>
                     <p>
                       IPK Kumulatif:{' '}
-                      <span class="font-bold text-brand-600 dark:text-white">
+                      <span class="font-bold text-action dark:text-white">
                         {Number(transkripData()?.ipk ?? 0).toFixed(2)}
                       </span>
                     </p>
@@ -1751,7 +1747,7 @@ export default function Khs() {
                 </button>
                 <button
                   onClick={() => window.print()}
-                  class="px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="px-4 py-2 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                 >
                   Cetak Sekarang
                 </button>
@@ -1762,7 +1758,7 @@ export default function Khs() {
         {/* --- ADMIN REKAP & KONVERSI MASSAL MODAL --- */}
         <Show when={showBulkRekap()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl p-6 flex flex-col gap-4 dark:bg-secondary-900 max-h-[90vh] overflow-y-auto">
+            <div class="bg-white rounded-2xl w-full max-w-3xl p-6 flex flex-col gap-4 dark:bg-secondary-900 max-h-[90vh] overflow-y-auto">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">Rekap & Konversi Massal Nilai</h3>
                 <button
@@ -1818,7 +1814,7 @@ export default function Khs() {
                     <For each={bulkRows()}>
                       {(row) => (
                         <tr>
-                          <td class="p-2 font-bold text-brand-600">{row.nilaiHuruf}</td>
+                          <td class="p-2 font-bold text-action">{row.nilaiHuruf}</td>
                           <td class="p-2">
                             <input
                               type="number"
@@ -1869,7 +1865,7 @@ export default function Khs() {
         {/* --- ADMIN KONVERSI NILAI MODAL --- */}
         <Show when={showKonversiModal()}>
           <div class="fixed inset-0 bg-secondary-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 dark:bg-secondary-900">
               <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-secondary-800 text-base dark:text-white">
                   {konversiId() ? 'Edit Aturan Konversi Nilai' : 'Tambah Aturan Konversi Nilai'}
@@ -1888,7 +1884,7 @@ export default function Khs() {
                     Program Studi (Pilih jika aturan khusus prodi)
                   </label>
                   <select
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 bg-white font-medium dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 bg-white font-medium dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                     value={konversiProdiId()}
                     onChange={(e) => setKonversiProdiId(e.currentTarget.value)}
                   >
@@ -1904,7 +1900,7 @@ export default function Khs() {
                     placeholder="Contoh: A, B+, C"
                     value={nilaiHuruf()}
                     onInput={(e) => setNilaiHuruf(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
 
@@ -1918,7 +1914,7 @@ export default function Khs() {
                     placeholder="Contoh: 4.00"
                     value={nilaiIndeks()}
                     onInput={(e) => setNilaiIndeks(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
 
@@ -1932,7 +1928,7 @@ export default function Khs() {
                     placeholder="Contoh: 80.00"
                     value={nilaiMin()}
                     onInput={(e) => setNilaiMin(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
 
@@ -1946,7 +1942,7 @@ export default function Khs() {
                     placeholder="Contoh: 100.00"
                     value={nilaiMax()}
                     onInput={(e) => setNilaiMax(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
 
@@ -1957,13 +1953,13 @@ export default function Khs() {
                     placeholder="Contoh: Istimewa, Amat Baik"
                     value={predikat()}
                     onInput={(e) => setPredikat(e.currentTarget.value)}
-                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white"
+                    class="border border-secondary-200 rounded-xl px-3 py-2 text-caption focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  class="w-full py-2.5 bg-brand-600 text-white font-bold rounded-xl text-caption hover:bg-brand-700 active:scale-95 transition-all shadow-sm dark:bg-brand-700 dark:hover:bg-brand-600"
+                  class="w-full py-2.5 bg-action text-white font-bold rounded-xl text-caption hover:bg-action-dark active:scale-95 transition-all dark:bg-action-dark dark:hover:bg-action"
                 >
                   Simpan Aturan Konversi
                 </button>
@@ -1993,7 +1989,7 @@ export default function Khs() {
                   </div>
                   <div class="bg-secondary-50 dark:bg-secondary-800/60 rounded-xl p-3 text-center">
                     <span class="block text-fine uppercase font-bold text-secondary-400">Huruf</span>
-                    <span class="text-xl font-bold text-brand-600">{data().nilaiHuruf ?? '-'}</span>
+                    <span class="text-xl font-bold text-action">{data().nilaiHuruf ?? '-'}</span>
                   </div>
                   <div class="bg-secondary-50 dark:bg-secondary-800/60 rounded-xl p-3 text-center">
                     <span class="block text-fine uppercase font-bold text-secondary-400">Indeks</span>

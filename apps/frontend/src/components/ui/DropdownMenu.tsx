@@ -55,7 +55,7 @@ export function DropdownMenu(props: DropdownMenuProps) {
   };
 
   const panelClass = () =>
-    `absolute mt-1 min-w-44 rounded-lg border border-secondary-200/80 bg-white py-1 shadow-xl dark:border-secondary-700 dark:bg-secondary-800 ${
+    `absolute mt-1 min-w-44 rounded-lg border border-secondary-200/80 bg-white py-1 dark:border-secondary-700 dark:bg-secondary-800 ${
       resolvedPos() === 'left' ? 'left-0' : 'right-0'
     }`;
 

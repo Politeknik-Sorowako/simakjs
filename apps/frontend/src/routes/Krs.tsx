@@ -445,7 +445,7 @@ export default function Krs() {
           checked={allPageKrsSelected()}
           disabled={sortedKrsData().length === 0}
           onChange={toggleSelectAllKrs}
-          class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+          class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus cursor-pointer"
         />,
       );
     }
@@ -510,7 +510,7 @@ export default function Krs() {
     }
   };
 
-  // --- Massal tab: tri-state "Pilih Semua" for pending students ---
+  // --- Massal tab: tri-state"Pilih Semua" for pending students ---
   const massalPageIds = () => paginatedPendingStudents().map((s) => Number((s as { id: number }).id));
   const allPageMassalSelected = () => {
     const ids = massalPageIds();
@@ -649,7 +649,7 @@ export default function Krs() {
 
         {/* Info Banner if Mahasiswa Self-Service KRS is disabled */}
         <Show when={role() === 'mahasiswa' && !canMahasiswaFillKrs()}>
-          <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold shadow-sm flex items-start gap-3 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+          <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold flex items-start gap-3 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
             <span class="text-base">🔒</span>
             <div>
               <p class="font-bold">Pengisian KRS Mandiri Dinonaktifkan</p>
@@ -662,7 +662,7 @@ export default function Krs() {
 
         {/* Warning Banner if Mahasiswa is not active */}
         <Show when={role() === 'mahasiswa' && mahasiswaProfile() && mahasiswaProfile()?.status !== 'aktif'}>
-          <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold shadow-sm flex items-start gap-3 dark:bg-red-900/30 dark:text-red-400">
+          <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold flex items-start gap-3 dark:bg-red-900/30 dark:text-red-400">
             <span class="text-base">⚠️</span>
             <div>
               <p class="font-bold">Status Registrasi: Tidak Aktif (SPP/UKT Belum Lunas)</p>
@@ -683,7 +683,7 @@ export default function Krs() {
             krsData()!.data.some((k) => !k.isApproved)
           }
         >
-          <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+          <div class="p-4 bg-yellow-50 border border-yellow-100 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <h4 class="text-sm font-bold text-yellow-800 dark:text-yellow-400">KRS Mahasiswa Menunggu Persetujuan</h4>
               <p class="text-xs text-yellow-600 font-medium mt-0.5">
@@ -698,7 +698,7 @@ export default function Krs() {
 
         {/* Rencana Studi Panel - Mahasiswa Only */}
         <Show when={role() === 'mahasiswa' && rencanaStudi()}>
-          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3">
+          <div class="bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3">
             <div class="flex justify-between items-center">
               <h3 class="text-sm font-bold text-secondary-800 dark:text-white">
                 📚 Rencana Studi — {rencanaStudi()?.kurikulum.nama}
@@ -707,7 +707,7 @@ export default function Krs() {
                 <span class="text-xs text-secondary-500 dark:text-secondary-200">
                   Semester {rencanaStudi()?.currentSemester}
                 </span>
-                <span class="text-xs font-semibold text-brand-600">SKS Lulus: {rencanaStudi()?.totalSksLulus}</span>
+                <span class="text-xs font-semibold text-action">SKS Lulus: {rencanaStudi()?.totalSksLulus}</span>
               </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -743,7 +743,7 @@ export default function Krs() {
                               </span>
                             </div>
                             <Show when={mk.nilaiHuruf}>
-                              <span class="text-xs font-bold text-brand-600 ml-1">{mk.nilaiHuruf}</span>
+                              <span class="text-xs font-bold text-action ml-1">{mk.nilaiHuruf}</span>
                             </Show>
                           </div>
                         )}
@@ -795,7 +795,7 @@ export default function Krs() {
               onClick={() => setActiveTab('kelola')}
               class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab() === 'kelola'
-                  ? 'bg-brand-600 text-white shadow-sm shadow-accent-200'
+                  ? 'bg-action text-white'
                   : 'bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700'
               }`}
             >
@@ -805,7 +805,7 @@ export default function Krs() {
               onClick={() => setActiveTab('massal')}
               class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 activeTab() === 'massal'
-                  ? 'bg-brand-600 text-white shadow-sm shadow-accent-200'
+                  ? 'bg-action text-white'
                   : 'bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700'
               }`}
             >
@@ -854,7 +854,7 @@ export default function Krs() {
                 onChange={(e) => {
                   setStatusMhsFilter(e.currentTarget.value as 'aktif' | 'cuti' | '');
                 }}
-                class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
               >
                 <option value="">Semua Status Mhs</option>
                 <option value="aktif">Aktif</option>
@@ -866,7 +866,7 @@ export default function Krs() {
                 onChange={(e) => {
                   setApprovalFilter(e.currentTarget.value as 'pending' | 'approved' | '');
                 }}
-                class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
               >
                 <option value="">Semua Status</option>
                 <option value="pending">Pending</option>
@@ -880,7 +880,7 @@ export default function Krs() {
               <For each={sortedKrsData()}>
                 {(item) => (
                   <tr
-                    class={`transition-colors ${isKrsChecked(item.id) ? 'bg-brand-50/60 dark:bg-brand-900/20' : 'hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50'}`}
+                    class={`transition-colors ${isKrsChecked(item.id) ? 'bg-action-50/60 dark:bg-action/20' : 'hover:bg-secondary-50/50 dark:hover:bg-secondary-800/50'}`}
                   >
                     <Show when={showKrsBatchSelect()}>
                       <td class="px-6 py-4">
@@ -889,7 +889,7 @@ export default function Krs() {
                           aria-label={`Pilih KRS ${item.mahasiswa?.nama ?? item.id}`}
                           checked={isKrsChecked(item.id)}
                           onChange={() => toggleKrsRow(item.id)}
-                          class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                          class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus cursor-pointer"
                         />
                       </td>
                     </Show>
@@ -977,7 +977,7 @@ export default function Krs() {
         </Show>
 
         <Show when={activeTab() === 'massal' && role() !== 'mahasiswa'}>
-          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 shadow-sm mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
+          <div class="flex justify-between items-center gap-4 bg-white/60 p-6 rounded-2xl border border-secondary-100 mb-4 dark:bg-secondary-900/60 dark:border-secondary-800">
             <div>
               <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa dengan KRS Pending</h3>
               <p class="text-xs text-secondary-400 mt-0.5 dark:text-secondary-200">
@@ -1000,7 +1000,7 @@ export default function Krs() {
                 variant="primary"
                 onClick={handleApproveBatch}
                 disabled={selectedMhsIds().length === 0}
-                class="shadow-sm shadow-accent-200"
+                class="shadow-sm"
               >
                 🔓 Setujui KRS Terpilih ({selectedMhsIds().length})
               </Button>
@@ -1017,7 +1017,7 @@ export default function Krs() {
                   onChange={toggleSelectAllMassal}
                   disabled={massalPageIds().length === 0}
                   title="Pilih semua mahasiswa pending di halaman ini"
-                  class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                  class="rounded border-secondary-300 text-action focus:ring-action-focus h-4 w-4 cursor-pointer dark:border-secondary-700"
                 />,
                 <SortableHeader
                   field="nim"
@@ -1076,7 +1076,7 @@ export default function Krs() {
                           type="checkbox"
                           checked={isChecked()}
                           onChange={toggleCheck}
-                          class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                          class="rounded border-secondary-300 text-action focus:ring-action-focus h-4 w-4 cursor-pointer dark:border-secondary-700"
                         />
                       </td>
                       <td class="px-6 py-4 font-mono text-secondary-700 dark:text-secondary-200">{student.nim}</td>
@@ -1186,7 +1186,7 @@ export default function Krs() {
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
                 <select
-                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                   value={paketProdi()}
                   onChange={(e) => setPaketProdi(Number(e.currentTarget.value))}
                 >
@@ -1201,13 +1201,13 @@ export default function Krs() {
                   placeholder="Misal: 2024"
                   value={paketAngkatan()}
                   onInput={(e) => setPaketAngkatan(e.currentTarget.value)}
-                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 />
               </div>
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Semester</label>
                 <select
-                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                   value={paketSemester()}
                   onChange={(e) => setPaketSemester(Number(e.currentTarget.value))}
                 >
@@ -1217,7 +1217,7 @@ export default function Krs() {
               <div class="flex flex-col gap-1">
                 <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Periode Akademik</label>
                 <select
-                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                   value={selectedPeriode()}
                   onChange={(e) => setSelectedPeriode(e.currentTarget.value)}
                 >

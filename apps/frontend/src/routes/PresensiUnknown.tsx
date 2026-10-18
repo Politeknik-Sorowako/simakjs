@@ -11,7 +11,7 @@ import { fmtTanggal, fmtWaktu } from '../utils/format';
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-sm">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -219,7 +219,7 @@ export default function PresensiUnknown() {
             }}
             class={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
               tab() === 'perkuliahan'
-                ? 'bg-brand-600 text-white'
+                ? 'bg-action text-white'
                 : 'bg-secondary-100 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300'
             }`}
           >
@@ -233,7 +233,7 @@ export default function PresensiUnknown() {
             }}
             class={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
               tab() === 'praktikum'
-                ? 'bg-brand-600 text-white'
+                ? 'bg-action text-white'
                 : 'bg-secondary-100 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300'
             }`}
           >
@@ -241,12 +241,12 @@ export default function PresensiUnknown() {
           </button>
         </div>
 
-        <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl p-6 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-wrap gap-4 items-center mb-4">
             <input
               type="text"
               placeholder="Cari NIM / Nama mahasiswa..."
-              class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
               value={search()}
               onInput={(e) => {
                 const q = e.currentTarget.value;
@@ -257,7 +257,7 @@ export default function PresensiUnknown() {
               }}
             />
             <select
-              class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
               value={statusFilter()}
               onChange={(e) => {
                 setStatusFilter(e.currentTarget.value as 'belum' | 'sudah' | '');
@@ -477,7 +477,7 @@ export default function PresensiUnknown() {
                     Ubah status menjadi
                   </label>
                   <select
-                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                     value={resolveStatus()}
                     onChange={(e) => setResolveStatus(e.currentTarget.value as 'sakit' | 'izin' | 'alpa')}
                   >
@@ -514,7 +514,7 @@ export default function PresensiUnknown() {
                     <input
                       type="number"
                       min={0}
-                      class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                       value={resolveDurasi()}
                       onInput={(e) => setResolveDurasi(Number(e.currentTarget.value) || 0)}
                     />
@@ -527,7 +527,7 @@ export default function PresensiUnknown() {
                   </label>
                   <textarea
                     rows={3}
-                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full rounded-xl border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                     placeholder="Misal: Surat Keterangan Dokter / Penjelasan dari Admin..."
                     value={resolveNote()}
                     onInput={(e) => setResolveNote(e.currentTarget.value)}
@@ -589,7 +589,7 @@ export default function PresensiUnknown() {
           </Show>
           <Show when={previewLoading()}>
             <div class="flex items-center justify-center py-16 text-secondary-400">
-              <div class="w-6 h-6 border-2 border-brand-600 border-t-transparent rounded-full animate-spin mr-2" />
+              <div class="w-6 h-6 border-2 border-action border-t-transparent rounded-full animate-spin mr-2" />
               <span class="text-sm">Memuat berkas...</span>
             </div>
           </Show>

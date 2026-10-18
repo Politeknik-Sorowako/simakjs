@@ -109,7 +109,7 @@ export default function AdmisiPengumuman() {
             onSubmit={handleSubmit}
             class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-5 mb-6 space-y-4"
           >
-            <div class="text-xs font-semibold text-brand-600 mb-1">
+            <div class="text-xs font-semibold text-action mb-1">
               {editingId() !== null ? '✏️ Edit Pengumuman' : '📝 Pengumuman Baru'}
             </div>
             <div>
@@ -139,7 +139,7 @@ export default function AdmisiPengumuman() {
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                 onChange={(e) => setFile(e.currentTarget.files?.[0] || null)}
-                class="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300"
+                class="w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-action-50 file:text-action hover:file:bg-action-100 dark:file:bg-brand-900/30 dark:file:text-brand-300"
               />
             </div>
             <label class="flex items-center gap-2 text-sm">
@@ -147,7 +147,7 @@ export default function AdmisiPengumuman() {
                 type="checkbox"
                 checked={isPinned()}
                 onChange={(e) => setIsPinned(e.currentTarget.checked)}
-                class="rounded border-secondary-300 text-brand-600"
+                class="rounded border-secondary-300 text-action"
               />
               Sematkan di atas (pinned)
             </label>
@@ -177,7 +177,7 @@ export default function AdmisiPengumuman() {
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
                       {a.isPinned ? (
-                        <span class="text-xs px-1.5 py-0.5 bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 rounded font-semibold">
+                        <span class="text-xs px-1.5 py-0.5 bg-action-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 rounded font-semibold">
                           PINNED
                         </span>
                       ) : null}
@@ -189,7 +189,7 @@ export default function AdmisiPengumuman() {
                         href={`${apiUrl}/admisi/announcements/${a.id}/file`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-700 underline mt-1"
+                        class="inline-flex items-center gap-1 text-xs text-action hover:text-action underline mt-1"
                       >
                         📎 {a.fileName}
                       </a>
@@ -205,7 +205,7 @@ export default function AdmisiPengumuman() {
                     </p>
                   </div>
                   <div class="flex gap-2 ml-4 flex-shrink-0">
-                    <button onClick={() => handleEdit(a)} class="text-xs text-brand-600 hover:text-brand-700">
+                    <button onClick={() => handleEdit(a)} class="text-xs text-action hover:text-action">
                       Edit
                     </button>
                     <button onClick={() => handleDelete(a.id)} class="text-xs text-red-500 hover:text-red-700">

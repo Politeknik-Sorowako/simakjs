@@ -35,7 +35,7 @@ export default function SkpiCetak() {
     },
     async (mhsId): Promise<SkpiDokumen | null> => {
       // Kegagalan (403/404/5xx) ditelan → `doc()` bernilai null sehingga fallback
-      // "Dokumen tidak dapat dimuat" tampil, bukan lempar ke ErrorBoundary rute.
+      //"Dokumen tidak dapat dimuat" tampil, bukan lempar ke ErrorBoundary rute.
       try {
         return await skpiController.getDokumen(mhsId);
       } catch {
@@ -133,7 +133,7 @@ export default function SkpiCetak() {
               setShowSignConfirm(true);
             }}
             disabled={signBusy()}
-            class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-50"
+            class="rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95 disabled:opacity-50"
           >
             Tandatangani & Terbitkan QR
           </button>
@@ -146,7 +146,7 @@ export default function SkpiCetak() {
         <button
           type="button"
           onClick={() => window.print()}
-          class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95"
+          class="rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95"
         >
           🖨️ Cetak Sekarang
         </button>
@@ -156,7 +156,7 @@ export default function SkpiCetak() {
         when={!doc.loading}
         fallback={
           <div class="flex items-center justify-center py-24 text-secondary-400">
-            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-action border-t-transparent" />
             <span class="text-sm">Menyiapkan data cetak...</span>
           </div>
         }

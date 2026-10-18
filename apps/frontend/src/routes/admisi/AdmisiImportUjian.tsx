@@ -101,7 +101,7 @@ export default function AdmisiImportUjian() {
             <div class="bg-white dark:bg-secondary-800/40 border border-secondary-200 dark:border-secondary-700 rounded-xl p-4">
               <div class="flex items-center justify-between mb-3">
                 <h2 class="font-semibold text-sm">Peserta Terverifikasi</h2>
-                <button onClick={selectAll} class="text-xs text-brand-600 hover:text-brand-700">
+                <button onClick={selectAll} class="text-xs text-action hover:text-action">
                   {selected().size === (candidates()?.data?.length || 0) ? 'Unselect All' : 'Select All'}
                 </button>
               </div>
@@ -119,7 +119,7 @@ export default function AdmisiImportUjian() {
                         type="checkbox"
                         checked={selected().has(a.id)}
                         onChange={() => toggleSelect(a.id)}
-                        class="rounded border-secondary-300 text-brand-600"
+                        class="rounded border-secondary-300 text-action"
                       />
                       <span class="font-mono text-xs text-secondary-400">{a.noPendaftar}</span>
                       <span>{a.namaLengkap || '-'}</span>

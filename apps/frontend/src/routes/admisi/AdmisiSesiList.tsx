@@ -218,7 +218,7 @@ export default function AdmisiSesiList() {
                                     <div class="flex items-center gap-2">
                                       <span class="font-semibold">{session.nama}</span>
                                       <span
-                                        class={`text-xs px-2 py-0.5 rounded-full ${visibleToPublic ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-400'}`}
+                                        class={`text-xs px-2 py-0.5 rounded-full ${visibleToPublic ? 'bg-action-100 text-action' : 'bg-gray-100 text-gray-400'}`}
                                       >
                                         {visibleToPublic ? 'Terlihat' : 'Tersembunyi'}
                                       </span>
@@ -261,7 +261,7 @@ export default function AdmisiSesiList() {
                                     </Show>
                                     <A
                                       href={`/admisi/manajemen/sesi/${session.id}`}
-                                      class="text-xs px-2 py-1 rounded border border-brand-300 text-brand-600 hover:bg-brand-50"
+                                      class="text-xs px-2 py-1 rounded border border-brand-300 text-action hover:bg-action-50"
                                     >
                                       Detail
                                     </A>

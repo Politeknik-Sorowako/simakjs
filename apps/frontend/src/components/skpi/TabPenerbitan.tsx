@@ -242,7 +242,7 @@ export default function TabPenerbitan() {
   return (
     <div class="flex flex-col gap-6">
       {/* Aksi massal */}
-      <div class="bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+      <div class="bg-white p-4 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <p class="text-xs text-secondary-500">
             <b>{selected().size}</b> mahasiswa dipilih — <b>{selectedSignable().length}</b> siap diterbitkan,{' '}
@@ -273,14 +273,14 @@ export default function TabPenerbitan() {
       </div>
 
       {/* Filter */}
-      <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+      <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div class="relative flex-1 w-full">
             <span class="absolute left-3.5 top-2.5 text-secondary-400">🔍</span>
             <input
               type="text"
               placeholder="Cari NIM / nama mahasiswa..."
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={pagination.search()}
               onInput={(e) => {
                 pagination.setSearch(e.currentTarget.value);
@@ -309,7 +309,7 @@ export default function TabPenerbitan() {
                 setSiapOnly(e.currentTarget.checked);
                 pagination.resetPage();
               }}
-              class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+              class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus"
             />
             Hanya siap terbit
           </label>
@@ -378,7 +378,7 @@ export default function TabPenerbitan() {
                           type="checkbox"
                           checked={selected().has(row.mahasiswaId)}
                           onChange={() => toggleSelect(row.mahasiswaId)}
-                          class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                          class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus"
                           aria-label={`Pilih ${row.nama}`}
                         />
                       </td>

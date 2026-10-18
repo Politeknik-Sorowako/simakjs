@@ -97,7 +97,7 @@ export function TtdMassalTable(props: TtdMassalTableProps) {
                             type="checkbox"
                             checked={props.isRowChecked(row.mahasiswaId)}
                             onChange={toggle}
-                            class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 h-4 w-4 cursor-pointer dark:border-secondary-700"
+                            class="rounded border-secondary-300 text-action focus:ring-action-focus h-4 w-4 cursor-pointer dark:border-secondary-700"
                           />
                         </td>
                         <td class="p-3 whitespace-nowrap">{row.nim}</td>
@@ -127,7 +127,7 @@ export function TtdMassalTable(props: TtdMassalTableProps) {
                             href={`/khs/cetak/${row.mahasiswaId}/${props.periodeId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="px-3 py-1.5 border border-brand-600 text-brand-600 font-bold rounded-xl text-caption hover:bg-brand-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
+                            class="px-3 py-1.5 border border-action text-action font-bold rounded-xl text-caption hover:bg-action-50 active:scale-95 transition-all dark:border-brand-400 dark:text-brand-400"
                           >
                             Cetak
                           </a>

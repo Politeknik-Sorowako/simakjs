@@ -55,7 +55,7 @@ export default function AdmisiPembayaran() {
       <div class="p-4 md:p-6 max-w-3xl mx-auto">
         <button
           onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}
-          class="text-sm text-brand-600 hover:text-brand-700 mb-4"
+          class="text-sm text-action hover:text-action mb-4"
         >
           ← Kembali ke Detail
         </button>
@@ -70,7 +70,7 @@ export default function AdmisiPembayaran() {
               <h2 class="font-semibold text-lg mb-1">{va.isPaid ? 'Pembayaran Diterima' : 'Menunggu Pembayaran'}</h2>
               <div class="bg-secondary-50 dark:bg-secondary-800 rounded-lg p-4 inline-block mt-2">
                 <div class="text-xs text-secondary-400">Nomor Virtual Account</div>
-                <div class="text-2xl font-bold font-mono tracking-wider text-brand-600">{va.vaNumber}</div>
+                <div class="text-2xl font-bold font-mono tracking-wider text-action">{va.vaNumber}</div>
               </div>
               <div class="mt-3 text-sm text-secondary-500">
                 Bank: {va.nama || `ID ${va.vaBankId}`} | Rp {va.nominal?.toLocaleString('id-ID')}
@@ -94,17 +94,17 @@ export default function AdmisiPembayaran() {
                     onClick={() => setSelectedBank(bank.id)}
                     class={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                       selectedBank() === bank.id
-                        ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
+                        ? 'border-action bg-action-50 dark:bg-action/20'
                         : 'border-secondary-200 dark:border-secondary-700 hover:border-brand-300'
                     }`}
                   >
                     <div class="flex items-center gap-3">
                       <div
                         class={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          selectedBank() === bank.id ? 'border-brand-500' : 'border-secondary-300'
+                          selectedBank() === bank.id ? 'border-action' : 'border-secondary-300'
                         }`}
                       >
-                        {selectedBank() === bank.id && <div class="w-2.5 h-2.5 rounded-full bg-brand-500" />}
+                        {selectedBank() === bank.id && <div class="w-2.5 h-2.5 rounded-full bg-action" />}
                       </div>
                       <div>
                         <span class="font-medium">{bank.nama}</span>

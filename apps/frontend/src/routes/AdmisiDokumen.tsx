@@ -98,7 +98,7 @@ export default function AdmisiDokumen() {
       <div class="p-4 md:p-6 max-w-3xl mx-auto">
         <button
           onClick={() => navigate(`/admisi/pendaftaran/${params.id}`)}
-          class="text-sm text-brand-600 hover:text-brand-700 mb-4"
+          class="text-sm text-action hover:text-action mb-4"
         >
           ← Kembali ke Detail
         </button>
@@ -183,7 +183,7 @@ export default function AdmisiDokumen() {
                                       href={doc.fileLink}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      class="text-brand-600 hover:text-brand-700 underline truncate"
+                                      class="text-action hover:text-action underline truncate"
                                     >
                                       🔗 Buka Link Google Drive
                                     </a>
@@ -193,7 +193,7 @@ export default function AdmisiDokumen() {
                                         href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/admisi/documents/${doc.id}/file`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="text-brand-600 hover:text-brand-700 underline truncate"
+                                        class="text-action hover:text-action underline truncate"
                                       >
                                         📄 {doc.originalName || 'Lihat File'}
                                       </a>

@@ -233,6 +233,78 @@ export interface LegacyImportResult {
   errors: { line: number; error: string }[];
 }
 
+export type PullEntityKey =
+  | 'semester'
+  | 'prodi'
+  | 'matkul'
+  | 'dosen'
+  | 'mahasiswa'
+  | 'kelas'
+  | 'krs-nilai'
+  | 'dosen-pengajar'
+  | 'transkrip'
+  | 'aktivitas-mahasiswa';
+/**
+ * `isi` → baris lokal sudah ada tetapi field target masih kosong (nilai diisi dari Feeder).
+ * `link_id`` → hanya menautkan id_pddikti, nilai lokal dipertahankan.
+ */
+export type PullDiffStatus = 'baru' | 'isi' | 'link_id' | 'konflik' | 'sama';
+export type ConflictResolution = 'feeder' | 'lokal';
+
+export interface PullEntityMeta {
+  key: PullEntityKey;
+  label: string;
+  category: 'referensi' | 'master' | 'transaksional';
+  feederAct: string;
+  description: string;
+  /** true = entitas hanya pratinjau (tidak ada tabel lokal untuk diterapkan). */
+  previewOnly?: boolean;
+}
+
+export interface PullPreviewItem {
+  feederId: string;
+  naturalKey: string;
+  label: string;
+  status: PullDiffStatus;
+  localId: string | number | null;
+  localIdPddikti: string | null;
+  feederData: Record<string, string | number | boolean | null>;
+  localData: Record<string, string | number | boolean | null> | null;
+  diffs: Array<{
+    field: string;
+    feederValue: string | number | boolean | null;
+    localValue: string | number | boolean | null;
+  }>;
+  canApply: boolean;
+  note?: string;
+}
+
+export interface PullPreviewResult {
+  entity: PullEntityKey;
+  feederAct: string;
+  writeGuard: boolean;
+  summary: {
+    totalFeeder: number;
+    baru: number;
+    isi: number;
+    linkId: number;
+    konflik: number;
+    sama: number;
+  };
+  items: PullPreviewItem[];
+  fetchedAt: string;
+}
+
+export interface PullApplyResult {
+  entity: PullEntityKey;
+  conflictResolution: ConflictResolution;
+  inserted: number;
+  updated: number;
+  linkedOnly: number;
+  skipped: number;
+  errors: Array<{ feederId: string; error: string }>;
+}
+
 export const khsController = {
   async importNilaiLegacy(file: File, periodeId: string, namaKelas?: string): Promise<LegacyImportResult> {
     const formData = new FormData();
@@ -433,6 +505,31 @@ export const khsController = {
   }> {
     return fetchApi('/pddikti/sync', {
       method: 'POST',
+    });
+  },
+
+  async getPullEntities(): Promise<{
+    writeGuard: boolean;
+    entities: PullEntityMeta[];
+  }> {
+    return fetchApi('/pddikti/pull/entities');
+  },
+
+  async getPullPreview(entity: PullEntityKey, filter?: string): Promise<PullPreviewResult> {
+    const params = new URLSearchParams({ entity });
+    if (filter?.trim()) params.set('filter', filter.trim());
+    return fetchApi(`/pddikti/pull/preview?${params.toString()}`);
+  },
+
+  async applyPull(payload: {
+    entity: PullEntityKey;
+    feederIds: string[];
+    conflictResolution?: ConflictResolution;
+    filter?: string;
+  }): Promise<PullApplyResult> {
+    return fetchApi('/pddikti/pull/apply', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 

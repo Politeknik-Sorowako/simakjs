@@ -101,7 +101,7 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
   };
 
   const wrapClass = () =>
-    'w-full bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3 py-2.5 text-caption text-secondary-900 dark:text-white placeholder:text-secondary-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 transition-all';
+    'w-full bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3 py-2.5 text-caption text-secondary-900 dark:text-white placeholder:text-secondary-400 focus:outline-none focus:border-action focus:ring-2 focus:ring-brand-100 transition-all';
 
   const renderToolbar = () => (
     <div class="flex items-center justify-between gap-1 px-2 py-1.5 bg-secondary-50 dark:bg-secondary-800 border-b border-secondary-200 dark:border-secondary-700 shrink-0">
@@ -225,14 +225,14 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
       <div class="flex items-center gap-0.5">
         <button
           type="button"
-          class={`px-2 py-1 rounded-md text-fine font-bold transition-all ${tab() === 'write' ? 'bg-brand-600 text-white' : 'text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-700'}`}
+          class={`px-2 py-1 rounded-md text-fine font-bold transition-all ${tab() === 'write' ? 'bg-action text-white' : 'text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-700'}`}
           onClick={() => setTab('write')}
         >
           Tulis
         </button>
         <button
           type="button"
-          class={`px-2 py-1 rounded-md text-fine font-bold transition-all ${tab() === 'preview' ? 'bg-brand-600 text-white' : 'text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-700'}`}
+          class={`px-2 py-1 rounded-md text-fine font-bold transition-all ${tab() === 'preview' ? 'bg-action text-white' : 'text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-700'}`}
           onClick={() => setTab('preview')}
         >
           Pratinjau

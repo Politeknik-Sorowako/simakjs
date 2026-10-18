@@ -119,7 +119,7 @@ export default function PengumumanDetail() {
         {/* Loading / Error States */}
         <Show when={announcement.loading}>
           <div class="py-20 text-center text-sm text-secondary-400">
-            <div class="inline-block w-6 h-6 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mb-2" />
+            <div class="inline-block w-6 h-6 border-2 border-action border-t-transparent rounded-full animate-spin mb-2" />
             <p>Memuat pengumuman...</p>
           </div>
         </Show>
@@ -143,7 +143,7 @@ export default function PengumumanDetail() {
         {/* Content Body */}
         <Show when={announcement()}>
           {(item) => (
-            <article class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-3xl p-6 sm:p-10 shadow-sm space-y-8">
+            <article class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-3xl p-6 sm:p-10 space-y-8">
               {/* Badges & Meta */}
               <div class="space-y-4">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -162,7 +162,7 @@ export default function PengumumanDetail() {
                       Ditarik
                     </span>
                   </Show>
-                  <span class="px-3 py-1 rounded-full text-xs font-medium bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+                  <span class="px-3 py-1 rounded-full text-xs font-medium bg-action-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
                     🎯 Sasaran: {item().targetRole === 'semua' ? 'Semua Sivitas' : item().targetRole}
                   </span>
                 </div>
@@ -199,7 +199,7 @@ export default function PengumumanDetail() {
 
               {/* High-res Thumbnail Banner if available */}
               <Show when={item().thumbnailUrl}>
-                <div class="w-full max-h-[460px] rounded-2xl overflow-hidden bg-secondary-100 dark:bg-secondary-800 shadow-sm border border-secondary-200 dark:border-secondary-800">
+                <div class="w-full max-h-[460px] rounded-2xl overflow-hidden bg-secondary-100 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-800">
                   <img
                     src={getAbsoluteStorageUrl(item().thumbnailUrl!)}
                     alt={item().judul}

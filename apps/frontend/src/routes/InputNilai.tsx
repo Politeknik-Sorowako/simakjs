@@ -674,7 +674,7 @@ export default function InputNilai() {
 
   const componentHasSub = (komponenId: number) => (subsByKomponen().get(komponenId) || []).length > 0;
 
-  // Bulk "nilai awal": hanya mengisi sel yang masih kosong untuk mahasiswa terpilih.
+  // Bulk"nilai awal": hanya mengisi sel yang masih kosong untuk mahasiswa terpilih.
   const handleBulkApply = () => {
     const sel = selectedKrsIds();
     if (sel.size === 0) {
@@ -1190,7 +1190,7 @@ export default function InputNilai() {
           judulDokumen: 'DAFTAR NILAI UJIAN',
           infoLines: [
             `Mata Kuliah: ${kelas?.mataKuliah?.nama || '-'} (${kelas?.mataKuliah?.kode || '-'})`,
-            `Kelas: ${kelas?.namaKelas || '-'}  |  Periode: ${periode}`,
+            `Kelas: ${kelas?.namaKelas || '-'} | Periode: ${periode}`,
             `Program Studi: ${kelas?.mataKuliah?.programStudi?.nama || '-'}`,
             `Dosen Pengampu: ${pengampu || '-'}`,
             `Rentang Nilai: 0 - ${nilaiEnvelope().max}`,
@@ -1402,7 +1402,7 @@ export default function InputNilai() {
 
     if (method === 'akhir') {
       const col = headerDetected ? header.findIndex((h) => h === 'nilai_akhir' || h === 'nilai') : 1;
-      if (col < 0) return { successCount: 0, errors: [{ line: 1, error: 'Kolom "nilai_akhir" tidak ditemukan.' }] };
+      if (col < 0) return { successCount: 0, errors: [{ line: 1, error: 'Kolom"nilai_akhir" tidak ditemukan.' }] };
       const entries: Array<{ krsId: number; nilai: number }> = [];
       const seenKrs = new Set<number>();
       dataRows.forEach((row, i) => {
@@ -1457,7 +1457,7 @@ export default function InputNilai() {
         if (ambiguousComp.has(name)) {
           errors.push({
             line: 1,
-            error: `Nama komponen "${rows[0][col]}" dipakai oleh lebih dari satu komponen — ganti nama agar unik sebelum impor.`,
+            error: `Nama komponen"${rows[0][col]}" dipakai oleh lebih dari satu komponen — ganti nama agar unik sebelum impor.`,
           });
           continue;
         }
@@ -1465,7 +1465,7 @@ export default function InputNilai() {
         if (id === undefined) {
           errors.push({
             line: 1,
-            error: `Kolom "${rows[0][col]}" tidak cocok dengan komponen manapun.`,
+            error: `Kolom"${rows[0][col]}" tidak cocok dengan komponen manapun.`,
           });
           continue;
         }
@@ -1481,7 +1481,7 @@ export default function InputNilai() {
             errors: [
               {
                 line: 1,
-                error: `Kolom "${rows[0][entry.col]}" duplikat — setiap komponen hanya boleh muncul satu kali.`,
+                error: `Kolom"${rows[0][entry.col]}" duplikat — setiap komponen hanya boleh muncul satu kali.`,
               },
             ],
           };
@@ -1503,7 +1503,7 @@ export default function InputNilai() {
           if (raw === undefined || String(raw).trim() === '') continue;
           const nilai = parseGradeInput(raw);
           if (nilai === null || nilai < 0 || nilai > nilaiEnvelope().max) {
-            errors.push({ line, error: `Nilai "${rows[0][col]}" harus 0-${nilaiEnvelope().max}.` });
+            errors.push({ line, error: `Nilai"${rows[0][col]}" harus 0-${nilaiEnvelope().max}.` });
             return;
           }
           nilaiKomponenList.push({ komponenNilaiId, nilai });
@@ -1541,13 +1541,13 @@ export default function InputNilai() {
       if (ambiguousSub.has(name)) {
         errors.push({
           line: 1,
-          error: `Nama sub-komponen "${rows[0][col]}" dipakai oleh lebih dari satu definisi — ganti nama agar unik sebelum impor.`,
+          error: `Nama sub-komponen"${rows[0][col]}" dipakai oleh lebih dari satu definisi — ganti nama agar unik sebelum impor.`,
         });
         continue;
       }
       const id = nameToSub.get(name);
       if (id === undefined) {
-        errors.push({ line: 1, error: `Kolom "${rows[0][col]}" tidak cocok dengan sub-komponen manapun.` });
+        errors.push({ line: 1, error: `Kolom"${rows[0][col]}" tidak cocok dengan sub-komponen manapun.` });
         continue;
       }
       colMap.push({ col, subKomponenNilaiId: id });
@@ -1562,7 +1562,7 @@ export default function InputNilai() {
           errors: [
             {
               line: 1,
-              error: `Kolom "${rows[0][entry.col]}" duplikat — setiap sub-komponen hanya boleh muncul satu kali.`,
+              error: `Kolom"${rows[0][entry.col]}" duplikat — setiap sub-komponen hanya boleh muncul satu kali.`,
             },
           ],
         };
@@ -1584,7 +1584,7 @@ export default function InputNilai() {
         if (raw === undefined || String(raw).trim() === '') continue;
         const nilai = parseGradeInput(raw);
         if (nilai === null || nilai < 0 || nilai > nilaiEnvelope().max) {
-          errors.push({ line, error: `Nilai "${rows[0][col]}" harus 0-${nilaiEnvelope().max}.` });
+          errors.push({ line, error: `Nilai"${rows[0][col]}" harus 0-${nilaiEnvelope().max}.` });
           return;
         }
         subNilaiList.push({ subKomponenNilaiId, nilai });
@@ -1652,7 +1652,7 @@ export default function InputNilai() {
         if (n === null || n < nilaiEnvelope().min || n > nilaiEnvelope().max) {
           errors.push({
             line,
-            error: `Kolom "${rows[0][col] ?? col}" -> ${mapping[col]}: nilai harus ${nilaiEnvelope().min}-${nilaiEnvelope().max}.`,
+            error: `Kolom"${rows[0][col] ?? col}" -> ${mapping[col]}: nilai harus ${nilaiEnvelope().min}-${nilaiEnvelope().max}.`,
           });
         }
       }
@@ -1780,7 +1780,7 @@ export default function InputNilai() {
     <MainLayout>
       <div class="flex flex-col gap-6 pb-28">
         {/* Header */}
-        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">Input Nilai Kelas</h1>
           <p class="text-sm text-secondary-500">
             Kelola komposisi komponen nilai dan input nilai mahasiswa per kelas kuliah
@@ -1788,7 +1788,7 @@ export default function InputNilai() {
         </div>
 
         {/* Class Selection Card */}
-        <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <h3 class="font-bold text-secondary-700 text-sm">Pilih Kelas Kuliah</h3>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <SearchableSelect
@@ -1844,7 +1844,7 @@ export default function InputNilai() {
         </div>
 
         <Show when={isRulesMissing()}>
-          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 shadow-sm dark:bg-rose-900/30 dark:text-rose-400">
+          <div class="bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold flex flex-col gap-1.5 dark:bg-rose-900/30 dark:text-rose-400">
             <span class="font-bold flex items-center gap-1.5 text-rose-800 text-sm">
               ⚠ Peringatan: Aturan Konversi Belum Ditetapkan
             </span>
@@ -1859,14 +1859,14 @@ export default function InputNilai() {
         <Show
           when={selectedKelasId()}
           fallback={
-            <div class="bg-white p-12 rounded-2xl border border-secondary-100 shadow-sm text-center text-secondary-400 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white p-12 rounded-2xl border border-secondary-100 text-center text-secondary-400 dark:bg-secondary-900 dark:border-secondary-800">
               Silakan pilih kelas kuliah terlebih dahulu untuk mengelola komponen dan nilai.
             </div>
           }
         >
           <Show when={selectedRombelId() && currentRombel()}>
             <div class="flex flex-col gap-3 mb-6">
-              <div class="bg-brand-50 border border-brand-200 text-brand-800 p-4 rounded-2xl text-xs flex flex-wrap items-center justify-between gap-3 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+              <div class="bg-action-50 border border-brand-200 text-action p-4 rounded-2xl text-xs flex flex-wrap items-center justify-between gap-3 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
                 <div class="flex flex-col gap-0.5">
                   <span class="font-bold text-sm">Mode Rombel: {currentRombel()?.namaGroup}</span>
                   <span>
@@ -1877,7 +1877,7 @@ export default function InputNilai() {
                 <button
                   type="button"
                   onClick={() => setSelectedRombelId(null)}
-                  class="px-3 py-1.5 rounded-full bg-white text-brand-700 border border-brand-300 font-semibold hover:bg-brand-100 active:scale-95 transition-all dark:bg-secondary-800 dark:text-brand-300 dark:border-brand-700"
+                  class="px-3 py-1.5 rounded-full bg-white text-action border border-brand-300 font-semibold hover:bg-action-100 active:scale-95 transition-all dark:bg-secondary-800 dark:text-brand-300 dark:border-brand-700"
                 >
                   Tampilkan semua mahasiswa
                 </button>
@@ -1900,7 +1900,7 @@ export default function InputNilai() {
           </Show>
 
           {/* Rekap Pra-Simpan */}
-          <div class="bg-white rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
             <button
               type="button"
               onClick={() => setShowRekap((v) => !v)}
@@ -1911,7 +1911,7 @@ export default function InputNilai() {
                 <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
                   {rekapOverall().lengkap}/{rekapOverall().total} lengkap
                 </span>
-                <span class="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-semibold dark:bg-brand-900/30 dark:text-brand-300">
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-action-50 text-action font-semibold dark:bg-brand-900/30 dark:text-brand-300">
                   Rentang {nilaiEnvelope().min}-{nilaiEnvelope().max}
                 </span>
                 <Show when={dirtyCount() > 0}>
@@ -2058,7 +2058,7 @@ export default function InputNilai() {
                           Total {totalBobot()}%
                         </span>
                         <Show when={isClassLocked()}>
-                          <span class="px-2.5 py-1 bg-accent-50 text-accent-700 border border-accent-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-accent-900/30 dark:text-accent-400">
+                          <span class="px-2.5 py-1 bg-action-50 text-action border border-action-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark">
                             ⊘ Dikunci
                           </span>
                         </Show>
@@ -2092,7 +2092,7 @@ export default function InputNilai() {
           </div>
 
           {/* Student Grades Table */}
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
             <div class="flex flex-col gap-3 border-b pb-3">
               <div class="flex justify-between items-center">
                 <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
@@ -2112,7 +2112,7 @@ export default function InputNilai() {
                     onClick={() => setFocusKomponenId(null)}
                     class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
                       focusKomponenId() === null
-                        ? 'bg-brand-600 text-white border-brand-600'
+                        ? 'bg-action text-white border-action'
                         : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
                     }`}
                   >
@@ -2125,7 +2125,7 @@ export default function InputNilai() {
                         onClick={() => setFocusKomponenId(c.id)}
                         class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
                           focusKomponenId() === c.id
-                            ? 'bg-brand-600 text-white border-brand-600'
+                            ? 'bg-action text-white border-action'
                             : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
                         }`}
                       >
@@ -2149,7 +2149,7 @@ export default function InputNilai() {
                       placeholder="0.00"
                       value={bulkValue()}
                       onInput={(e) => setBulkValue(e.currentTarget.value.replace(/[^0-9.,]/g, ''))}
-                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs w-24 text-center focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs w-24 text-center focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                     />
                   </div>
                   <div class="flex flex-col gap-1">
@@ -2157,7 +2157,7 @@ export default function InputNilai() {
                     <select
                       value={bulkKomponenId() ?? ''}
                       onChange={(e) => setBulkKomponenId(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
-                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500 text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
                     >
                       <option value="">-- Pilih Komponen --</option>
                       <For each={validComponents()}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
@@ -2167,7 +2167,7 @@ export default function InputNilai() {
                     type="button"
                     onClick={handleBulkApply}
                     disabled={selectedCount() === 0}
-                    class="px-3 py-1.5 rounded-full bg-brand-600 text-white font-bold text-xs hover:bg-brand-700 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    class="px-3 py-1.5 rounded-full bg-action text-white font-bold text-xs hover:bg-action-dark active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Terapkan ke Terpilih
                   </button>
@@ -2205,7 +2205,7 @@ export default function InputNilai() {
                         aria-label="Pilih semua mahasiswa"
                         checked={allVisibleSelected()}
                         onChange={toggleSelectAll}
-                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                        class="rounded border-secondary-300 text-action focus:ring-action-focus"
                       />
                     </th>
                     <th class="p-3">Mahasiswa</th>
@@ -2246,7 +2246,7 @@ export default function InputNilai() {
                             aria-label={`Pilih ${stud.nama}`}
                             checked={isKrsSelected(stud.krsId)}
                             onChange={() => toggleKrsSelected(stud.krsId)}
-                            class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+                            class="rounded border-secondary-300 text-action focus:ring-action-focus"
                           />
                         </td>
                         <td class="p-3">
@@ -2279,7 +2279,7 @@ export default function InputNilai() {
                                         ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
                                         : isDirty(`g:${stud.krsId}_${c.id}`)
                                           ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                                          : 'border-secondary-200 focus:border-brand-500 focus:ring-brand-500/20 dark:border-secondary-700'
+                                          : 'border-secondary-200 focus:border-action focus:ring-action-focus/20 dark:border-secondary-700'
                                     }`}
                                   />
                                 }
@@ -2317,7 +2317,7 @@ export default function InputNilai() {
                                         class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                           isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
                                             ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                            : 'border-brand-400 focus:border-brand-500 focus:ring-brand-500/20 dark:border-brand-700'
+                                            : 'border-brand-400 focus:border-action focus:ring-action-focus/20 dark:border-brand-700'
                                         }`}
                                       />
                                       <button
@@ -2328,7 +2328,7 @@ export default function InputNilai() {
                                           resetL1ToAuto(stud.krsId, c.id);
                                         }}
                                         title="Kembali ke agregat sub-komponen"
-                                        class="text-brand-600 hover:text-brand-800 text-sm font-bold px-1"
+                                        class="text-action hover:text-action text-sm font-bold px-1"
                                       >
                                         ↩
                                       </button>
@@ -2339,7 +2339,7 @@ export default function InputNilai() {
                                     disabled={isClassLocked()}
                                     onClick={() => openSubPopup(stud, c)}
                                     title="Input nilai sub-komponen"
-                                    class="px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-semibold hover:bg-brand-100 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800"
+                                    class="px-2.5 py-1 rounded-full bg-action-50 text-action border border-brand-200 text-[10px] font-semibold hover:bg-action-100 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800"
                                   >
                                     Input Sub [S]
                                   </button>
@@ -2628,7 +2628,7 @@ export default function InputNilai() {
                     onClick={() => setImportTemplate(t.id)}
                     class={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all active:scale-95 ${
                       importTemplate() === t.id
-                        ? 'bg-brand-600 text-white border-brand-600'
+                        ? 'bg-action text-white border-action'
                         : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
                     }`}
                   >

@@ -62,7 +62,7 @@ export default function MataKuliah() {
   createEffect(() => {
     const data = kurikulums();
     if (data?.data?.length && filterKurikulum() === undefined) {
-      // Only auto-select if there's exactly one kurikulum, otherwise keep "Semua Kurikulum"
+      // Only auto-select if there's exactly one kurikulum, otherwise keep"Semua Kurikulum"
       if (data.data.length === 1) {
         setFilterKurikulum(data.data[0].id);
       }
@@ -301,7 +301,7 @@ export default function MataKuliah() {
         />
 
         {/* Filters */}
-        <div class="flex flex-wrap gap-3 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800 items-end">
+        <div class="flex flex-wrap gap-3 bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800 items-end">
           <div class="flex-1 min-w-[200px]">
             <Input
               placeholder="Cari kode atau nama mata kuliah..."
@@ -321,7 +321,7 @@ export default function MataKuliah() {
           <div class="w-[220px]">
             <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-200 mb-1">Kurikulum</label>
             <select
-              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
               value={filterKurikulum() || ''}
               onChange={(e) => {
                 setFilterKurikulum(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
@@ -342,7 +342,7 @@ export default function MataKuliah() {
           <div class="w-[140px]">
             <label class="block text-xs font-semibold text-secondary-500 dark:text-secondary-200 mb-1">Semester</label>
             <select
-              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
               value={filterSemester() ?? ''}
               onChange={(e) => {
                 setFilterSemester(e.currentTarget.value ? Number(e.currentTarget.value) : undefined);
@@ -386,14 +386,14 @@ export default function MataKuliah() {
           >
             <For each={sortedData()}>
               {(item) => (
-                <tr class="hover:bg-brand-50/50 dark:hover:bg-secondary-800/50 transition-colors">
+                <tr class="hover:bg-action-50/50 dark:hover:bg-secondary-800/50 transition-colors">
                   <td class="px-6 py-4 font-mono text-secondary-600 dark:text-secondary-200 font-semibold">
                     {item.kode}
                   </td>
                   <td class="px-6 py-4 font-medium text-secondary-800 dark:text-secondary-200">{item.nama}</td>
                   <td class="px-6 py-4 font-semibold text-secondary-700 dark:text-secondary-200">{item.sksTotal}</td>
                   <td class="px-6 py-4">
-                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-action-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
                       {item.semester ? `Semester ${item.semester}` : '-'}
                     </span>
                   </td>
@@ -454,7 +454,7 @@ export default function MataKuliah() {
                 <div class="flex flex-col gap-1.5">
                   <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
                   <select
-                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                     value={formProdiId()}
                     onChange={(e) => setFormProdiId(Number(e.currentTarget.value))}
                   >

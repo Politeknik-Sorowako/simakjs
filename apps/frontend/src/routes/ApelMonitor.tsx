@@ -295,7 +295,7 @@ export default function ApelMonitor() {
         {/* Modal Detail Presensi Sesi */}
         <Show when={selectedDetailSesiId()}>
           <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] flex flex-col">
+            <div class="bg-white dark:bg-gray-800 rounded-lg max-w-3xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col">
               <div class="flex justify-between items-center border-b dark:border-gray-700 pb-3 flex-shrink-0">
                 <div>
                   <h3 class="text-lg font-bold">Detail Presensi Sesi Apel</h3>

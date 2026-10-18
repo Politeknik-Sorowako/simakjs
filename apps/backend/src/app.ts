@@ -8,6 +8,7 @@ import { auditAfterResponse, auditBeforeHandle } from './plugins/audit.plugin';
 import { jwtPlugin } from './plugins/jwt.plugin';
 import { admisiRoutes } from './routes/admisi.routes';
 import { admisiAdminRoutes } from './routes/admisi-admin.routes';
+import { aktivitasMbkmRoutes } from './routes/aktivitas-mbkm.routes';
 import { angkatanKurikulumRoutes } from './routes/angkatan-kurikulum.routes';
 import { apelRoutes } from './routes/apel.routes';
 import { auditRoutes } from './routes/audit.routes';
@@ -48,6 +49,7 @@ import { obeReportRoutes } from './routes/obe-report.routes';
 import { pasalPelanggaranRoutes } from './routes/pasal-pelanggaran.routes';
 import { pddiktiRoutes } from './routes/pddikti.routes';
 import { pelanggaranRoutes } from './routes/pelanggaran.routes';
+import { pembimbingRoutes } from './routes/pembimbing.routes';
 import { pengumumanRoutes } from './routes/pengumuman.routes';
 import { periodeAkademikRoutes } from './routes/periode-akademik.routes';
 import { presensiRoutes } from './routes/presensi.routes';
@@ -468,6 +470,8 @@ export const app = new Elysia()
   .use(nilaiPraktikRoutes)
   .use(bimbinganRoutes)
   .use(kategoriBimbinganRoutes)
+  .use(pembimbingRoutes)
+  .use(aktivitasMbkmRoutes)
   .use(bkdRoutes)
   .use(settingsRoutes)
   .use(skpiRoutes)

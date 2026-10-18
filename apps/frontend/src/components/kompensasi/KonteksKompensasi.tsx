@@ -7,7 +7,7 @@ interface KonteksKompensasiProps {
   row: KetidakhadiranRow;
 }
 
-const LINK_CLASS = 'text-brand-600 underline font-semibold hover:text-brand-700';
+const LINK_CLASS = 'text-action underline font-semibold hover:text-action';
 
 export default function KonteksKompensasi(props: KonteksKompensasiProps) {
   return (
@@ -19,7 +19,7 @@ export default function KonteksKompensasi(props: KonteksKompensasiProps) {
         >
           <div class="font-semibold">
             <Show when={props.row.mataKuliahKode}>
-              <span class="text-brand-600">[{props.row.mataKuliahKode}]</span>{' '}
+              <span class="text-action">[{props.row.mataKuliahKode}]</span>{' '}
             </Show>
             <Show when={props.row.mataKuliahNama}>{props.row.mataKuliahNama}</Show>
             <Show when={props.row.mataKuliahNama && props.row.namaKelas}> · </Show>

@@ -64,7 +64,7 @@ export default function AdmisiDetail() {
   return (
     <MainLayout>
       <div class="p-4 md:p-6 max-w-4xl mx-auto">
-        <button onClick={() => navigate('/admisi/dashboard')} class="text-sm text-brand-600 hover:text-brand-700 mb-4">
+        <button onClick={() => navigate('/admisi/dashboard')} class="text-sm text-action hover:text-action mb-4">
           ← Kembali ke Dashboard
         </button>
 
@@ -172,7 +172,7 @@ export default function AdmisiDetail() {
                         href={doc.fileLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-sm text-brand-600 hover:underline truncate"
+                        class="text-sm text-action hover:underline truncate"
                       >
                         🔗 {doc.originalName || 'Link Google Drive'}
                       </a>
@@ -181,7 +181,7 @@ export default function AdmisiDetail() {
                         href={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/admisi/documents/${doc.id}/file`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="text-sm text-brand-600 hover:underline truncate"
+                        class="text-sm text-action hover:underline truncate"
                       >
                         📄 {doc.originalName || 'Lihat File'}
                       </a>
@@ -277,7 +277,7 @@ export default function AdmisiDetail() {
           </Show>
 
           <Show when={app()?.status === 'nim_issued' && app()?.nimDiterbitkan}>
-            <div class="bg-brand-50 dark:bg-brand-900/20 border border-brand-200 dark:border-brand-800 rounded-xl p-5 text-center">
+            <div class="bg-action-50 dark:bg-action/20 border border-brand-200 dark:border-brand-800 rounded-xl p-5 text-center">
               <div class="text-3xl mb-2">🎉</div>
               <h2 class="font-semibold text-brand-700 dark:text-brand-400 mb-1">NIM Telah Diterbitkan</h2>
               <p class="text-lg font-bold font-mono">{app()?.nimDiterbitkan}</p>

@@ -9,7 +9,7 @@
 
   body {
     margin: 0;
-    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     @apply text-body leading-relaxed bg-parchment text-secondary-800 transition-colors duration-200;
@@ -137,6 +137,26 @@
   aside.sidebar-collapsed nav button svg {
     width: 1.25rem;
     height: 1.25rem;
+  }
+
+  /*
+   * Saat collapsed, tiap grup menu menampilkan IKON SEKSI yang bermakna
+   * (database, kalender, toga, grafik, dll) alih-alih chevron panah `>` yang
+   * tidak menjelaskan apa pun. Chevron disembunyikan; perilaku klik tetap sama
+   * (klik grup → sidebar expand lewat onExpand).
+   */
+  aside.sidebar-collapsed .sidebar-section-chevron {
+    display: none;
+  }
+
+  aside.sidebar-collapsed .sidebar-section-icon {
+    display: block;
+    color: #cccccc;
+  }
+
+  aside.sidebar-collapsed nav button:hover .sidebar-section-icon,
+  aside.sidebar-collapsed nav button:focus-visible .sidebar-section-icon {
+    color: #2997ff;
   }
 
   aside.sidebar-collapsed .sidebar-section-title,

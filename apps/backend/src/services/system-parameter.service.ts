@@ -1,6 +1,12 @@
 import { eq, sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
 import { db } from '../utils/db';
+import { decryptSecret, encryptSecret, isSecretEncrypted } from '../utils/secret-crypto';
+
+/** Bentuk nilai parameter yang sudah tervalidasi, siap disimpan. */
+export type ParamValueValidation =
+  | { ok: true; value: string /** true = pertahankan nilai lama (mis. password dikosongkan) */; keepExisting?: boolean }
+  | { ok: false; error: string };
 
 const cache = new Map<string, { value: string; at: number }>();
 const CACHE_TTL_MS = 10_000;
@@ -127,7 +133,86 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     description:
       'Epoch sesi (kill-switch). Menaikkan nilai ini memaksa semua pengguna login ulang: token yang dibubuhi sessEpoch lebih kecil dari nilai ini ditolak.',
   },
+  // ─── Integrasi Neo Feeder PDDIKTI (Web Service live2.php) ─────────────────
+  FEEDER_URL: {
+    value: 'https://feeder.politekniksorowako.ac.id/ws/live2.php',
+    type: 'string',
+    description: 'Alamat Web Service Neo Feeder PDDIKTI (umumnya .../ws/live2.php)',
+  },
+  FEEDER_USERNAME: {
+    value: 'darmawaty@politekniksorowako.ac.id',
+    type: 'string',
+    description: 'Username akun Web Service Neo Feeder PDDIKTI',
+  },
+  FEEDER_PASSWORD: {
+    value: '',
+    type: 'string',
+    description:
+      'Password akun Web Service Neo Feeder PDDIKTI (hanya tersimpan di server, tidak pernah ditampilkan kembali). Kosongkan saat menyimpan bila tidak ingin mengubah.',
+  },
+  FEEDER_TIMEOUT_MS: {
+    value: '20000',
+    type: 'number',
+    description: 'Timeout permintaan ke Web Service Feeder dalam milidetik (5000–60000)',
+  },
+  FEEDER_PAGE_SIZE: {
+    value: '200',
+    type: 'number',
+    description: 'Jumlah baris per halaman saat menarik data dari Feeder (50–500)',
+  },
+  FEEDER_AUTO_APPROVE_KRS: {
+    value: 'false',
+    type: 'boolean',
+    description: 'Setujui otomatis KRS tertunda sebelum dikirim/diambil dari Feeder',
+  },
+  FEEDER_WRITE_GUARD: {
+    value: 'true',
+    type: 'boolean',
+    description:
+      'Blokir semua aksi tulis ke Feeder PDDIKTI (Insert/Update/Delete). Jika aktif (true), aplikasi hanya mengizinkan operasi baca (Get* / GetToken).',
+  },
 };
+
+/** Parameter yang nilainya bersifat rahasia (di-mask pada respons API). */
+export const SECRET_PARAM_KEYS: ReadonlySet<string> = new Set(['FEEDER_PASSWORD']);
+
+/**
+ * Parameter yang HANYA dibaca dari environment server (`.env`), bukan dari
+ * `system_settings`. Menulisnya lewat aplikasi tidak berkefek apa pun — kode
+ * hanya melihat `process.env`. Selain itu, menyimpan kunci kriptografi di tabel
+ * yang sama justru membatalkan gunanya: kunci untuk membuka data terenkripsi
+ * harus berada di lapisan akses berbeda (pemilik OS/container), bukan di lapisan
+ * data yang justru ingin dilindungi. Karena itu penulisan key ini DITOLAK
+ * (400) pada `PUT /system/parameters/:key` maupun legacy `PUT /settings`,
+ * supaya admin tidak sempat mengira nilai yang diabaikan tersebut aktif.
+ */
+export const ENV_ONLY_PARAM_KEYS: ReadonlySet<string> = new Set([
+  // Kunci enkripsi parameter rahasia (PR #563)
+  'SETTINGS_SECRET_KEY',
+  // Autentikasi
+  'JWT_SECRET',
+  // Tanda tangan dokumen (QR signed-hash)
+  'SIGN_HMAC_KEYS',
+  'SIGN_ACTIVE_KID',
+  'VERIFY_BASE_URL',
+  // Integrasi pihak ketiga
+  'RESEND_API_KEY',
+  'EMAIL_FROM',
+  'TURNSTILE_SECRET_KEY',
+  'GOOGLE_CLIENT_SECRET',
+]);
+
+/** Konfigurasi ter-resolve untuk integrasi Neo Feeder PDDIKTI. */
+export interface FeederConfig {
+  url: string;
+  username: string;
+  password: string;
+  timeoutMs: number;
+  pageSize: number;
+  autoApproveKrs: boolean;
+  /** Jika true (default fail-safe), semua mutasi ke Feeder (Insert/Update/Delete) diblokir. */
+  writeGuard: boolean;
+}
 
 const SESSION_DURATION_MIN = 15;
 const SESSION_DURATION_MAX = 10080;
@@ -143,6 +228,11 @@ export class SystemParameterService {
     cache.clear();
   }
 
+  /** Bersihkan cache parameter in-memory (mis. saat reset DB pengujian). */
+  static clearCache(): void {
+    cache.clear();
+  }
+
   static async getRaw(key: string): Promise<string | null> {
     const cached = cache.get(key);
     if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
@@ -155,8 +245,11 @@ export class SystemParameterService {
         if (def) return def.value;
         return null;
       }
-      cache.set(key, { value: row.value, at: Date.now() });
-      return row.value;
+      // Parameter rahasia (atau nilai bertanda `enc:v1:`) didekripsi saat dibaca agar
+      // seluruh consumer (Feeder, dst.) tetap menerima nilai asli.
+      const plain = SECRET_PARAM_KEYS.has(key) || isSecretEncrypted(row.value) ? decryptSecret(row.value) : row.value;
+      cache.set(key, { value: plain, at: Date.now() });
+      return plain;
     } catch {
       // Tabel opsional belum tersedia atau query gagal: gunakan default agar path
       // yang bergantung pada parameter (mis. audit log) tidak ikut gagal.
@@ -211,6 +304,43 @@ export class SystemParameterService {
     } catch {
       return fallback;
     }
+  }
+
+  /**
+   * Konfigurasi integrasi Neo Feeder PDDIKTI yang sudah di-resolve & di-clamp.
+   * Nilai timeout/pageSize selalu dalam rentang aman meski baris DB korup.
+   * `writeGuard` bersifat fail-safe: aktif (`true`) kecuali diset eksplisit `'false'` atau `'0'`.
+   */
+  static async getFeederConfig(): Promise<FeederConfig> {
+    const [url, username, password, timeoutRaw, pageSizeRaw, autoApprove, writeGuardRaw] = await Promise.all([
+      SystemParameterService.getRaw('FEEDER_URL'),
+      SystemParameterService.getRaw('FEEDER_USERNAME'),
+      SystemParameterService.getRaw('FEEDER_PASSWORD'),
+      SystemParameterService.getRaw('FEEDER_TIMEOUT_MS'),
+      SystemParameterService.getRaw('FEEDER_PAGE_SIZE'),
+      SystemParameterService.getRaw('FEEDER_AUTO_APPROVE_KRS'),
+      SystemParameterService.getRaw('FEEDER_WRITE_GUARD'),
+    ]);
+    const timeoutParsed = Number(timeoutRaw);
+    const pageSizeParsed = Number(pageSizeRaw);
+    const normalizedGuard = (writeGuardRaw ?? '').trim().toLowerCase();
+    const writeGuard = normalizedGuard !== 'false' && normalizedGuard !== '0';
+    return {
+      url: (url ?? '').trim(),
+      username: (username ?? '').trim(),
+      password: password ?? '',
+      timeoutMs: Number.isFinite(timeoutParsed) ? Math.min(60000, Math.max(5000, Math.floor(timeoutParsed))) : 20000,
+      pageSize: Number.isFinite(pageSizeParsed) ? Math.min(500, Math.max(50, Math.floor(pageSizeParsed))) : 200,
+      autoApproveKrs: autoApprove === 'true' || autoApprove === '1',
+      writeGuard,
+    };
+  }
+
+  /** Status guard tulis Feeder (fail-safe ke `true` bila belum diset/korup). */
+  static async isFeederWriteGuardEnabled(): Promise<boolean> {
+    const raw = await SystemParameterService.getRaw('FEEDER_WRITE_GUARD');
+    const normalized = (raw ?? '').trim().toLowerCase();
+    return normalized !== 'false' && normalized !== '0';
   }
 
   /** Durasi sesi login (idle timeout) dalam menit, diklamp ke rentang 15–10080. */
@@ -300,18 +430,110 @@ export class SystemParameterService {
     return await db.select().from(systemSettings).orderBy(systemSettings.key);
   }
 
+  /**
+   * Menyimpan parameter. Nilai bertanda rahasia (`SECRET_PARAM_KEYS`) dienkripsi
+   * at-rest sebelum masuk DB (lihat `utils/secret-crypto.ts`). Nilai KOSONG untuk
+   * parameter rahasia juga ditulis apa adanya (caller menangani makna "pertahankan
+   * nilai lama" sebelum memanggil fungsi ini).
+   */
   static async set(key: string, value: string, updatedBy?: number, description?: string) {
     const type: ParamType = DEFAULT_PARAMS[key]?.type ?? 'string';
+    const stored = SECRET_PARAM_KEYS.has(key) && value !== '' ? encryptSecret(value) : value;
     const [row] = await db
       .insert(systemSettings)
-      .values({ key, value, description, updatedBy, paramType: type })
+      .values({ key, value: stored, description, updatedBy, paramType: type })
       .onConflictDoUpdate({
         target: systemSettings.key,
-        set: { value, updatedBy, description, updatedAt: new Date() },
+        set: { value: stored, updatedBy, description, updatedAt: new Date() },
       })
       .returning();
     SystemParameterService.invalidate(key);
     return row;
+  }
+
+  /**
+   * Validasi & normalisasi nilai parameter sebelum disimpan (dipakai bersama oleh
+   * `PUT /system/parameters/:key` dan legacy `PUT /settings`). Mengembalikan
+   * `{ ok: false, error }` bila nilai tidak sah.
+   */
+  static validateParamValue(key: string, rawValue: string): ParamValueValidation {
+    const value = String(rawValue);
+    // Kunci & kredensial yang hanya dibaca dari environment server tidak boleh
+    // ditulis lewat aplikasi — nilai di tabel akan diabaikan dan dapat memberi
+    // kesan aman yang palsu (lihat ENV_ONLY_PARAM_KEYS).
+    if (ENV_ONLY_PARAM_KEYS.has(key)) {
+      return {
+        ok: false,
+        error: `Parameter "${key}" hanya dapat diatur melalui environment server (.env) dan tidak dapat diubah dari aplikasi. Putuskan barisnya dari berkas .env lalu mulai ulang backend.`,
+      };
+    }
+    if (key === 'SESSION_DURATION_MINUTES') {
+      const minutes = Number(value);
+      if (!Number.isFinite(minutes) || minutes < SESSION_DURATION_MIN || minutes > SESSION_DURATION_MAX) {
+        return {
+          ok: false,
+          error: `Durasi sesi harus berupa angka antara ${SESSION_DURATION_MIN} dan ${SESSION_DURATION_MAX} menit`,
+        };
+      }
+      return { ok: true, value: String(Math.floor(minutes)) };
+    }
+    if (key === 'SESSION_EPOCH') {
+      return { ok: false, error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
+    }
+    if (key === 'FEEDER_URL') {
+      const trimmed = value.trim();
+      if (!/^https?:\/\/\S+$/i.test(trimmed)) {
+        return { ok: false, error: 'Alamat Feeder harus berupa URL http(s) yang valid' };
+      }
+      if (trimmed.length > 500) {
+        return { ok: false, error: 'Alamat Feeder terlalu panjang (maks 500 karakter)' };
+      }
+      return { ok: true, value: trimmed };
+    }
+    if (key === 'FEEDER_USERNAME') {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return { ok: false, error: 'Username Feeder wajib diisi' };
+      }
+      if (trimmed.length > 200) {
+        return { ok: false, error: 'Username Feeder terlalu panjang (maks 200 karakter)' };
+      }
+      return { ok: true, value: trimmed };
+    }
+    if (key === 'FEEDER_PASSWORD') {
+      // Nilai kosong = pertahankan password lama (form tidak menampilkan nilai tersimpan).
+      if (value.trim() === '') {
+        return { ok: true, value: '', keepExisting: true };
+      }
+      if (value.length > 200) {
+        return { ok: false, error: 'Password Feeder terlalu panjang (maks 200 karakter)' };
+      }
+      return { ok: true, value };
+    }
+    if (key === 'FEEDER_TIMEOUT_MS') {
+      const ms = Number(value);
+      if (!Number.isFinite(ms) || ms < 5000 || ms > 60000) {
+        return { ok: false, error: 'Timeout Feeder harus berupa angka antara 5000 dan 60000 ms' };
+      }
+      return { ok: true, value: String(Math.floor(ms)) };
+    }
+    if (key === 'FEEDER_PAGE_SIZE') {
+      const size = Number(value);
+      if (!Number.isFinite(size) || size < 50 || size > 500) {
+        return { ok: false, error: 'Page size Feeder harus berupa angka antara 50 dan 500' };
+      }
+      return { ok: true, value: String(Math.floor(size)) };
+    }
+    if (key === 'FEEDER_WRITE_GUARD' || key === 'FEEDER_AUTO_APPROVE_KRS') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true') return { ok: true, value: 'true' };
+      if (normalized === 'false') return { ok: true, value: 'false' };
+      if (key === 'FEEDER_WRITE_GUARD') {
+        return { ok: false, error: 'FEEDER_WRITE_GUARD harus bernilai true atau false' };
+      }
+      return { ok: false, error: 'FEEDER_AUTO_APPROVE_KRS harus bernilai true atau false' };
+    }
+    return { ok: true, value };
   }
 
   static descriptions(): Record<string, { type: ParamType; description: string; defaultValue: string }> {

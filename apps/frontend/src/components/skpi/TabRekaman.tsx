@@ -294,7 +294,7 @@ export default function TabRekaman(props: TabRekamanProps) {
   };
 
   const handleDelete = async (row: SkpiKegiatan) => {
-    if (!window.confirm(`Hapus rekaman kegiatan "${row.namaKegiatan}"?`)) return;
+    if (!window.confirm(`Hapus rekaman kegiatan"${row.namaKegiatan}"?`)) return;
     try {
       await skpiController.remove(row.id);
       toast.showToast('Rekaman kegiatan dihapus', 'success');
@@ -349,7 +349,7 @@ export default function TabRekaman(props: TabRekamanProps) {
   const handleDeleteLampiran = async (row: SkpiKegiatan) => {
     const lampiran = row.lampiran?.[0];
     if (!lampiran) return;
-    if (!window.confirm(`Hapus lampiran "${lampiran.fileName}"?`)) return;
+    if (!window.confirm(`Hapus lampiran"${lampiran.fileName}"?`)) return;
     try {
       await skpiController.deleteLampiran(row.id, lampiran.id);
       toast.showToast('Lampiran dihapus', 'success');
@@ -437,7 +437,7 @@ export default function TabRekaman(props: TabRekamanProps) {
     try {
       await skpiController.updateKategori(row.id, { isAktif: !row.isAktif });
       toast.showToast(
-        row.isAktif ? `Kategori "${row.nama}" dinonaktifkan` : `Kategori "${row.nama}" diaktifkan`,
+        row.isAktif ? `Kategori"${row.nama}" dinonaktifkan` : `Kategori"${row.nama}" diaktifkan`,
         'success',
       );
       // Kategori yang baru dinonaktifkan hilang dari opsi filter; reset agar
@@ -453,7 +453,7 @@ export default function TabRekaman(props: TabRekamanProps) {
   };
 
   const handleKategoriDelete = async (row: SkpiKategori) => {
-    if (!window.confirm(`Hapus kategori "${row.nama}"?`)) return;
+    if (!window.confirm(`Hapus kategori"${row.nama}"?`)) return;
     try {
       await skpiController.deleteKategori(row.id);
       toast.showToast('Kategori kegiatan dihapus', 'success');
@@ -477,7 +477,7 @@ export default function TabRekaman(props: TabRekamanProps) {
       <div class="flex flex-col gap-6">
         {/* Aksi utama tab */}
         <Show when={showInputUi()}>
-          <div class="bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white p-4 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
             <div class="flex flex-wrap items-center justify-end gap-3">
               <Button variant="secondary" onClick={() => refetch()}>
                 Muat Ulang
@@ -495,14 +495,14 @@ export default function TabRekaman(props: TabRekamanProps) {
         </Show>
 
         {/* Filter + tabel */}
-        <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div class="relative flex-1 w-full">
               <span class="absolute left-3.5 top-2.5 text-secondary-400">🔍</span>
               <input
                 type="text"
                 placeholder="Cari nama kegiatan / penyelenggara / NIM / nama mahasiswa..."
-                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={pagination.search()}
                 onInput={(e) => {
                   pagination.setSearch(e.currentTarget.value);
@@ -533,7 +533,7 @@ export default function TabRekaman(props: TabRekamanProps) {
           </div>
 
           {/* Filter per mahasiswa & prodi — hanya tampilan staf/dosen; backend
-              memvalidasi lingkup per peran. */}
+ memvalidasi lingkup per peran. */}
           <Show when={!isMahasiswaView()}>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
               <div class="sm:w-80">
@@ -651,7 +651,7 @@ export default function TabRekaman(props: TabRekamanProps) {
                             <button
                               type="button"
                               onClick={() => handleOpenLampiran(row)}
-                              class="text-brand-600 hover:underline font-medium"
+                              class="text-action hover:underline font-medium"
                             >
                               Lihat
                             </button>
@@ -721,7 +721,7 @@ export default function TabRekaman(props: TabRekamanProps) {
           </Show>
 
           {/* Input staf (create): pilih mahasiswa target. Backend mewajibkan
-              mahasiswaId + prodi-scope untuk staf. */}
+ mahasiswaId + prodi-scope untuk staf. */}
           <Show when={isStaffInput() && !editingId()}>
             <SearchableSelect
               label="Mahasiswa"
@@ -811,7 +811,7 @@ export default function TabRekaman(props: TabRekamanProps) {
               placeholder="Uraian singkat kegiatan..."
               value={deskripsi()}
               onInput={(e) => setDeskripsi(e.currentTarget.value)}
-              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-600 resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
+              class="w-full px-4 py-2.5 rounded-xl border border-secondary-200 bg-white text-table text-secondary-800 placeholder:text-secondary-400 focus:outline-none focus:ring-2 focus:ring-action-focus/20 focus:border-action resize-none dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
             />
           </div>
 
@@ -879,7 +879,7 @@ export default function TabRekaman(props: TabRekamanProps) {
               type="checkbox"
               checked={katAktif()}
               onChange={(e) => setKatAktif(e.currentTarget.checked)}
-              class="w-4 h-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500"
+              class="w-4 h-4 rounded border-secondary-300 text-action focus:ring-action-focus"
             />
             Kategori aktif (dapat dipilih pada form kegiatan)
           </label>

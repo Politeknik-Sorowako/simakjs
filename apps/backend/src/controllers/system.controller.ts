@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { systemSettings } from '../models/schema';
 import { ChangelogService } from '../services/changelog.service';
-import { SystemParameterService } from '../services/system-parameter.service';
+import { SECRET_PARAM_KEYS, SystemParameterService } from '../services/system-parameter.service';
 import { VersionService } from '../services/version.service';
 import { db } from '../utils/db';
 import { isSuperAdminOrAdmin } from '../utils/role';
@@ -77,7 +77,14 @@ export class SystemController {
         updatedBy: r.updatedBy ?? null,
       });
     }
-    return { data: meta };
+    // Parameter rahasia (mis. password Feeder) tidak pernah dikembalikan mentah —
+    // hanya menandai apakah nilainya sudah terisi (`hasValue`).
+    const data = meta.map((m) =>
+      SECRET_PARAM_KEYS.has(m.key)
+        ? { ...m, value: '', hasValue: String(m.value ?? '').length > 0, masked: true }
+        : { ...m, masked: false },
+    );
+    return { data };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
@@ -92,7 +99,7 @@ export class SystemController {
       return { error: 'Akses ditolak. Hanya Admin atau Super Admin.' };
     }
     const key = (params as Record<string, unknown>)?.key as string;
-    let value = ((body as Record<string, unknown>)?.value as string) ?? null;
+    const value = ((body as Record<string, unknown>)?.value as string) ?? null;
     const description = ((body as Record<string, unknown>)?.description as string) ?? undefined;
     if (!key || value === null || value === undefined) {
       set.status = 400;
@@ -102,21 +109,19 @@ export class SystemController {
       set.status = 400;
       return { error: 'key hanya boleh mengandung huruf, angka, dan underscore' };
     }
-    if (key === 'SESSION_DURATION_MINUTES') {
-      const minutes = Number(value);
-      if (!Number.isFinite(minutes) || minutes < 15 || minutes > 10080) {
-        set.status = 400;
-        return { error: 'Durasi sesi harus berupa angka antara 15 dan 10080 menit' };
-      }
-      value = String(Math.floor(minutes));
-    }
-    if (key === 'SESSION_EPOCH') {
+    // Validasi & normalisasi bersama dengan legacy `PUT /settings`.
+    const validated = SystemParameterService.validateParamValue(key, String(value));
+    if (!validated.ok) {
       set.status = 400;
-      return { error: 'SESSION_EPOCH hanya boleh dinaikkan via endpoint paksa logout' };
+      return { error: validated.error };
+    }
+    if (validated.keepExisting) {
+      // Password rahasia dikosongkan → pertahankan nilai tersimpan (tak ditimpa).
+      return { key, value: '' };
     }
     try {
-      const row = await SystemParameterService.set(key, String(value), user.id, description);
-      return { key: row.key, value: row.value };
+      const row = await SystemParameterService.set(key, validated.value, user.id, description);
+      return { key: row.key, value: SECRET_PARAM_KEYS.has(key) ? '' : row.value };
     } catch (e: unknown) {
       set.status = 500;
       return { error: e instanceof Error ? e.message : 'Gagal memperbarui parameter' };
@@ -159,7 +164,12 @@ export class SystemController {
       })
       .from(systemSettings)
       .orderBy(systemSettings.key);
-    return { data: rows };
+    const data = rows.map((r) =>
+      SECRET_PARAM_KEYS.has(r.key)
+        ? { ...r, value: '', hasValue: String(r.value ?? '').length > 0, masked: true }
+        : { ...r, masked: false },
+    );
+    return { data };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any

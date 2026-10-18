@@ -122,7 +122,7 @@ export default function AktivasiAkun() {
 
   return (
     <div class="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-4">
-      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8">
+      <div class="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-8">
         <div class="flex flex-col items-center mb-6">
           <img src={logoImg} alt="SIMAK Vokasi Logo" class="h-14 w-auto mb-3" />
           <h1 class="text-xl font-bold text-slate-800 dark:text-slate-100 text-center">Aktivasi Akun SIMAK Vokasi</h1>

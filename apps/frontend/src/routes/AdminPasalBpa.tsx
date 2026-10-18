@@ -123,7 +123,7 @@ export default function AdminPasalBpa() {
   };
 
   const handleDelete = async (p: PasalPelanggaran) => {
-    if (!window.confirm(`Hapus pasal "${p.nomorPasal}"? Data pelanggaran yang memakai pasal ini tidak terpengaruh.`)) {
+    if (!window.confirm(`Hapus pasal"${p.nomorPasal}"? Data pelanggaran yang memakai pasal ini tidak terpengaruh.`)) {
       return;
     }
     try {
@@ -165,7 +165,7 @@ export default function AdminPasalBpa() {
   return (
     <MainLayout>
       <div class="flex flex-col gap-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <div>
             <h1 class="text-2xl font-extrabold text-secondary-800 tracking-tight dark:text-white">
               Master Pasal Pelanggaran (BPA)
@@ -186,14 +186,14 @@ export default function AdminPasalBpa() {
           </Show>
         </div>
 
-        <div class="bg-white border border-secondary-100 rounded-2xl shadow-sm p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="relative flex-1 w-full">
               <span class="absolute left-3.5 top-2.5 text-secondary-400 dark:text-secondary-200">🔍</span>
               <input
                 type="text"
                 placeholder="Cari nomor atau bunyi pasal..."
-                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                class="w-full bg-secondary-50 border border-secondary-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                 value={search()}
                 onInput={(e) => handleSearchInput(e.currentTarget.value)}
               />
@@ -205,7 +205,7 @@ export default function AdminPasalBpa() {
                 <Button
                   onClick={() => setShowBulkDeleteModal(true)}
                   variant="danger"
-                  class="w-full sm:w-auto text-xs py-2 px-4 flex items-center justify-center gap-2 shadow-sm font-bold animate-fadeIn"
+                  class="w-full sm:w-auto text-xs py-2 px-4 flex items-center justify-center gap-2 font-bold animate-fadeIn"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path
@@ -235,7 +235,7 @@ export default function AdminPasalBpa() {
                     <th class="p-3 w-10 text-center">
                       <input
                         type="checkbox"
-                        class="h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer accent-brand-600"
+                        class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus cursor-pointer accent-brand-600"
                         checked={isAllSelected()}
                         onChange={toggleSelectAll}
                         title="Pilih Semua"
@@ -270,7 +270,7 @@ export default function AdminPasalBpa() {
                       <tr
                         class={`transition-colors ${
                           isSelected()
-                            ? 'bg-brand-50/60 dark:bg-brand-900/20'
+                            ? 'bg-action-50/60 dark:bg-action/20'
                             : 'hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20'
                         }`}
                       >
@@ -278,7 +278,7 @@ export default function AdminPasalBpa() {
                           <td class="p-3 text-center">
                             <input
                               type="checkbox"
-                              class="h-4 w-4 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer accent-brand-600"
+                              class="h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus cursor-pointer accent-brand-600"
                               checked={isSelected()}
                               onChange={() => toggleSelectRow(p.id)}
                             />
@@ -362,7 +362,7 @@ export default function AdminPasalBpa() {
                 placeholder="Tuliskan bunyi pasal sesuai BPA..."
                 value={bunyiPasal()}
                 onInput={(e) => setBunyiPasal(e.currentTarget.value)}
-                class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 resize-none dark:border-secondary-700"
+                class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-action resize-none dark:border-secondary-700"
                 required
               />
             </div>
@@ -372,7 +372,7 @@ export default function AdminPasalBpa() {
               <select
                 value={jenisSanksi()}
                 onChange={(e) => setJenisSanksi(parseInt(e.currentTarget.value))}
-                class="border border-secondary-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-brand-500 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200"
+                class="border border-secondary-200 rounded-xl p-3 text-xs bg-white focus:outline-none focus:border-action dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-200"
               >
                 <option value={1}>Lisan (1 poin)</option>
                 <option value={4}>Tertulis (4 poin)</option>

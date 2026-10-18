@@ -13,6 +13,7 @@ import {
   users,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { PembimbingService } from './pembimbing.service';
 
 export class BimbinganService {
   static async getActivePeriode() {
@@ -171,11 +172,16 @@ export class BimbinganService {
       throw new Error('Mahasiswa tidak ditemukan.');
     }
 
+    // Untuk kategori TA/PKL, dosen pembimbing diambil dari penetapan pembimbing
+    // modul Penetapan Pembimbing (TA_UTAMA / PKL) bila ada; fallback ke Dosen PA
+    // supaya pencatatan tetap berjalan sebelum penetapan dibuat.
+    const pembimbingDitetapkan = await PembimbingService.resolvePembimbingDefault(mahasiswaId, kategori);
+
     const [newBimbingan] = await db
       .insert(bimbingan)
       .values({
         mahasiswaId,
-        dosenId: mhs.dosenPaId,
+        dosenId: pembimbingDitetapkan ?? mhs.dosenPaId,
         periodeId: activePeriode.id,
         ringkasan: null,
         isApproved: false,

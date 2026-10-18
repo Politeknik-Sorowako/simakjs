@@ -324,7 +324,7 @@ export default function EvaluasiSistem() {
         </Show>
 
         <Show when={canAccess()}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6 shadow-sm">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl p-6">
             <div class="flex items-center gap-2 mb-4">
               <div class="inline-flex rounded-full bg-secondary-100 dark:bg-secondary-800 p-0.5">
                 <button
@@ -335,7 +335,7 @@ export default function EvaluasiSistem() {
                   }}
                   class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                     !myOnly()
-                      ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
+                      ? 'bg-white text-secondary-900 dark:bg-secondary-700 dark:text-white'
                       : 'text-secondary-500 dark:text-secondary-300'
                   }`}
                 >
@@ -349,7 +349,7 @@ export default function EvaluasiSistem() {
                   }}
                   class={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                     myOnly()
-                      ? 'bg-white text-secondary-900 shadow-sm dark:bg-secondary-700 dark:text-white'
+                      ? 'bg-white text-secondary-900 dark:bg-secondary-700 dark:text-white'
                       : 'text-secondary-500 dark:text-secondary-300'
                   }`}
                 >
@@ -375,32 +375,32 @@ export default function EvaluasiSistem() {
                     <thead>
                       <tr class="border-b border-secondary-100 dark:border-secondary-800 text-secondary-400 font-semibold">
                         <th
-                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          class="pb-3 cursor-pointer select-none hover:text-action"
                           onClick={() => handleSort('createdAt')}
                         >
                           Tanggal {getSortIcon('createdAt')}
                         </th>
                         <th class="pb-3">Pengirim</th>
                         <th
-                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          class="pb-3 cursor-pointer select-none hover:text-action"
                           onClick={() => handleSort('kategori')}
                         >
                           Kategori {getSortIcon('kategori')}
                         </th>
                         <th
-                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          class="pb-3 cursor-pointer select-none hover:text-action"
                           onClick={() => handleSort('judul')}
                         >
                           Judul & Pesan {getSortIcon('judul')}
                         </th>
                         <th
-                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          class="pb-3 cursor-pointer select-none hover:text-action"
                           onClick={() => handleSort('rating')}
                         >
                           Rating {getSortIcon('rating')}
                         </th>
                         <th
-                          class="pb-3 cursor-pointer select-none hover:text-brand-600"
+                          class="pb-3 cursor-pointer select-none hover:text-action"
                           onClick={() => handleSort('likeCount')}
                         >
                           Suka {getSortIcon('likeCount')}
@@ -424,13 +424,13 @@ export default function EvaluasiSistem() {
                               <span class="block text-[10px] text-secondary-400 uppercase">{item.user?.role}</span>
                             </td>
                             <td class="py-3">
-                              <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                              <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-action-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                                 {KATEGORI_LABEL[item.kategori] || item.kategori}
                               </span>
                             </td>
                             <td class="py-3 max-w-xs">
                               <button type="button" onClick={() => openDetail(item.id)} class="text-left group">
-                                <div class="font-bold text-secondary-800 dark:text-white group-hover:text-brand-600 group-hover:underline">
+                                <div class="font-bold text-secondary-800 dark:text-white group-hover:text-action group-hover:underline">
                                   {item.judul}
                                 </div>
                                 <div class="text-secondary-500 line-clamp-2 mt-0.5">{item.pesan}</div>
@@ -522,7 +522,7 @@ export default function EvaluasiSistem() {
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Kategori Masukan</label>
             <select
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={kategori()}
               onChange={(e) => setKategori(e.currentTarget.value)}
             >
@@ -547,7 +547,7 @@ export default function EvaluasiSistem() {
               Pesan Detail / Penjelasan
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               rows="4"
               placeholder="Jelaskan secara rinci usulan atau evaluasi Anda untuk sistem..."
               value={pesan()}
@@ -632,7 +632,7 @@ export default function EvaluasiSistem() {
 
                 {/* Meta badges */}
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-action-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
                     {KATEGORI_LABEL[item.kategori] || item.kategori}
                   </span>
                   <span class="text-amber-500 font-bold text-xs">★ {item.rating || 5}/5</span>
@@ -702,7 +702,7 @@ export default function EvaluasiSistem() {
                       placeholder="Tulis komentar..."
                       value={detailComment()}
                       onInput={(e) => setDetailComment(e.currentTarget.value)}
-                      class="flex-1 px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+                      class="flex-1 px-3 py-2 text-xs bg-secondary-50 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
                     />
                     <Button type="submit" variant="primary" class="text-xs py-1.5 px-3">
                       Kirim
@@ -731,7 +731,7 @@ export default function EvaluasiSistem() {
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Kategori Masukan</label>
             <select
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               value={editKategori()}
               onChange={(e) => setEditKategori(e.currentTarget.value)}
             >
@@ -753,7 +753,7 @@ export default function EvaluasiSistem() {
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-secondary-600 dark:text-secondary-200">Pesan Detail</label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               rows="4"
               value={editPesan()}
               onInput={(e) => setEditPesan(e.currentTarget.value)}
@@ -866,7 +866,7 @@ export default function EvaluasiSistem() {
                         type="checkbox"
                         checked={accessRoles().includes(opt.value)}
                         onChange={() => toggleAccessRole(opt.value)}
-                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+                        class="rounded border-secondary-300 text-action focus:ring-action-focus dark:border-secondary-700"
                       />
                       <span>{opt.label}</span>
                     </label>

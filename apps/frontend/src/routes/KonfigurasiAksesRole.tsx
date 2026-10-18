@@ -163,7 +163,7 @@ export default function KonfigurasiAksesRole() {
             <button
               class={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                 tab() === 'matrix'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-action text-white'
                   : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
               }`}
               onClick={() => setTab('matrix')}
@@ -173,7 +173,7 @@ export default function KonfigurasiAksesRole() {
             <button
               class={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
                 tab() === 'role-types'
-                  ? 'bg-brand-600 text-white'
+                  ? 'bg-action text-white'
                   : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
               }`}
               onClick={() => setTab('role-types')}
@@ -318,7 +318,7 @@ export default function KonfigurasiAksesRole() {
                               type="checkbox"
                               checked={editMatrix()?.values[m]?.[level] || false}
                               onChange={() => toggleCell(m, level)}
-                              class="pointer-events-none h-4 w-4 rounded border-secondary-300 text-primary-600 focus:ring-primary-500/30"
+                              class="pointer-events-none h-4 w-4 rounded border-secondary-300 text-action focus:ring-action-focus/30"
                             />
                           </td>
                         )}

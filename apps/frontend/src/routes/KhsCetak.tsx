@@ -65,7 +65,7 @@ export default function KhsCetak() {
 
   // Tanda tangan = persetujuan Kaprodi/Admin: halaman cetak HANYA MEMBACA baris
   // tanda tangan yang sudah ada — TIDAK PERNAH menerbitkan sendiri saat dibuka.
-  // Penerbitan hanya melalui tombol "Setujui & Tandatangani" + konfirmasi modal
+  // Penerbitan hanya melalui tombol"Setujui & Tandatangani" + konfirmasi modal
   // di halaman ini (atau lewat tab TTD Massal di /khs). Backend tetap menegakkan
   // role + scope prodi.
   const canSign = () => auth.hasRole(['kaprodi', 'admin', 'super_admin']);
@@ -81,7 +81,7 @@ export default function KhsCetak() {
       if (!target) return null;
       // Hanya membaca tanda tangan yang sudah ada; tanpa menerbitkan baru.
       // Kegagalan baca TIDAK ditelan — biarkan resource masuk ke `signature.error`
-      // agar alert merah tampil (bukan banner "belum ditandatangani" yang menyesatkan).
+      // agar alert merah tampil (bukan banner"belum ditandatangani" yang menyesatkan).
       const existing = await documentSignatureController.getByRef(target.mhsId, target.periodeId);
       return existing ? ensureQrDataUrl(existing) : null;
     },
@@ -89,7 +89,7 @@ export default function KhsCetak() {
 
   // Membaca resource yang ber-error akan melempar dan ditangkap ErrorBoundary
   // aplikasi (halaman cetak gagal total, bukan cetak-tanpa-QR). Akses lewat
-  // `sigData` agar kegagalan baca diperlakukan sebagai "belum ditandatangani"
+  // `sigData` agar kegagalan baca diperlakukan sebagai"belum ditandatangani"
   // sehingga alert merah + cetak tanpa QR tetap berjalan.
   const sigData = () => (signature.error ? null : signature());
 
@@ -109,7 +109,7 @@ export default function KhsCetak() {
     } catch (e: unknown) {
       setSignActionError(e instanceof Error ? e.message : 'Gagal menandatangani KHS.');
     } finally {
-      // Modal ditutup SETELAH request selesai (sukses/gagal): label "Menandatangani..."
+      // Modal ditutup SETELAH request selesai (sukses/gagal): label"Menandatangani..."
       // sempat tampil selama proses, dan alert kesalahan terlihat di luar overlay modal.
       setShowSignConfirm(false);
       setSignBusy(false);
@@ -182,7 +182,7 @@ export default function KhsCetak() {
                   setShowSignConfirm(true);
                 }}
                 disabled={signBusy()}
-                class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-50"
+                class="rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95 disabled:opacity-50"
               >
                 Setujui & Tandatangani
               </button>
@@ -194,7 +194,7 @@ export default function KhsCetak() {
         <button
           type="button"
           onClick={() => window.print()}
-          class="rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95"
+          class="rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95"
         >
           🖨️ Cetak Sekarang
         </button>
@@ -204,7 +204,7 @@ export default function KhsCetak() {
         when={!printData.loading}
         fallback={
           <div class="flex items-center justify-center py-24 text-secondary-400">
-            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+            <div class="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-action border-t-transparent" />
             <span class="text-sm">Menyiapkan data cetak...</span>
           </div>
         }

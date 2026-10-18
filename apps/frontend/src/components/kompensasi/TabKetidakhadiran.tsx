@@ -176,13 +176,13 @@ export default function TabKetidakhadiran(props: TabKetidakhadiranProps) {
 
   return (
     <div class="flex flex-col gap-4">
-      <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-5 shadow-card dark:shadow-card-dark flex flex-col gap-3">
+      <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-5 flex flex-col gap-3">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <FilterField label="Cari NIM / Nama">
             <input
               type="text"
               placeholder="Cari NIM atau nama mahasiswa..."
-              class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-secondary-400"
+              class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-3.5 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-action-focus placeholder:text-secondary-400"
               value={props.filters.search()}
               onInput={(e) => props.filters.setSearch(e.currentTarget.value)}
             />
@@ -244,7 +244,7 @@ export default function TabKetidakhadiran(props: TabKetidakhadiranProps) {
             <button
               type="button"
               onClick={resetFilters}
-              class="text-xs font-bold text-brand-600 hover:text-brand-700 underline"
+              class="text-xs font-bold text-action hover:text-action underline"
             >
               Reset Filter
             </button>

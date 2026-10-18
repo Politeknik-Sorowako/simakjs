@@ -165,7 +165,9 @@ export function VerifyModal(props: VerifyModalProps) {
                   </div>
                   <div class="rounded-xl border border-secondary-200 dark:border-secondary-800 p-3 text-center">
                     <div class="text-fine uppercase text-secondary-400 font-semibold">Sisa Kuota</div>
-                    <div class="text-lg font-bold text-accent-600 dark:text-accent-400">{rekap().sisaKuota} mnt</div>
+                    <div class="text-lg font-bold text-action dark:text-action dark:text-action-ondark">
+                      {rekap().sisaKuota} mnt
+                    </div>
                   </div>
                 </div>
               )}
@@ -235,7 +237,7 @@ export function VerifyModal(props: VerifyModalProps) {
               </label>
               <textarea
                 rows="3"
-                class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-4 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-xl px-4 py-2.5 text-table text-secondary-800 dark:text-secondary-100 focus:outline-none focus:ring-2 focus:ring-action-focus"
                 placeholder="Catatan verifikasi (opsional)"
                 value={note()}
                 onInput={(e) => setNote(e.currentTarget.value)}

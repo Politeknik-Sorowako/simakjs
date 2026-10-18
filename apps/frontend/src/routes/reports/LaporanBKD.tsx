@@ -284,7 +284,7 @@ export default function LaporanBKD() {
     ...rowsPraktikum().map((r) => ({ ...r, jenis: 'Praktikum', group: r.namaGroup })),
   ];
 
-  // Dropdown "Cetak & Ekspor" — satu pintu akses untuk seluruh aksi cetak/ekspor BKD.
+  // Dropdown"Cetak & Ekspor" — satu pintu akses untuk seluruh aksi cetak/ekspor BKD.
   const [actionsOpen, setActionsOpen] = createSignal(false);
   let actionsRef: HTMLDivElement | undefined;
 
@@ -369,7 +369,7 @@ export default function LaporanBKD() {
               type="button"
               onClick={() => setActionsOpen(!actionsOpen())}
               disabled={rekap.loading}
-              class="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-brand-700 active:scale-95 disabled:opacity-50 print:hidden"
+              class="inline-flex items-center gap-2 rounded-full bg-action px-5 py-2.5 text-sm font-bold text-white transition-all hover:bg-action-dark active:scale-95 disabled:opacity-50 print:hidden"
             >
               <span class="text-base">🖨️</span>
               <span>Cetak &amp; Ekspor</span>
@@ -384,7 +384,7 @@ export default function LaporanBKD() {
             </button>
 
             <Show when={actionsOpen()}>
-              <div class="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-secondary-200 bg-white p-2 shadow-xl dark:border-secondary-700 dark:bg-secondary-900">
+              <div class="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-secondary-200 bg-white p-2 dark:border-secondary-700 dark:bg-secondary-900">
                 <p class="px-3 pb-1 pt-2 text-caption font-semibold uppercase tracking-wider text-secondary-400">
                   Cetak Dokumen
                 </p>
@@ -443,7 +443,7 @@ export default function LaporanBKD() {
           </div>
         </div>
 
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col sm:flex-row gap-4">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl flex flex-col sm:flex-row gap-4">
           <div class="flex-1">
             <SearchableSelect
               label="Periode"
@@ -587,7 +587,7 @@ export default function LaporanBKD() {
             </div>
           </div>
 
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">A. Rekap Mengajar &amp; Presensi</h3>
             </div>
@@ -653,7 +653,7 @@ export default function LaporanBKD() {
             </div>
           </div>
 
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 C1. Rekap Mengajar Praktikum &amp; Presensi
@@ -721,7 +721,7 @@ export default function LaporanBKD() {
             </div>
           </div>
 
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">C2. Riwayat Pertemuan Praktikum</h3>
             </div>
@@ -778,7 +778,7 @@ export default function LaporanBKD() {
             </div>
           </div>
 
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 C3. Rekap Presensi Praktikum per Mahasiswa
@@ -838,7 +838,7 @@ export default function LaporanBKD() {
             </p>
           </div>
 
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">D. Rekap Bimbingan per Tanggal</h3>
             </div>
@@ -879,7 +879,7 @@ export default function LaporanBKD() {
             </div>
           </div>
 
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">E. Riwayat Bimbingan (Detail)</h3>
             </div>

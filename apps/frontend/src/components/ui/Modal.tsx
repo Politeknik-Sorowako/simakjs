@@ -45,7 +45,7 @@ export function Modal(props: ModalProps) {
 
         {/* Modal Content */}
         <div
-          class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-2xl shadow-2xl border border-secondary-200/80 dark:border-secondary-800 animate-scale-in print:static print:max-w-none print:rounded-none print:shadow-none print:border-0 print:bg-white dark:print:bg-white print:animate-none`}
+          class={`relative w-full ${width()} bg-white dark:bg-secondary-900 rounded-card border border-hairline dark:border-secondary-800 animate-scale-in print:static print:max-w-none print:rounded-none print:shadow-none print:border-0 print:bg-white dark:print:bg-white print:animate-none`}
           role="dialog"
           aria-modal="true"
           aria-label={props.title || 'Dialog'}
@@ -57,7 +57,7 @@ export function Modal(props: ModalProps) {
               <button
                 onClick={() => props.onClose?.()}
                 aria-label="Tutup dialog"
-                class="p-1.5 rounded-full text-secondary-400 hover:text-secondary-600 hover:bg-secondary-100 dark:hover:text-secondary-300 dark:hover:bg-secondary-800 transition-colors"
+                class="p-1.5 rounded-full text-secondary-400 hover:text-action hover:bg-action-50 dark:hover:text-action-ondark-ondark dark:hover:bg-secondary-800 transition-colors active:scale-95"
               >
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -67,7 +67,7 @@ export function Modal(props: ModalProps) {
           </Show>
 
           {/* Body */}
-          <div class="max-h-[70vh] overflow-y-auto p-6 print:max-h-none print:overflow-visible print:p-0">
+          <div class="max-h-[70vh] overflow-y-auto px-6 py-5 print:max-h-none print:overflow-visible print:p-0">
             {props.children}
           </div>
         </div>

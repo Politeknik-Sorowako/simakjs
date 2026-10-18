@@ -396,7 +396,7 @@ export default function KelasKuliah() {
         </div>
 
         {/* Filter Toolbar */}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-secondary-100 shadow-sm dark:bg-secondary-900 dark:border-secondary-800">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
           <Input
             label="Pencarian"
             placeholder="Cari kelas, MK, atau dosen..."
@@ -492,7 +492,7 @@ export default function KelasKuliah() {
                     <div class="flex flex-wrap gap-1.5 items-center">
                       <For each={item.dosenPengajarKelas}>
                         {(dp) => (
-                          <span class="inline-flex items-center gap-1 bg-brand-50 text-brand-700 border border-brand-100 rounded px-2 py-0.5 text-xs font-semibold dark:bg-brand-900/30 dark:text-white dark:border-brand-800">
+                          <span class="inline-flex items-center gap-1 bg-action-50 text-action border border-brand-100 rounded px-2 py-0.5 text-xs font-semibold dark:bg-brand-900/30 dark:text-white dark:border-brand-800">
                             {dp.dosen?.nama} ({dp.sksBebanMengajar || 0} SKS)
                             <button
                               onClick={() => handleUnplot(dp.id)}
@@ -506,7 +506,7 @@ export default function KelasKuliah() {
                       </For>
                       <button
                         onClick={() => openPlotModal(item)}
-                        class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border border-dashed border-brand-300 dark:border-brand-700 text-brand-600 dark:text-brand-400 hover:bg-brand-50/55 dark:hover:bg-brand-900/20 rounded transition-all focus:outline-none"
+                        class="inline-flex items-center px-2 py-0.5 text-xs font-semibold border border-dashed border-brand-300 dark:border-brand-700 text-action dark:text-brand-400 hover:bg-action-50/55 dark:hover:bg-action/20 rounded transition-all focus:outline-none"
                       >
                         + Plot Dosen
                       </button>

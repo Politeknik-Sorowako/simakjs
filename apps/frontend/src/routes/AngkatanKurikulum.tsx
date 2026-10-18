@@ -136,13 +136,13 @@ export default function AngkatanKurikulum() {
         </div>
 
         {/* Filter */}
-        <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
+        <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800">
           <div class="w-[300px]">
             <label class="block text-sm font-semibold text-secondary-700 dark:text-secondary-200 mb-1">
               Program Studi
             </label>
             <select
-              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+              class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
               onChange={(e) => setProdiFilter(e.currentTarget.value ? Number(e.currentTarget.value) : undefined)}
             >
               <option value="">Semua Program Studi</option>
@@ -235,7 +235,7 @@ export default function AngkatanKurikulum() {
             <div class="flex flex-col gap-1">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={formProdiId()}
                 onChange={(e) => {
                   setFormProdiId(Number(e.currentTarget.value));
@@ -260,7 +260,7 @@ export default function AngkatanKurikulum() {
             <div class="flex flex-col gap-1">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Kurikulum</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={kurikulumId()}
                 onChange={(e) => setKurikulumId(Number(e.currentTarget.value))}
                 required

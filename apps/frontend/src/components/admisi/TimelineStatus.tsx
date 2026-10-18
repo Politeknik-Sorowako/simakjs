@@ -88,7 +88,7 @@ export default function TimelineStatus(props: Props) {
   };
 
   return (
-    <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-6 mb-6 shadow-sm">
+    <div class="bg-white dark:bg-secondary-900 border border-secondary-200/80 dark:border-secondary-800 rounded-2xl p-6 mb-6">
       <h2 class="font-semibold text-sm mb-4 text-secondary-900 dark:text-white">Tahapan Seleksi</h2>
       <div class="relative">
         {/* Garis vertikal */}
@@ -112,7 +112,7 @@ export default function TimelineStatus(props: Props) {
                         : current
                           ? isRejected || isFailed
                             ? 'bg-danger-50 border-danger-500 text-danger-600 dark:bg-danger-900/30 dark:border-danger-500 dark:text-danger-400'
-                            : 'bg-primary-50 border-primary-600 text-primary-700 dark:bg-primary-900/40 dark:border-primary-500 dark:text-primary-300'
+                            : 'bg-primary-50 border-action text-primary-700 dark:bg-primary-900/40 dark:border-primary-500 dark:text-primary-300'
                           : 'bg-secondary-100 border-secondary-300 text-secondary-400 dark:bg-secondary-800 dark:border-secondary-700 dark:text-secondary-500'
                     }`}
                   >
@@ -129,7 +129,7 @@ export default function TimelineStatus(props: Props) {
                             : current
                               ? isRejected || isFailed
                                 ? 'text-danger-700 dark:text-danger-400'
-                                : 'text-primary-700 dark:text-primary-400'
+                                : 'text-primary-700 dark:text-action-ondark'
                               : 'text-secondary-400 dark:text-secondary-500'
                         }`}
                       >

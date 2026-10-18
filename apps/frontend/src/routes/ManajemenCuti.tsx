@@ -42,7 +42,7 @@ export default function ManajemenCuti() {
   const getStatusBadge = (status: string) => {
     const map: Record<string, { bg: string; text: string; label: string }> = {
       pending: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Menunggu PA' },
-      disetujui_pa: { bg: 'bg-brand-100', text: 'text-brand-800', label: 'Disetujui PA' },
+      disetujui_pa: { bg: 'bg-action-100', text: 'text-action', label: 'Disetujui PA' },
       disetujui_keuangan: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Disetujui Keuangan' },
       disetujui_prodi: { bg: 'bg-green-100', text: 'text-green-800', label: 'Disetujui (Cuti)' },
       ditolak: { bg: 'bg-red-100', text: 'text-red-800', label: 'Ditolak' },
@@ -231,7 +231,7 @@ export default function ManajemenCuti() {
           tanggalSuratIzin: tanggalSuratIzin() || null,
           catatan: catatan() || null,
         });
-        toast.showToast(`Data cuti mahasiswa "${mhs.nama}" berhasil diperbarui.`, 'success');
+        toast.showToast(`Data cuti mahasiswa"${mhs.nama}" berhasil diperbarui.`, 'success');
       } else {
         const created = await cutiController.inputByAdmin({
           mahasiswaId: mhs.id,
@@ -260,7 +260,7 @@ export default function ManajemenCuti() {
           }
         }
 
-        toast.showToast(`Mahasiswa "${mhs.nama}" berhasil dicatat cuti.`, 'success');
+        toast.showToast(`Mahasiswa"${mhs.nama}" berhasil dicatat cuti.`, 'success');
       }
 
       setShowInputModal(false);
@@ -273,10 +273,10 @@ export default function ManajemenCuti() {
   };
 
   const handleDeleteCuti = async (id: number, nama: string) => {
-    if (!confirm(`Batalkan cuti mahasiswa "${nama}"? Data cuti akan dihapus dan status kembali aktif.`)) return;
+    if (!confirm(`Batalkan cuti mahasiswa"${nama}"? Data cuti akan dihapus dan status kembali aktif.`)) return;
     try {
       await cutiController.delete(id);
-      toast.showToast(`Cuti "${nama}" berhasil dibatalkan.`, 'success');
+      toast.showToast(`Cuti"${nama}" berhasil dibatalkan.`, 'success');
       refetchInput();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal membatalkan cuti.', 'error');
@@ -284,7 +284,7 @@ export default function ManajemenCuti() {
   };
 
   const handleAktifKembaliFromInput = async (id: number, nama: string) => {
-    if (!confirm(`Aktifkan kembali mahasiswa "${nama}"?`)) return;
+    if (!confirm(`Aktifkan kembali mahasiswa"${nama}"?`)) return;
     try {
       await cutiController.aktifKembali(id);
       toast.showToast(`"${nama}" berhasil diaktifkan kembali.`, 'success');
@@ -476,11 +476,11 @@ export default function ManajemenCuti() {
   };
 
   const handleAktifKembali = async (id: number, nama: string) => {
-    if (!confirm(`Aktifkan kembali mahasiswa "${nama}" dari status cuti?`)) return;
+    if (!confirm(`Aktifkan kembali mahasiswa"${nama}" dari status cuti?`)) return;
     setProcessing(id);
     try {
       await cutiController.aktifKembali(id);
-      toast.showToast(`Mahasiswa "${nama}" berhasil diaktifkan kembali.`, 'success');
+      toast.showToast(`Mahasiswa"${nama}" berhasil diaktifkan kembali.`, 'success');
       refetchAktif();
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal mengaktifkan kembali.', 'error');
@@ -507,7 +507,7 @@ export default function ManajemenCuti() {
                 onClick={() => setActiveTab(tab.key)}
                 class={`px-5 py-3 text-sm font-semibold transition-colors duration-150 rounded-t-lg border-b-2 -mb-px ${
                   activeTab() === tab.key
-                    ? 'border-brand-600 text-brand-600 bg-brand-50/50'
+                    ? 'border-action text-action bg-action-50/50'
                     : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
                 }`}
               >
@@ -538,7 +538,7 @@ export default function ManajemenCuti() {
               </div>
               <div class="w-48">
                 <select
-                  class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                  class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                   value={inputPeriode()}
                   onChange={(e) => {
                     setInputPeriode(e.currentTarget.value);
@@ -594,7 +594,7 @@ export default function ManajemenCuti() {
                           <button
                             type="button"
                             onClick={() => openViewLampiranModal(cutiRecord!.id, `Lampiran - ${item.nama}`)}
-                            class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                            class="inline-flex items-center gap-1 mt-1 text-xs text-action hover:text-action hover:underline"
                           >
                             <span>📎 {cutiRecord!.lampiran!.length} Berkas</span>
                           </button>
@@ -651,7 +651,7 @@ export default function ManajemenCuti() {
           <div class="flex gap-4 items-center">
             <div class="w-48">
               <select
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={apprPeriode()}
                 onChange={(e) => {
                   setApprPeriode(e.currentTarget.value);
@@ -664,7 +664,7 @@ export default function ManajemenCuti() {
             </div>
             <div class="w-48">
               <select
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={apprStatus()}
                 onChange={(e) => {
                   setApprStatus(e.currentTarget.value);
@@ -712,7 +712,7 @@ export default function ManajemenCuti() {
                         <button
                           type="button"
                           onClick={() => openViewLampiranModal(item.id, `Lampiran - ${item.mahasiswa?.nama}`)}
-                          class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                          class="inline-flex items-center gap-1 mt-1 text-xs text-action hover:text-action hover:underline"
                         >
                           <span>📎 {item.lampiran?.length} Berkas</span>
                         </button>
@@ -765,12 +765,12 @@ export default function ManajemenCuti() {
                     rejectedPagination.resetPage();
                   }, 400);
                 }}
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               />
             </div>
             <div class="w-48">
               <select
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={aktifPeriode()}
                 onChange={(e) => {
                   setAktifPeriode(e.currentTarget.value);
@@ -858,10 +858,10 @@ export default function ManajemenCuti() {
             <Show
               when={!selectedMhs()}
               fallback={
-                <div class="flex justify-between items-center p-3 bg-brand-50 border border-brand-200 rounded-lg">
+                <div class="flex justify-between items-center p-3 bg-action-50 border border-brand-200 rounded-lg">
                   <div>
-                    <div class="font-semibold text-brand-900">{selectedMhs()?.nama}</div>
-                    <div class="text-xs text-brand-700">
+                    <div class="font-semibold text-action">{selectedMhs()?.nama}</div>
+                    <div class="text-xs text-action">
                       NIM: {selectedMhs()?.nim} | Status: {selectedMhs()?.status}
                     </div>
                   </div>
@@ -889,7 +889,7 @@ export default function ManajemenCuti() {
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-semibold text-secondary-700">Periode Cuti</label>
               <select
-                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+                class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
                 value={inputPeriodeId()}
                 onChange={(e) => setInputPeriodeId(e.currentTarget.value)}
               >
@@ -951,7 +951,7 @@ export default function ManajemenCuti() {
             <label class="text-sm font-semibold text-secondary-700">Alasan Cuti</label>
             <textarea
               rows={2}
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Alasan cuti mahasiswa..."
               value={alasan()}
               onInput={(e) => setAlasan(e.currentTarget.value)}
@@ -1093,7 +1093,7 @@ export default function ManajemenCuti() {
             <label class="text-sm font-semibold text-secondary-700">Catatan/Keterangan</label>
             <textarea
               rows={3}
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Tambahkan catatan jika diperlukan..."
               value={apprCatatan()}
               onInput={(e) => setApprCatatan(e.currentTarget.value)}

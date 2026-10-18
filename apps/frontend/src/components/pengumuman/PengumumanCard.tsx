@@ -103,7 +103,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
     }
 
     return (
-      <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
+      <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-action-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
         🎯 {text}
       </span>
     );
@@ -112,7 +112,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
   // If rendering inside pinned slide carousel
   if (isSlide()) {
     return (
-      <div class="min-w-[300px] sm:min-w-[340px] max-w-[360px] snap-start bg-white dark:bg-secondary-900 border border-amber-300 dark:border-amber-600/60 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between shrink-0 bg-gradient-to-br from-amber-50/30 to-transparent">
+      <div class="min-w-[300px] sm:min-w-[340px] max-w-[360px] snap-start bg-white dark:bg-secondary-900 border border-amber-300 dark:border-amber-600/60 rounded-2xl p-4 hover:shadow-md transition-all flex flex-col justify-between shrink-0 bg-gradient-to-br from-amber-50/30 to-transparent">
         <div>
           {/* Thumbnail preview or fallback placeholder banner */}
           <Show
@@ -183,7 +183,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
           <button
             type="button"
             onClick={() => props.onClick?.()}
-            class="font-semibold text-brand-600 dark:text-brand-400 hover:underline"
+            class="font-semibold text-action dark:text-brand-400 hover:underline"
           >
             Baca →
           </button>

@@ -181,7 +181,7 @@ export default function Pengumuman() {
   };
 
   const handlePublishAgain = async (item: PengumumanItem) => {
-    if (confirm(`Publikasikan kembali pengumuman "${item.judul}"?`)) {
+    if (confirm(`Publikasikan kembali pengumuman"${item.judul}"?`)) {
       try {
         await pengumumanController.publish({
           id: item.id,
@@ -245,7 +245,7 @@ export default function Pengumuman() {
             <button
               type="button"
               onClick={handleOpenCreate}
-              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0066cc] hover:bg-[#0071e3] active:scale-95 shadow-md transition-all self-start sm:self-auto"
+              class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0066cc] hover:bg-[#0071e3] active:scale-95 transition-all self-start sm:self-auto"
             >
               <span>+</span>
               <span>Buat Pengumuman</span>
@@ -391,7 +391,7 @@ export default function Pengumuman() {
                       class="px-6 py-2.5 rounded-xl text-xs font-bold text-secondary-800 dark:text-secondary-100 bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 hover:bg-secondary-50 dark:hover:bg-secondary-750 active:scale-95 shadow-xs transition-all flex items-center gap-2"
                     >
                       <Show when={isLoadingMore()}>
-                        <span class="inline-block w-3 h-3 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                        <span class="inline-block w-3 h-3 border-2 border-action border-t-transparent rounded-full animate-spin" />
                       </Show>
                       <span>{isLoadingMore() ? 'Memuat...' : 'Muat Pengumuman Lainnya'}</span>
                     </button>

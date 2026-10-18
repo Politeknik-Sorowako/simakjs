@@ -8,7 +8,7 @@ import { ExportColumn } from '../../utils/export';
 
 function TableLoadingFallback() {
   return (
-    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 shadow-card dark:shadow-card-dark transition-colors duration-200">
+    <div class="w-full overflow-hidden rounded-2xl border border-secondary-200/80 dark:border-secondary-800 bg-white dark:bg-secondary-900 transition-colors duration-200">
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-secondary-200/80 dark:divide-secondary-800 text-left text-base">
           <tbody class="divide-y divide-secondary-200/50 dark:divide-secondary-800/60">
@@ -269,7 +269,7 @@ export default function LaporanPresensiKelas() {
             }}
             class={`py-3 px-6 border-b-2 transition-colors duration-150 flex items-center gap-2 ${
               activeTab() === 'kelas'
-                ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                ? 'border-action text-action dark:text-brand-400'
                 : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:hover:text-white'
             }`}
           >
@@ -291,7 +291,7 @@ export default function LaporanPresensiKelas() {
             }}
             class={`py-3 px-6 border-b-2 transition-colors duration-150 flex items-center gap-2 ${
               activeTab() === 'mahasiswa'
-                ? 'border-brand-600 text-brand-600 dark:text-brand-400'
+                ? 'border-action text-action dark:text-brand-400'
                 : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:hover:text-white'
             }`}
           >
@@ -308,7 +308,7 @@ export default function LaporanPresensiKelas() {
         </div>
 
         {/* Filters */}
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
               Periode Semester
@@ -359,7 +359,7 @@ export default function LaporanPresensiKelas() {
 
         {/* Tab 1 Content: Rekap per Kelas */}
         <Show when={activeTab() === 'kelas'}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 Daftar Persentase Kehadiran per Kelas Kuliah
@@ -388,28 +388,28 @@ export default function LaporanPresensiKelas() {
                 <table class="w-full text-left text-table border-collapse">
                   <thead>
                     <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800 select-none">
-                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('kodeMk')}>
+                      <th class="py-3 px-4 cursor-pointer hover:text-action" onClick={() => handleSort('kodeMk')}>
                         Kode MK {sortField() === 'kodeMk' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
-                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('namaMk')}>
+                      <th class="py-3 px-4 cursor-pointer hover:text-action" onClick={() => handleSort('namaMk')}>
                         Mata Kuliah / Kelas {sortField() === 'namaMk' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
                       <th class="py-3 px-4">Program Studi</th>
                       <th class="py-3 px-4">Dosen Pengajar</th>
                       <th
-                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        class="py-3 px-4 text-center cursor-pointer hover:text-action"
                         onClick={() => handleSort('totalMahasiswa')}
                       >
                         Mhs {sortField() === 'totalMahasiswa' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
                       <th
-                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        class="py-3 px-4 text-center cursor-pointer hover:text-action"
                         onClick={() => handleSort('totalPertemuan')}
                       >
                         Sesi BAP {sortField() === 'totalPertemuan' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
                       <th
-                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        class="py-3 px-4 text-center cursor-pointer hover:text-action"
                         onClick={() => handleSort('rataPersentaseHadir')}
                       >
                         % Kehadiran Rata-rata{' '}
@@ -436,7 +436,7 @@ export default function LaporanPresensiKelas() {
                           </td>
                           <td class="py-3 px-4">
                             <div class="font-semibold text-secondary-800 dark:text-white">{row.namaMk}</div>
-                            <div class="text-caption text-brand-600 font-bold">Kelas: {row.namaKelas}</div>
+                            <div class="text-caption text-action font-bold">Kelas: {row.namaKelas}</div>
                           </td>
                           <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.prodiNama}</td>
                           <td class="py-3 px-4 text-secondary-600 dark:text-secondary-300">{row.dosenPengajar}</td>
@@ -458,7 +458,7 @@ export default function LaporanPresensiKelas() {
                           <td class="py-3 px-4 text-center">
                             <button
                               onClick={() => setDetailKelasId(row.kelasKuliahId)}
-                              class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-caption font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
+                              class="px-3 py-1 bg-action-50 hover:bg-action-100 text-action text-caption font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
                             >
                               Lihat Detail Mhs
                             </button>
@@ -508,7 +508,7 @@ export default function LaporanPresensiKelas() {
 
         {/* Tab 2 Content: Rekap per Mahasiswa */}
         <Show when={activeTab() === 'mahasiswa'}>
-          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl shadow-sm overflow-hidden">
+          <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-3 border-b border-secondary-100 dark:border-secondary-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white">
                 Daftar Persentase Kehadiran per Mahasiswa
@@ -537,21 +537,21 @@ export default function LaporanPresensiKelas() {
                 <table class="w-full text-left text-table border-collapse">
                   <thead>
                     <tr class="border-b border-secondary-100 text-secondary-400 dark:text-secondary-200 uppercase text-fine font-semibold bg-secondary-50/50 dark:bg-secondary-800 select-none">
-                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('nim')}>
+                      <th class="py-3 px-4 cursor-pointer hover:text-action" onClick={() => handleSort('nim')}>
                         NIM {sortField() === 'nim' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
-                      <th class="py-3 px-4 cursor-pointer hover:text-brand-600" onClick={() => handleSort('nama')}>
+                      <th class="py-3 px-4 cursor-pointer hover:text-action" onClick={() => handleSort('nama')}>
                         Mahasiswa {sortField() === 'nama' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
                       <th class="py-3 px-4">Program Studi</th>
                       <th
-                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        class="py-3 px-4 text-center cursor-pointer hover:text-action"
                         onClick={() => handleSort('totalKelas')}
                       >
                         Total Kelas {sortField() === 'totalKelas' ? (sortOrder() === 'asc' ? '↑' : '↓') : ''}
                       </th>
                       <th
-                        class="py-3 px-4 text-center cursor-pointer hover:text-brand-600"
+                        class="py-3 px-4 text-center cursor-pointer hover:text-action"
                         onClick={() => handleSort('rataPersentaseHadir')}
                       >
                         % Kehadiran Rata-rata{' '}
@@ -595,7 +595,7 @@ export default function LaporanPresensiKelas() {
                           <td class="py-3 px-4 text-center">
                             <button
                               onClick={() => setDetailMahasiswaId(row.mahasiswaId)}
-                              class="px-3 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 text-caption font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
+                              class="px-3 py-1 bg-action-50 hover:bg-action-100 text-action text-caption font-bold rounded-lg dark:bg-brand-900/40 dark:text-brand-300 transition-colors"
                             >
                               Lihat Detail Kelas
                             </button>
@@ -646,7 +646,7 @@ export default function LaporanPresensiKelas() {
         {/* Modal Detail Presensi per Kelas */}
         <Show when={detailKelasId()}>
           <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary-900/60 backdrop-blur-sm">
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
               <div class="px-6 py-4 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center bg-secondary-50/50 dark:bg-secondary-800/50">
                 <div>
                   <h3 class="text-base font-bold text-secondary-800 dark:text-white">Detail Kehadiran Mahasiswa</h3>
@@ -662,65 +662,65 @@ export default function LaporanPresensiKelas() {
                         const printWin = window.open('', '_blank');
                         if (!printWin) return;
                         const html = `
-                          <!DOCTYPE html>
-                          <html>
-                          <head>
-                            <title>Rekap Presensi Kelas - ${data.kelas?.mataKuliah?.nama || ''}</title>
-                            <style>
-                              body { font-family: sans-serif; padding: 20px; color: #333; }
-                              h2 { text-align: center; margin-bottom: 5px; }
-                              p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
-                              table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-                              th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
-                              th { background-color: #f4f4f4; text-align: center; }
-                              .center { text-align: center; }
-                            </style>
-                          </head>
-                          <body>
-                            <h2>REKAPITULASI PRESENSI KELAS</h2>
-                            <p><strong>${data.kelas?.mataKuliah?.nama || ''}</strong> (${data.kelas?.namaKelas || ''})<br>Total Pertemuan: ${data.totalPertemuan} | Total Peserta: ${data.mahasiswa.length}</p>
-                            <table>
-                              <thead>
-                                <tr>
-                                  <th width="4%">No</th>
-                                  <th width="15%">NIM</th>
-                                  <th>Nama Mahasiswa</th>
-                                  <th width="8%">Hadir</th>
-                                  <th width="8%">Sakit</th>
-                                  <th width="8%">Izin</th>
-                                  <th width="8%">Alpa</th>
-                                  <th width="8%">Telat</th>
-                                  <th width="10%">% Hadir</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                ${(data.mahasiswa || [])
-                                  .map(
-                                    (m, idx) => `
-                                  <tr>
-                                    <td class="center">${idx + 1}</td>
-                                    <td class="center">${m.nim}</td>
-                                    <td>${m.nama}</td>
-                                    <td class="center">${m.hadir}</td>
-                                    <td class="center">${m.sakit}</td>
-                                    <td class="center">${m.izin}</td>
-                                    <td class="center">${m.alpa}</td>
-                                    <td class="center">${m.telat}</td>
-                                    <td class="center"><strong>${m.persentaseHadir}%</strong></td>
-                                  </tr>
-                                `,
-                                  )
-                                  .join('')}
-                              </tbody>
-                            </table>
-                            <script>window.onload = () => { window.print(); };</script>
-                          </body>
-                          </html>
-                        `;
+ <!DOCTYPE html>
+ <html>
+ <head>
+ <title>Rekap Presensi Kelas - ${data.kelas?.mataKuliah?.nama || ''}</title>
+ <style>
+ body { font-family: sans-serif; padding: 20px; color: #333; }
+ h2 { text-align: center; margin-bottom: 5px; }
+ p { text-align: center; margin-top: 0; font-size: 13px; color: #555; }
+ table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+ th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+ th { background-color: #f4f4f4; text-align: center; }
+ .center { text-align: center; }
+ </style>
+ </head>
+ <body>
+ <h2>REKAPITULASI PRESENSI KELAS</h2>
+ <p><strong>${data.kelas?.mataKuliah?.nama || ''}</strong> (${data.kelas?.namaKelas || ''})<br>Total Pertemuan: ${data.totalPertemuan} | Total Peserta: ${data.mahasiswa.length}</p>
+ <table>
+ <thead>
+ <tr>
+ <th width="4%">No</th>
+ <th width="15%">NIM</th>
+ <th>Nama Mahasiswa</th>
+ <th width="8%">Hadir</th>
+ <th width="8%">Sakit</th>
+ <th width="8%">Izin</th>
+ <th width="8%">Alpa</th>
+ <th width="8%">Telat</th>
+ <th width="10%">% Hadir</th>
+ </tr>
+ </thead>
+ <tbody>
+ ${(data.mahasiswa || [])
+   .map(
+     (m, idx) => `
+ <tr>
+ <td class="center">${idx + 1}</td>
+ <td class="center">${m.nim}</td>
+ <td>${m.nama}</td>
+ <td class="center">${m.hadir}</td>
+ <td class="center">${m.sakit}</td>
+ <td class="center">${m.izin}</td>
+ <td class="center">${m.alpa}</td>
+ <td class="center">${m.telat}</td>
+ <td class="center"><strong>${m.persentaseHadir}%</strong></td>
+ </tr>
+ `,
+   )
+   .join('')}
+ </tbody>
+ </table>
+ <script>window.onload = () => { window.print(); };</script>
+ </body>
+ </html>
+ `;
                         printWin.document.write(html);
                         printWin.document.close();
                       }}
-                      class="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white text-caption font-bold rounded-lg shadow-sm"
+                      class="px-3 py-1 bg-action hover:bg-action-dark text-white text-caption font-bold rounded-lg"
                     >
                       🖨️ Cetak Presensi Kelas
                     </button>
@@ -781,7 +781,7 @@ export default function LaporanPresensiKelas() {
                                     <td class="py-2 px-3 text-center">{m.izin}</td>
                                     <td class="py-2 px-3 text-center font-bold text-rose-600">{m.alpa}</td>
                                     <td class="py-2 px-3 text-center">{m.telat}</td>
-                                    <td class="py-2 px-3 text-center font-bold text-brand-600">{m.persentaseHadir}%</td>
+                                    <td class="py-2 px-3 text-center font-bold text-action">{m.persentaseHadir}%</td>
                                   </tr>
                                 )}
                               </For>
@@ -809,7 +809,7 @@ export default function LaporanPresensiKelas() {
         {/* Modal Detail Presensi per Mahasiswa */}
         <Show when={detailMahasiswaId()}>
           <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary-900/60 backdrop-blur-sm">
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-200 dark:border-secondary-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
               <div class="px-6 py-4 border-b border-secondary-100 dark:border-secondary-800 flex justify-between items-center bg-secondary-50/50 dark:bg-secondary-800/50">
                 <div>
                   <h3 class="text-base font-bold text-secondary-800 dark:text-white">
@@ -843,7 +843,7 @@ export default function LaporanPresensiKelas() {
                           </div>
                           <div>
                             <span class="text-secondary-400 dark:text-secondary-300">Rata-rata % Kehadiran:</span>{' '}
-                            <strong class="text-brand-600 font-bold">{data.summary.rataPersentaseHadir}%</strong>
+                            <strong class="text-action font-bold">{data.summary.rataPersentaseHadir}%</strong>
                           </div>
                         </div>
 
@@ -870,7 +870,7 @@ export default function LaporanPresensiKelas() {
                                         {k.kodeMk ? `${k.kodeMk} - ` : ''}
                                         {k.namaMk || '-'}
                                       </div>
-                                      <div class="text-caption text-brand-600 dark:text-brand-400 font-bold">
+                                      <div class="text-caption text-action dark:text-brand-400 font-bold">
                                         Kelas: {k.namaKelas || '-'}
                                       </div>
                                     </td>
@@ -880,7 +880,7 @@ export default function LaporanPresensiKelas() {
                                     <td class="py-2 px-3 text-center">{k.izin}</td>
                                     <td class="py-2 px-3 text-center font-bold text-rose-600">{k.alpa}</td>
                                     <td class="py-2 px-3 text-center">{k.telat}</td>
-                                    <td class="py-2 px-3 text-center font-bold text-brand-600">{k.persentaseHadir}%</td>
+                                    <td class="py-2 px-3 text-center font-bold text-action">{k.persentaseHadir}%</td>
                                   </tr>
                                 )}
                               </For>

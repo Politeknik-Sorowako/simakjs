@@ -32,7 +32,7 @@ export default function ReloadPrompt() {
       <div
         role="alert"
         aria-live="polite"
-        class="fixed bottom-4 right-4 z-50 flex max-w-md items-center gap-3 rounded-lg border border-sky-200 bg-white p-4 shadow-xl dark:border-sky-800 dark:bg-slate-800"
+        class="fixed bottom-4 right-4 z-50 flex max-w-md items-center gap-3 rounded-lg border border-sky-200 bg-white p-4 dark:border-sky-800 dark:bg-slate-800"
       >
         <div class="flex-1 text-sm text-slate-700 dark:text-slate-200">
           <Show when={needRefresh()} fallback={<span>Aplikasi SIMAK Vokasi siap digunakan dalam mode offline.</span>}>

@@ -336,7 +336,7 @@ export default function Dosen() {
           </div>
           <div class="w-56">
             <select
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-brand-500 focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-sm text-secondary-900 focus:border-action focus:outline-none dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={filterProdi() ?? ''}
               onChange={(e) => handleProdiChange(e.currentTarget.value)}
             >
@@ -357,7 +357,7 @@ export default function Dosen() {
                 type="checkbox"
                 checked={isAllSelected()}
                 onChange={toggleSelectAll}
-                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+                class="rounded border-secondary-300 text-action focus:ring-action-focus dark:border-secondary-700"
               />,
               <SortableHeader field="nip" sortBy={sortBy()} sortOrder={sortOrder()} onSort={toggleSort}>
                 NIP
@@ -387,7 +387,7 @@ export default function Dosen() {
                       type="checkbox"
                       checked={selectedIds().includes(item.id)}
                       onChange={() => toggleSelect(item.id)}
-                      class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:border-secondary-700"
+                      class="rounded border-secondary-300 text-action focus:ring-action-focus dark:border-secondary-700"
                     />
                   </td>
                   <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">

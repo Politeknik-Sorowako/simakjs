@@ -68,7 +68,7 @@ export function ExportButtonGroup(props: ExportButtonProps) {
         type="button"
         disabled={exporting()}
         onClick={() => setOpen(!open())}
-        class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 shadow-sm transition-all focus:outline-none active:scale-95 disabled:opacity-50"
+        class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-700 dark:text-secondary-200 hover:bg-secondary-50 dark:hover:bg-secondary-700 transition-all focus:outline-none active:scale-95 disabled:opacity-50"
       >
         <span class="text-sm">{exporting() ? '⏳' : '📤'}</span>
         <span>{exporting() ? 'Mengunduh...' : 'Ekspor'}</span>

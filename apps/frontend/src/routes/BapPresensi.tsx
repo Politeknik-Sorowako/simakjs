@@ -1016,54 +1016,54 @@ export default function BapPresensi() {
     const rowsHtml = rows
       .map(
         (bap, i) => `
-        <tr>
-          <td class="border px-3 py-2 text-center">${i + 1}</td>
-          <td class="border px-3 py-2 text-center">${bap.pertemuanKe}</td>
-          <td class="border px-3 py-2 text-center">${bap.tanggal}</td>
-          <td class="border px-3 py-2">${bap.materi}</td>
-          <td class="border px-3 py-2 text-center">${bap.durasiMenit} mnt</td>
-          <td class="border px-3 py-2"></td>
-        </tr>`,
+ <tr>
+ <td class="border px-3 py-2 text-center">${i + 1}</td>
+ <td class="border px-3 py-2 text-center">${bap.pertemuanKe}</td>
+ <td class="border px-3 py-2 text-center">${bap.tanggal}</td>
+ <td class="border px-3 py-2">${bap.materi}</td>
+ <td class="border px-3 py-2 text-center">${bap.durasiMenit} mnt</td>
+ <td class="border px-3 py-2"></td>
+ </tr>`,
       )
       .join('');
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>BAP</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
-    h2 { text-align: center; margin: 0 0 8px; font-size: 18px; }
-    .sub { text-align: center; font-size: 14px; margin: 2px 0; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
-    th, td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
-    th { background: #eee; }
-    .sign-area { text-align: right; margin-top: 48px; }
-    .sign-box { display: inline-block; margin-right: 32px; text-align: center; }
-  </style>
+ <meta charset="utf-8" />
+ <title>BAP</title>
+ <style>
+ body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
+ h2 { text-align: center; margin: 0 0 8px; font-size: 18px; }
+ .sub { text-align: center; font-size: 14px; margin: 2px 0; }
+ table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
+ th, td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
+ th { background: #eee; }
+ .sign-area { text-align: right; margin-top: 48px; }
+ .sign-box { display: inline-block; margin-right: 32px; text-align: center; }
+ </style>
 </head>
 <body>
-  <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
-  <p class="sub">${title} · Kelas ${kelasLabel}</p>
-  <p class="sub">Dosen Pengampu: ${dosenNama}</p>
-  <table>
-    <thead>
-      <tr>
-        <th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHtml}</tbody>
-  </table>
-  <div class="sign-area">
-    <div class="sign-box">
-      <p style="margin-bottom:56px">(_______________)</p>
-      <p>${dosenNama}</p>
-    </div>
-  </div>
-  <script>
-    window.onload = function() { window.print(); };
-  <\/script>
+ <h2>BERITA ACARA PERKULIAHAN (BAP)</h2>
+ <p class="sub">${title} · Kelas ${kelasLabel}</p>
+ <p class="sub">Dosen Pengampu: ${dosenNama}</p>
+ <table>
+ <thead>
+ <tr>
+ <th>No</th><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th>
+ </tr>
+ </thead>
+ <tbody>${rowsHtml}</tbody>
+ </table>
+ <div class="sign-area">
+ <div class="sign-box">
+ <p style="margin-bottom:56px">(_______________)</p>
+ <p>${dosenNama}</p>
+ </div>
+ </div>
+ <script>
+ window.onload = function() { window.print(); };
+ <\/script>
 </body>
 </html>`;
 
@@ -1086,55 +1086,55 @@ export default function BapPresensi() {
     const rowsHtml = rows
       .map(
         (bap, i) => `
-        <tr>
-          <td class="border px-3 py-2 text-center">${i + 1}</td>
-          <td class="border px-3 py-2 text-center">${bap.sesiKe}</td>
-          <td class="border px-3 py-2 text-center">${bap.tanggal}</td>
-          <td class="border px-3 py-2">${bap.tema || '-'}</td>
-          <td class="border px-3 py-2">${bap.materi}</td>
-          <td class="border px-3 py-2 text-center">${bap.durasiMenit} mnt</td>
-          <td class="border px-3 py-2"></td>
-        </tr>`,
+ <tr>
+ <td class="border px-3 py-2 text-center">${i + 1}</td>
+ <td class="border px-3 py-2 text-center">${bap.sesiKe}</td>
+ <td class="border px-3 py-2 text-center">${bap.tanggal}</td>
+ <td class="border px-3 py-2">${bap.tema || '-'}</td>
+ <td class="border px-3 py-2">${bap.materi}</td>
+ <td class="border px-3 py-2 text-center">${bap.durasiMenit} mnt</td>
+ <td class="border px-3 py-2"></td>
+ </tr>`,
       )
       .join('');
 
     const html = `<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>BAP Praktikum</title>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
-    h2 { text-align: center; margin: 0 0 8px; font-size: 18px; }
-    .sub { text-align: center; font-size: 14px; margin: 2px 0; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
-    th, td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
-    th { background: #eee; }
-    .sign-area { text-align: right; margin-top: 48px; }
-    .sign-box { display: inline-block; margin-right: 32px; text-align: center; }
-  </style>
+ <meta charset="utf-8" />
+ <title>BAP Praktikum</title>
+ <style>
+ body { font-family: Arial, Helvetica, sans-serif; color: #000; margin: 24px; }
+ h2 { text-align: center; margin: 0 0 8px; font-size: 18px; }
+ .sub { text-align: center; font-size: 14px; margin: 2px 0; }
+ table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
+ th, td { border: 1px solid #000; padding: 8px 12px; text-align: left; }
+ th { background: #eee; }
+ .sign-area { text-align: right; margin-top: 48px; }
+ .sign-box { display: inline-block; margin-right: 32px; text-align: center; }
+ </style>
 </head>
 <body>
-  <h2>BERITA ACARA PRAKTIKUM (BAP)</h2>
-  <p class="sub">Kelas Praktikum (Rombel): ${rombelLabel}</p>
-  <p class="sub">Instruktur: ${instrukturNama}</p>
-  <table>
-    <thead>
-      <tr>
-        <th>No</th><th>Sesi</th><th>Tanggal</th><th>Tema</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th>
-      </tr>
-    </thead>
-    <tbody>${rowsHtml}</tbody>
-  </table>
-  <div class="sign-area">
-    <div class="sign-box">
-      <p style="margin-bottom:56px">(_______________)</p>
-      <p>${instrukturNama}</p>
-    </div>
-  </div>
-  <script>
-    window.onload = function() { window.print(); };
-  <\/script>
+ <h2>BERITA ACARA PRAKTIKUM (BAP)</h2>
+ <p class="sub">Kelas Praktikum (Rombel): ${rombelLabel}</p>
+ <p class="sub">Instruktur: ${instrukturNama}</p>
+ <table>
+ <thead>
+ <tr>
+ <th>No</th><th>Sesi</th><th>Tanggal</th><th>Tema</th><th>Materi</th><th>Durasi</th><th>Tanda Tangan</th>
+ </tr>
+ </thead>
+ <tbody>${rowsHtml}</tbody>
+ </table>
+ <div class="sign-area">
+ <div class="sign-box">
+ <p style="margin-bottom:56px">(_______________)</p>
+ <p>${instrukturNama}</p>
+ </div>
+ </div>
+ <script>
+ window.onload = function() { window.print(); };
+ <\/script>
 </body>
 </html>`;
 
@@ -1162,7 +1162,7 @@ export default function BapPresensi() {
             <div class="flex items-center gap-2">
               <A
                 href={`/input-nilai?kelas=${selectedKelasId()}`}
-                class="inline-flex items-center px-4 py-2 text-base font-semibold rounded-full border border-brand-600 text-brand-700 hover:bg-brand-50 active:scale-95 transition-all dark:text-brand-300 dark:border-brand-700 dark:hover:bg-brand-900/30"
+                class="inline-flex items-center px-4 py-2 text-base font-semibold rounded-full border border-action text-action hover:bg-action-50 active:scale-95 transition-all dark:text-brand-300 dark:border-brand-700 dark:hover:bg-brand-900/30"
               >
                 Input Nilai Kelas
               </A>
@@ -1180,7 +1180,7 @@ export default function BapPresensi() {
             onClick={() => setMainTab('teori')}
             class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
               mainTab() === 'teori'
-                ? 'bg-brand-600 text-white shadow-sm'
+                ? 'bg-action text-white'
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
@@ -1191,7 +1191,7 @@ export default function BapPresensi() {
             onClick={() => setMainTab('praktikum')}
             class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
               mainTab() === 'praktikum'
-                ? 'bg-brand-600 text-white shadow-sm'
+                ? 'bg-action text-white'
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
@@ -1202,7 +1202,7 @@ export default function BapPresensi() {
             onClick={() => setMainTab('monitoring')}
             class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
               mainTab() === 'monitoring'
-                ? 'bg-brand-600 text-white shadow-sm'
+                ? 'bg-action text-white'
                 : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
             }`}
           >
@@ -1212,7 +1212,7 @@ export default function BapPresensi() {
 
         <Show when={mainTab() === 'teori'}>
           {/* Selection bar */}
-          <div class="bg-white border border-secondary-100 p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+          <div class="bg-white border border-secondary-100 p-6 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
             <div>
               <SearchableSelect
                 label="Pilih Kelas Kuliah"
@@ -1255,7 +1255,7 @@ export default function BapPresensi() {
           <Show when={selectedKelasId() && selectedBapId()}>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left BAP Summary */}
-              <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm flex flex-col gap-4 lg:col-span-1 h-fit dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="bg-white border border-secondary-100 rounded-2xl p-6 flex flex-col gap-4 lg:col-span-1 h-fit dark:bg-secondary-900 dark:border-secondary-800">
                 <div class="flex justify-between items-center border-b pb-2">
                   <h3 class="font-bold text-secondary-800 dark:text-white">Detail Berita Acara (BAP)</h3>
                   <div class="flex items-center gap-2">
@@ -1288,7 +1288,7 @@ export default function BapPresensi() {
                   <span class="text-caption font-semibold text-secondary-400 uppercase dark:text-secondary-200">
                     Materi Pokok (CPMK)
                   </span>
-                  <span class="text-base font-semibold text-brand-600">
+                  <span class="text-base font-semibold text-action">
                     {(() => {
                       const activeBapObj = bapData()?.find((b) => b.id === selectedBapId());
                       const cpmkObj = cpmkData()?.find((c) => c.id === activeBapObj?.cpmkId);
@@ -1336,7 +1336,7 @@ export default function BapPresensi() {
               </div>
 
               {/* Right Attendance Table */}
-              <div class="bg-white border border-secondary-100 rounded-2xl p-6 shadow-sm lg:col-span-2 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="bg-white border border-secondary-100 rounded-2xl p-6 lg:col-span-2 flex flex-col gap-4 dark:bg-secondary-900 dark:border-secondary-800">
                 <div class="flex items-center justify-between border-b pb-4">
                   <h3 class="font-bold text-secondary-800 dark:text-white">Presensi Kehadiran Mahasiswa</h3>
                   <Button onClick={handleSaveAttendance} variant="success">
@@ -1395,12 +1395,12 @@ export default function BapPresensi() {
                                             } ${
                                               state().status === st
                                                 ? st === 'hadir'
-                                                  ? 'bg-accent-50 text-accent-700 border-accent-200'
+                                                  ? 'bg-action-50 text-action border-action-200'
                                                   : st === 'alpa'
                                                     ? 'bg-red-50 text-red-700 border-red-200'
                                                     : st === 'unknown'
                                                       ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300'
-                                                      : 'bg-accent-50 text-accent-700 border-accent-200'
+                                                      : 'bg-action-50 text-action border-action-200'
                                                 : 'bg-transparent text-secondary-400 dark:text-secondary-300 border-secondary-200 hover:bg-secondary-100'
                                             }`}
                                             title={statusFullLabel(st)}
@@ -1476,7 +1476,7 @@ export default function BapPresensi() {
 
         <Show when={mainTab() === 'praktikum'}>
           <div class="flex flex-col gap-6">
-            <div class="bg-white border border-secondary-100 p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
+            <div class="bg-white border border-secondary-100 p-6 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4 dark:bg-secondary-900 dark:border-secondary-800">
               <div>
                 <SearchableSelect
                   label="Pilih Kelas Kuliah"
@@ -1524,7 +1524,7 @@ export default function BapPresensi() {
             </div>
 
             <Show when={selectedRombelId()}>
-              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-6 rounded-2xl shadow-sm flex flex-col gap-4">
+              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-6 rounded-2xl flex flex-col gap-4">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div>
                     <h3 class="font-bold text-secondary-800 dark:text-white">BAP & Sinkronisasi Rombel Praktikum</h3>
@@ -1550,7 +1550,7 @@ export default function BapPresensi() {
                     </Show>
                     <A
                       href={`/input-nilai?kelas=${selectedKelasId()}&rombel=${selectedRombelId()}`}
-                      class="inline-flex items-center px-4 py-2 text-base font-semibold rounded-full border border-brand-600 text-brand-700 hover:bg-brand-50 active:scale-95 transition-all dark:text-brand-300 dark:border-brand-700 dark:hover:bg-brand-900/30"
+                      class="inline-flex items-center px-4 py-2 text-base font-semibold rounded-full border border-action text-action hover:bg-action-50 active:scale-95 transition-all dark:text-brand-300 dark:border-brand-700 dark:hover:bg-brand-900/30"
                     >
                       Input Nilai Rombel
                     </A>
@@ -1596,13 +1596,13 @@ export default function BapPresensi() {
                       <For each={bapPraktikumData() || []}>
                         {(bap) => (
                           <tr class="border-b border-secondary-50 dark:border-secondary-800/60 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/40">
-                            <td class="py-3 px-4 font-bold text-brand-600">Sesi {bap.sesiKe}</td>
+                            <td class="py-3 px-4 font-bold text-action">Sesi {bap.sesiKe}</td>
                             <td class="py-3 px-4 text-secondary-700 dark:text-secondary-200">{bap.tanggal}</td>
                             <td class="py-3 px-4 text-secondary-800 dark:text-white">
                               <Show when={bap.tema} fallback={bap.materi}>
                                 {(t) => (
                                   <div>
-                                    <span class="font-semibold text-brand-600">{t()}</span>
+                                    <span class="font-semibold text-action">{t()}</span>
                                     <div class="text-caption text-secondary-500 dark:text-secondary-300">
                                       {bap.materi}
                                     </div>
@@ -1684,7 +1684,7 @@ export default function BapPresensi() {
           <div class="flex flex-col gap-6">
             {/* Stats Cards */}
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
+              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl flex flex-col gap-1">
                 <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Total Kelas Perkuliahan
                 </span>
@@ -1692,11 +1692,11 @@ export default function BapPresensi() {
                   {(monitoringData() || []).length}
                 </span>
               </div>
-              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
+              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl flex flex-col gap-1">
                 <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Rata-Rata Progres RPS
                 </span>
-                <span class="text-2xl font-bold text-brand-600">
+                <span class="text-2xl font-bold text-action">
                   {(() => {
                     const list = monitoringData() || [];
                     if (list.length === 0) return '0%';
@@ -1705,7 +1705,7 @@ export default function BapPresensi() {
                   })()}
                 </span>
               </div>
-              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
+              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl flex flex-col gap-1">
                 <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Kelas Sesuai Target (&gt;=80%)
                 </span>
@@ -1713,7 +1713,7 @@ export default function BapPresensi() {
                   {(monitoringData() || []).filter((m) => m.persentaseCapaian >= 80).length}
                 </span>
               </div>
-              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl shadow-sm flex flex-col gap-1">
+              <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-5 rounded-2xl flex flex-col gap-1">
                 <span class="text-caption font-semibold uppercase text-secondary-400 dark:text-secondary-200">
                   Kelas Belum Sesuai (&lt;80%)
                 </span>
@@ -1724,7 +1724,7 @@ export default function BapPresensi() {
             </div>
 
             {/* Search Filter & Table */}
-            <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-6 rounded-2xl shadow-sm flex flex-col gap-4">
+            <div class="bg-white border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800 p-6 rounded-2xl flex flex-col gap-4">
               <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <h2 class="text-lg font-bold text-secondary-800 dark:text-white">
                   Rekapitulasi Kesesuaian RPS vs Realisasi BAP
@@ -1757,7 +1757,7 @@ export default function BapPresensi() {
                     placeholder="Cari Mata Kuliah / Dosen..."
                     value={searchMonitoring()}
                     onInput={(e) => setSearchMonitoring(e.currentTarget.value)}
-                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 text-secondary-800 dark:text-white"
+                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-action-focus text-secondary-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -1801,7 +1801,7 @@ export default function BapPresensi() {
                             {item.prodiNama}
                           </td>
                           <td class="py-3 px-4 font-medium text-secondary-700 dark:text-white">{item.dosenPengajar}</td>
-                          <td class="py-3 px-4 font-bold text-brand-600 dark:text-brand-400">
+                          <td class="py-3 px-4 font-bold text-action dark:text-brand-400">
                             {item.topikDiajarkanCount} / {item.totalTopikRps} Topik
                           </td>
                           <td class="py-3 px-4">
@@ -1858,7 +1858,7 @@ export default function BapPresensi() {
           title={`Matrix Kesesuaian RPS - ${detailMatrixData()?.mataKuliahNama || ''} (${detailMatrixData()?.namaKelas || ''})`}
         >
           <div class="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-1">
-            <div class="bg-brand-50/50 p-4 rounded-xl border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 grid grid-cols-2 gap-2 text-caption">
+            <div class="bg-action-50/50 p-4 rounded-xl border border-brand-200/50 dark:bg-action/20 dark:border-brand-800/40 grid grid-cols-2 gap-2 text-caption">
               <div>
                 <span class="font-bold">Mata Kuliah:</span> [{detailMatrixData()?.mataKuliahKode}]{' '}
                 {detailMatrixData()?.mataKuliahNama}
@@ -1888,7 +1888,7 @@ export default function BapPresensi() {
                   <For each={detailMatrixData()?.matrix || []}>
                     {(row) => (
                       <tr class="border-b border-secondary-100 dark:border-secondary-800/50 hover:bg-secondary-50 dark:hover:bg-secondary-800/50">
-                        <td class="py-2.5 px-3 font-bold text-brand-600">P{row.pertemuanRps}</td>
+                        <td class="py-2.5 px-3 font-bold text-action">P{row.pertemuanRps}</td>
                         <td class="py-2.5 px-3 font-medium text-secondary-800 dark:text-white">
                           {row.topik} {row.subTopik ? `(${stripMarkdown(row.subTopik)})` : ''}
                         </td>
@@ -1973,7 +1973,7 @@ export default function BapPresensi() {
                         href={`/rps?mataKuliahId=${kelas().mataKuliahId}&periodeId=${kelas().periodeId}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        class="inline-flex items-center gap-1 font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
+                        class="inline-flex items-center gap-1 font-semibold text-action hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
                       >
                         Buat RPS Baru →
                       </a>
@@ -1994,7 +1994,7 @@ export default function BapPresensi() {
                       href={`/rps?mataKuliahId=${kelas().mataKuliahId}&periodeId=${kelas().periodeId}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 text-caption font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
+                      class="inline-flex items-center gap-1 text-caption font-semibold text-action hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 transition-colors shrink-0"
                     >
                       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
@@ -2035,7 +2035,7 @@ export default function BapPresensi() {
                               setSelectedCpmkId(selectedTopics[0].cpmkId);
                             }
                           }}
-                          class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                          class="rounded text-action focus:ring-action-focus w-4 h-4"
                         />
                         <span class="font-bold text-brand-700 dark:text-brand-400">P{topic.pertemuanKe}:</span>
                         <span class="text-secondary-700 dark:text-white font-medium">{topic.topik}</span>
@@ -2053,7 +2053,7 @@ export default function BapPresensi() {
           </Show>
 
           <Show when={materi()}>
-            <div class="rounded-xl bg-brand-50/50 p-3 border border-brand-200/50 dark:bg-brand-900/20 dark:border-brand-800/40 text-caption">
+            <div class="rounded-xl bg-action-50/50 p-3 border border-brand-200/50 dark:bg-action/20 dark:border-brand-800/40 text-caption">
               <span class="font-bold text-brand-700 dark:text-brand-300">Target CPMK (Otomatis dari RPS): </span>
               <span class="text-secondary-700 dark:text-secondary-200">
                 {(() => {
@@ -2070,7 +2070,7 @@ export default function BapPresensi() {
               Catatan Pertemuan (Opsional)
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
               rows="3"
               placeholder="Tambahkan catatan khusus mengenai pertemuan perkuliahan ini..."
               value={catatan()}
@@ -2117,7 +2117,7 @@ export default function BapPresensi() {
           <div class="flex flex-col gap-1">
             <label class="text-base font-semibold text-secondary-600 dark:text-secondary-200">Deskripsi CPMK</label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Jelaskan capaian mata kuliah ini..."
               value={newCpmkDeskripsi()}
@@ -2154,7 +2154,7 @@ export default function BapPresensi() {
               Keterangan (opsional)
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Catatan opsional mengenai kelompok praktikum ini..."
               value={keteranganRombel()}
@@ -2241,7 +2241,7 @@ export default function BapPresensi() {
                 onClick={() => setAssignTab('krs')}
                 class={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors ${
                   assignTab() === 'krs'
-                    ? 'bg-brand-600 text-white shadow-sm'
+                    ? 'bg-action text-white'
                     : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
                 }`}
               >
@@ -2252,14 +2252,14 @@ export default function BapPresensi() {
                 onClick={() => setAssignTab('all')}
                 class={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors ${
                   assignTab() === 'all'
-                    ? 'bg-brand-600 text-white shadow-sm'
+                    ? 'bg-action text-white'
                     : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
                 }`}
               >
                 Lintas Kelas (Semua Mhs)
               </button>
             </div>
-            <div class="text-caption font-bold text-brand-600 dark:text-brand-400 px-2">
+            <div class="text-caption font-bold text-action dark:text-brand-400 px-2">
               {assignedMhsSet().size} Mahasiswa Terpilih
             </div>
           </div>
@@ -2314,7 +2314,7 @@ export default function BapPresensi() {
                 return (
                   <label
                     class={`flex items-center justify-between p-3 cursor-pointer text-caption transition-colors hover:bg-secondary-50 dark:hover:bg-secondary-800/60 ${
-                      checked ? 'bg-brand-50/50 dark:bg-brand-900/10' : ''
+                      checked ? 'bg-action-50/50 dark:bg-brand-900/10' : ''
                     }`}
                   >
                     <div class="flex items-center gap-3">
@@ -2322,7 +2322,7 @@ export default function BapPresensi() {
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleAssignMhs(m.id)}
-                        class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:bg-secondary-900 dark:border-secondary-700"
+                        class="rounded border-secondary-300 text-action focus:ring-action-focus dark:bg-secondary-900 dark:border-secondary-700"
                       />
                       <div>
                         <div class="font-semibold text-secondary-800 dark:text-secondary-100">{m.nama}</div>
@@ -2373,7 +2373,7 @@ export default function BapPresensi() {
                   <select
                     value={selectedSesiIdsPrak()[0] || 1}
                     onChange={(e) => setSelectedSesiIdsPrak([Number(e.currentTarget.value)])}
-                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-3 py-2 text-base text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full bg-secondary-50 border border-secondary-200 dark:bg-secondary-800 dark:border-secondary-700 rounded-xl px-3 py-2 text-base text-secondary-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                   >
                     <For each={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]}>
                       {(p) => <option value={p}>Sesi {p}</option>}
@@ -2399,7 +2399,7 @@ export default function BapPresensi() {
                               }
                               setSelectedSesiIdsPrak(nextIds);
                             }}
-                            class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                            class="rounded text-action focus:ring-action-focus w-4 h-4"
                           />
                           <span class="font-bold text-brand-700 dark:text-brand-400">{p}</span>
                         </label>
@@ -2445,10 +2445,10 @@ export default function BapPresensi() {
                           type="checkbox"
                           checked={isChecked()}
                           onChange={toggleTopic}
-                          class="mt-0.5 rounded border-secondary-300 text-brand-600 focus:ring-brand-500 dark:bg-secondary-900 dark:border-secondary-700"
+                          class="mt-0.5 rounded border-secondary-300 text-action focus:ring-action-focus dark:bg-secondary-900 dark:border-secondary-700"
                         />
                         <div class="flex-1">
-                          <span class="font-bold text-brand-600 dark:text-brand-400 mr-1.5">P{topic.pertemuanKe}</span>
+                          <span class="font-bold text-action dark:text-brand-400 mr-1.5">P{topic.pertemuanKe}</span>
                           <span class="font-medium text-secondary-800 dark:text-secondary-100">{topic.topik}</span>
                           {topic.subTopik && (
                             <span class="text-secondary-500 dark:text-secondary-400 block text-fine">
@@ -2511,7 +2511,7 @@ export default function BapPresensi() {
               Catatan Sesi (opsional)
             </label>
             <textarea
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700"
               rows="3"
               placeholder="Catatan hasil pelaksanaan praktikum..."
               value={catatanPrak()}
@@ -2566,7 +2566,7 @@ export default function BapPresensi() {
                     <div class="flex flex-col items-end gap-1.5">
                       <div class="flex items-center gap-2">
                         <select
-                          class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          class="bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-action-focus disabled:opacity-60 disabled:cursor-not-allowed"
                           value={sheet().status}
                           disabled={Boolean(sheet().verifiedAt) && !auth.hasRole(['admin', 'super_admin', 'prodi'])}
                           onChange={(e) => {
@@ -2597,7 +2597,7 @@ export default function BapPresensi() {
                         <input
                           type="number"
                           min={0}
-                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                          class="w-16 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-action-focus disabled:opacity-60 disabled:cursor-not-allowed"
                           placeholder="Menit"
                           value={sheet().durasiMangkir}
                           onInput={(e) => {
@@ -2663,7 +2663,7 @@ export default function BapPresensi() {
                         min={0}
                         max={100}
                         step="0.01"
-                        class="w-24 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-brand-500 text-right font-bold text-brand-600"
+                        class="w-24 bg-secondary-50 dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg px-2.5 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-action-focus text-right font-bold text-action"
                         value={sheet().nilaiAngka}
                         onInput={(e) => {
                           const val = parseFloat(e.currentTarget.value) || 0;
@@ -2894,7 +2894,7 @@ export default function BapPresensi() {
               min={1}
               value={duplicateTargetPertemuan()}
               onInput={(e) => setDuplicateTargetPertemuan(Number(e.currentTarget.value))}
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             />
           </div>
           <div class="flex flex-col gap-1.5">
@@ -2903,7 +2903,7 @@ export default function BapPresensi() {
               type="date"
               value={duplicateTargetTanggal()}
               onInput={(e) => setDuplicateTargetTanggal(e.currentTarget.value)}
-              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
+              class="w-full bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white"
             />
           </div>
           <div class="flex justify-end gap-2">
@@ -2939,7 +2939,7 @@ export default function BapPresensi() {
               Keterangan / Alasan
             </label>
             <textarea
-              class="w-full min-h-[120px] bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-secondary-800 dark:border-secondary-700 dark:text-white resize-y"
+              class="w-full min-h-[120px] bg-secondary-50 border border-secondary-200 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:ring-2 focus:ring-action-focus dark:bg-secondary-800 dark:border-secondary-700 dark:text-white resize-y"
               placeholder="Tulis keterangan detail (misal alasan keterlambatan, kondisi khusus, dll)..."
               value={keteranganDraft()}
               onInput={(e) => setKeteranganDraft(e.currentTarget.value)}

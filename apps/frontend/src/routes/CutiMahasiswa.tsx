@@ -124,7 +124,7 @@ export default function CutiMahasiswa() {
         );
       case 'disetujui_pa':
         return (
-          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/30 dark:text-brand-400">
+          <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-action-100 text-action dark:bg-brand-900/30 dark:text-brand-400">
             Disetujui PA (Menunggu Keuangan)
           </span>
         );
@@ -223,7 +223,7 @@ export default function CutiMahasiswa() {
                       <button
                         type="button"
                         onClick={() => openLampiranModal(item.id)}
-                        class="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:text-brand-700 hover:underline"
+                        class="inline-flex items-center gap-1 mt-1 text-xs text-action hover:text-action hover:underline"
                       >
                         <span>📎 {item.lampiran?.length} Berkas</span>
                       </button>
@@ -297,7 +297,7 @@ export default function CutiMahasiswa() {
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Periode Akademik</label>
             <select
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               value={periodeId()}
               onChange={(e) => setPeriodeId(e.currentTarget.value)}
             >
@@ -316,7 +316,7 @@ export default function CutiMahasiswa() {
             <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Alasan Cuti</label>
             <textarea
               rows={4}
-              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
+              class="w-full rounded-lg border border-secondary-300 bg-white px-3 py-2 text-secondary-800 outline-none focus:border-action focus:ring-1 focus:ring-action-focus dark:border-secondary-700 dark:bg-secondary-900 dark:text-white"
               placeholder="Jelaskan alasan pengajuan cuti secara mendetail..."
               value={alasan()}
               onInput={(e) => setAlasan(e.currentTarget.value)}

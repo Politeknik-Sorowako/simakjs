@@ -138,11 +138,30 @@ module.exports = {
           900: '#0C4A6E',
           950: '#082F49',
         },
+        // ─── Action Blue — satu-satunya aksen interaktif (DESIGN.md) ───────────
+        // Token ADITIF: tidak menggantikan palet lama (primary/brand/accent),
+        // sehingga migrasi bisa bertahap dan rollback cukup dengan revert commit.
+        // Semua elemen "klik me" memakai keluarga ini; palet lain tetap untuk
+        // status (danger/success/warning/info) dan permukaan (secondary).
+        action: {
+          DEFAULT: '#0066CC', // Action Blue — warna interaktif utama
+          dark: '#0052A8', // Hover/press pada permukaan terang
+          focus: '#0071E3', // Cincin fokus keyboard
+          ondark: '#2997FF', // Varian untuk permukaan gelap
+          ondarkDark: '#1D6ED6', // Hover pada permukaan gelap
+          50: '#F2F7FD',
+          100: '#E3EEFB',
+          200: '#C7DDF7',
+        },
+        // Near-black Ink — warna suara/judul (DESIGN.md colors.ink)
+        ink: '#1D1D1F',
+        // Hairline & Divider — garis pemisah 1px (DESIGN.md colors.hairline / divider-soft)
+        hairline: '#E0E0E0',
       },
       fontFamily: {
-        sans: ['Poppins', 'Work Sans', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-        heading: ['Poppins', 'sans-serif'],
-        body: ['Work Sans', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        heading: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        body: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
       },
       fontSize: {
         display: ['2rem', { lineHeight: '1.15', letterSpacing: '-0.02em' }],
@@ -165,6 +184,9 @@ module.exports = {
       borderRadius: {
         '2xl': '1rem',
         '3xl': '1.5rem',
+        // Skala radius DESIGN.md untuk kartu utilitas & utility card.
+        'card': '18px',
+        'pearl': '11px',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',

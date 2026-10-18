@@ -21,7 +21,7 @@ export default function OfflineBanner() {
       <div
         role="status"
         id="offline-banner"
-        class="bg-amber-600 px-4 py-2 text-center text-xs font-medium text-white shadow-md transition-all dark:bg-amber-700"
+        class="bg-amber-600 px-4 py-2 text-center text-xs font-medium text-white transition-all dark:bg-amber-700"
       >
         <div class="flex items-center justify-center gap-2">
           <svg

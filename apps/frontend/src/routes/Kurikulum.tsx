@@ -151,7 +151,7 @@ export default function Kurikulum() {
     if (!targetId || !sourceKurikulumId()) return;
     if (
       !confirm(
-        `Salin semua mata kuliah dari kurikulum sumber ke "${kurikulumDetail()?.nama}"? MK yang sudah ada akan dilewati.`,
+        `Salin semua mata kuliah dari kurikulum sumber ke"${kurikulumDetail()?.nama}"? MK yang sudah ada akan dilewati.`,
       )
     )
       return;
@@ -406,7 +406,7 @@ export default function Kurikulum() {
         </div>
 
         {/* Filter and Search */}
-        <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl shadow-sm border border-secondary-100 dark:border-secondary-800">
+        <div class="flex flex-wrap gap-4 bg-white dark:bg-secondary-900 p-4 rounded-xl border border-secondary-100 dark:border-secondary-800">
           <div class="flex-1 min-w-[250px]">
             <Input
               type="text"
@@ -557,7 +557,7 @@ export default function Kurikulum() {
             <div class="flex flex-col gap-1">
               <label class="text-sm font-semibold text-secondary-700 dark:text-secondary-200">Program Studi</label>
               <select
-                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                 value={prodiId()}
                 onChange={(e) => setProdiId(Number(e.currentTarget.value))}
               >
@@ -572,7 +572,7 @@ export default function Kurikulum() {
                 when={periodes.loading}
                 fallback={
                   <select
-                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    class="w-full h-10 px-3 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action-focus"
                     value={semesterMulai()}
                     onChange={(e) => setSemesterMulai(e.currentTarget.value)}
                   >
@@ -705,7 +705,7 @@ export default function Kurikulum() {
                 <For each={mkBySemester()}>
                   {(group) => (
                     <div class="border border-secondary-100 dark:border-secondary-800 rounded-lg">
-                      <div class="px-4 py-2 bg-brand-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-white flex items-center justify-between">
+                      <div class="px-4 py-2 bg-action-50 dark:bg-brand-900/30 font-semibold text-sm text-brand-700 dark:text-white flex items-center justify-between">
                         <span>Semester {group.semester}</span>
                         <span class="text-xs font-normal text-secondary-500 dark:text-secondary-300">
                           {group.items.filter((i) => selectedMkIds().includes(i.mataKuliahId)).length} /{' '}
@@ -720,7 +720,7 @@ export default function Kurikulum() {
                                 type="checkbox"
                                 checked={isSemesterAllSelected(group.items)}
                                 onChange={() => toggleSelectSemester(group.items)}
-                                class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                class="rounded border-secondary-300 text-action focus:ring-action-focus cursor-pointer"
                                 title="Pilih semua di semester ini"
                               />
                             </th>
@@ -750,14 +750,14 @@ export default function Kurikulum() {
                               const isSelected = () => selectedMkIds().includes(item.mataKuliahId);
                               return (
                                 <tr
-                                  class={`border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30 transition-colors ${isSelected() ? 'bg-brand-50/40 dark:bg-brand-900/20' : ''}`}
+                                  class={`border-b border-secondary-50 dark:border-secondary-800/50 hover:bg-secondary-50/50 dark:hover:bg-secondary-800/30 transition-colors ${isSelected() ? 'bg-action-50/40 dark:bg-action/20' : ''}`}
                                 >
                                   <td class="px-3 py-2 text-center">
                                     <input
                                       type="checkbox"
                                       checked={isSelected()}
                                       onChange={() => toggleSelectRow(item.mataKuliahId)}
-                                      class="rounded border-secondary-300 text-brand-600 focus:ring-brand-500 cursor-pointer"
+                                      class="rounded border-secondary-300 text-action focus:ring-action-focus cursor-pointer"
                                     />
                                   </td>
                                   <td class="px-4 py-2 font-mono text-secondary-600">{item.mataKuliah?.kode}</td>
@@ -817,7 +817,7 @@ export default function Kurikulum() {
                     <div class="flex-1 min-w-[200px]">
                       <label class="text-xs font-semibold text-secondary-500 block mb-1">Kurikulum Sumber</label>
                       <select
-                        class="w-full h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        class="w-full h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                         value={sourceKurikulumId()}
                         onChange={(e) => setSourceKurikulumId(Number(e.currentTarget.value))}
                       >
@@ -867,7 +867,7 @@ export default function Kurikulum() {
                         <a
                           href={`${API_URL}/kurikulum/template-import-mk`}
                           download="template-import-mk.csv"
-                          class="text-xs text-brand-600 hover:text-brand-800 font-semibold underline"
+                          class="text-xs text-action hover:text-action font-semibold underline"
                         >
                           Download Template CSV
                         </a>
@@ -875,7 +875,7 @@ export default function Kurikulum() {
                           type="file"
                           accept=".csv"
                           onChange={handleImportCsv}
-                          class="w-full text-sm text-secondary-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                          class="w-full text-sm text-secondary-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-action-50 file:text-action hover:file:bg-action-100"
                         />
                       </div>
                     </div>
@@ -913,7 +913,7 @@ export default function Kurikulum() {
                   <div class="flex flex-col gap-1">
                     <label class="text-xs font-semibold text-secondary-500">Mata Kuliah</label>
                     <select
-                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                       value={addMkMataKuliahId()}
                       onChange={(e) => {
                         const id = Number(e.currentTarget.value);
@@ -939,7 +939,7 @@ export default function Kurikulum() {
                   <div class="flex flex-col gap-1">
                     <label class="text-xs font-semibold text-secondary-500">Semester</label>
                     <select
-                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                       value={addMkSemester()}
                       onChange={(e) => setAddMkSemester(Number(e.currentTarget.value))}
                     >
@@ -950,7 +950,7 @@ export default function Kurikulum() {
                     <label class="text-xs font-semibold text-secondary-500">SKS</label>
                     <input
                       type="number"
-                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      class="h-9 px-2 rounded-lg border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-action-focus"
                       value={addMkSks()}
                       onInput={(e) => setAddMkSks(Number(e.currentTarget.value))}
                     />

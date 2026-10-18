@@ -49,7 +49,7 @@ export default function LaporanKRS() {
           </Show>
         </div>
 
-        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+        <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
           <label class="block text-caption font-semibold text-secondary-500 dark:text-secondary-300 uppercase tracking-wider mb-1">
             Periode Akademik
           </label>
@@ -112,7 +112,7 @@ export default function LaporanKRS() {
             />
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">Status Approval KRS</h3>
               <PieChart
                 labels={['Disetujui', 'Pending']}
@@ -121,7 +121,7 @@ export default function LaporanKRS() {
                 donut
               />
             </div>
-            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl shadow-sm">
+            <div class="bg-white dark:bg-secondary-900 border border-secondary-100 dark:border-secondary-800 p-5 rounded-2xl">
               <h3 class="text-base font-bold text-secondary-800 dark:text-white mb-3">KRS per Program Studi</h3>
               <For each={stats()?.perProdi || []}>
                 {(p: { prodiNama: string; total: number; approved: number }) => (

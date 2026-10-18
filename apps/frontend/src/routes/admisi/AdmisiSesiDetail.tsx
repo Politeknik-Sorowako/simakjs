@@ -182,10 +182,7 @@ export default function AdmisiSesiDetail() {
   return (
     <MainLayout>
       <div class="p-4 md:p-6 max-w-6xl mx-auto">
-        <button
-          onClick={() => navigate('/admisi/manajemen/sesi')}
-          class="text-sm text-brand-600 hover:text-brand-700 mb-4"
-        >
+        <button onClick={() => navigate('/admisi/manajemen/sesi')} class="text-sm text-action hover:text-action mb-4">
           ← Kembali ke Daftar Sesi
         </button>
 
@@ -281,7 +278,7 @@ export default function AdmisiSesiDetail() {
                           <Show when={sp.biayaDaftar}>
                             <span
                               onClick={() => setEditBiaya(String(sp.prodiId))}
-                              class="text-xs text-secondary-400 cursor-pointer hover:text-brand-600"
+                              class="text-xs text-secondary-400 cursor-pointer hover:text-action"
                             >
                               Rp {Number(sp.biayaDaftar).toLocaleString('id-ID')} ✏️
                             </span>
@@ -289,7 +286,7 @@ export default function AdmisiSesiDetail() {
                           <Show when={!sp.biayaDaftar}>
                             <span
                               onClick={() => setEditBiaya(String(sp.prodiId))}
-                              class="text-xs text-green-600 font-semibold cursor-pointer hover:text-brand-600"
+                              class="text-xs text-green-600 font-semibold cursor-pointer hover:text-action"
                             >
                               GRATIS ✏️
                             </span>
@@ -370,7 +367,7 @@ export default function AdmisiSesiDetail() {
                   {(preset) => (
                     <button
                       onClick={() => applyPreset(preset)}
-                      class="text-xs px-3 py-1.5 bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300 rounded-lg border border-brand-200 dark:border-brand-800 hover:bg-brand-100"
+                      class="text-xs px-3 py-1.5 bg-action-50 dark:bg-action/20 text-brand-700 dark:text-brand-300 rounded-lg border border-brand-200 dark:border-brand-800 hover:bg-action-100"
                     >
                       {preset.nama}
                     </button>

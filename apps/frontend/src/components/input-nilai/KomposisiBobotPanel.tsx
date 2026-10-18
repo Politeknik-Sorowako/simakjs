@@ -58,7 +58,7 @@ export default function KomposisiBobotPanel(props: KomposisiBobotPanelProps) {
                     type="button"
                     title="Breakdown sub-komponen"
                     onClick={() => props.onToggleExpand(komponenId() as number)}
-                    class={`text-xs p-1 rounded ${isExpanded() ? 'text-brand-700' : 'text-secondary-400 hover:text-brand-600'}`}
+                    class={`text-xs p-1 rounded ${isExpanded() ? 'text-action' : 'text-secondary-400 hover:text-action'}`}
                   >
                     [S]
                   </button>
@@ -90,14 +90,14 @@ export default function KomposisiBobotPanel(props: KomposisiBobotPanelProps) {
           <div class="flex flex-col gap-2 align-start">
             <button
               onClick={props.onAdd}
-              class="text-brand-600 hover:text-brand-700 font-bold text-xs flex items-center gap-1 text-left"
+              class="text-action hover:text-action font-bold text-xs flex items-center gap-1 text-left"
             >
               + Tambah Komponen
             </button>
             <Show when={props.rencanaEvalsCount > 0}>
               <button
                 onClick={props.onImportFromRps}
-                class="text-accent-600 hover:text-accent-700 font-bold text-xs flex items-center gap-1 text-left"
+                class="text-action hover:text-action font-bold text-xs flex items-center gap-1 text-left"
               >
                 Ambil Komposisi dari RPS
               </button>
@@ -110,7 +110,7 @@ export default function KomposisiBobotPanel(props: KomposisiBobotPanelProps) {
       <Show when={!props.isLocked}>
         <button
           onClick={props.onSave}
-          class="mt-4 px-4 py-2 bg-brand-600 text-white font-bold rounded-xl text-xs hover:bg-brand-700 active:scale-95 transition-all shadow-sm shadow-accent-100 dark:bg-brand-700 dark:hover:bg-brand-600"
+          class="mt-4 px-4 py-2 bg-action text-white font-bold rounded-xl text-xs hover:bg-action-dark active:scale-95 transition-all shadow-accent-100 dark:bg-action-dark dark:hover:bg-action"
         >
           Simpan Bobot Komponen
         </button>
