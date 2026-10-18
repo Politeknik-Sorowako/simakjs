@@ -110,7 +110,9 @@ export const programStudi = pgTable('program_studi', {
 export const dosen = pgTable('dosen', {
   id: serial('id').primaryKey(),
   nip: varchar('nip', { length: 50 }).notNull().unique(),
+  gelarDepan: varchar('gelar_depan', { length: 50 }),
   nama: varchar('nama', { length: 255 }).notNull(),
+  gelarBelakang: varchar('gelar_belakang', { length: 100 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
   programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'restrict' }),
   idPddikti: varchar('id_pddikti', { length: 50 }).unique(),

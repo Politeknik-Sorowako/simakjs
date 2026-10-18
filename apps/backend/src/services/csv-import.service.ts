@@ -19,6 +19,7 @@ import {
 } from '../models/schema';
 import { isCutiGlobal } from '../utils/cuti-guard';
 import { db } from '../utils/db';
+import { parseNamaGelar } from '../utils/nama-gelar';
 import { JENIS_FULL_DAY, JENIS_KOMPEN, type JenisKompen } from './kompensasi-manual.service';
 import { PelanggaranService } from './pelanggaran.service';
 import { SystemParameterService } from './system-parameter.service';
@@ -300,9 +301,25 @@ export class CsvImportService {
       const prodiKode = record.programstudikode || '';
       const prodiId = prodiMap.get(prodiKode.toLowerCase());
 
+      let cleanNama = record.nama?.trim() ?? '';
+      let gelarDepan = (record.gelar_depan || record.gelardepan || record['gelar depan'] || '').trim() || null;
+      let gelarBelakang =
+        (record.gelar_belakang || record.gelarbelakang || record['gelar belakang'] || '').trim() || null;
+
+      if (!gelarDepan && !gelarBelakang && cleanNama) {
+        const parsed = parseNamaGelar(cleanNama);
+        if (parsed.gelarDepan || parsed.gelarBelakang) {
+          gelarDepan = parsed.gelarDepan;
+          cleanNama = parsed.nama;
+          gelarBelakang = parsed.gelarBelakang;
+        }
+      }
+
       batchData.push({
         nip: record.nip,
-        nama: record.nama,
+        gelarDepan,
+        nama: cleanNama,
+        gelarBelakang,
         email: record.email,
         programStudiId: prodiId || null,
         nidn: record.nidn || null,
@@ -327,7 +344,9 @@ export class CsvImportService {
               .onConflictDoUpdate({
                 target: dosen.nip,
                 set: {
+                  gelarDepan: item.gelarDepan,
                   nama: item.nama,
+                  gelarBelakang: item.gelarBelakang,
                   email: item.email,
                   programStudiId: item.programStudiId,
                   nidn: item.nidn,
