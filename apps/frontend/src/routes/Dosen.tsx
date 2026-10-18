@@ -18,6 +18,7 @@ import { userController } from '../controllers/userController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn } from '../utils/export';
 import { getTodayString } from '../utils/format';
+import { formatNamaGelar, parseNamaGelar } from '../utils/nama-gelar';
 
 const POHON_ILMU_SUGGESTIONS = [
   'Ilmu Komputer',
@@ -121,7 +122,9 @@ export default function Dosen() {
   const [showModal, setShowModal] = createSignal(false);
   const [editId, setEditId] = createSignal<number | null>(null);
   const [nip, setNip] = createSignal('');
+  const [gelarDepan, setGelarDepan] = createSignal('');
   const [nama, setNama] = createSignal('');
+  const [gelarBelakang, setGelarBelakang] = createSignal('');
   const [email, setEmail] = createSignal('');
   const [prodiId, setProdiId] = createSignal<number>(0);
   const [nidn, setNidn] = createSignal('');
@@ -137,7 +140,9 @@ export default function Dosen() {
   const openAddModal = () => {
     setEditId(null);
     setNip('');
+    setGelarDepan('');
     setNama('');
+    setGelarBelakang('');
     setEmail('');
     const firstProdi = prodis()?.data?.[0]?.id || 0;
     setProdiId(firstProdi);
@@ -156,7 +161,9 @@ export default function Dosen() {
   const openEditModal = (item: IDosen) => {
     setEditId(item.id);
     setNip(item.nip);
+    setGelarDepan(item.gelarDepan || '');
     setNama(item.nama);
+    setGelarBelakang(item.gelarBelakang || '');
     setEmail(item.email);
     setProdiId(item.programStudiId || 0);
     setNidn(item.nidn || '');
@@ -171,13 +178,29 @@ export default function Dosen() {
     setShowModal(true);
   };
 
+  const handleNamaInput = (val: string) => {
+    // Toleransi auto-split jika admin mem-paste nama lengkap yang sudah ada gelarnya ke kolom nama
+    if (!gelarDepan() && !gelarBelakang() && (val.includes(',') || val.includes('.'))) {
+      const parsed = parseNamaGelar(val);
+      if (parsed.gelarDepan || parsed.gelarBelakang) {
+        if (parsed.gelarDepan) setGelarDepan(parsed.gelarDepan);
+        setNama(parsed.nama);
+        if (parsed.gelarBelakang) setGelarBelakang(parsed.gelarBelakang);
+        return;
+      }
+    }
+    setNama(val);
+  };
+
   const handleSave = async (e: Event) => {
     e.preventDefault();
     setErrorMsg('');
     try {
       const payload = {
         nip: nip(),
-        nama: nama(),
+        gelarDepan: gelarDepan().trim() || null,
+        nama: nama().trim(),
+        gelarBelakang: gelarBelakang().trim() || null,
         email: email(),
         programStudiId: Number(prodiId()),
         nidn: nidn() || null,
@@ -393,7 +416,9 @@ export default function Dosen() {
                   <td class="px-6 py-4 font-mono text-secondary-600 font-semibold dark:text-secondary-200">
                     {item.nip}
                   </td>
-                  <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">{item.nama}</td>
+                  <td class="px-6 py-4 font-medium text-secondary-800 dark:text-white">
+                    {formatNamaGelar(item.nama, item.gelarDepan, item.gelarBelakang)}
+                  </td>
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.email}</td>
                   <td class="px-6 py-4 text-secondary-600 dark:text-secondary-200">{item.programStudi?.nama || '-'}</td>
                   <td class="px-6 py-4 text-secondary-500 dark:text-secondary-200">{item.nidn || '-'}</td>
@@ -459,13 +484,44 @@ export default function Dosen() {
                 onInput={(e) => setNip(e.currentTarget.value)}
                 placeholder="Contoh: 19800101..."
               />
-              <Input
-                label="Nama Lengkap"
-                required
-                value={nama()}
-                onInput={(e) => setNama(e.currentTarget.value)}
-                placeholder="Contoh: Dr. Budi Santoso"
-              />
+              <div class="col-span-1 md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-3 p-3 bg-secondary-50/50 dark:bg-secondary-800/30 rounded-xl border border-secondary-200/60 dark:border-secondary-700/60">
+                <div class="md:col-span-3">
+                  <Input
+                    label="Gelar Depan"
+                    value={gelarDepan()}
+                    onInput={(e) => setGelarDepan(e.currentTarget.value)}
+                    placeholder="Contoh: Dr. Ir."
+                  />
+                </div>
+                <div class="md:col-span-6">
+                  <Input
+                    label="Nama Asli (Tanpa Gelar)"
+                    required
+                    value={nama()}
+                    onInput={(e) => handleNamaInput(e.currentTarget.value)}
+                    placeholder="Contoh: Budi Santoso"
+                  />
+                </div>
+                <div class="md:col-span-3">
+                  <Input
+                    label="Gelar Belakang"
+                    value={gelarBelakang()}
+                    onInput={(e) => setGelarBelakang(e.currentTarget.value)}
+                    placeholder="Contoh: S.T., M.T."
+                  />
+                </div>
+                <div class="md:col-span-12 text-xs text-secondary-500 dark:text-secondary-400 flex items-center justify-between pt-1">
+                  <span>
+                    Pratinjau Nama Lengkap:{' '}
+                    <span class="font-semibold text-secondary-900 dark:text-white">
+                      {formatNamaGelar(nama(), gelarDepan(), gelarBelakang()) || '(belum diisi)'}
+                    </span>
+                  </span>
+                  <span class="text-[11px] text-secondary-400">
+                    *Mendukung paste nama lengkap bergelar ke kolom nama asli
+                  </span>
+                </div>
+              </div>
               <Input
                 type="email"
                 label="Email"

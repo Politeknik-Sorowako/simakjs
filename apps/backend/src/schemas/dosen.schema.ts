@@ -2,7 +2,9 @@ import { t } from 'elysia';
 
 export const dosenBody = t.Object({
   nip: t.String({ default: '198701012015011001' }),
-  nama: t.String({ default: 'Dr. John Doe' }),
+  gelarDepan: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
+  nama: t.String({ default: 'John Doe' }),
+  gelarBelakang: t.Optional(t.Union([t.String(), t.Null()], { default: null })),
   email: t.String({ format: 'email', default: 'johndoe@test.com' }),
   programStudiId: t.Optional(t.Integer({ default: 1 })),
   idPddikti: t.Optional(t.Union([t.String(), t.Null()])),
@@ -19,7 +21,9 @@ export const dosenBody = t.Object({
 export const updateDosenBody = t.Partial(
   t.Object({
     nip: t.String(),
+    gelarDepan: t.Union([t.String(), t.Null()]),
     nama: t.String(),
+    gelarBelakang: t.Union([t.String(), t.Null()]),
     email: t.String({ format: 'email' }),
     programStudiId: t.Union([t.Integer(), t.Null()]),
     idPddikti: t.Union([t.String(), t.Null()]),
@@ -55,7 +59,9 @@ export const getDosenSchema = {
         t.Object({
           id: t.Integer({ default: 1 }),
           nip: t.String({ default: '198701012015011001' }),
-          nama: t.String({ default: 'Dr. John Doe' }),
+          gelarDepan: t.Union([t.String(), t.Null()], { default: null }),
+          nama: t.String({ default: 'John Doe' }),
+          gelarBelakang: t.Union([t.String(), t.Null()], { default: null }),
           email: t.String({ default: 'johndoe@test.com' }),
           programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
           idPddikti: t.Union([t.String(), t.Null()], { default: null }),
@@ -102,7 +108,9 @@ export const createDosenSchema = {
     201: t.Object({
       id: t.Integer({ default: 1 }),
       nip: t.String({ default: '198701012015011001' }),
-      nama: t.String({ default: 'Dr. John Doe' }),
+      gelarDepan: t.Union([t.String(), t.Null()], { default: null }),
+      nama: t.String({ default: 'John Doe' }),
+      gelarBelakang: t.Union([t.String(), t.Null()], { default: null }),
       email: t.String({ default: 'johndoe@test.com' }),
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
@@ -137,7 +145,9 @@ export const getDosenByIdSchema = {
     200: t.Object({
       id: t.Integer({ default: 1 }),
       nip: t.String({ default: '198701012015011001' }),
-      nama: t.String({ default: 'Dr. John Doe' }),
+      gelarDepan: t.Union([t.String(), t.Null()], { default: null }),
+      nama: t.String({ default: 'John Doe' }),
+      gelarBelakang: t.Union([t.String(), t.Null()], { default: null }),
       email: t.String({ default: 'johndoe@test.com' }),
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),
@@ -182,7 +192,9 @@ export const updateDosenSchema = {
     200: t.Object({
       id: t.Integer({ default: 1 }),
       nip: t.String({ default: '198701012015011001' }),
-      nama: t.String({ default: 'Dr. John Doe' }),
+      gelarDepan: t.Union([t.String(), t.Null()], { default: null }),
+      nama: t.String({ default: 'John Doe' }),
+      gelarBelakang: t.Union([t.String(), t.Null()], { default: null }),
       email: t.String({ default: 'johndoe@test.com' }),
       programStudiId: t.Union([t.Integer(), t.Null()], { default: 1 }),
       idPddikti: t.Union([t.String(), t.Null()], { default: null }),

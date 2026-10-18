@@ -12,6 +12,7 @@ import {
   programStudi,
 } from '../models/schema';
 import { db } from '../utils/db';
+import { formatNamaGelar, parseNamaGelar } from '../utils/nama-gelar';
 import { FeederService } from './feeder.service';
 import { type FeederConfig, SystemParameterService } from './system-parameter.service';
 
@@ -121,7 +122,8 @@ export const PULL_ENTITY_CATALOG: ReadonlyArray<PullEntityMeta> = [
     label: 'Dosen',
     category: 'master',
     feederAct: 'GetListDosen',
-    description: 'Menarik data master dosen (NIDN, NIP, nama, tgl lahir, gender) dan menautkan id_dosen PDDIKTI.',
+    description:
+      'Menarik data master dosen (NIDN, NUPTK, NIP, gelar depan, nama asli, gelar belakang, tgl lahir, gender) dan menautkan id_dosen PDDIKTI.',
   },
   {
     key: 'mahasiswa',
@@ -589,49 +591,82 @@ export class FeederPullService {
   ): PullPreviewItem[] {
     const byPddikti = new Map<string, typeof dosen.$inferSelect>();
     const byNidn = new Map<string, typeof dosen.$inferSelect>();
+    const byNuptk = new Map<string, typeof dosen.$inferSelect>();
     const byNip = new Map<string, typeof dosen.$inferSelect>();
     const byNama = new Map<string, typeof dosen.$inferSelect>();
+    const byFullFormatted = new Map<string, typeof dosen.$inferSelect>();
 
     for (const d of localRows) {
       if (d.idPddikti) byPddikti.set(d.idPddikti.trim().toLowerCase(), d);
       if (d.nidn) byNidn.set(d.nidn.trim().toLowerCase(), d);
+      if (d.nuptk) byNuptk.set(d.nuptk.trim().toLowerCase(), d);
       if (d.nip) byNip.set(d.nip.trim().toLowerCase(), d);
       byNama.set(d.nama.trim().toLowerCase(), d);
+      const full = formatNamaGelar(d.nama, d.gelarDepan, d.gelarBelakang);
+      if (full) byFullFormatted.set(full.trim().toLowerCase(), d);
     }
 
     const items: PullPreviewItem[] = [];
     for (const raw of feederRows) {
       const idDosen = asStr(raw.id_dosen);
-      const nama = asStr(raw.nama_dosen);
+      const rawNamaDosen = asStr(raw.nama_dosen);
       const nidn = asStr(raw.nidn) || null;
-      const nip = asStr(raw.nip) || nidn || idDosen.slice(0, 18);
+      const nuptk = asStr(raw.nuptk) || asStr(raw.NUPTK) || null;
+      const nip = asStr(raw.nip) || nidn || nuptk || idDosen.slice(0, 18);
       const jenisKelamin = normalizeGender(raw.jenis_kelamin);
       const tanggalLahir = normalizeFeederDate(raw.tanggal_lahir);
       const idAgama =
         raw.id_agama !== undefined && raw.id_agama !== null && asStr(raw.id_agama) !== '' ? asInt(raw.id_agama) : null;
-      if (!idDosen || !nama) continue;
+      if (!idDosen || !rawNamaDosen) continue;
+
+      // Ekstrak gelar depan & belakang: prioritaskan field feeder bila ada, fallback ke parser
+      let gelarDepan = asStr(raw.gelar_depan) || asStr(raw.gelardepan) || null;
+      let gelarBelakang = asStr(raw.gelar_belakang) || asStr(raw.gelarbelakang) || null;
+      let nama = rawNamaDosen;
+
+      if (!gelarDepan && !gelarBelakang) {
+        const parsed = parseNamaGelar(rawNamaDosen);
+        gelarDepan = parsed.gelarDepan;
+        nama = parsed.nama;
+        gelarBelakang = parsed.gelarBelakang;
+      }
 
       const feederData = {
         nip,
         nidn,
+        nuptk,
+        gelarDepan,
         nama,
+        gelarBelakang,
         jenisKelamin,
         tanggalLahir,
         idAgama,
       };
 
+      const formattedFeederName = formatNamaGelar(nama, gelarDepan, gelarBelakang).trim().toLowerCase();
+
       const local =
         byPddikti.get(idDosen.toLowerCase()) ??
         (nidn ? byNidn.get(nidn.toLowerCase()) : undefined) ??
+        (nuptk ? byNuptk.get(nuptk.toLowerCase()) : undefined) ??
+        (nuptk ? byNip.get(nuptk.toLowerCase()) : undefined) ??
         (nip ? byNip.get(nip.toLowerCase()) : undefined) ??
+        (nip ? byNuptk.get(nip.toLowerCase()) : undefined) ??
         byNama.get(nama.toLowerCase()) ??
+        byFullFormatted.get(formattedFeederName) ??
+        byNama.get(rawNamaDosen.toLowerCase()) ??
         null;
+
+      const displayFormatted = formatNamaGelar(nama, gelarDepan, gelarBelakang);
+      const idTag = nidn ? ` (NIDN: ${nidn})` : nuptk ? ` (NUPTK: ${nuptk})` : '';
+      const label = `${displayFormatted}${idTag}`;
+      const naturalKey = nidn || nuptk || nip;
 
       if (!local) {
         items.push({
           feederId: idDosen,
-          naturalKey: nidn || nip,
-          label: `${nama}${nidn ? ` (NIDN: ${nidn})` : ''}`,
+          naturalKey,
+          label,
           status: 'baru',
           localId: null,
           localIdPddikti: null,
@@ -646,20 +681,36 @@ export class FeederPullService {
       const localData = {
         nip: local.nip,
         nidn: local.nidn ?? null,
+        nuptk: local.nuptk ?? null,
+        gelarDepan: local.gelarDepan ?? null,
         nama: local.nama,
+        gelarBelakang: local.gelarBelakang ?? null,
         jenisKelamin: local.jenisKelamin ?? null,
         tanggalLahir: local.tanggalLahir ?? null,
         idAgama: local.idAgama ?? null,
       };
 
-      const diffs = FeederPullService.computeDiffs(['nama', 'nidn'], feederData, localData);
+      // Hitung diffs untuk field yang diisi di Feeder vs Lokal
+      // Jika salah satu sisi bernilai null/kosong dan sisi lain punya nilai, deteksi sebagai diff/update
+      const diffFields: string[] = ['nama'];
+      if (feederData.gelarDepan || localData.gelarDepan) diffFields.push('gelarDepan');
+      if (feederData.gelarBelakang || localData.gelarBelakang) diffFields.push('gelarBelakang');
+      if (feederData.nidn || localData.nidn) diffFields.push('nidn');
+      if (feederData.nuptk && localData.nuptk) {
+        diffFields.push('nuptk');
+      } else if (!localData.nuptk && feederData.nuptk && local.nip !== feederData.nuptk) {
+        // NUPTK baru dari Feeder yang belum ada di lokal
+        diffFields.push('nuptk');
+      }
+
+      const diffs = FeederPullService.computeDiffs(diffFields, feederData, localData);
       const idLinked = (local.idPddikti ?? '').toLowerCase() === idDosen.toLowerCase();
       const status: PullDiffStatus = diffs.length > 0 ? 'konflik' : idLinked ? 'sama' : 'link_id';
 
       items.push({
         feederId: idDosen,
-        naturalKey: nidn || local.nip,
-        label: `${nama}${nidn ? ` (NIDN: ${nidn})` : ''}`,
+        naturalKey: nidn || nuptk || local.nip,
+        label,
         status,
         localId: local.id,
         localIdPddikti: local.idPddikti ?? null,
@@ -1399,12 +1450,20 @@ export class FeederPullService {
     } else if (entity === 'dosen') {
       const ids = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.id_dosen)]);
       const nidns = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nidn)]);
+      const nuptks = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nuptk) || asStr(r.NUPTK)]);
       const nips = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nip)]);
-      const namas = FeederPullService.uniqueLower(feederRows, (r) => [asStr(r.nama_dosen)]);
+      const namas = FeederPullService.uniqueLower(feederRows, (r) => {
+        const rawNama = asStr(r.nama_dosen);
+        const parsed = parseNamaGelar(rawNama);
+        return [rawNama, parsed.nama];
+      });
       const where = FeederPullService.combinePredicates([
         ...(ids.length ? [inArray(sql`lower(${dosen.idPddikti})`, ids)] : []),
         ...(nidns.length ? [inArray(sql`lower(${dosen.nidn})`, nidns)] : []),
-        ...(nips.length ? [inArray(sql`lower(${dosen.nip})`, nips)] : []),
+        ...(nuptks.length
+          ? [inArray(sql`lower(${dosen.nuptk})`, nuptks), inArray(sql`lower(${dosen.nip})`, nuptks)]
+          : []),
+        ...(nips.length ? [inArray(sql`lower(${dosen.nip})`, nips), inArray(sql`lower(${dosen.nuptk})`, nips)] : []),
         ...(namas.length ? [inArray(sql`lower(${dosen.nama})`, namas)] : []),
       ]);
       const localRows = where ? await db.select().from(dosen).where(where) : [];
@@ -1675,17 +1734,23 @@ export class FeederPullService {
         } else if (entity === 'dosen') {
           const nip = String(item.feederData.nip ?? item.feederId.slice(0, 18));
           const nidn = item.feederData.nidn ? String(item.feederData.nidn) : null;
+          const nuptk = item.feederData.nuptk ? String(item.feederData.nuptk) : null;
+          const gelarDepan = item.feederData.gelarDepan ? String(item.feederData.gelarDepan) : null;
           const nama = String(item.feederData.nama ?? '');
+          const gelarBelakang = item.feederData.gelarBelakang ? String(item.feederData.gelarBelakang) : null;
           const jenisKelamin = (item.feederData.jenisKelamin as 'L' | 'P' | null) ?? null;
           const tanggalLahir = item.feederData.tanggalLahir ? String(item.feederData.tanggalLahir) : null;
           const idAgama = typeof item.feederData.idAgama === 'number' ? item.feederData.idAgama : null;
 
           if (item.status === 'baru') {
-            const emailLocal = sanitizeEmailLocal(nidn || nip, item.feederId.slice(0, 10));
+            const emailLocal = sanitizeEmailLocal(nidn || nuptk || nip, item.feederId.slice(0, 10));
             await db.insert(dosen).values({
               nip,
               nidn,
+              nuptk,
+              gelarDepan,
               nama,
+              gelarBelakang,
               email: `${emailLocal}@feeder.politekniksorowako.ac.id`,
               jenisKelamin,
               tanggalLahir,
@@ -1702,13 +1767,19 @@ export class FeederPullService {
               lastSyncAt: now,
             };
             if (!item.localData?.nidn && nidn) setPayload.nidn = nidn;
+            if (!item.localData?.nuptk && nuptk) setPayload.nuptk = nuptk;
+            if (!item.localData?.gelarDepan && gelarDepan) setPayload.gelarDepan = gelarDepan;
+            if (!item.localData?.gelarBelakang && gelarBelakang) setPayload.gelarBelakang = gelarBelakang;
             if (!item.localData?.jenisKelamin && jenisKelamin) setPayload.jenisKelamin = jenisKelamin;
             if (!item.localData?.tanggalLahir && tanggalLahir) setPayload.tanggalLahir = tanggalLahir;
             if (item.localData?.idAgama === null && idAgama !== null) setPayload.idAgama = idAgama;
 
             if (item.status === 'konflik' && conflictResolution === 'feeder') {
               setPayload.nama = nama;
+              if (gelarDepan) setPayload.gelarDepan = gelarDepan;
+              if (gelarBelakang) setPayload.gelarBelakang = gelarBelakang;
               if (nidn) setPayload.nidn = nidn;
+              if (nuptk) setPayload.nuptk = nuptk;
               await db.update(dosen).set(setPayload).where(eq(dosen.id, item.localId));
               updated++;
             } else {

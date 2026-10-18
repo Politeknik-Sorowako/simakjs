@@ -1,10 +1,13 @@
 import { and, asc, count, desc, eq, ilike, or } from 'drizzle-orm';
 import { dosen } from '../models/schema';
 import { db } from '../utils/db';
+import { parseNamaGelar } from '../utils/nama-gelar';
 
 export interface CreateDosenDto {
   nip: string;
+  gelarDepan?: string | null;
   nama: string;
+  gelarBelakang?: string | null;
   email: string;
   programStudiId?: number;
   idPddikti?: string;
@@ -28,12 +31,14 @@ export class DosenService {
     sortOrder: 'asc' | 'desc' = 'asc',
   ) {
     const offset = (page - 1) * limit;
-    let conditions = [];
+    const conditions = [];
 
     if (search) {
       conditions.push(
         or(
           ilike(dosen.nama, `%${search}%`),
+          ilike(dosen.gelarDepan, `%${search}%`),
+          ilike(dosen.gelarBelakang, `%${search}%`),
           ilike(dosen.nip, `%${search}%`),
           ilike(dosen.email, `%${search}%`),
           ilike(dosen.nuptk, `%${search}%`),
@@ -100,8 +105,25 @@ export class DosenService {
   }
 
   static async create(data: CreateDosenDto) {
+    let cleanNama = data.nama?.trim() ?? '';
+    let gelarDepan = data.gelarDepan?.trim() ? data.gelarDepan.trim() : null;
+    let gelarBelakang = data.gelarBelakang?.trim() ? data.gelarBelakang.trim() : null;
+
+    // Fallback auto-split bila pengguna memasukkan nama bergelar lengkap tanpa mengisi gelar terpisah
+    if (!gelarDepan && !gelarBelakang && cleanNama) {
+      const parsed = parseNamaGelar(cleanNama);
+      if (parsed.gelarDepan || parsed.gelarBelakang) {
+        gelarDepan = parsed.gelarDepan;
+        cleanNama = parsed.nama;
+        gelarBelakang = parsed.gelarBelakang;
+      }
+    }
+
     const sanitized = {
       ...data,
+      nama: cleanNama,
+      gelarDepan,
+      gelarBelakang,
       nik: data.nik?.trim() ? data.nik : null,
       tanggalLahir: data.tanggalLahir?.trim() ? data.tanggalLahir : null,
       tempatLahir: data.tempatLahir?.trim() ? data.tempatLahir : null,
@@ -117,6 +139,34 @@ export class DosenService {
 
   static async update(id: number, data: Partial<CreateDosenDto>) {
     const sanitized: Record<string, unknown> = { ...data };
+
+    if ('nama' in data) {
+      let cleanNama = data.nama?.trim() ?? '';
+      let gelarDepan =
+        data.gelarDepan !== undefined ? (data.gelarDepan?.trim() ? data.gelarDepan.trim() : null) : undefined;
+      let gelarBelakang =
+        data.gelarBelakang !== undefined ? (data.gelarBelakang?.trim() ? data.gelarBelakang.trim() : null) : undefined;
+
+      if (gelarDepan === undefined && gelarBelakang === undefined && cleanNama) {
+        const parsed = parseNamaGelar(cleanNama);
+        if (parsed.gelarDepan || parsed.gelarBelakang) {
+          sanitized.gelarDepan = parsed.gelarDepan;
+          sanitized.nama = parsed.nama;
+          sanitized.gelarBelakang = parsed.gelarBelakang;
+        } else {
+          sanitized.nama = cleanNama;
+        }
+      } else {
+        sanitized.nama = cleanNama;
+        if (gelarDepan !== undefined) sanitized.gelarDepan = gelarDepan;
+        if (gelarBelakang !== undefined) sanitized.gelarBelakang = gelarBelakang;
+      }
+    } else {
+      if ('gelarDepan' in data) sanitized.gelarDepan = data.gelarDepan?.trim() ? data.gelarDepan.trim() : null;
+      if ('gelarBelakang' in data)
+        sanitized.gelarBelakang = data.gelarBelakang?.trim() ? data.gelarBelakang.trim() : null;
+    }
+
     if ('nik' in data) sanitized.nik = data.nik?.trim() ? data.nik : null;
     if ('tanggalLahir' in data) sanitized.tanggalLahir = data.tanggalLahir?.trim() ? data.tanggalLahir : null;
     if ('tempatLahir' in data) sanitized.tempatLahir = data.tempatLahir?.trim() ? data.tempatLahir : null;
