@@ -1,10 +1,13 @@
 import { and, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
 import {
   aktivitasMbkm,
+  anggotaAktivitasMbkm,
+  bimbinganAktivitasMbkm,
   dosen,
   dosenPengajarKelas,
   jenisAktivitasMbkm,
   kelasKuliah,
+  konversiAktivitasMbkm,
   krs,
   mahasiswa,
   mataKuliah,
@@ -172,7 +175,7 @@ export const PULL_ENTITY_CATALOG: ReadonlyArray<PullEntityMeta> = [
     category: 'transaksional',
     feederAct: 'GetListAktivitasMahasiswa',
     description:
-      'Aktivitas MBKM dari Feeder (judul, jenis, semester, prodi). Header aktivitas disimpan; anggota & pembimbing ditarik terpisah setelah act detailnya dipastikan.',
+      'Aktivitas MBKM dari Feeder (judul, jenis, semester, prodi). Sinkronisasi penuh mencakup header aktivitas beserta anggota, pembimbing, dan konversi/rekognisi mata kuliah.',
   },
 ];
 
@@ -1391,10 +1394,166 @@ export class FeederPullService {
           localData: lokal ? { id: lokal.id, judul: lokal.judul, status: lokal.status } : null,
           diffs: lokal && !same ? [{ field: 'judul', feederValue: judul, localValue: lokal.judul }] : [],
           canApply: lokal === null || !same,
-          note: 'Hanya header aktivitas yang diterapkan. Anggota/pembimbing/konversi memerlukan act Feeder terpisah yang belum diprobe.',
+          note:
+            lokal === null
+              ? 'Header aktivitas beserta anggota, pembimbing, dan konversi akan disinkronkan ke lokal.'
+              : undefined,
         };
       })
       .filter((x): x is PullPreviewItem => x !== null);
+  }
+
+  /**
+   * Tarik relasi detail aktivitas MBKM dari Feeder dan sinkronkan ke DB lokal:
+   * 1. Anggota: `GetAnggotaAktivitasMahasiswa`
+   * 2. Pembimbing: `GetBimbingMahasiswa`
+   * 3. Konversi: `GetKonversiKampusMerdeka`
+   */
+  static async syncAktivitasDetails(
+    config: FeederConfig,
+    idAktivitasFeeder: string,
+    localAktivitasId: number,
+  ): Promise<{ anggota: number; pembimbing: number; konversi: number }> {
+    let anggota = 0;
+    let pembimbing = 0;
+    let konversi = 0;
+
+    // 1. Anggota Aktivitas
+    try {
+      const anggotaRows = await FeederPullService.fetchFeederRows(config, 'GetAnggotaAktivitasMahasiswa', {
+        filter: `id_aktivitas = '${idAktivitasFeeder}'`,
+        maxPages: 3,
+      });
+      for (const row of anggotaRows) {
+        const nim = asStr(row.nim);
+        const idReg = asStr(row.id_registrasi_mahasiswa);
+        if (!nim && !idReg) continue;
+
+        const conds: SQL[] = [];
+        if (nim) conds.push(eq(sql`lower(${mahasiswa.nim})`, nim.toLowerCase()));
+        if (idReg) conds.push(eq(sql`lower(${mahasiswa.idPddikti})`, idReg.toLowerCase()));
+
+        const mhsRows = await db
+          .select({ id: mahasiswa.id })
+          .from(mahasiswa)
+          .where(or(...conds))
+          .limit(1);
+
+        const mhsId = mhsRows[0]?.id;
+        if (!mhsId) continue;
+
+        const jenisPeran = asStr(row.jenis_peran);
+        const namaPeran = asStr(row.nama_jenis_peran).toLowerCase();
+        const peran = jenisPeran === '1' || namaPeran.includes('ketua') ? 'ketua' : 'anggota';
+
+        await db
+          .insert(anggotaAktivitasMbkm)
+          .values({
+            aktivitasId: localAktivitasId,
+            mahasiswaId: mhsId,
+            peran,
+          })
+          .onConflictDoUpdate({
+            target: [anggotaAktivitasMbkm.aktivitasId, anggotaAktivitasMbkm.mahasiswaId],
+            set: { peran },
+          });
+        anggota++;
+      }
+    } catch (e: unknown) {
+      console.warn(`[FeederPull] Gagal sync anggota aktivitas ${idAktivitasFeeder}:`, e);
+    }
+
+    // 2. Pembimbing Aktivitas
+    try {
+      const bimbingRows = await FeederPullService.fetchFeederRows(config, 'GetBimbingMahasiswa', {
+        filter: `id_aktivitas = '${idAktivitasFeeder}'`,
+        maxPages: 3,
+      });
+      for (const row of bimbingRows) {
+        const idDosen = asStr(row.id_dosen);
+        const nidn = asStr(row.nidn);
+        if (!idDosen && !nidn) continue;
+
+        const conds: SQL[] = [];
+        if (idDosen) conds.push(eq(sql`lower(${dosen.idPddikti})`, idDosen.toLowerCase()));
+        if (nidn) {
+          conds.push(eq(sql`lower(${dosen.nidn})`, nidn.toLowerCase()));
+          conds.push(eq(sql`lower(${dosen.nuptk})`, nidn.toLowerCase()));
+          conds.push(eq(sql`lower(${dosen.nip})`, nidn.toLowerCase()));
+        }
+
+        const dsnRows = await db
+          .select({ id: dosen.id })
+          .from(dosen)
+          .where(or(...conds))
+          .limit(1);
+
+        const dsnId = dsnRows[0]?.id;
+        if (!dsnId) continue;
+
+        const namaKategori = asStr(row.nama_kategori_kegiatan).toLowerCase();
+        const kategori = namaKategori.includes('pendamping') ? 'pendamping' : 'pembimbing';
+
+        await db
+          .insert(bimbinganAktivitasMbkm)
+          .values({
+            aktivitasId: localAktivitasId,
+            dosenId: dsnId,
+            kategori,
+          })
+          .onConflictDoUpdate({
+            target: [bimbinganAktivitasMbkm.aktivitasId, bimbinganAktivitasMbkm.dosenId],
+            set: { kategori },
+          });
+        pembimbing++;
+      }
+    } catch (e: unknown) {
+      console.warn(`[FeederPull] Gagal sync pembimbing aktivitas ${idAktivitasFeeder}:`, e);
+    }
+
+    // 3. Konversi Aktivitas
+    try {
+      const konversiRows = await FeederPullService.fetchFeederRows(config, 'GetKonversiKampusMerdeka', {
+        filter: `id_aktivitas = '${idAktivitasFeeder}'`,
+        maxPages: 3,
+      });
+      for (const row of konversiRows) {
+        const idMatkul = asStr(row.id_matkul);
+        const kodeMk = asStr(row.kode_mata_kuliah);
+        const sks = asInt(row.sks_mata_kuliah) || asInt(row.sks_aktivitas) || asInt(row.sks_diakui) || 0;
+        if ((!idMatkul && !kodeMk) || sks <= 0) continue;
+
+        const conds: SQL[] = [];
+        if (idMatkul) conds.push(eq(sql`lower(${mataKuliah.idPddikti})`, idMatkul.toLowerCase()));
+        if (kodeMk) conds.push(eq(sql`lower(${mataKuliah.kode})`, kodeMk.toLowerCase()));
+
+        const mkRows = await db
+          .select({ id: mataKuliah.id })
+          .from(mataKuliah)
+          .where(or(...conds))
+          .limit(1);
+
+        const mkId = mkRows[0]?.id;
+        if (!mkId) continue;
+
+        await db
+          .insert(konversiAktivitasMbkm)
+          .values({
+            aktivitasId: localAktivitasId,
+            mataKuliahId: mkId,
+            sksDiakui: sks,
+          })
+          .onConflictDoUpdate({
+            target: [konversiAktivitasMbkm.aktivitasId, konversiAktivitasMbkm.mataKuliahId],
+            set: { sksDiakui: sks },
+          });
+        konversi++;
+      }
+    } catch (e: unknown) {
+      console.warn(`[FeederPull] Gagal sync konversi aktivitas ${idAktivitasFeeder}:`, e);
+    }
+
+    return { anggota, pembimbing, konversi };
   }
 
   /** Buat preview diff antara data Feeder (`Get*`) dan tabel lokal tanpa mengubah DB. */
@@ -1589,6 +1748,7 @@ export class FeederPullService {
 
     const previewResult = await FeederPullService.preview(entity, options);
     const chosen = previewResult.items.filter((item) => selectedSet.has(item.feederId));
+    const config = await SystemParameterService.getFeederConfig();
 
     let inserted = 0;
     let updated = 0;
@@ -1958,6 +2118,7 @@ export class FeederPullService {
             continue;
           }
 
+          let localAktivitasId: number | null = null;
           if (item.status === 'baru') {
             const insertedRows = await db
               .insert(aktivitasMbkm)
@@ -1972,9 +2133,14 @@ export class FeederPullService {
               })
               .onConflictDoNothing()
               .returning({ id: aktivitasMbkm.id });
-            if (insertedRows.length > 0) inserted++;
-            else skipped++;
+            if (insertedRows.length > 0) {
+              inserted++;
+              localAktivitasId = insertedRows[0].id;
+            } else {
+              skipped++;
+            }
           } else if (typeof item.localId === 'number') {
+            localAktivitasId = item.localId;
             await db
               .update(aktivitasMbkm)
               .set({ idPddikti: item.feederId, updatedAt: now })
@@ -1985,6 +2151,10 @@ export class FeederPullService {
             } else {
               linkedOnly++;
             }
+          }
+
+          if (localAktivitasId !== null) {
+            await FeederPullService.syncAktivitasDetails(config, item.feederId, localAktivitasId);
           }
         } else if (entity === 'dosen-pengajar') {
           const dosenId = typeof item.feederData.dosenId === 'number' ? item.feederData.dosenId : 0;

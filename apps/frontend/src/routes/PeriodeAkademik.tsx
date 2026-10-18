@@ -41,7 +41,7 @@ export default function PeriodeAkademik() {
   ];
 
   const [sortBy, setSortBy] = createSignal('id');
-  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = createSignal<'asc' | 'desc'>('desc');
   const toggleSort = (field: string) => {
     if (sortBy() === field) setSortOrder(sortOrder() === 'asc' ? 'desc' : 'asc');
     else {
