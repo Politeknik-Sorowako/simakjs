@@ -12,7 +12,8 @@ export type UserRole =
   | 'calon_mahasiswa'
   | 'plp'
   | 'instruktur'
-  | 'kemahasiswaan';
+  | 'kemahasiswaan'
+  | 'lppm';
 
 export interface UserPayload {
   id: number;

@@ -30,6 +30,7 @@ const fallbackRoleOptions: { value: string; label: string }[] = [
   { value: 'plp', label: 'PLP / Teknisi Lab' },
   { value: 'instruktur', label: 'Instruktur' },
   { value: 'kemahasiswaan', label: 'Kemahasiswaan' },
+  { value: 'lppm', label: 'LPPM' },
   { value: 'keuangan', label: 'Keuangan' },
   { value: 'mahasiswa', label: 'Mahasiswa' },
   { value: 'calon_mahasiswa', label: 'Calon Mahasiswa' },
