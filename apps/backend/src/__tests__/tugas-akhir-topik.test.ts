@@ -508,4 +508,89 @@ describe('Tugas Akhir - Milestone 1: Pengusulan Topik (Individu & Kelompok)', ()
     );
     expect(getRes.status).toBe(404);
   });
+
+  it('13. Admin/Prodi dapat mengedit ketua pengusul dan anggota tim tugas akhir', async () => {
+    // 1. Buat TA awal oleh admin untuk mhs1
+    const createRes = await app.handle(
+      new Request('http://localhost/tugas-akhir', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${prodiToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'Tugas Akhir Kolaborasi Tim Mesin',
+          tipe: 'individu',
+          jenisKarya: 'rancang_bangun',
+          programStudiId: prodiId,
+          mahasiswaId: mhsId1,
+        }),
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const createBody = (await createRes.json()) as { data: { id: number } };
+    const targetId = createBody.data.id;
+
+    // 2. Admin mengubah ketua menjadi mhsId2 dan tipe menjadi kelompok dengan anggota mhsId1
+    const updateRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${prodiToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipe: 'kelompok',
+          mahasiswaId: mhsId2,
+          anggotaMahasiswaIds: [mhsId1],
+        }),
+      }),
+    );
+    expect(updateRes.status).toBe(200);
+
+    // 3. Verifikasi struktur anggota
+    const getRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+    expect(getRes.status).toBe(200);
+    const getBody = (await getRes.json()) as {
+      data: {
+        tipe: string;
+        anggota: { mahasiswaId: number; peran: string; statusKonfirmasi: string }[];
+      };
+    };
+
+    expect(getBody.data.tipe).toBe('kelompok');
+    const ketua = getBody.data.anggota.find((a) => a.peran === 'ketua');
+    expect(ketua).toBeDefined();
+    expect(ketua?.mahasiswaId).toBe(mhsId2);
+
+    const anggota = getBody.data.anggota.filter((a) => a.peran === 'anggota');
+    expect(anggota.length).toBe(1);
+    expect(anggota[0].mahasiswaId).toBe(mhsId1);
+
+    // 4. Ubah kembali ke individu: anggota non-ketua harus otomatis dibersihkan
+    const updateToIndividuRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${prodiToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipe: 'individu',
+        }),
+      }),
+    );
+    expect(updateToIndividuRes.status).toBe(200);
+
+    const getIndividuRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+    const getIndividuBody = (await getIndividuRes.json()) as {
+      data: {
+        tipe: string;
+        anggota: { mahasiswaId: number; peran: string }[];
+      };
+    };
+    expect(getIndividuBody.data.tipe).toBe('individu');
+    expect(getIndividuBody.data.anggota.length).toBe(1);
+    expect(getIndividuBody.data.anggota[0].peran).toBe('ketua');
+    expect(getIndividuBody.data.anggota[0].mahasiswaId).toBe(mhsId2);
+  });
 });

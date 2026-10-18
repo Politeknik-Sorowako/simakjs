@@ -44,6 +44,9 @@ export const updateTugasAkhirBody = t.Object({
   metodologi: t.Optional(t.Union([t.String(), t.Null()])),
   mitraIndustri: t.Optional(t.Union([t.String({ maxLength: 255 }), t.Null()])),
   fileProposalTopikUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  mahasiswaId: t.Optional(t.Union([t.Integer(), t.Null()])),
+  anggotaMahasiswaIds: t.Optional(t.Union([t.Array(t.Integer()), t.Null()])),
+  programStudiId: t.Optional(t.Union([t.Integer(), t.Null()])),
   usulanPembimbing: t.Optional(t.Union([t.Array(usulanPembimbingItem), t.Null()])),
 });
 

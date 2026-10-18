@@ -136,6 +136,9 @@ export interface UpdateTugasAkhirPayload {
   metodologi?: string;
   mitraIndustri?: string;
   fileProposalTopikUrl?: string;
+  mahasiswaId?: number;
+  anggotaMahasiswaIds?: number[];
+  programStudiId?: number;
   usulanPembimbing?: {
     peran: 'pembimbing_1' | 'pembimbing_2';
     dosenId?: number;
