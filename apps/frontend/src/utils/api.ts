@@ -101,8 +101,21 @@ export async function fetchApi<T>(endpoint: string, options: FetchOptions = {}):
     throw new Error('Sesi Anda telah berakhir. Silakan login kembali.');
   }
 
-  const errObj = data as { error?: string; message?: string } | undefined;
-  const errorMessage = errObj?.error || errObj?.message || response.statusText;
+  let errorMessage = response.statusText;
+  if (data && typeof data === 'object') {
+    const errObj = data as { error?: string; message?: string };
+    if (errObj.error && errObj.message && errObj.error !== errObj.message) {
+      if (errObj.error === 'Validasi gagal') {
+        errorMessage = `Validasi gagal: ${errObj.message}`;
+      } else {
+        errorMessage = errObj.error;
+      }
+    } else {
+      errorMessage = errObj.error || errObj.message || response.statusText;
+    }
+  } else if (typeof data === 'string' && data.trim()) {
+    errorMessage = data;
+  }
 
   if (response.status === 403) {
     throw new Error(errorMessage);

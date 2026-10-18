@@ -25,21 +25,21 @@ export interface UsulanPembimbingInput {
 
 export interface CreateTugasAkhirInput {
   judul: string;
-  judulInggris?: string;
+  judulInggris?: string | null;
   tipe: 'individu' | 'kelompok';
   jenisKarya: 'skripsi' | 'prototipe' | 'proyek_rekayasa' | 'rancang_bangun';
-  bidangKajian?: string;
-  latarBelakang?: string;
-  rumusanMasalah?: string;
-  tujuan?: string;
-  metodologi?: string;
-  mitraIndustri?: string;
-  programStudiId: number;
-  periodeId?: string;
-  fileProposalTopikUrl?: string;
-  mahasiswaId?: number;
-  anggotaMahasiswaIds?: number[];
-  usulanPembimbing?: UsulanPembimbingInput[];
+  bidangKajian?: string | null;
+  latarBelakang?: string | null;
+  rumusanMasalah?: string | null;
+  tujuan?: string | null;
+  metodologi?: string | null;
+  mitraIndustri?: string | null;
+  programStudiId?: number | null;
+  periodeId?: string | null;
+  fileProposalTopikUrl?: string | null;
+  mahasiswaId?: number | null;
+  anggotaMahasiswaIds?: number[] | null;
+  usulanPembimbing?: UsulanPembimbingInput[] | null;
 }
 
 export interface UpdateTugasAkhirInput {
@@ -95,6 +95,7 @@ export class TugasAkhirService {
 
   static async create(input: CreateTugasAkhirInput, user: UserPayload) {
     let ketuaMhsId: number | null = null;
+    let mhsProdiId: number | null = null;
     const isMhs = hasRole(user, ['mahasiswa']);
 
     if (isMhs) {
@@ -108,6 +109,7 @@ export class TugasAkhirService {
         throw new Error('Data profil mahasiswa tidak ditemukan.');
       }
       ketuaMhsId = mhsRow.id;
+      mhsProdiId = mhsRow.programStudiId;
     } else if (input.mahasiswaId) {
       // Didaftarkan oleh Admin / Prodi / Kaprodi / LPPM / Dosen atas nama mahasiswa
       const [mhsRow] = await db
@@ -120,6 +122,12 @@ export class TugasAkhirService {
         throw new Error('Mahasiswa yang dipilih tidak ditemukan.');
       }
       ketuaMhsId = mhsRow.id;
+      mhsProdiId = mhsRow.programStudiId;
+    }
+
+    const resolvedProdiId = input.programStudiId || mhsProdiId;
+    if (!resolvedProdiId) {
+      throw new Error('Program studi wajib ditentukan untuk tugas akhir.');
     }
 
     let activePeriodeId = input.periodeId;
@@ -133,7 +141,7 @@ export class TugasAkhirService {
     }
 
     return await db.transaction(async (tx) => {
-      const kodeTa = await TugasAkhirService.generateKodeTa(input.programStudiId);
+      const kodeTa = await TugasAkhirService.generateKodeTa(resolvedProdiId);
 
       const [newTa] = await tx
         .insert(tugasAkhir)
@@ -142,18 +150,18 @@ export class TugasAkhirService {
           tipe: input.tipe,
           jenisKarya: input.jenisKarya,
           judul: input.judul.trim(),
-          judulInggris: input.judulInggris?.trim(),
-          bidangKajian: input.bidangKajian?.trim(),
-          latarBelakang: input.latarBelakang?.trim(),
-          rumusanMasalah: input.rumusanMasalah?.trim(),
-          tujuan: input.tujuan?.trim(),
-          metodologi: input.metodologi?.trim(),
-          mitraIndustri: input.mitraIndustri?.trim(),
-          programStudiId: input.programStudiId,
+          judulInggris: input.judulInggris?.trim() || null,
+          bidangKajian: input.bidangKajian?.trim() || null,
+          latarBelakang: input.latarBelakang?.trim() || null,
+          rumusanMasalah: input.rumusanMasalah?.trim() || null,
+          tujuan: input.tujuan?.trim() || null,
+          metodologi: input.metodologi?.trim() || null,
+          mitraIndustri: input.mitraIndustri?.trim() || null,
+          programStudiId: resolvedProdiId,
           periodeId: activePeriodeId,
           status: 'diajukan',
           createdById: user.id,
-          fileProposalTopikUrl: input.fileProposalTopikUrl,
+          fileProposalTopikUrl: input.fileProposalTopikUrl || null,
         })
         .returning();
 

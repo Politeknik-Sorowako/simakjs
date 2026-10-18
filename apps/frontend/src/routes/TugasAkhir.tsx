@@ -121,6 +121,7 @@ export default function TugasAkhirPage() {
   const [usulanPembimbing2, setUsulanPembimbing2] = createSignal<number | null>(null);
 
   // Active student list for staff creating on behalf of student
+  const [rawActiveMhsList, setRawActiveMhsList] = createSignal<{ id: number; programStudiId?: number | null }[]>([]);
   const [activeMahasiswaList] = createResource(
     () => ({ search: mhsSearchQuery(), prodiId: programStudiId() }),
     async ({ search, prodiId }) => {
@@ -128,7 +129,9 @@ export default function TugasAkhirPage() {
         const res = await mahasiswaController.getAll(search || undefined, 1, 50, prodiId || undefined, {
           filterStatus: 'aktif',
         });
-        return (res.data || []).map((m) => ({
+        const items = res.data || [];
+        setRawActiveMhsList(items.map((m) => ({ id: m.id, programStudiId: m.programStudiId })));
+        return items.map((m) => ({
           value: m.id,
           label: formatMahasiswaOption(m),
         }));
@@ -219,12 +222,17 @@ export default function TugasAkhirPage() {
   // Submit pengusulan topik
   const handleCreateSubmit = async (e: Event) => {
     e.preventDefault();
-    if (!judul().trim()) {
+    const judulTrimmed = judul().trim();
+    if (!judulTrimmed) {
       showToast('Judul tugas akhir wajib diisi.', 'error');
       return;
     }
-    if (!programStudiId()) {
-      showToast('Program studi wajib dipilih.', 'error');
+    if (judulTrimmed.length < 3) {
+      showToast('Judul tugas akhir minimal 3 karakter.', 'error');
+      return;
+    }
+    if (!isMahasiswa() && !programStudiId() && !targetMahasiswaId()) {
+      showToast('Program studi atau mahasiswa pengusul wajib dipilih.', 'error');
       return;
     }
     if (!isMahasiswa() && !targetMahasiswaId()) {
@@ -233,15 +241,15 @@ export default function TugasAkhirPage() {
     }
 
     const usulan: CreateTugasAkhirPayload['usulanPembimbing'] = [];
-    if (usulanPembimbing1()) {
-      usulan.push({ peran: 'pembimbing_1', dosenId: usulanPembimbing1()! });
+    if (usulanPembimbing1() && Number(usulanPembimbing1()) > 0) {
+      usulan.push({ peran: 'pembimbing_1', dosenId: Number(usulanPembimbing1()) });
     }
-    if (usulanPembimbing2()) {
-      usulan.push({ peran: 'pembimbing_2', dosenId: usulanPembimbing2()! });
+    if (usulanPembimbing2() && Number(usulanPembimbing2()) > 0) {
+      usulan.push({ peran: 'pembimbing_2', dosenId: Number(usulanPembimbing2()) });
     }
 
     const payload: CreateTugasAkhirPayload = {
-      judul: judul().trim(),
+      judul: judulTrimmed,
       judulInggris: judulInggris().trim() || undefined,
       tipe: tipe(),
       jenisKarya: jenisKarya(),
@@ -251,9 +259,10 @@ export default function TugasAkhirPage() {
       tujuan: tujuan().trim() || undefined,
       metodologi: metodologi().trim() || undefined,
       mitraIndustri: mitraIndustri().trim() || undefined,
-      programStudiId: programStudiId()!,
-      mahasiswaId: !isMahasiswa() ? targetMahasiswaId()! : undefined,
-      anggotaMahasiswaIds: tipe() === 'kelompok' ? selectedAnggota().map((a) => a.id) : undefined,
+      programStudiId: programStudiId() ? Number(programStudiId()) : undefined,
+      mahasiswaId: !isMahasiswa() && targetMahasiswaId() ? Number(targetMahasiswaId()) : undefined,
+      anggotaMahasiswaIds:
+        tipe() === 'kelompok' && selectedAnggota().length > 0 ? selectedAnggota().map((a) => a.id) : undefined,
       usulanPembimbing: usulan.length > 0 ? usulan : undefined,
     };
 
@@ -588,7 +597,16 @@ export default function TugasAkhirPage() {
                   placeholder="Ketik NIM atau nama mahasiswa..."
                   options={activeMahasiswaList() || []}
                   value={targetMahasiswaId() || undefined}
-                  onChange={(val) => setTargetMahasiswaId(Number(val))}
+                  onChange={(val) => {
+                    const id = Number(val);
+                    setTargetMahasiswaId(id || null);
+                    if (id) {
+                      const found = rawActiveMhsList().find((m) => m.id === id);
+                      if (found?.programStudiId) {
+                        setProgramStudiId(found.programStudiId);
+                      }
+                    }
+                  }}
                   onSearch={(q) => setMhsSearchQuery(q)}
                 />
                 <span class="text-fine text-secondary-500 mt-1 block">
@@ -668,14 +686,16 @@ export default function TugasAkhirPage() {
             </Show>
 
             <div>
-              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Program Studi *</label>
+              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                Program Studi {isMahasiswa() ? '(Opsional - Otomatis Sesuai Akun Mahasiswa)' : '*'}
+              </label>
               <select
                 value={programStudiId() || ''}
                 onChange={(e) => setProgramStudiId(Number(e.currentTarget.value) || null)}
                 class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
-                required
+                required={!isMahasiswa()}
               >
-                <option value="">Pilih Program Studi</option>
+                <option value="">{isMahasiswa() ? 'Gunakan Prodi Akun Saya (Otomatis)' : 'Pilih Program Studi'}</option>
                 <For each={prodiList()}>{(p) => <option value={p.value}>{p.label}</option>}</For>
               </select>
             </div>

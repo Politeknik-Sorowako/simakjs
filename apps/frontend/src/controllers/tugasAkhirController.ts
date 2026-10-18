@@ -110,7 +110,7 @@ export interface CreateTugasAkhirPayload {
   tujuan?: string;
   metodologi?: string;
   mitraIndustri?: string;
-  programStudiId: number;
+  programStudiId?: number;
   periodeId?: string;
   fileProposalTopikUrl?: string;
   mahasiswaId?: number;
