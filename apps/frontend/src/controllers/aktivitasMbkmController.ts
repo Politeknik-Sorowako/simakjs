@@ -35,6 +35,15 @@ export interface KonversiAktivitas {
   sksDiakui: number;
 }
 
+export interface StatusLogAktivitas {
+  id: number;
+  dariStatus: StatusAktivitasMbkm | null;
+  keStatus: StatusAktivitasMbkm;
+  alasan: string;
+  olehNama: string | null;
+  createdAt: string;
+}
+
 export interface AktivitasMbkm {
   id: number;
   judul: string;
@@ -60,6 +69,8 @@ export interface AktivitasMbkm {
   pembimbing: PembimbingAktivitas[];
   konversi: KonversiAktivitas[];
   bimbinganTertaut: Array<{ id: number; mahasiswaId: number; periodeId: string }>;
+  /** Jejak perubahan status manual oleh admin/prodi/kaprodi (baru → lama). */
+  riwayatStatus: StatusLogAktivitas[];
 }
 
 export interface AktivitasMbkmListResponse {
@@ -188,5 +199,22 @@ export const aktivitasMbkmController = {
 
   async setSelesai(id: number) {
     return fetchApi<{ message: string }>(`/aktivitas-mbkm/${id}/selesai`, { method: 'POST' });
+  },
+
+  /**
+   * Paksa status di luar alur normal. `alasan` WAJIB (min 10 karakter) karena
+   * backend menyimpannya permanen — audit log otomatis hanya mencatat pelaku
+   * dan endpoint, bukan alasan koreksinya.
+   */
+  async overrideStatus(id: number, status: StatusAktivitasMbkm, alasan: string) {
+    return fetchApi<{ message: string }>(`/aktivitas-mbkm/${id}/override-status`, {
+      method: 'POST',
+      body: JSON.stringify({ status, alasan }),
+    });
+  },
+
+  async getStatusLog(id: number) {
+    const res = await fetchApi<{ data: StatusLogAktivitas[] }>(`/aktivitas-mbkm/${id}/status-log`);
+    return res.data;
   },
 };

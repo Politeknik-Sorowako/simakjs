@@ -113,3 +113,27 @@ export const removeKonversiSchema = {
   detail: { tags: aktivitasTags, summary: 'Hapus rekognisi SKS' },
   params: t.Object({ id: t.Numeric(), konversiId: t.Numeric() }),
 };
+
+/**
+ * Override status di luar alur normal. Alasan WAJIB diisi karena audit log
+ * otomatis hanya menyimpan URL dan pelaku — alasan koreksi hanya terekam di
+ * sini, dan tercatat permanen pada `aktivitas_mbkm_status_log`.
+ */
+export const overrideStatusSchema = {
+  detail: {
+    tags: aktivitasTags,
+    summary: 'Override status aktivitas MBKM',
+    description:
+      'Paksa perpindahan status ke nilai mana pun untuk koreksi data. Setiap override wajib menyertakan alasan yang disimpan permanen pada riwayat status.',
+  },
+  params: t.Object({ id: t.Numeric() }),
+  body: t.Object({
+    status: statusAktivitas,
+    alasan: t.String({ minLength: 10, maxLength: 500 }),
+  }),
+};
+
+export const statusLogSchema = {
+  detail: { tags: aktivitasTags, summary: 'Riwayat perubahan status aktivitas MBKM' },
+  params: t.Object({ id: t.Numeric() }),
+};

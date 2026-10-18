@@ -10,9 +10,11 @@ import {
   getAktivitasByIdSchema,
   getAktivitasSchema,
   getJenisAktivitasSchema,
+  overrideStatusSchema,
   removeAnggotaSchema,
   removeKonversiSchema,
   removePembimbingSchema,
+  statusLogSchema,
   updateAktivitasSchema,
 } from '../schemas/aktivitas-mbkm.schema';
 
@@ -33,4 +35,8 @@ export const aktivitasMbkmRoutes = new Elysia({ prefix: '/aktivitas-mbkm' })
   .post('/:id/ajukan', AktivitasMbkmController.ajukan, aktivitasIdSchema)
   .post('/:id/setujui', AktivitasMbkmController.setujui, aktivitasIdSchema)
   .post('/:id/tolak', AktivitasMbkmController.tolak, aktivitasIdSchema)
-  .post('/:id/selesai', AktivitasMbkmController.setSelesai, aktivitasIdSchema);
+  .post('/:id/selesai', AktivitasMbkmController.setSelesai, aktivitasIdSchema)
+  // Override status di luar alur normal (admin/super_admin/prodi/kaprodi).
+  // Alasan wajib dan tersimpan permanen di `aktivitas_mbkm_status_log`.
+  .post('/:id/override-status', AktivitasMbkmController.overrideStatus, overrideStatusSchema)
+  .get('/:id/status-log', AktivitasMbkmController.getStatusLog, statusLogSchema);

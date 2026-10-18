@@ -1,6 +1,11 @@
 import { eq } from 'drizzle-orm';
 import { dosen, mahasiswa } from '../models/schema';
-import { AktivitasInput, AktivitasMbkmService, type StatusAktivitas } from '../services/aktivitas-mbkm.service';
+import {
+  AktivitasInput,
+  AktivitasMbkmService,
+  type OverrideStatusInput,
+  type StatusAktivitas,
+} from '../services/aktivitas-mbkm.service';
 import { ProdiScopeService } from '../services/prodi-scope.service';
 import { db } from '../utils/db';
 import { hasRole } from '../utils/role';
@@ -10,6 +15,12 @@ import { AuthContext, UserPayload, UserRole } from '../utils/types';
 const MANAGER_ROLES: UserRole[] = ['admin', 'super_admin', 'prodi', 'kaprodi', 'kemahasiswaan'];
 const APPROVER_ROLES: UserRole[] = ['admin', 'super_admin', 'prodi', 'kaprodi', 'kemahasiswaan'];
 const READER_ROLES: UserRole[] = [...APPROVER_ROLES, 'dosen', 'mahasiswa'];
+/**
+ * Role yang boleh memaksa status di luar alur normal. Sengaja TIDAK memuat
+ * `kemahasiswaan`: unit kemahasiswaan bekerja pada data mahasiswa/magang,
+ * sedangkan koreksi status persetujuan adalah keputusan akademik bertanda tangan.
+ */
+const OVERRIDE_ROLES: UserRole[] = ['admin', 'super_admin', 'prodi', 'kaprodi'];
 
 export class AktivitasMbkmController {
   private static async getMahasiswaIdByEmail(email: string): Promise<number | null> {
@@ -413,6 +424,68 @@ export class AktivitasMbkmController {
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal menandai aktivitas selesai' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async overrideStatus({ params, body, set, getCurrentUser }: AuthContext<any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      const denied = AktivitasMbkmController.denyIfUnauthorized(
+        user,
+        OVERRIDE_ROLES,
+        'Akses ditolak. Override status hanya untuk Admin/Super Admin/Prodi/Kaprodi.',
+      );
+      if (denied || !user) {
+        set.status = user ? 403 : 401;
+        return { error: denied ?? 'Silakan login terlebih dahulu' };
+      }
+      const scopedProdiIds = await ProdiScopeService.getUserAccessibleProdiIds(user);
+      const result = await AktivitasMbkmService.overrideStatus(
+        Number(params.id),
+        body as OverrideStatusInput,
+        user.id,
+        scopedProdiIds,
+      );
+      return {
+        message: `Status aktivitas diubah menjadi ${result.row.status}. ${result.bimbinganDibuat} bimbingan PKL dibuat, ${result.bimbinganDilewati} sudah ada, ${result.bimbinganDiputus} tautan diputus.`,
+        data: result.row,
+      };
+    } catch (err: unknown) {
+      set.status = 400;
+      return { error: err instanceof Error ? err.message : 'Gagal melakukan override status' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getStatusLog({ params, set, getCurrentUser }: AuthContext<any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      const denied = AktivitasMbkmController.denyIfUnauthorized(user, READER_ROLES, 'Akses ditolak.');
+      if (denied || !user) {
+        set.status = user ? 403 : 401;
+        return { error: denied ?? 'Silakan login terlebih dahulu' };
+      }
+      // Batasi ke anggota/pembimbing bila dibaca oleh mahasiswa/dosen, agar
+      // riwayat internal (alasan koreksi) tidak bocor ke role yang tidak berhak.
+      const detail = await AktivitasMbkmService.getById(Number(params.id));
+      if (hasRole(user, ['mahasiswa'])) {
+        const myId = await AktivitasMbkmController.getMahasiswaIdByEmail(user.email);
+        if (!detail.anggota.some((a) => a.mahasiswaId === myId)) {
+          set.status = 403;
+          return { error: 'Akses ditolak.' };
+        }
+      } else if (hasRole(user, ['dosen']) && !hasRole(user, OVERRIDE_ROLES)) {
+        const myDosenId = await AktivitasMbkmController.getDosenIdByEmail(user.email);
+        if (!detail.pembimbing.some((p) => p.dosenId === myDosenId)) {
+          set.status = 403;
+          return { error: 'Akses ditolak.' };
+        }
+      }
+      return { data: detail.riwayatStatus };
+    } catch (err: unknown) {
+      set.status = 404;
+      return { error: err instanceof Error ? err.message : 'Riwayat status tidak ditemukan' };
     }
   }
 }
