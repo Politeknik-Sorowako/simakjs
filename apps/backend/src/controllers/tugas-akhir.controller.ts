@@ -4,6 +4,13 @@ import {
   TugasAkhirService,
   type UpdateTugasAkhirInput,
 } from '../services/tugas-akhir.service';
+import {
+  type AccSidangInput,
+  type CreateLogbookInput,
+  type ReviewLogbookInput,
+  TugasAkhirBimbinganService,
+  type UpdateLogbookInput,
+} from '../services/tugas-akhir-bimbingan.service';
 import type { AuthContext } from '../utils/types';
 
 export class TugasAkhirController {
@@ -193,6 +200,148 @@ export class TugasAkhirController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal merespon undangan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getLogbooks({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const logbooks = await TugasAkhirBimbinganService.getLogbooks(id, user);
+      return { data: logbooks };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengambil logbook bimbingan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async createLogbook({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const created = await TugasAkhirBimbinganService.createLogbook(id, body as CreateLogbookInput, user);
+      set.status = 201;
+      return { message: 'Logbook bimbingan berhasil dicatat', data: created };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mencatat logbook bimbingan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async updateLogbook({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const logbookId = parseInt(params.logbookId, 10);
+      if (isNaN(id) || isNaN(logbookId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const updated = await TugasAkhirBimbinganService.updateLogbook(id, logbookId, body as UpdateLogbookInput, user);
+      return { message: 'Logbook bimbingan berhasil diperbarui', data: updated };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memperbarui logbook bimbingan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async deleteLogbook({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const logbookId = parseInt(params.logbookId, 10);
+      if (isNaN(id) || isNaN(logbookId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const res = await TugasAkhirBimbinganService.deleteLogbook(id, logbookId, user);
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghapus logbook bimbingan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async reviewLogbook({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const logbookId = parseInt(params.logbookId, 10);
+      if (isNaN(id) || isNaN(logbookId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const updated = await TugasAkhirBimbinganService.reviewLogbook(id, logbookId, body as ReviewLogbookInput, user);
+      return { message: 'Review logbook bimbingan berhasil disimpan', data: updated };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mereview logbook bimbingan' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async accSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID tugas akhir tidak valid' };
+      }
+
+      const res = await TugasAkhirBimbinganService.berikanAccSidang(id, body as AccSidangInput, user);
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memperbarui status ACC sidang' };
     }
   }
 }

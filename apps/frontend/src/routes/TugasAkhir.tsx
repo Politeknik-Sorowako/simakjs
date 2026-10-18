@@ -18,6 +18,7 @@ import {
   type ReviewTopikPayload,
   type TugasAkhir,
   type TugasAkhirJenisKarya,
+  type TugasAkhirLogbook,
   type TugasAkhirStatus,
   type TugasAkhirTipe,
   tugasAkhirController,
@@ -150,6 +151,29 @@ export default function TugasAkhirPage() {
   // Detail & Action Modals
   const [selectedTa, setSelectedTa] = createSignal<TugasAkhir | null>(null);
   const [showDetailModal, setShowDetailModal] = createSignal(false);
+
+  // Ruang Bimbingan Modal
+  const [showBimbinganModal, setShowBimbinganModal] = createSignal(false);
+  const [bimbinganTa, setBimbinganTa] = createSignal<TugasAkhir | null>(null);
+  const [logbooks, setLogbooks] = createSignal<TugasAkhirLogbook[]>([]);
+  const [isLoadingLogbooks, setIsLoadingLogbooks] = createSignal(false);
+  const [showAddLogbookForm, setShowAddLogbookForm] = createSignal(false);
+  const [logbookPertemuanKe, setLogbookPertemuanKe] = createSignal<number>(1);
+  const [logbookTanggal, setLogbookTanggal] = createSignal<string>(new Date().toISOString().split('T')[0]);
+  const [logbookTopik, setLogbookTopik] = createSignal<string>('');
+  const [logbookDeskripsi, setLogbookDeskripsi] = createSignal<string>('');
+  const [logbookKendala, setLogbookKendala] = createSignal<string>('');
+  const [logbookDraftUrl, setLogbookDraftUrl] = createSignal<string>('');
+  const [logbookDosenId, setLogbookDosenId] = createSignal<number | null>(null);
+  const [isSubmittingLogbook, setIsSubmittingLogbook] = createSignal(false);
+
+  // Review Logbook Modal (Dosen/Staf)
+  const [reviewingLogbook, setReviewingLogbook] = createSignal<TugasAkhirLogbook | null>(null);
+  const [logbookReviewStatus, setLogbookReviewStatus] = createSignal<'disetujui' | 'perlu_revisi' | 'menunggu'>(
+    'disetujui',
+  );
+  const [logbookCatatanDosen, setLogbookCatatanDosen] = createSignal<string>('');
+  const [isSubmittingLogbookReview, setIsSubmittingLogbookReview] = createSignal(false);
 
   // Review Modal (Kaprodi / Prodi / Admin / LPPM)
   const [showReviewModal, setShowReviewModal] = createSignal(false);
@@ -583,6 +607,107 @@ export default function TugasAkhirPage() {
     }
   };
 
+  // Ruang Bimbingan Handlers
+  const openBimbinganModal = async (ta: TugasAkhir) => {
+    setBimbinganTa(ta);
+    setShowBimbinganModal(true);
+    setShowAddLogbookForm(false);
+    await loadLogbooks(ta.id);
+  };
+
+  const loadLogbooks = async (taId: number) => {
+    try {
+      setIsLoadingLogbooks(true);
+      const data = await tugasAkhirController.getLogbooks(taId);
+      setLogbooks(data);
+      setLogbookPertemuanKe(data.length + 1);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal memuat logbook bimbingan', 'error');
+    } finally {
+      setIsLoadingLogbooks(false);
+    }
+  };
+
+  const handleCreateLogbookSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!bimbinganTa()) return;
+    if (!logbookTopik().trim()) {
+      showToast('Topik bimbingan wajib diisi.', 'error');
+      return;
+    }
+    if (!logbookDeskripsi().trim()) {
+      showToast('Deskripsi kemajuan wajib diisi.', 'error');
+      return;
+    }
+
+    try {
+      setIsSubmittingLogbook(true);
+      await tugasAkhirController.createLogbook(bimbinganTa()!.id, {
+        pertemuanKe: logbookPertemuanKe(),
+        tanggalBimbingan: logbookTanggal(),
+        topik: logbookTopik().trim(),
+        deskripsiKemajuan: logbookDeskripsi().trim(),
+        kendala: logbookKendala().trim() || undefined,
+        fileDraftUrl: logbookDraftUrl().trim() || undefined,
+        dosenId: logbookDosenId() || undefined,
+      });
+
+      showToast('Logbook bimbingan berhasil dicatat!', 'success');
+      setLogbookTopik('');
+      setLogbookDeskripsi('');
+      setLogbookKendala('');
+      setLogbookDraftUrl('');
+      setShowAddLogbookForm(false);
+      await loadLogbooks(bimbinganTa()!.id);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mencatat logbook', 'error');
+    } finally {
+      setIsSubmittingLogbook(false);
+    }
+  };
+
+  const handleReviewLogbookSubmit = async (e: Event) => {
+    e.preventDefault();
+    if (!bimbinganTa() || !reviewingLogbook()) return;
+
+    try {
+      setIsSubmittingLogbookReview(true);
+      await tugasAkhirController.reviewLogbook(bimbinganTa()!.id, reviewingLogbook()!.id, {
+        statusBimbingan: logbookReviewStatus(),
+        catatanDosen: logbookCatatanDosen().trim() || undefined,
+      });
+
+      showToast('Review logbook bimbingan berhasil disimpan!', 'success');
+      setReviewingLogbook(null);
+      await loadLogbooks(bimbinganTa()!.id);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mereview logbook', 'error');
+    } finally {
+      setIsSubmittingLogbookReview(false);
+    }
+  };
+
+  const handleAccSidangAction = async (jenisSidang: 'proposal' | 'akhir', statusAcc: boolean) => {
+    if (!bimbinganTa()) return;
+    try {
+      await tugasAkhirController.accSidang(bimbinganTa()!.id, {
+        jenisSidang,
+        statusAcc,
+      });
+      showToast(
+        `Status ACC ${jenisSidang === 'proposal' ? 'Sidang Proposal' : 'Sidang Akhir'} berhasil diperbarui!`,
+        'success',
+      );
+      // Refresh TA detail
+      const updated = await tugasAkhirController.getById(bimbinganTa()!.id);
+      setBimbinganTa(updated);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui status ACC sidang', 'error');
+    }
+  };
+
   const tableHeaders = ['Kode & Judul', 'Tipe & Karya', 'Pengusul / Anggota', 'Pembimbing', 'Status', 'Aksi'];
 
   return (
@@ -751,6 +876,29 @@ export default function TugasAkhirPage() {
                       </td>
                       <td class="py-4 px-4 text-right">
                         <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                          <Show
+                            when={[
+                              'disetujui',
+                              'bimbingan',
+                              'sempro_diajukan',
+                              'sempro_dijadwalkan',
+                              'sempro_selesai',
+                              'sidang_diajukan',
+                              'sidang_dijadwalkan',
+                              'sidang_selesai',
+                              'revisi',
+                              'lulus',
+                            ].includes(item.status)}
+                          >
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              class="bg-action-500 hover:bg-action-600 text-white"
+                              onClick={() => openBimbinganModal(item)}
+                            >
+                              Bimbingan
+                            </Button>
+                          </Show>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1611,6 +1759,406 @@ export default function TugasAkhirPage() {
               </Button>
             </div>
           </div>
+        </Modal>
+      </Show>
+
+      {/* MODAL RUANG BIMBINGAN & LOGBOOK TA */}
+      <Show when={showBimbinganModal() && bimbinganTa()}>
+        <Modal
+          title={`Ruang Bimbingan: ${bimbinganTa()?.kodeTa}`}
+          isOpen={showBimbinganModal()}
+          onClose={() => setShowBimbinganModal(false)}
+          maxWidth="xl"
+        >
+          <div class="space-y-6 max-h-[80vh] overflow-y-auto px-1">
+            {/* Header Ringkasan Tugas Akhir */}
+            <div class="p-4 bg-pearl dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-3">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <span class="text-caption font-bold text-action uppercase tracking-wide">
+                    {bimbinganTa()?.kodeTa} • {bimbinganTa()?.tipe === 'kelompok' ? 'Kelompok' : 'Individu'}
+                  </span>
+                  <h3 class="text-table font-bold text-ink dark:text-pearl mt-0.5 leading-snug">
+                    {bimbinganTa()?.judul}
+                  </h3>
+                </div>
+                <Badge variant={STATUS_META[bimbinganTa()!.status]?.variant || 'default'}>
+                  {STATUS_META[bimbinganTa()!.status]?.label || bimbinganTa()!.status}
+                </Badge>
+              </div>
+
+              {/* Progress Minimal Bimbingan (Target 8 Sesi) */}
+              <div class="pt-2 border-t border-hairline dark:border-hairline-dark">
+                <div class="flex items-center justify-between text-fine mb-1.5">
+                  <span class="font-semibold text-ink dark:text-pearl">Progres Sesi Bimbingan Disetujui:</span>
+                  <span class="font-bold text-action">
+                    {logbooks().filter((l) => l.statusBimbingan === 'disetujui').length} / 8 Pertemuan Disetujui
+                  </span>
+                </div>
+                <div class="w-full bg-secondary-200 dark:bg-secondary-800 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    class="bg-action h-full transition-all duration-300 rounded-full"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (logbooks().filter((l) => l.statusBimbingan === 'disetujui').length / 8) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Status ACC Sidang oleh Pembimbing */}
+              <div class="pt-2 border-t border-hairline dark:border-hairline-dark">
+                <span class="text-fine font-semibold text-secondary-500 uppercase block mb-2">
+                  Verifikasi Kelayakan Maju Sidang (ACC Pembimbing)
+                </span>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <For each={bimbinganTa()?.pembimbing}>
+                    {(p) => {
+                      const isMyPembimbing = () =>
+                        p.dosenNama === user()?.nama || p.dosenNip === (user() as Record<string, unknown> | null)?.nip;
+                      const canGiveAcc = () => isStaff() || isMyPembimbing();
+
+                      return (
+                        <div class="p-3 bg-white dark:bg-secondary-900/40 rounded-xl border border-hairline dark:border-hairline-dark space-y-2">
+                          <div class="flex items-center justify-between">
+                            <span class="font-semibold text-fine text-action">
+                              {p.peran === 'pembimbing_1' ? 'Pembimbing 1' : 'Pembimbing 2'}
+                            </span>
+                            <span class="text-fine text-secondary-500">{p.dosenNama || p.namaEksternal || '-'}</span>
+                          </div>
+
+                          <div class="flex items-center justify-between pt-1">
+                            <span class="text-caption text-ink dark:text-pearl">ACC Sidang Proposal:</span>
+                            <div class="flex items-center gap-1.5">
+                              <Badge variant={p.accSidangProposal ? 'success' : 'default'} size="sm">
+                                {p.accSidangProposal ? 'Sudah ACC' : 'Belum ACC'}
+                              </Badge>
+                              <Show when={canGiveAcc()}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAccSidangAction('proposal', !p.accSidangProposal)}
+                                >
+                                  {p.accSidangProposal ? 'Batal ACC' : 'Beri ACC'}
+                                </Button>
+                              </Show>
+                            </div>
+                          </div>
+
+                          <div class="flex items-center justify-between pt-1">
+                            <span class="text-caption text-ink dark:text-pearl">ACC Sidang Akhir:</span>
+                            <div class="flex items-center gap-1.5">
+                              <Badge variant={p.accSidangAkhir ? 'success' : 'default'} size="sm">
+                                {p.accSidangAkhir ? 'Sudah ACC' : 'Belum ACC'}
+                              </Badge>
+                              <Show when={canGiveAcc()}>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleAccSidangAction('akhir', !p.accSidangAkhir)}
+                                >
+                                  {p.accSidangAkhir ? 'Batal ACC' : 'Beri ACC'}
+                                </Button>
+                              </Show>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              </div>
+            </div>
+
+            {/* Tombol Tambah Logbook */}
+            <div class="flex items-center justify-between">
+              <h4 class="text-table font-bold text-ink dark:text-pearl">
+                Riwayat Logbook Konsultasi ({logbooks().length} Catatan)
+              </h4>
+              <Button
+                variant={showAddLogbookForm() ? 'secondary' : 'primary'}
+                size="sm"
+                onClick={() => setShowAddLogbookForm(!showAddLogbookForm())}
+              >
+                {showAddLogbookForm() ? 'Tutup Form' : '+ Catat Bimbingan'}
+              </Button>
+            </div>
+
+            {/* Form Tambah Logbook */}
+            <Show when={showAddLogbookForm()}>
+              <form
+                onSubmit={handleCreateLogbookSubmit}
+                class="p-4 bg-secondary-50/70 dark:bg-secondary-900/30 rounded-2xl border border-hairline dark:border-hairline-dark space-y-4"
+              >
+                <div class="font-semibold text-caption text-ink dark:text-pearl">Catat Sesi Bimbingan Baru</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-fine font-semibold text-secondary-500 mb-1">Pertemuan Ke *</label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={logbookPertemuanKe()}
+                      onInput={(e) => setLogbookPertemuanKe(Number(e.currentTarget.value) || 1)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-fine font-semibold text-secondary-500 mb-1">Tanggal Bimbingan *</label>
+                    <Input
+                      type="date"
+                      value={logbookTanggal()}
+                      onInput={(e) => setLogbookTanggal(e.currentTarget.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-fine font-semibold text-secondary-500 mb-1">Dosen Pembimbing</label>
+                    <select
+                      value={logbookDosenId() || ''}
+                      onChange={(e) => setLogbookDosenId(Number(e.currentTarget.value) || null)}
+                      class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                    >
+                      <option value="">Semua / Dosen Default</option>
+                      <For each={bimbinganTa()?.pembimbing}>
+                        {(p) => (
+                          <option value={p.dosenId || ''}>
+                            {p.peran === 'pembimbing_1' ? 'P1' : 'P2'}: {p.dosenNama || p.namaEksternal}
+                          </option>
+                        )}
+                      </For>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-fine font-semibold text-secondary-500 mb-1">
+                    Topik / Bahasan Bimbingan *
+                  </label>
+                  <Input
+                    placeholder="Contoh: Konsultasi Bab 2 Tinjauan Pustaka & Desain Skematik..."
+                    value={logbookTopik()}
+                    onInput={(e) => setLogbookTopik(e.currentTarget.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-fine font-semibold text-secondary-500 mb-1">
+                    Deskripsi Kemajuan yang Dicapai *
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Jelaskan secara spesifik materi kemajuan naskah atau prototipe..."
+                    value={logbookDeskripsi()}
+                    onInput={(e) => setLogbookDeskripsi(e.currentTarget.value)}
+                    class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                    required
+                  />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-fine font-semibold text-secondary-500 mb-1">
+                      Kendala / Persoalan Teknis (Opsional)
+                    </label>
+                    <Input
+                      placeholder="Kendala komponen atau literatur..."
+                      value={logbookKendala()}
+                      onInput={(e) => setLogbookKendala(e.currentTarget.value)}
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-fine font-semibold text-secondary-500 mb-1">
+                      Tautan Draft / Laporan File (Opsional)
+                    </label>
+                    <Input
+                      placeholder="https://drive.google.com/..."
+                      value={logbookDraftUrl()}
+                      onInput={(e) => setLogbookDraftUrl(e.currentTarget.value)}
+                    />
+                  </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowAddLogbookForm(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" variant="primary" size="sm" disabled={isSubmittingLogbook()}>
+                    {isSubmittingLogbook() ? 'Menyimpan...' : 'Simpan Logbook'}
+                  </Button>
+                </div>
+              </form>
+            </Show>
+
+            {/* Timeline Daftar Logbook */}
+            <Show
+              when={!isLoadingLogbooks()}
+              fallback={<div class="text-center py-6 text-secondary-500">Memuat riwayat logbook...</div>}
+            >
+              <Show
+                when={logbooks().length > 0}
+                fallback={
+                  <div class="text-center py-8 bg-secondary-50/50 dark:bg-secondary-900/20 rounded-2xl border border-dashed border-hairline dark:border-hairline-dark">
+                    <p class="text-caption text-secondary-500">Belum ada sesi bimbingan yang dicatat.</p>
+                    <p class="text-fine text-secondary-400 mt-1">
+                      Mahasiswa dapat mulai mencatat logbook setelah berdiskusi dengan pembimbing.
+                    </p>
+                  </div>
+                }
+              >
+                <div class="space-y-3">
+                  <For each={logbooks()}>
+                    {(lb) => (
+                      <div class="p-4 bg-white dark:bg-canvas-dark rounded-xl border border-hairline dark:border-hairline-dark shadow-sm space-y-2">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-action/10 text-action">
+                              Pertemuan #{lb.pertemuanKe}
+                            </span>
+                            <span class="text-fine text-secondary-500">{lb.tanggalBimbingan}</span>
+                            <Show when={lb.dosenNama}>
+                              <span class="text-fine text-secondary-400">• Dosen: {lb.dosenNama}</span>
+                            </Show>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                lb.statusBimbingan === 'disetujui'
+                                  ? 'success'
+                                  : lb.statusBimbingan === 'perlu_revisi'
+                                    ? 'warning'
+                                    : 'default'
+                              }
+                              size="sm"
+                            >
+                              {lb.statusBimbingan === 'disetujui'
+                                ? 'Disetujui Pembimbing'
+                                : lb.statusBimbingan === 'perlu_revisi'
+                                  ? 'Perlu Revisi'
+                                  : 'Menunggu Review'}
+                            </Badge>
+
+                            {/* Tombol Review untuk Dosen / Staf */}
+                            <Show when={isStaff() || hasRole(['dosen'])}>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => {
+                                  setReviewingLogbook(lb);
+                                  setLogbookReviewStatus(lb.statusBimbingan);
+                                  setLogbookCatatanDosen(lb.catatanDosen || '');
+                                }}
+                              >
+                                Review
+                              </Button>
+                            </Show>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div class="text-table font-semibold text-ink dark:text-pearl">{lb.topik}</div>
+                          <p class="text-caption text-secondary-600 dark:text-secondary-300 mt-1 whitespace-pre-wrap">
+                            {lb.deskripsiKemajuan}
+                          </p>
+                        </div>
+
+                        <Show when={lb.kendala}>
+                          <div class="text-fine text-secondary-500 bg-secondary-50 dark:bg-secondary-900/30 p-2.5 rounded-lg">
+                            <span class="font-semibold text-danger-600 dark:text-danger-400">Kendala: </span>
+                            {lb.kendala}
+                          </div>
+                        </Show>
+
+                        <Show when={lb.catatanDosen}>
+                          <div class="text-fine bg-success-50/70 dark:bg-success-900/20 text-success-800 dark:text-success-200 p-2.5 rounded-lg border border-success-200 dark:border-success-800/40">
+                            <span class="font-semibold">Catatan / Arahan Dosen: </span>
+                            {lb.catatanDosen}
+                          </div>
+                        </Show>
+
+                        <Show when={lb.fileDraftUrl}>
+                          <div class="pt-1">
+                            <a
+                              href={lb.fileDraftUrl!}
+                              target="_blank"
+                              rel="noreferrer"
+                              class="text-fine text-action hover:underline inline-flex items-center gap-1"
+                            >
+                              📎 Lihat Dokumen Draft Naskah
+                            </a>
+                          </div>
+                        </Show>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </Show>
+
+            <div class="flex justify-end pt-4 border-t border-hairline dark:border-hairline-dark">
+              <Button type="button" variant="ghost" onClick={() => setShowBimbinganModal(false)}>
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </Show>
+
+      {/* MODAL REVIEW LOGBOOK (DOSEN / STAF) */}
+      <Show when={reviewingLogbook()}>
+        <Modal
+          title={`Review Logbook: Pertemuan #${reviewingLogbook()?.pertemuanKe}`}
+          isOpen={!!reviewingLogbook()}
+          onClose={() => setReviewingLogbook(null)}
+          maxWidth="md"
+        >
+          <form onSubmit={handleReviewLogbookSubmit} class="space-y-4">
+            <div>
+              <span class="text-fine text-secondary-500 uppercase block mb-1">Topik Bimbingan</span>
+              <p class="text-table font-semibold text-ink dark:text-pearl">{reviewingLogbook()?.topik}</p>
+            </div>
+
+            <div>
+              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                Status Verifikasi Bimbingan *
+              </label>
+              <select
+                value={logbookReviewStatus()}
+                onChange={(e) =>
+                  setLogbookReviewStatus(e.currentTarget.value as 'disetujui' | 'perlu_revisi' | 'menunggu')
+                }
+                class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+              >
+                <option value="disetujui">Disetujui (Memenuhi Syarat & Masuk BKD)</option>
+                <option value="perlu_revisi">Perlu Revisi (Perbaiki Materi)</option>
+                <option value="menunggu">Menunggu / Ditunda</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                Catatan / Arahan Perbaikan
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Berikan arahan untuk bimbingan berikutnya..."
+                value={logbookCatatanDosen()}
+                onInput={(e) => setLogbookCatatanDosen(e.currentTarget.value)}
+                class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+              />
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t border-hairline dark:border-hairline-dark">
+              <Button type="button" variant="ghost" onClick={() => setReviewingLogbook(null)}>
+                Batal
+              </Button>
+              <Button type="submit" variant="primary" disabled={isSubmittingLogbookReview()}>
+                {isSubmittingLogbookReview() ? 'Menyimpan...' : 'Simpan Review'}
+              </Button>
+            </div>
+          </form>
         </Modal>
       </Show>
     </MainLayout>
