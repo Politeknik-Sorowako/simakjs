@@ -2,11 +2,13 @@ import { createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { DropdownMenu, type DropdownMenuItem } from '../components/ui/DropdownMenu';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
+
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { dosenController } from '../controllers/dosenController';
@@ -1126,90 +1128,130 @@ export default function TugasAkhirPage() {
                         </Show>
                       </td>
                       <td class="py-4 px-4 text-right">
-                        <div class="flex items-center justify-end gap-1.5 flex-wrap">
-                          <Show
-                            when={[
-                              'disetujui',
-                              'bimbingan',
-                              'sempro_diajukan',
-                              'sempro_dijadwalkan',
-                              'sempro_selesai',
-                              'sidang_diajukan',
-                              'sidang_dijadwalkan',
-                              'sidang_selesai',
-                              'revisi',
-                              'lulus',
-                            ].includes(item.status)}
-                          >
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              class="bg-action-500 hover:bg-action-600 text-white"
-                              onClick={() => openBimbinganModal(item)}
-                            >
-                              Bimbingan
-                            </Button>
-                          </Show>
+                        {(() => {
+                          const actionItems = (): DropdownMenuItem[] => {
+                            const items: DropdownMenuItem[] = [];
 
-                          {/* Tombol Sidang Proposal (Sempro) */}
-                          <Show
-                            when={[
-                              'bimbingan',
-                              'sempro_diajukan',
-                              'sempro_dijadwalkan',
-                              'sempro_selesai',
-                              'sidang_diajukan',
-                              'sidang_dijadwalkan',
-                              'sidang_selesai',
-                              'revisi',
-                              'lulus',
-                            ].includes(item.status)}
-                          >
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              class="border-action/30 text-action hover:bg-action/10"
-                              onClick={() => openSidangModal(item)}
-                            >
-                              Sidang Sempro
-                            </Button>
-                          </Show>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedTa(item);
-                              setShowDetailModal(true);
-                            }}
-                          >
-                            Detail
-                          </Button>
-                          <Show when={canEdit(item)}>
-                            <Button variant="secondary" size="sm" onClick={() => openEditModal(item)}>
-                              Edit
-                            </Button>
-                          </Show>
-                          <Show when={isStaff()}>
-                            <Button variant="secondary" size="sm" onClick={() => openReviewModal(item)}>
-                              Review
-                            </Button>
-                          </Show>
-                          <Show when={isLppmOrAdmin()}>
-                            <Button
-                              variant="warning"
-                              size="sm"
-                              title="Administrative Override"
-                              onClick={() => openOverrideModal(item)}
-                            >
-                              Override
-                            </Button>
-                          </Show>
-                          <Show when={canDelete(item)}>
-                            <Button variant="danger" size="sm" onClick={() => openDeleteModal(item)}>
-                              Hapus
-                            </Button>
-                          </Show>
-                        </div>
+                            // 1. Detail Tugas Akhir (Selalu ada)
+                            items.push({
+                              label: 'Detail Tugas Akhir',
+                              icon: '📄',
+                              onClick: () => {
+                                setSelectedTa(item);
+                                setShowDetailModal(true);
+                              },
+                            });
+
+                            // 2. Ruang Bimbingan & Logbook (Jika sudah disetujui/bimbingan/dst)
+                            if (
+                              [
+                                'disetujui',
+                                'bimbingan',
+                                'sempro_diajukan',
+                                'sempro_dijadwalkan',
+                                'sempro_selesai',
+                                'sidang_diajukan',
+                                'sidang_dijadwalkan',
+                                'sidang_selesai',
+                                'revisi',
+                                'lulus',
+                              ].includes(item.status)
+                            ) {
+                              items.push({
+                                label: 'Ruang Bimbingan',
+                                icon: '💬',
+                                onClick: () => openBimbinganModal(item),
+                              });
+                            }
+
+                            // 3. Sidang Proposal (Sempro)
+                            if (
+                              [
+                                'bimbingan',
+                                'sempro_diajukan',
+                                'sempro_dijadwalkan',
+                                'sempro_selesai',
+                                'sidang_diajukan',
+                                'sidang_dijadwalkan',
+                                'sidang_selesai',
+                                'revisi',
+                                'lulus',
+                              ].includes(item.status)
+                            ) {
+                              items.push({
+                                label: 'Sidang Sempro',
+                                icon: '🎓',
+                                onClick: () => openSidangModal(item),
+                              });
+                            }
+
+                            // 4. Edit (Mahasiswa pembuat atau Staf/Admin)
+                            if (canEdit(item)) {
+                              items.push({
+                                label: 'Edit Tugas Akhir',
+                                icon: '✏️',
+                                onClick: () => openEditModal(item),
+                              });
+                            }
+
+                            // 5. Review & Disposisi Pembimbing (Staf/Kaprodi/Admin)
+                            if (isStaff()) {
+                              items.push({
+                                label: 'Review & Pembimbing',
+                                icon: '📝',
+                                onClick: () => openReviewModal(item),
+                              });
+                            }
+
+                            // 6. Administrative Override (LPPM / Super Admin / Admin)
+                            if (isLppmOrAdmin()) {
+                              items.push({
+                                label: 'Override Status',
+                                icon: '⚡',
+                                onClick: () => openOverrideModal(item),
+                              });
+                            }
+
+                            // 7. Hapus Tugas Akhir (Danger)
+                            if (canDelete(item)) {
+                              items.push({ separator: true });
+                              items.push({
+                                label: 'Hapus Tugas Akhir',
+                                icon: '🗑️',
+                                danger: true,
+                                onClick: () => openDeleteModal(item),
+                              });
+                            }
+
+                            return items;
+                          };
+
+                          return (
+                            <DropdownMenu
+                              triggerAriaLabel={`Aksi tugas akhir ${item.kodeTa}`}
+                              position="right"
+                              trigger={
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-pearl dark:bg-canvas-dark border border-hairline dark:border-hairline-dark hover:bg-secondary-100 dark:hover:bg-secondary-800 text-ink dark:text-pearl transition-all shadow-2xs">
+                                  <span>Aksi</span>
+                                  <svg
+                                    class="w-3.5 h-3.5 text-secondary-500"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-width="2"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
+                                </div>
+                              }
+                              items={actionItems()}
+                            />
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
