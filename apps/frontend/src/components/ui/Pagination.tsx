@@ -17,8 +17,11 @@ export function Pagination(props: PaginationProps) {
 
   const pageOptions = () => props.pageOptions ?? DEFAULT_PAGE_OPTIONS;
 
-  const start = () => Math.min((props.currentPage - 1) * props.limit + 1, props.total);
-  const end = () => Math.min(props.currentPage * props.limit, props.total);
+  const safeTotal = () => (typeof props.total === 'number' && !isNaN(props.total) ? props.total : 0);
+  const safeCurrentPage = () => Math.max(1, props.currentPage || 1);
+  const safeLimit = () => Math.max(1, props.limit || 10);
+  const start = () => Math.min((safeCurrentPage() - 1) * safeLimit() + 1, safeTotal());
+  const end = () => Math.min(safeCurrentPage() * safeLimit(), safeTotal());
 
   const handleJump = () => {
     const val = Number(jumpValue());
@@ -32,7 +35,7 @@ export function Pagination(props: PaginationProps) {
     <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mt-4">
       <div class="flex items-center gap-3 text-caption text-secondary-500 dark:text-secondary-400">
         <span>
-          Menampilkan {props.total > 0 ? start() : 0}–{end()} dari {props.total} data
+          Menampilkan {safeTotal() > 0 ? start() : 0}–{safeTotal() > 0 ? end() : 0} dari {safeTotal()} data
         </span>
         <div class="flex items-center gap-1.5">
           <span>Baris:</span>

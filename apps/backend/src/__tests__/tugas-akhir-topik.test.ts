@@ -408,4 +408,104 @@ describe('Tugas Akhir - Milestone 1: Pengusulan Topik (Individu & Kelompok)', ()
     expect(body.error).toContain('Validasi gagal:');
     expect(body.error).toContain('judul');
   });
+
+  it('10. GET /tugas-akhir menyertakan daftar pembimbing dan total paging di root', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/tugas-akhir?page=1&limit=10', {
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      data: { id: number; pembimbing: { peran: string; dosenNama?: string }[] }[];
+      total: number;
+      page: number;
+      limit: number;
+    };
+    expect(typeof body.total).toBe('number');
+    expect(body.total).toBeGreaterThan(0);
+    expect(Array.isArray(body.data)).toBe(true);
+
+    const hasPembimbing = body.data.some((ta) => ta.pembimbing && ta.pembimbing.length > 0);
+    expect(hasPembimbing).toBe(true);
+  });
+
+  it('11. Update tugas akhir berhasil mengubah judul dan usulan pembimbing', async () => {
+    // Buat TA baru untuk diedit
+    const createdRes = await app.handle(
+      new Request('http://localhost/tugas-akhir', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'Judul Asli Sebelum Diedit Mahasiswa',
+          tipe: 'individu',
+          jenisKarya: 'skripsi',
+          programStudiId: prodiId,
+        }),
+      }),
+    );
+    expect(createdRes.status).toBe(201);
+    const createdBody = (await createdRes.json()) as { data: { id: number } };
+    const targetId = createdBody.data.id;
+
+    // Edit TA
+    const updateRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'Judul Baru Yang Sudah Diperbarui',
+          usulanPembimbing: [{ peran: 'pembimbing_1', dosenId: dosenId1 }],
+        }),
+      }),
+    );
+    expect(updateRes.status).toBe(200);
+
+    const getRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    const getBody = (await getRes.json()) as { data: { judul: string; pembimbing: { dosenId: number }[] } };
+    expect(getBody.data.judul).toBe('Judul Baru Yang Sudah Diperbarui');
+    expect(getBody.data.pembimbing.length).toBe(1);
+    expect(getBody.data.pembimbing[0].dosenId).toBe(dosenId1);
+  });
+
+  it('12. Delete tugas akhir berhasil menghapus data tugas akhir', async () => {
+    // Buat TA untuk dihapus
+    const createdRes = await app.handle(
+      new Request('http://localhost/tugas-akhir', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          judul: 'Tugas Akhir Yang Akan Dihapus Pengusul',
+          tipe: 'individu',
+          jenisKarya: 'prototipe',
+          programStudiId: prodiId,
+        }),
+      }),
+    );
+    expect(createdRes.status).toBe(201);
+    const createdBody = (await createdRes.json()) as { data: { id: number } };
+    const targetId = createdBody.data.id;
+
+    // Delete TA
+    const deleteRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(deleteRes.status).toBe(200);
+
+    // Verify sudah tidak ditemukan
+    const getRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${targetId}`, {
+        headers: { Authorization: `Bearer ${mhsToken}` },
+      }),
+    );
+    expect(getRes.status).toBe(404);
+  });
 });

@@ -43,17 +43,18 @@ export interface CreateTugasAkhirInput {
 }
 
 export interface UpdateTugasAkhirInput {
-  judul?: string;
-  judulInggris?: string;
+  judul?: string | null;
+  judulInggris?: string | null;
   tipe?: 'individu' | 'kelompok';
   jenisKarya?: 'skripsi' | 'prototipe' | 'proyek_rekayasa' | 'rancang_bangun';
-  bidangKajian?: string;
-  latarBelakang?: string;
-  rumusanMasalah?: string;
-  tujuan?: string;
-  metodologi?: string;
-  mitraIndustri?: string;
-  fileProposalTopikUrl?: string;
+  bidangKajian?: string | null;
+  latarBelakang?: string | null;
+  rumusanMasalah?: string | null;
+  tujuan?: string | null;
+  metodologi?: string | null;
+  mitraIndustri?: string | null;
+  fileProposalTopikUrl?: string | null;
+  usulanPembimbing?: UsulanPembimbingInput[] | null;
 }
 
 export interface ReviewTopikInput {
@@ -233,29 +234,85 @@ export class TugasAkhirService {
       throw new Error('Akses ditolak. Anda bukan pengusul tugas akhir ini.');
     }
 
-    if (!isStaffEditor && !['draft', 'revisi_proposal_topik'].includes(existing.status)) {
-      throw new Error('Topik yang sudah diajukan atau diproses tidak dapat diubah tanpa persetujuan prodi.');
+    if (!isStaffEditor && !['draft', 'diajukan', 'revisi_proposal_topik'].includes(existing.status)) {
+      throw new Error('Topik yang sudah disetujui atau diproses tidak dapat diubah tanpa persetujuan prodi.');
     }
 
-    const [updated] = await db
-      .update(tugasAkhir)
-      .set({
-        judul: input.judul?.trim() ?? existing.judul,
-        judulInggris: input.judulInggris !== undefined ? input.judulInggris?.trim() : existing.judulInggris,
-        tipe: input.tipe ?? existing.tipe,
-        jenisKarya: input.jenisKarya ?? existing.jenisKarya,
-        bidangKajian: input.bidangKajian !== undefined ? input.bidangKajian?.trim() : existing.bidangKajian,
-        latarBelakang: input.latarBelakang !== undefined ? input.latarBelakang?.trim() : existing.latarBelakang,
-        rumusanMasalah: input.rumusanMasalah !== undefined ? input.rumusanMasalah?.trim() : existing.rumusanMasalah,
-        tujuan: input.tujuan !== undefined ? input.tujuan?.trim() : existing.tujuan,
-        metodologi: input.metodologi !== undefined ? input.metodologi?.trim() : existing.metodologi,
-        mitraIndustri: input.mitraIndustri !== undefined ? input.mitraIndustri?.trim() : existing.mitraIndustri,
-        fileProposalTopikUrl: input.fileProposalTopikUrl ?? existing.fileProposalTopikUrl,
-      })
-      .where(eq(tugasAkhir.id, id))
-      .returning();
+    return await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(tugasAkhir)
+        .set({
+          judul: input.judul?.trim() ?? existing.judul,
+          judulInggris: input.judulInggris !== undefined ? input.judulInggris?.trim() : existing.judulInggris,
+          tipe: input.tipe ?? existing.tipe,
+          jenisKarya: input.jenisKarya ?? existing.jenisKarya,
+          bidangKajian: input.bidangKajian !== undefined ? input.bidangKajian?.trim() : existing.bidangKajian,
+          latarBelakang: input.latarBelakang !== undefined ? input.latarBelakang?.trim() : existing.latarBelakang,
+          rumusanMasalah: input.rumusanMasalah !== undefined ? input.rumusanMasalah?.trim() : existing.rumusanMasalah,
+          tujuan: input.tujuan !== undefined ? input.tujuan?.trim() : existing.tujuan,
+          metodologi: input.metodologi !== undefined ? input.metodologi?.trim() : existing.metodologi,
+          mitraIndustri: input.mitraIndustri !== undefined ? input.mitraIndustri?.trim() : existing.mitraIndustri,
+          fileProposalTopikUrl: input.fileProposalTopikUrl ?? existing.fileProposalTopikUrl,
+        })
+        .where(eq(tugasAkhir.id, id))
+        .returning();
 
-    return updated;
+      // Jika usulan pembimbing diperbarui
+      if (input.usulanPembimbing && input.usulanPembimbing.length > 0) {
+        for (const p of input.usulanPembimbing) {
+          const [existP] = await tx
+            .select()
+            .from(tugasAkhirPembimbing)
+            .where(and(eq(tugasAkhirPembimbing.tugasAkhirId, id), eq(tugasAkhirPembimbing.peran, p.peran)))
+            .limit(1);
+
+          if (existP) {
+            await tx
+              .update(tugasAkhirPembimbing)
+              .set({
+                dosenId: p.dosenId,
+                namaEksternal: p.namaEksternal?.trim() || null,
+                instansiEksternal: p.instansiEksternal?.trim() || null,
+                catatan: p.catatan?.trim() || null,
+              })
+              .where(eq(tugasAkhirPembimbing.id, existP.id));
+          } else {
+            await tx.insert(tugasAkhirPembimbing).values({
+              tugasAkhirId: id,
+              peran: p.peran,
+              dosenId: p.dosenId,
+              namaEksternal: p.namaEksternal?.trim() || null,
+              instansiEksternal: p.instansiEksternal?.trim() || null,
+              statusPersetujuan: 'usulan',
+              catatan: p.catatan?.trim() || null,
+            });
+          }
+        }
+      }
+
+      return updated;
+    });
+  }
+
+  static async delete(id: number, user: UserPayload) {
+    const [existing] = await db.select().from(tugasAkhir).where(eq(tugasAkhir.id, id)).limit(1);
+    if (!existing) {
+      throw new Error('Data tugas akhir tidak ditemukan.');
+    }
+
+    const isStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi', 'lppm']);
+    const isOwner = existing.createdById === user.id;
+
+    if (!isStaff && !isOwner) {
+      throw new Error('Akses ditolak. Anda tidak berhak menghapus tugas akhir ini.');
+    }
+
+    if (!isStaff && !['draft', 'diajukan', 'revisi_proposal_topik'].includes(existing.status)) {
+      throw new Error('Tugas akhir yang sudah disetujui atau diproses tidak dapat dihapus oleh mahasiswa.');
+    }
+
+    await db.delete(tugasAkhir).where(eq(tugasAkhir.id, id));
+    return { success: true, message: 'Data tugas akhir berhasil dihapus.' };
   }
 
   static async reviewTopik(id: number, input: ReviewTopikInput, user: UserPayload) {
@@ -591,8 +648,94 @@ export class TugasAkhirService {
       .limit(limit)
       .offset(offset);
 
+    const taIds = rows.map((r) => r.id);
+
+    let pembimbingList: {
+      id: number;
+      tugasAkhirId: number;
+      peran: string;
+      dosenId: number | null;
+      namaEksternal: string | null;
+      instansiEksternal: string | null;
+      statusPersetujuan: string;
+      catatan: string | null;
+      dosenNama: string | null;
+      dosenNip: string | null;
+    }[] = [];
+
+    let anggotaList: {
+      id: number;
+      tugasAkhirId: number;
+      mahasiswaId: number;
+      peran: string;
+      statusKonfirmasi: string;
+      bagianPengerjaan: string | null;
+      mahasiswaNama: string | null;
+      mahasiswaNim: string | null;
+    }[] = [];
+
+    if (taIds.length > 0) {
+      pembimbingList = await db
+        .select({
+          id: tugasAkhirPembimbing.id,
+          tugasAkhirId: tugasAkhirPembimbing.tugasAkhirId,
+          peran: tugasAkhirPembimbing.peran,
+          dosenId: tugasAkhirPembimbing.dosenId,
+          namaEksternal: tugasAkhirPembimbing.namaEksternal,
+          instansiEksternal: tugasAkhirPembimbing.instansiEksternal,
+          statusPersetujuan: tugasAkhirPembimbing.statusPersetujuan,
+          catatan: tugasAkhirPembimbing.catatan,
+          dosenNama: dosen.nama,
+          dosenNip: dosen.nip,
+        })
+        .from(tugasAkhirPembimbing)
+        .leftJoin(dosen, eq(tugasAkhirPembimbing.dosenId, dosen.id))
+        .where(inArray(tugasAkhirPembimbing.tugasAkhirId, taIds))
+        .orderBy(asc(tugasAkhirPembimbing.peran));
+
+      anggotaList = await db
+        .select({
+          id: tugasAkhirAnggota.id,
+          tugasAkhirId: tugasAkhirAnggota.tugasAkhirId,
+          mahasiswaId: tugasAkhirAnggota.mahasiswaId,
+          peran: tugasAkhirAnggota.peran,
+          statusKonfirmasi: tugasAkhirAnggota.statusKonfirmasi,
+          bagianPengerjaan: tugasAkhirAnggota.bagianPengerjaan,
+          mahasiswaNama: mahasiswa.nama,
+          mahasiswaNim: mahasiswa.nim,
+        })
+        .from(tugasAkhirAnggota)
+        .leftJoin(mahasiswa, eq(tugasAkhirAnggota.mahasiswaId, mahasiswa.id))
+        .where(inArray(tugasAkhirAnggota.tugasAkhirId, taIds))
+        .orderBy(asc(tugasAkhirAnggota.id));
+    }
+
+    const pembimbingMap = new Map<number, typeof pembimbingList>();
+    for (const p of pembimbingList) {
+      const list = pembimbingMap.get(p.tugasAkhirId) || [];
+      list.push(p);
+      pembimbingMap.set(p.tugasAkhirId, list);
+    }
+
+    const anggotaMap = new Map<number, typeof anggotaList>();
+    for (const a of anggotaList) {
+      const list = anggotaMap.get(a.tugasAkhirId) || [];
+      list.push(a);
+      anggotaMap.set(a.tugasAkhirId, list);
+    }
+
+    const rowsWithDetails = rows.map((r) => ({
+      ...r,
+      pembimbing: pembimbingMap.get(r.id) || [],
+      anggota: anggotaMap.get(r.id) || [],
+    }));
+
     return {
-      data: rows,
+      data: rowsWithDetails,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
       meta: {
         page,
         limit,
