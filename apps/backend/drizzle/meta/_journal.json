@@ -631,6 +631,13 @@
       "when": 1789895000000,
       "tag": "0090_add_dosen_gelar_depan_belakang",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1789900000000,
+      "tag": "0091_lppm_user_role",
+      "breakpoints": true
     }
   ]
 }

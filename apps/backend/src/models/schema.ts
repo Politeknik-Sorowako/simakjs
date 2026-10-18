@@ -30,6 +30,7 @@ export const roleEnum = pgEnum('user_role', [
   'plp',
   'instruktur',
   'kemahasiswaan',
+  'lppm',
 ]);
 
 export const applicationStatusEnum = pgEnum('application_status', [

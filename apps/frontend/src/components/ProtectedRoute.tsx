@@ -18,6 +18,7 @@ interface ProtectedRouteProps {
     | 'plp'
     | 'instruktur'
     | 'kemahasiswaan'
+    | 'lppm'
   )[];
 }
 
