@@ -64,6 +64,7 @@ import { skpiRoutes } from './routes/skpi.routes';
 import { subCpmkRoutes } from './routes/sub-cpmk.routes';
 import { systemRoutes } from './routes/system.routes';
 import { tagihanRoutes } from './routes/tagihan.routes';
+import { tugasAkhirRoutes } from './routes/tugas-akhir.routes';
 import { userRoutes } from './routes/user.routes';
 import { verifikasiUnknownRoutes } from './routes/verifikasi-unknown.routes';
 import { visiMisiRoutes } from './routes/visi-misi.routes';
@@ -472,6 +473,7 @@ export const app = new Elysia()
   .use(kategoriBimbinganRoutes)
   .use(pembimbingRoutes)
   .use(aktivitasMbkmRoutes)
+  .use(tugasAkhirRoutes)
   .use(bkdRoutes)
   .use(settingsRoutes)
   .use(skpiRoutes)

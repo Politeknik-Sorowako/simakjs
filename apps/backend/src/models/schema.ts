@@ -3713,3 +3713,381 @@ export const aktivitasMbkmStatusLogRelations = relations(aktivitasMbkmStatusLog,
     references: [users.id],
   }),
 }));
+
+// ─── TUGAS AKHIR / SKRIPSI ───────────────────────────────────────────────────
+
+export const TUGAS_AKHIR_TIPE = ['individu', 'kelompok'] as const;
+export type TugasAkhirTipe = (typeof TUGAS_AKHIR_TIPE)[number];
+
+export const TUGAS_AKHIR_STATUS = [
+  'draft',
+  'diajukan',
+  'revisi_proposal_topik',
+  'disetujui',
+  'ditolak',
+  'bimbingan',
+  'siap_sidang_proposal',
+  'seminar_proposal',
+  'revisi_proposal',
+  'penelitian_berjalan',
+  'siap_sidang_akhir',
+  'sidang_akhir',
+  'revisi_naskah_akhir',
+  'lulus',
+  'tidak_lulus',
+  'dibatalkan',
+] as const;
+export type TugasAkhirStatus = (typeof TUGAS_AKHIR_STATUS)[number];
+
+export const TUGAS_AKHIR_JENIS_KARYA = ['skripsi', 'prototipe', 'proyek_rekayasa', 'rancang_bangun'] as const;
+export type TugasAkhirJenisKarya = (typeof TUGAS_AKHIR_JENIS_KARYA)[number];
+
+export const tugasAkhir = pgTable(
+  'tugas_akhir',
+  {
+    id: serial('id').primaryKey(),
+    kodeTa: varchar('kode_ta', { length: 50 }).notNull().unique(),
+    tipe: varchar('tipe', { length: 20 }).default('individu').notNull(), // 'individu' | 'kelompok'
+    jenisKarya: varchar('jenis_karya', { length: 50 }).default('skripsi').notNull(),
+    judul: text('judul').notNull(),
+    judulInggris: text('judul_inggris'),
+    bidangKajian: varchar('bidang_kajian', { length: 100 }),
+    latarBelakang: text('latar_belakang'),
+    rumusanMasalah: text('rumusan_masalah'),
+    tujuan: text('tujuan'),
+    metodologi: text('metodologi'),
+    mitraIndustri: varchar('mitra_industri', { length: 255 }),
+    programStudiId: integer('program_studi_id')
+      .notNull()
+      .references(() => programStudi.id, { onDelete: 'restrict' }),
+    periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
+    status: varchar('status', { length: 40 }).default('draft').notNull(),
+    createdById: integer('created_by_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    disetujuiOlehId: integer('disetujui_oleh_id').references(() => users.id, { onDelete: 'set null' }),
+    disetujuiAt: timestamp('disetujui_at'),
+    catatanProdi: text('catatan_prodi'),
+    fileProposalTopikUrl: text('file_proposal_topik_url'),
+    fileLaporanFinalUrl: text('file_laporan_final_url'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_tugas_akhir_status').on(t.status),
+    index('idx_tugas_akhir_prodi').on(t.programStudiId),
+    index('idx_tugas_akhir_periode').on(t.periodeId),
+    index('idx_tugas_akhir_created_by').on(t.createdById),
+  ],
+);
+
+export const tugasAkhirAnggota = pgTable(
+  'tugas_akhir_anggota',
+  {
+    id: serial('id').primaryKey(),
+    tugasAkhirId: integer('tugas_akhir_id')
+      .notNull()
+      .references(() => tugasAkhir.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    peran: varchar('peran', { length: 20 }).default('anggota').notNull(), // 'ketua' | 'anggota'
+    statusKonfirmasi: varchar('status_konfirmasi', { length: 20 }).default('menunggu').notNull(), // 'menunggu' | 'diterima' | 'ditolak'
+    bagianPengerjaan: text('bagian_pengerjaan'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    unique('tugas_akhir_anggota_unique').on(t.tugasAkhirId, t.mahasiswaId),
+    index('idx_tugas_akhir_anggota_mhs').on(t.mahasiswaId),
+  ],
+);
+
+export const tugasAkhirPembimbing = pgTable(
+  'tugas_akhir_pembimbing',
+  {
+    id: serial('id').primaryKey(),
+    tugasAkhirId: integer('tugas_akhir_id')
+      .notNull()
+      .references(() => tugasAkhir.id, { onDelete: 'cascade' }),
+    dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'set null' }),
+    namaEksternal: varchar('nama_eksternal', { length: 100 }),
+    instansiEksternal: varchar('instansi_eksternal', { length: 255 }),
+    peran: varchar('peran', { length: 20 }).notNull(), // 'pembimbing_1' | 'pembimbing_2'
+    statusPersetujuan: varchar('status_persetujuan', { length: 20 }).default('usulan').notNull(), // 'usulan' | 'disetujui' | 'ditolak'
+    catatan: text('catatan'),
+    accSidangProposal: boolean('acc_sidang_proposal').default(false).notNull(),
+    accSidangProposalAt: timestamp('acc_sidang_proposal_at'),
+    accSidangAkhir: boolean('acc_sidang_akhir').default(false).notNull(),
+    accSidangAkhirAt: timestamp('acc_sidang_akhir_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [
+    unique('tugas_akhir_pembimbing_peran_unq').on(t.tugasAkhirId, t.peran),
+    index('idx_tugas_akhir_pembimbing_dosen').on(t.dosenId),
+  ],
+);
+
+export const tugasAkhirStatusLog = pgTable(
+  'tugas_akhir_status_log',
+  {
+    id: serial('id').primaryKey(),
+    tugasAkhirId: integer('tugas_akhir_id')
+      .notNull()
+      .references(() => tugasAkhir.id, { onDelete: 'cascade' }),
+    dariStatus: varchar('dari_status', { length: 40 }),
+    keStatus: varchar('ke_status', { length: 40 }).notNull(),
+    alasan: text('alasan').notNull(),
+    olehUserId: integer('oleh_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('idx_tugas_akhir_status_log_ta').on(t.tugasAkhirId)],
+);
+
+export const tugasAkhirLogbook = pgTable(
+  'tugas_akhir_logbook',
+  {
+    id: serial('id').primaryKey(),
+    tugasAkhirId: integer('tugas_akhir_id')
+      .notNull()
+      .references(() => tugasAkhir.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    dosenId: integer('dosen_id').references(() => dosen.id, { onDelete: 'set null' }),
+    pertemuanKe: integer('pertemuan_ke').notNull(),
+    tanggalBimbingan: date('tanggal_bimbingan', { mode: 'string' }).notNull(),
+    topik: text('topik').notNull(),
+    deskripsiKemajuan: text('deskripsi_kemajuan').notNull(),
+    kendala: text('kendala'),
+    catatanDosen: text('catatan_dosen'),
+    statusBimbingan: varchar('status_bimbingan', { length: 20 }).default('menunggu').notNull(), // 'menunggu' | 'disetujui' | 'perlu_revisi'
+    fileDraftUrl: text('file_draft_url'),
+    fileRevisiUrl: text('file_revisi_url'),
+    statusBkd: boolean('status_bkd').default(true).notNull(),
+    bimbinganId: integer('bimbingan_id').references(() => bimbingan.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_ta_logbook_ta').on(t.tugasAkhirId),
+    index('idx_ta_logbook_dosen').on(t.dosenId),
+    index('idx_ta_logbook_mhs').on(t.mahasiswaId),
+  ],
+);
+
+export const tugasAkhirSidang = pgTable(
+  'tugas_akhir_sidang',
+  {
+    id: serial('id').primaryKey(),
+    tugasAkhirId: integer('tugas_akhir_id')
+      .notNull()
+      .references(() => tugasAkhir.id, { onDelete: 'cascade' }),
+    jenisSidang: varchar('jenis_sidang', { length: 20 }).notNull(), // 'proposal' | 'kemajuan' | 'akhir'
+    periodeId: varchar('periode_id', { length: 5 }).references(() => periodeAkademik.id, { onDelete: 'set null' }),
+    tanggalPengajuan: date('tanggal_pengajuan', { mode: 'string' }),
+    status: varchar('status', { length: 30 }).default('diajukan').notNull(), // 'diajukan' | 'diverifikasi' | 'dijadwalkan' | 'selesai' | 'dibatalkan'
+    berkasSyarat: jsonb('berkas_syarat').$type<Record<string, unknown>>(),
+    tanggalSidang: date('tanggal_sidang', { mode: 'string' }),
+    jamMulai: varchar('jam_mulai', { length: 10 }),
+    jamSelesai: varchar('jam_selesai', { length: 10 }),
+    ruangan: varchar('ruangan', { length: 100 }),
+    statusHasil: varchar('status_hasil', { length: 30 }).default('menunggu').notNull(), // 'menunggu' | 'lulus_tanpa_revisi' | 'lulus_dengan_revisi' | 'sidang_ulang' | 'tidak_lulus'
+    nilaiAkhirAngka: numeric('nilai_akhir_angka', { precision: 5, scale: 2 }),
+    nilaiAkhirHuruf: varchar('nilai_akhir_huruf', { length: 5 }),
+    batasWaktuRevisi: date('batas_waktu_revisi', { mode: 'string' }),
+    statusRevisi: varchar('status_revisi', { length: 30 }).default('belum_selesai').notNull(), // 'belum_selesai' | 'diverifikasi_penguji' | 'tuntas'
+    catatanSidang: text('catatan_sidang'),
+    beritaAcaraSignatureId: integer('berita_acara_signature_id').references(() => documentSignatures.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    index('idx_ta_sidang_ta').on(t.tugasAkhirId),
+    index('idx_ta_sidang_status').on(t.status),
+    index('idx_ta_sidang_tanggal').on(t.tanggalSidang),
+  ],
+);
+
+export const tugasAkhirPenguji = pgTable(
+  'tugas_akhir_penguji',
+  {
+    id: serial('id').primaryKey(),
+    sidangId: integer('sidang_id')
+      .notNull()
+      .references(() => tugasAkhirSidang.id, { onDelete: 'cascade' }),
+    dosenId: integer('dosen_id')
+      .notNull()
+      .references(() => dosen.id, { onDelete: 'cascade' }),
+    peranPenguji: varchar('peran_penguji', { length: 30 }).notNull(), // 'ketua_penguji' | 'sekretaris' | 'penguji_1' | 'penguji_2' | 'pembimbing_1' | 'pembimbing_2'
+    kehadiran: boolean('kehadiran').default(false).notNull(),
+    nilaiTotal: numeric('nilai_total', { precision: 5, scale: 2 }),
+    catatanRevisi: text('catatan_revisi'),
+    statusAccRevisi: boolean('status_acc_revisi').default(false).notNull(),
+    accRevisiAt: timestamp('acc_revisi_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [unique('ta_sidang_penguji_dosen_unq').on(t.sidangId, t.dosenId), index('idx_ta_penguji_dosen').on(t.dosenId)],
+);
+
+export const tugasAkhirRubrikKriteria = pgTable(
+  'tugas_akhir_rubrik_kriteria',
+  {
+    id: serial('id').primaryKey(),
+    programStudiId: integer('program_studi_id').references(() => programStudi.id, { onDelete: 'cascade' }),
+    jenisSidang: varchar('jenis_sidang', { length: 20 }).notNull(), // 'proposal' | 'kemajuan' | 'akhir'
+    kode: varchar('kode', { length: 20 }).notNull(),
+    nama: varchar('nama', { length: 150 }).notNull(),
+    deskripsi: text('deskripsi'),
+    bobot: integer('bobot').notNull(), // e.g. 20 (percent)
+    isIndividu: boolean('is_individu').default(false).notNull(), // true = nilai per individu mahasiswa; false = nilai kelompok
+    urutan: integer('urutan').default(0).notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('idx_ta_rubrik_prodi').on(t.programStudiId), index('idx_ta_rubrik_jenis').on(t.jenisSidang)],
+);
+
+export const tugasAkhirNilaiDetail = pgTable(
+  'tugas_akhir_nilai_detail',
+  {
+    id: serial('id').primaryKey(),
+    pengujiId: integer('penguji_id')
+      .notNull()
+      .references(() => tugasAkhirPenguji.id, { onDelete: 'cascade' }),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    kriteriaId: integer('kriteria_id')
+      .notNull()
+      .references(() => tugasAkhirRubrikKriteria.id, { onDelete: 'restrict' }),
+    nilai: numeric('nilai', { precision: 5, scale: 2 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [unique('ta_nilai_penguji_mhs_kriteria_unq').on(t.pengujiId, t.mahasiswaId, t.kriteriaId)],
+);
+
+export const tugasAkhirRelations = relations(tugasAkhir, ({ one, many }) => ({
+  programStudi: one(programStudi, {
+    fields: [tugasAkhir.programStudiId],
+    references: [programStudi.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [tugasAkhir.periodeId],
+    references: [periodeAkademik.id],
+  }),
+  createdBy: one(users, {
+    fields: [tugasAkhir.createdById],
+    references: [users.id],
+  }),
+  disetujuiOleh: one(users, {
+    fields: [tugasAkhir.disetujuiOlehId],
+    references: [users.id],
+  }),
+  anggota: many(tugasAkhirAnggota),
+  pembimbing: many(tugasAkhirPembimbing),
+  logbook: many(tugasAkhirLogbook),
+  sidang: many(tugasAkhirSidang),
+  statusLog: many(tugasAkhirStatusLog),
+}));
+
+export const tugasAkhirAnggotaRelations = relations(tugasAkhirAnggota, ({ one }) => ({
+  tugasAkhir: one(tugasAkhir, {
+    fields: [tugasAkhirAnggota.tugasAkhirId],
+    references: [tugasAkhir.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [tugasAkhirAnggota.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+}));
+
+export const tugasAkhirPembimbingRelations = relations(tugasAkhirPembimbing, ({ one }) => ({
+  tugasAkhir: one(tugasAkhir, {
+    fields: [tugasAkhirPembimbing.tugasAkhirId],
+    references: [tugasAkhir.id],
+  }),
+  dosen: one(dosen, {
+    fields: [tugasAkhirPembimbing.dosenId],
+    references: [dosen.id],
+  }),
+}));
+
+export const tugasAkhirStatusLogRelations = relations(tugasAkhirStatusLog, ({ one }) => ({
+  tugasAkhir: one(tugasAkhir, {
+    fields: [tugasAkhirStatusLog.tugasAkhirId],
+    references: [tugasAkhir.id],
+  }),
+  oleh: one(users, {
+    fields: [tugasAkhirStatusLog.olehUserId],
+    references: [users.id],
+  }),
+}));
+
+export const tugasAkhirLogbookRelations = relations(tugasAkhirLogbook, ({ one }) => ({
+  tugasAkhir: one(tugasAkhir, {
+    fields: [tugasAkhirLogbook.tugasAkhirId],
+    references: [tugasAkhir.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [tugasAkhirLogbook.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  dosen: one(dosen, {
+    fields: [tugasAkhirLogbook.dosenId],
+    references: [dosen.id],
+  }),
+}));
+
+export const tugasAkhirSidangRelations = relations(tugasAkhirSidang, ({ one, many }) => ({
+  tugasAkhir: one(tugasAkhir, {
+    fields: [tugasAkhirSidang.tugasAkhirId],
+    references: [tugasAkhir.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [tugasAkhirSidang.periodeId],
+    references: [periodeAkademik.id],
+  }),
+  penguji: many(tugasAkhirPenguji),
+}));
+
+export const tugasAkhirPengujiRelations = relations(tugasAkhirPenguji, ({ one, many }) => ({
+  sidang: one(tugasAkhirSidang, {
+    fields: [tugasAkhirPenguji.sidangId],
+    references: [tugasAkhirSidang.id],
+  }),
+  dosen: one(dosen, {
+    fields: [tugasAkhirPenguji.dosenId],
+    references: [dosen.id],
+  }),
+  nilaiDetail: many(tugasAkhirNilaiDetail),
+}));
+
+export const tugasAkhirNilaiDetailRelations = relations(tugasAkhirNilaiDetail, ({ one }) => ({
+  penguji: one(tugasAkhirPenguji, {
+    fields: [tugasAkhirNilaiDetail.pengujiId],
+    references: [tugasAkhirPenguji.id],
+  }),
+  mahasiswa: one(mahasiswa, {
+    fields: [tugasAkhirNilaiDetail.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  kriteria: one(tugasAkhirRubrikKriteria, {
+    fields: [tugasAkhirNilaiDetail.kriteriaId],
+    references: [tugasAkhirRubrikKriteria.id],
+  }),
+}));
