@@ -477,28 +477,6 @@ export class AktivitasMbkmService {
     });
   }
 
-  /** Riwayat perubahan status manual untuk satu aktivitas (terbaru lebih dulu). */
-  static async listStatusLog(id: number): Promise<StatusLogItem[]> {
-    const rows = await db
-      .select({
-        id: aktivitasMbkmStatusLog.id,
-        dariStatus: aktivitasMbkmStatusLog.dariStatus,
-        keStatus: aktivitasMbkmStatusLog.keStatus,
-        alasan: aktivitasMbkmStatusLog.alasan,
-        olehNama: sql<string | null>`${usersOverride.nama}`,
-        createdAt: aktivitasMbkmStatusLog.createdAt,
-      })
-      .from(aktivitasMbkmStatusLog)
-      .leftJoin(usersOverride, eq(aktivitasMbkmStatusLog.olehUserId, usersOverride.id))
-      .where(eq(aktivitasMbkmStatusLog.aktivitasId, id))
-      .orderBy(desc(aktivitasMbkmStatusLog.createdAt));
-    return rows.map((r) => ({
-      ...r,
-      dariStatus: (r.dariStatus as StatusAktivitas | null) ?? null,
-      keStatus: r.keStatus as StatusAktivitas,
-    }));
-  }
-
   static async setSelesai(id: number, scopedProdiIds?: number[] | null) {
     const existing = await AktivitasMbkmService.loadOwned(id, scopedProdiIds);
     if (!existing) throw new Error('Data aktivitas tidak ditemukan.');
@@ -606,13 +584,20 @@ export class AktivitasMbkmService {
   }
 
   static async getById(id: number) {
-    const [row] = await AktivitasMbkmService.composeItems([id], { includeHistory: false });
+    // Detail membaca `riwayatStatus` (dipakai modal detail & endpoint status-log),
+    // jadi riwayat harus ikut di-compose di sini.
+    const [row] = await AktivitasMbkmService.composeItems([id], { includeHistory: true });
     if (!row) throw new Error('Data aktivitas tidak ditemukan.');
     return row;
   }
 
-  /** Susun detail lengkap (anggota, pembimbing, konversi, bimbingan tertaut). */
-  static async composeItems(ids: number[], _opts: { includeHistory: boolean }): Promise<AktivitasDetail[]> {
+  /**
+   * Susun detail lengkap (anggota, pembimbing, konversi, bimbingan tertaut).
+   * `includeHistory` mengontrol pengambilan `riwayatStatus`: daftar aktivitas
+   * tidak menampilkannya, jadi query status-log (beserta join `users`) dilewati
+   * agar tidak membebani endpoint list dengan tabel yang tidak dibutuhkan.
+   */
+  static async composeItems(ids: number[], opts: { includeHistory: boolean }): Promise<AktivitasDetail[]> {
     if (ids.length === 0) return [];
 
     const heads = await db
@@ -694,20 +679,22 @@ export class AktivitasMbkmService {
       .from(bimbingan)
       .where(and(inArray(bimbingan.aktivitasMbkmId, ids), isNotNull(bimbingan.aktivitasMbkmId)));
 
-    const statusLogRows = await db
-      .select({
-        aktivitasId: aktivitasMbkmStatusLog.aktivitasId,
-        id: aktivitasMbkmStatusLog.id,
-        dariStatus: aktivitasMbkmStatusLog.dariStatus,
-        keStatus: aktivitasMbkmStatusLog.keStatus,
-        alasan: aktivitasMbkmStatusLog.alasan,
-        olehNama: sql<string | null>`${usersOverride.nama}`,
-        createdAt: aktivitasMbkmStatusLog.createdAt,
-      })
-      .from(aktivitasMbkmStatusLog)
-      .leftJoin(usersOverride, eq(aktivitasMbkmStatusLog.olehUserId, usersOverride.id))
-      .where(inArray(aktivitasMbkmStatusLog.aktivitasId, ids))
-      .orderBy(desc(aktivitasMbkmStatusLog.createdAt));
+    const statusLogRows = opts.includeHistory
+      ? await db
+          .select({
+            aktivitasId: aktivitasMbkmStatusLog.aktivitasId,
+            id: aktivitasMbkmStatusLog.id,
+            dariStatus: aktivitasMbkmStatusLog.dariStatus,
+            keStatus: aktivitasMbkmStatusLog.keStatus,
+            alasan: aktivitasMbkmStatusLog.alasan,
+            olehNama: sql<string | null>`${usersOverride.nama}`,
+            createdAt: aktivitasMbkmStatusLog.createdAt,
+          })
+          .from(aktivitasMbkmStatusLog)
+          .leftJoin(usersOverride, eq(aktivitasMbkmStatusLog.olehUserId, usersOverride.id))
+          .where(inArray(aktivitasMbkmStatusLog.aktivitasId, ids))
+          .orderBy(desc(aktivitasMbkmStatusLog.createdAt))
+      : [];
 
     return heads.map((h) => ({
       id: h.id,
