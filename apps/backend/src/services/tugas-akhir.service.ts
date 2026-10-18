@@ -54,6 +54,9 @@ export interface UpdateTugasAkhirInput {
   metodologi?: string | null;
   mitraIndustri?: string | null;
   fileProposalTopikUrl?: string | null;
+  mahasiswaId?: number | null;
+  anggotaMahasiswaIds?: number[] | null;
+  programStudiId?: number | null;
   usulanPembimbing?: UsulanPembimbingInput[] | null;
 }
 
@@ -239,12 +242,113 @@ export class TugasAkhirService {
     }
 
     return await db.transaction(async (tx) => {
+      let resolvedProdiId = existing.programStudiId;
+      if (isStaffEditor && input.programStudiId) {
+        resolvedProdiId = input.programStudiId;
+      }
+
+      // 1. Tangani perubahan Ketua jika dilakukan oleh Staff Editor
+      let currentKetuaId: number | null = null;
+      const [currentKetua] = await tx
+        .select({ id: tugasAkhirAnggota.id, mahasiswaId: tugasAkhirAnggota.mahasiswaId })
+        .from(tugasAkhirAnggota)
+        .where(and(eq(tugasAkhirAnggota.tugasAkhirId, id), eq(tugasAkhirAnggota.peran, 'ketua')))
+        .limit(1);
+
+      if (currentKetua) {
+        currentKetuaId = currentKetua.mahasiswaId;
+      }
+
+      if (isStaffEditor && input.mahasiswaId && input.mahasiswaId !== currentKetuaId) {
+        const [targetMhs] = await tx
+          .select({ id: mahasiswa.id, programStudiId: mahasiswa.programStudiId })
+          .from(mahasiswa)
+          .where(eq(mahasiswa.id, input.mahasiswaId))
+          .limit(1);
+
+        if (!targetMhs) {
+          throw new Error('Mahasiswa ketua pengusul tidak ditemukan.');
+        }
+
+        // Jika staf tidak eksplisit set programStudiId dan targetMhs punya programStudiId, sinkronkan
+        if (!input.programStudiId && targetMhs.programStudiId) {
+          resolvedProdiId = targetMhs.programStudiId;
+        }
+
+        // Hapus record lama mahasiswa baru ini dari tim jika sebelumnya ada (sebagai anggota)
+        await tx
+          .delete(tugasAkhirAnggota)
+          .where(and(eq(tugasAkhirAnggota.tugasAkhirId, id), eq(tugasAkhirAnggota.mahasiswaId, input.mahasiswaId)));
+
+        // Hapus ketua lama
+        if (currentKetua) {
+          await tx.delete(tugasAkhirAnggota).where(eq(tugasAkhirAnggota.id, currentKetua.id));
+        }
+
+        // Daftarkan ketua baru
+        await tx.insert(tugasAkhirAnggota).values({
+          tugasAkhirId: id,
+          mahasiswaId: input.mahasiswaId,
+          peran: 'ketua',
+          statusKonfirmasi: 'diterima',
+        });
+
+        currentKetuaId = input.mahasiswaId;
+      }
+
+      const newTipe = input.tipe ?? existing.tipe;
+
+      // 2. Tangani perubahan Anggota Tim jika dilakukan oleh Staff Editor
+      if (isStaffEditor) {
+        if (newTipe === 'individu') {
+          // Hapus semua anggota non-ketua
+          await tx
+            .delete(tugasAkhirAnggota)
+            .where(and(eq(tugasAkhirAnggota.tugasAkhirId, id), eq(tugasAkhirAnggota.peran, 'anggota')));
+        } else if (input.anggotaMahasiswaIds !== undefined && input.anggotaMahasiswaIds !== null) {
+          const targetAnggotaIds = input.anggotaMahasiswaIds.filter((mId) => mId !== currentKetuaId);
+
+          const existingMembers = await tx
+            .select({ id: tugasAkhirAnggota.id, mahasiswaId: tugasAkhirAnggota.mahasiswaId })
+            .from(tugasAkhirAnggota)
+            .where(and(eq(tugasAkhirAnggota.tugasAkhirId, id), eq(tugasAkhirAnggota.peran, 'anggota')));
+
+          const toDelete = existingMembers.filter((m) => !targetAnggotaIds.includes(m.mahasiswaId));
+          if (toDelete.length > 0) {
+            await tx.delete(tugasAkhirAnggota).where(
+              and(
+                eq(tugasAkhirAnggota.tugasAkhirId, id),
+                inArray(
+                  tugasAkhirAnggota.id,
+                  toDelete.map((d) => d.id),
+                ),
+              ),
+            );
+          }
+
+          const existingMemberIds = existingMembers.map((m) => m.mahasiswaId);
+          for (const mId of targetAnggotaIds) {
+            if (!existingMemberIds.includes(mId)) {
+              await tx
+                .insert(tugasAkhirAnggota)
+                .values({
+                  tugasAkhirId: id,
+                  mahasiswaId: mId,
+                  peran: 'anggota',
+                  statusKonfirmasi: 'diterima',
+                })
+                .onConflictDoNothing();
+            }
+          }
+        }
+      }
+
       const [updated] = await tx
         .update(tugasAkhir)
         .set({
           judul: input.judul?.trim() ?? existing.judul,
           judulInggris: input.judulInggris !== undefined ? input.judulInggris?.trim() : existing.judulInggris,
-          tipe: input.tipe ?? existing.tipe,
+          tipe: newTipe,
           jenisKarya: input.jenisKarya ?? existing.jenisKarya,
           bidangKajian: input.bidangKajian !== undefined ? input.bidangKajian?.trim() : existing.bidangKajian,
           latarBelakang: input.latarBelakang !== undefined ? input.latarBelakang?.trim() : existing.latarBelakang,
@@ -253,6 +357,7 @@ export class TugasAkhirService {
           metodologi: input.metodologi !== undefined ? input.metodologi?.trim() : existing.metodologi,
           mitraIndustri: input.mitraIndustri !== undefined ? input.mitraIndustri?.trim() : existing.mitraIndustri,
           fileProposalTopikUrl: input.fileProposalTopikUrl ?? existing.fileProposalTopikUrl,
+          programStudiId: resolvedProdiId,
         })
         .where(eq(tugasAkhir.id, id))
         .returning();

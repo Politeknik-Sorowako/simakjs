@@ -166,6 +166,12 @@ export default function TugasAkhirPage() {
   // Edit Modal
   const [showEditModal, setShowEditModal] = createSignal(false);
   const [editingTa, setEditingTa] = createSignal<TugasAkhir | null>(null);
+  const [editTargetMahasiswaId, setEditTargetMahasiswaId] = createSignal<number | null>(null);
+  const [editProgramStudiId, setEditProgramStudiId] = createSignal<number | null>(null);
+  const [editMhsSearchQuery, setEditMhsSearchQuery] = createSignal('');
+  const [editAnggotaNimInput, setEditAnggotaNimInput] = createSignal('');
+  const [editSelectedAnggota, setEditSelectedAnggota] = createSignal<{ id: number; nim: string; nama: string }[]>([]);
+  const [editIsSearchingMhs, setEditIsSearchingMhs] = createSignal(false);
   const [editJudul, setEditJudul] = createSignal('');
   const [editJudulInggris, setEditJudulInggris] = createSignal('');
   const [editTipe, setEditTipe] = createSignal<TugasAkhirTipe>('individu');
@@ -178,6 +184,67 @@ export default function TugasAkhirPage() {
   const [editMitraIndustri, setEditMitraIndustri] = createSignal('');
   const [editUsulanPembimbing1, setEditUsulanPembimbing1] = createSignal<number | null>(null);
   const [editUsulanPembimbing2, setEditUsulanPembimbing2] = createSignal<number | null>(null);
+
+  const [editRawActiveMhsList, setEditRawActiveMhsList] = createSignal<
+    { id: number; programStudiId?: number | null }[]
+  >([]);
+  const [editActiveMahasiswaList] = createResource(
+    () => ({ search: editMhsSearchQuery(), prodiId: editProgramStudiId() }),
+    async ({ search, prodiId }) => {
+      try {
+        const res = await mahasiswaController.getAll(search || undefined, 1, 50, prodiId || undefined, {
+          filterStatus: 'aktif',
+        });
+        const items = res.data || [];
+        setEditRawActiveMhsList(items.map((m) => ({ id: m.id, programStudiId: m.programStudiId })));
+        return items.map((m) => ({
+          value: m.id,
+          label: formatMahasiswaOption(m),
+        }));
+      } catch {
+        return [];
+      }
+    },
+  );
+
+  const handleEditAddAnggota = async () => {
+    const nim = editAnggotaNimInput().trim();
+    if (!nim) {
+      showToast('Masukkan NIM rekan mahasiswa terlebih dahulu.', 'error');
+      return;
+    }
+    try {
+      setEditIsSearchingMhs(true);
+      const res = await mahasiswaController.getAll(nim, 1, 1, undefined, { filterStatus: 'aktif' });
+      const mhs = res.data?.find((m: { nim: string }) => m.nim === nim);
+      if (!mhs) {
+        showToast(`Mahasiswa aktif dengan NIM ${nim} tidak ditemukan.`, 'error');
+        return;
+      }
+      if (editSelectedAnggota().some((a) => a.id === mhs.id)) {
+        showToast('Mahasiswa ini sudah ada dalam daftar tim.', 'error');
+        return;
+      }
+      if (editTargetMahasiswaId() === mhs.id) {
+        showToast('Mahasiswa ini sudah dipilih sebagai ketua tim.', 'error');
+        return;
+      }
+      setEditSelectedAnggota([
+        ...editSelectedAnggota(),
+        { id: mhs.id, nim: mhs.nim, nama: formatMahasiswaOption(mhs) },
+      ]);
+      setEditAnggotaNimInput('');
+      showToast(`Mahasiswa ${mhs.nama} ditambahkan ke tim.`, 'success');
+    } catch {
+      showToast('Gagal mencari mahasiswa.', 'error');
+    } finally {
+      setEditIsSearchingMhs(false);
+    }
+  };
+
+  const handleEditRemoveAnggota = (id: number) => {
+    setEditSelectedAnggota(editSelectedAnggota().filter((a) => a.id !== id));
+  };
 
   // Delete Modal
   const [showDeleteModal, setShowDeleteModal] = createSignal(false);
@@ -206,6 +273,20 @@ export default function TugasAkhirPage() {
     setEditTujuan(ta.tujuan || '');
     setEditMetodologi(ta.metodologi || '');
     setEditMitraIndustri(ta.mitraIndustri || '');
+    setEditProgramStudiId(ta.programStudiId || null);
+
+    const ketua = ta.anggota?.find((a) => a.peran === 'ketua');
+    setEditTargetMahasiswaId(ketua?.mahasiswaId || null);
+
+    const nonKetua = (ta.anggota || []).filter((a) => a.peran === 'anggota');
+    setEditSelectedAnggota(
+      nonKetua.map((a) => ({
+        id: a.mahasiswaId,
+        nim: a.mahasiswaNim || '-',
+        nama: a.mahasiswaNama ? `${a.mahasiswaNama}${a.mahasiswaNim ? ` (${a.mahasiswaNim})` : ''}` : '-',
+      })),
+    );
+    setEditAnggotaNimInput('');
 
     const p1 = ta.pembimbing?.find((p) => p.peran === 'pembimbing_1');
     const p2 = ta.pembimbing?.find((p) => p.peran === 'pembimbing_2');
@@ -249,6 +330,16 @@ export default function TugasAkhirPage() {
       mitraIndustri: editMitraIndustri().trim() || undefined,
       usulanPembimbing: usulan.length > 0 ? usulan : undefined,
     };
+
+    if (isStaff()) {
+      if (editTargetMahasiswaId()) {
+        payload.mahasiswaId = Number(editTargetMahasiswaId());
+      }
+      if (editProgramStudiId()) {
+        payload.programStudiId = Number(editProgramStudiId());
+      }
+      payload.anggotaMahasiswaIds = editTipe() === 'kelompok' ? editSelectedAnggota().map((a) => a.id) : [];
+    }
 
     try {
       setIsSubmitting(true);
@@ -608,9 +699,16 @@ export default function TugasAkhirPage() {
                       </td>
                       <td class="py-4 px-4">
                         <div class="text-table text-ink dark:text-pearl font-medium">
-                          {item.creatorNama || 'Mahasiswa'}
+                          {item.anggota?.find((a) => a.peran === 'ketua')?.mahasiswaNama ||
+                            item.creatorNama ||
+                            'Mahasiswa'}
                         </div>
-                        <Show when={item.anggota && item.anggota.length > 0}>
+                        <Show when={item.anggota?.find((a) => a.peran === 'ketua')?.mahasiswaNim}>
+                          <div class="text-caption text-secondary-500 font-mono">
+                            {item.anggota?.find((a) => a.peran === 'ketua')?.mahasiswaNim}
+                          </div>
+                        </Show>
+                        <Show when={item.tipe === 'kelompok' || (item.anggota && item.anggota.length > 1)}>
                           <div class="text-fine text-secondary-500 mt-0.5">
                             {item.anggota?.length} Anggota (
                             {item.anggota?.filter((a) => a.statusKonfirmasi === 'diterima').length} Dikonfirmasi)
@@ -1246,6 +1344,49 @@ export default function TugasAkhirPage() {
           maxWidth="xl"
         >
           <form onSubmit={handleEditSubmit} class="space-y-4 max-h-[75vh] overflow-y-auto px-1">
+            <Show when={isStaff()}>
+              <div class="p-4 bg-pearl dark:bg-canvas-dark rounded-xl border border-hairline dark:border-hairline-dark space-y-3">
+                <label class="block text-caption font-bold text-ink dark:text-pearl">
+                  Pengusul & Program Studi (Admin / Pengelola)
+                </label>
+                <div>
+                  <label class="block text-fine font-semibold text-secondary-500 mb-1">
+                    Mahasiswa Pengusul (Ketua Tim) *
+                  </label>
+                  <SearchableSelect
+                    placeholder="Ketik NIM atau nama mahasiswa..."
+                    options={editActiveMahasiswaList() || []}
+                    value={editTargetMahasiswaId() || undefined}
+                    onChange={(val) => {
+                      const id = Number(val);
+                      setEditTargetMahasiswaId(id || null);
+                      if (id) {
+                        const found = editRawActiveMhsList().find((m) => m.id === id);
+                        if (found?.programStudiId) {
+                          setEditProgramStudiId(found.programStudiId);
+                        }
+                      }
+                    }}
+                    onSearch={(q) => setEditMhsSearchQuery(q)}
+                  />
+                  <span class="text-fine text-secondary-500 mt-1 block">
+                    Ganti mahasiswa ketua tim tugas akhir ini bila diperlukan.
+                  </span>
+                </div>
+                <div>
+                  <label class="block text-fine font-semibold text-secondary-500 mb-1">Program Studi</label>
+                  <select
+                    value={editProgramStudiId() || ''}
+                    onChange={(e) => setEditProgramStudiId(Number(e.currentTarget.value) || null)}
+                    class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                  >
+                    <option value="">Pilih Program Studi</option>
+                    <For each={prodiList()}>{(p) => <option value={p.value}>{p.label}</option>}</For>
+                  </select>
+                </div>
+              </div>
+            </Show>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">Tipe Kepesertaan *</label>
@@ -1272,6 +1413,56 @@ export default function TugasAkhirPage() {
                 </select>
               </div>
             </div>
+
+            <Show when={editTipe() === 'kelompok'}>
+              <div class="p-4 bg-secondary-50/70 dark:bg-secondary-900/30 rounded-xl border border-hairline dark:border-hairline-dark space-y-3">
+                <label class="block text-caption font-bold text-ink dark:text-pearl">
+                  Anggota Tim Mahasiswa (Kelompok)
+                </label>
+                <p class="text-fine text-secondary-500">
+                  {isStaff()
+                    ? 'Kelola anggota tim mahasiswa untuk tugas akhir kelompok ini.'
+                    : 'Masukkan NIM rekan mahasiswa Anda.'}
+                </p>
+                <div class="flex gap-2">
+                  <Input
+                    placeholder="Masukkan NIM rekan..."
+                    value={editAnggotaNimInput()}
+                    onInput={(e) => setEditAnggotaNimInput(e.currentTarget.value)}
+                    class="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleEditAddAnggota}
+                    disabled={editIsSearchingMhs()}
+                  >
+                    Tambah Rekan
+                  </Button>
+                </div>
+                <Show when={editSelectedAnggota().length > 0}>
+                  <div class="space-y-1.5 pt-2">
+                    <For each={editSelectedAnggota()}>
+                      {(ang) => (
+                        <div class="flex items-center justify-between bg-white dark:bg-canvas-dark px-3 py-2 rounded-lg border border-hairline dark:border-hairline-dark text-table">
+                          <div>
+                            <span class="font-mono text-xs font-semibold text-action mr-2">{ang.nim}</span>
+                            <span class="text-ink dark:text-pearl">{ang.nama}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleEditRemoveAnggota(ang.id)}
+                            class="text-danger-600 hover:text-danger-800 text-fine font-semibold"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </div>
+            </Show>
 
             <div>
               <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
