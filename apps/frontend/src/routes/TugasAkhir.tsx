@@ -215,6 +215,20 @@ export default function TugasAkhirPage() {
   const [nilaiCatatanRevisi, setNilaiCatatanRevisi] = createSignal('');
   const [isSubmittingNilai, setIsSubmittingNilai] = createSignal(false);
 
+  // Helper Konversi Nilai BPA Resmi Skala 0 - 10
+  const konversiBpaFrontend = (nilai: number) => {
+    if (nilai >= 8.5) return { huruf: 'A', indeks: '4.00', predikat: 'Sangat Istimewa (Lulus)' };
+    if (nilai >= 8.0) return { huruf: 'A-', indeks: '3.70', predikat: 'Istimewa (Lulus)' };
+    if (nilai >= 7.5) return { huruf: 'B+', indeks: '3.30', predikat: 'Sangat Baik (Lulus)' };
+    if (nilai >= 7.0) return { huruf: 'B', indeks: '3.00', predikat: 'Baik (Lulus)' };
+    if (nilai >= 6.3) return { huruf: 'B-', indeks: '2.70', predikat: 'Cukup Baik (Lulus)' };
+    if (nilai >= 5.7) return { huruf: 'C+', indeks: '2.30', predikat: 'Lebih dari Cukup' };
+    if (nilai >= 5.1) return { huruf: 'C', indeks: '2.00', predikat: 'Cukup' };
+    if (nilai >= 4.6) return { huruf: 'D+', indeks: '1.50', predikat: 'Kurang (Sidang Ulang)' };
+    if (nilai >= 4.0) return { huruf: 'D', indeks: '1.00', predikat: 'Sangat Kurang (Sidang Ulang)' };
+    return { huruf: 'E', indeks: '0.00', predikat: 'Gagal / Tidak Lulus' };
+  };
+
   // Form Finalisasi Sidang (Prodi/Kaprodi)
   const [finalisasiStatusHasil, setFinalisasiStatusHasil] = createSignal<
     'lulus_tanpa_revisi' | 'lulus_dengan_revisi' | 'sidang_ulang' | 'tidak_lulus'
@@ -808,8 +822,9 @@ export default function TugasAkhirPage() {
         setSidangActiveTab('daftar');
       }
 
-      // Load rubrik kriteria untuk proposal
-      const rubrik = await tugasAkhirController.getRubrikKriteria(taId, 'proposal');
+      // Load rubrik kriteria untuk jenis sidang aktif (proposal / akhir)
+      const jenisSidangAktif = propSidang?.jenisSidang || 'proposal';
+      const rubrik = await tugasAkhirController.getRubrikKriteria(taId, jenisSidangAktif);
       setRubrikKriteria(rubrik);
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Gagal memuat data sidang', 'error');
@@ -2846,65 +2861,445 @@ export default function TugasAkhirPage() {
                   when={rubrikKriteria().length > 0}
                   fallback={
                     <div class="text-center py-6 text-secondary-500">
-                      Rubrik penilaian proposal belum dikonfigurasi oleh sistem.
+                      Rubrik penilaian belum dikonfigurasi oleh sistem.
                     </div>
                   }
                 >
-                  <form onSubmit={handleInputNilaiSubmit} class="space-y-4">
-                    <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
-                      Setiap penguji menginput nilai skala 0-100 untuk tiap kriteria penilaian mahasiswa/tim.
+                  <form onSubmit={handleInputNilaiSubmit} class="space-y-5">
+                    {/* Header Panduan Skala 0 - 10 */}
+                    <div class="p-3.5 bg-action/5 rounded-2xl border border-action/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <div class="text-caption font-bold text-action flex items-center gap-2">
+                          <span>Formulir Penilaian Tugas Akhir Resmi Skala 0 – 10 (Standar BPA)</span>
+                          <Badge variant="accent" size="sm">
+                            Skala 0.0 - 10.0
+                          </Badge>
+                        </div>
+                        <p class="text-fine text-secondary-600 dark:text-secondary-400 mt-0.5">
+                          Rumus Nilai Akhir = <strong>30% Total A</strong> (Pembimbingan) + <strong>35% Total B</strong>{' '}
+                          (Alat/Mesin) + <strong>35% Total C</strong> (Laporan).
+                        </p>
+                      </div>
+                      <div class="text-right text-fine font-semibold text-secondary-500 hidden sm:block">
+                        Batas Kelulusan: <span class="text-success-600 font-bold">5.10 (C)</span>
+                      </div>
                     </div>
 
-                    <div class="space-y-3">
-                      <For each={sidangTa()?.anggota}>
-                        {(ang) => (
-                          <div class="p-4 bg-white dark:bg-canvas-dark rounded-xl border border-hairline dark:border-hairline-dark space-y-3">
-                            <div class="flex items-center justify-between">
-                              <span class="text-caption font-bold text-ink dark:text-pearl">
-                                Mahasiswa: {ang.mahasiswaNama} ({ang.mahasiswaNim})
-                              </span>
-                              <Badge variant="default" size="sm">
-                                {ang.peran === 'ketua' ? 'Ketua' : 'Anggota'}
-                              </Badge>
-                            </div>
+                    {/* Matriks Tabel Penilaian Komponen */}
+                    <div class="overflow-x-auto rounded-2xl border border-hairline dark:border-hairline-dark bg-white dark:bg-canvas-dark shadow-xs">
+                      <table class="w-full text-left text-table border-collapse">
+                        <thead>
+                          <tr class="bg-pearl dark:bg-canvas-dark border-b border-hairline dark:border-hairline-dark">
+                            <th class="py-3 px-4 font-bold text-ink dark:text-pearl w-16">Kode</th>
+                            <th class="py-3 px-4 font-bold text-ink dark:text-pearl min-w-[260px]">
+                              Komponen Kriteria Penilaian
+                            </th>
+                            <th class="py-3 px-4 font-bold text-ink dark:text-pearl text-center w-24">Bobot</th>
+                            <For each={sidangTa()?.anggota}>
+                              {(ang, idx) => (
+                                <th class="py-3 px-4 font-bold text-action text-center min-w-[140px] border-l border-hairline dark:border-hairline-dark">
+                                  <div class="text-fine font-bold text-ink dark:text-pearl truncate max-w-[150px]">
+                                    {ang.mahasiswaNama}
+                                  </div>
+                                  <div class="text-fine text-secondary-500 font-normal">
+                                    {ang.mahasiswaNim} {ang.peran === 'ketua' ? '(Ketua)' : `(MHS-${idx() + 1})`}
+                                  </div>
+                                </th>
+                              )}
+                            </For>
+                          </tr>
+                        </thead>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <tbody class="divide-y divide-hairline dark:divide-hairline-dark">
+                          {/* JIKA MEMILIKI KATEGORI A, B, C LENGKAP */}
+                          <Show
+                            when={rubrikKriteria().some((k) => k.kategori === 'pembimbingan')}
+                            fallback={
+                              /* Tampilan fallback untuk jenis sidang tanpa kategori terpisah (misal sempro umum) */
                               <For each={rubrikKriteria()}>
-                                {(crit) => {
-                                  const key = `${crit.id}_${ang.mahasiswaId}`;
+                                {(crit) => (
+                                  <tr class="hover:bg-pearl/50 dark:hover:bg-canvas-dark/50">
+                                    <td class="py-2.5 px-4 font-mono text-fine text-secondary-500">
+                                      {crit.kode || `K.${crit.id}`}
+                                    </td>
+                                    <td class="py-2.5 px-4 text-ink dark:text-pearl">
+                                      {crit.nama || crit.namaKriteria}
+                                    </td>
+                                    <td class="py-2.5 px-4 text-center font-semibold text-secondary-600">
+                                      {crit.bobot || crit.bobotPersen}%
+                                    </td>
+                                    <For each={sidangTa()?.anggota}>
+                                      {(ang) => {
+                                        const key = `${crit.id}_${ang.mahasiswaId}`;
+                                        return (
+                                          <td class="py-2 px-3 text-center border-l border-hairline dark:border-hairline-dark">
+                                            <input
+                                              type="number"
+                                              step="0.1"
+                                              min="0"
+                                              max="10"
+                                              placeholder="0-10"
+                                              value={nilaiMap()[key] ?? ''}
+                                              onInput={(e) => {
+                                                const val = parseFloat(e.currentTarget.value);
+                                                setNilaiMap((prev) => ({
+                                                  ...prev,
+                                                  [key]: isNaN(val) ? 0 : val,
+                                                }));
+                                              }}
+                                              class="w-24 text-center border border-hairline dark:border-hairline-dark rounded-xl px-2.5 py-1.5 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl focus:border-action outline-none"
+                                            />
+                                          </td>
+                                        );
+                                      }}
+                                    </For>
+                                  </tr>
+                                )}
+                              </For>
+                            }
+                          >
+                            {/* ================= BLOK A: PENILAIAN PEMBIMBINGAN (30%) ================= */}
+                            <tr class="bg-secondary-50/70 dark:bg-secondary-900/30">
+                              <td colspan={3 + (sidangTa()?.anggota?.length || 1)} class="py-2.5 px-4">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-caption font-black text-ink dark:text-pearl uppercase tracking-wider">
+                                    Kategori A — Penilaian Pembimbingan (Bersifat Individu)
+                                  </span>
+                                  <Badge variant="accent" size="sm">
+                                    Kontribusi Nilai Akhir: 30%
+                                  </Badge>
+                                </div>
+                              </td>
+                            </tr>
+                            <For each={rubrikKriteria().filter((k) => k.kategori === 'pembimbingan')}>
+                              {(crit) => (
+                                <tr class="hover:bg-pearl/50 dark:hover:bg-canvas-dark/50">
+                                  <td class="py-2.5 px-4 font-mono text-fine text-secondary-500 font-semibold">
+                                    {crit.kode || `A.${crit.id}`}
+                                  </td>
+                                  <td class="py-2.5 px-4 text-ink dark:text-pearl">{crit.nama || crit.namaKriteria}</td>
+                                  <td class="py-2.5 px-4 text-center font-semibold text-secondary-600">
+                                    {crit.bobot || crit.bobotPersen}%
+                                  </td>
+                                  <For each={sidangTa()?.anggota}>
+                                    {(ang) => {
+                                      const key = `${crit.id}_${ang.mahasiswaId}`;
+                                      return (
+                                        <td class="py-2 px-3 text-center border-l border-hairline dark:border-hairline-dark">
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            max="10"
+                                            placeholder="0 - 10"
+                                            value={nilaiMap()[key] ?? ''}
+                                            onInput={(e) => {
+                                              const val = parseFloat(e.currentTarget.value);
+                                              setNilaiMap((prev) => ({
+                                                ...prev,
+                                                [key]: isNaN(val) ? 0 : val,
+                                              }));
+                                            }}
+                                            class="w-24 text-center border border-hairline dark:border-hairline-dark rounded-xl px-2.5 py-1.5 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl focus:border-action outline-none"
+                                          />
+                                        </td>
+                                      );
+                                    }}
+                                  </For>
+                                </tr>
+                              )}
+                            </For>
+                            {/* Baris Total A */}
+                            <tr class="bg-action/5 font-bold border-t-2 border-hairline dark:border-hairline-dark">
+                              <td colspan={3} class="py-2.5 px-4 text-right text-action">
+                                Nilai Total Kategori A (Skala 0 – 10):
+                              </td>
+                              <For each={sidangTa()?.anggota}>
+                                {(ang) => {
+                                  const listA = rubrikKriteria().filter((k) => k.kategori === 'pembimbingan');
+                                  let totA = 0;
+                                  let bobotA = 0;
+                                  for (const c of listA) {
+                                    const val = Number(nilaiMap()[`${c.id}_${ang.mahasiswaId}`]) || 0;
+                                    const w = Number(c.bobot || c.bobotPersen) || 0;
+                                    totA += (val * w) / 100;
+                                    bobotA += w;
+                                  }
+                                  const normA = bobotA > 0 ? (totA / bobotA) * 100 : 0;
                                   return (
-                                    <div>
-                                      <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
-                                        {crit.namaKriteria} ({crit.bobotPersen}%)
-                                      </label>
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        placeholder="0-100"
-                                        value={nilaiMap()[key] ?? ''}
-                                        onInput={(e) => {
-                                          const val = Number(e.currentTarget.value);
-                                          setNilaiMap((prev) => ({ ...prev, [key]: val }));
-                                        }}
-                                      />
-                                    </div>
+                                    <td class="py-2.5 px-3 text-center font-mono text-action font-black text-table border-l border-hairline dark:border-hairline-dark">
+                                      {normA.toFixed(2)}
+                                    </td>
                                   );
                                 }}
                               </For>
-                            </div>
-                          </div>
-                        )}
-                      </For>
+                            </tr>
+
+                            {/* ================= BLOK B: PENILAIAN ALAT / MESIN (35%) ================= */}
+                            <tr class="bg-secondary-50/70 dark:bg-secondary-900/30">
+                              <td colspan={3 + (sidangTa()?.anggota?.length || 1)} class="py-2.5 px-4">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-caption font-black text-ink dark:text-pearl uppercase tracking-wider">
+                                    Kategori B — Penilaian Alat / Mesin (Bersifat Kelompok)
+                                  </span>
+                                  <Badge variant="accent" size="sm">
+                                    Kontribusi Nilai Akhir: 35%
+                                  </Badge>
+                                </div>
+                              </td>
+                            </tr>
+                            <For each={rubrikKriteria().filter((k) => k.kategori === 'alat_mesin')}>
+                              {(crit) => (
+                                <tr class="hover:bg-pearl/50 dark:hover:bg-canvas-dark/50">
+                                  <td class="py-2.5 px-4 font-mono text-fine text-secondary-500 font-semibold">
+                                    {crit.kode || `B.${crit.id}`}
+                                  </td>
+                                  <td class="py-2.5 px-4 text-ink dark:text-pearl">{crit.nama || crit.namaKriteria}</td>
+                                  <td class="py-2.5 px-4 text-center font-semibold text-secondary-600">
+                                    {crit.bobot || crit.bobotPersen}%
+                                  </td>
+                                  <For each={sidangTa()?.anggota}>
+                                    {(ang) => {
+                                      const key = `${crit.id}_${ang.mahasiswaId}`;
+                                      return (
+                                        <td class="py-2 px-3 text-center border-l border-hairline dark:border-hairline-dark">
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            max="10"
+                                            placeholder="0 - 10"
+                                            value={nilaiMap()[key] ?? ''}
+                                            onInput={(e) => {
+                                              const val = parseFloat(e.currentTarget.value);
+                                              const updatedVal = isNaN(val) ? 0 : val;
+                                              // Nilai kelompok: sinkronkan ke seluruh anggota tim
+                                              const newMap = { ...nilaiMap() };
+                                              sidangTa()?.anggota?.forEach((a) => {
+                                                newMap[`${crit.id}_${a.mahasiswaId}`] = updatedVal;
+                                              });
+                                              setNilaiMap(newMap);
+                                            }}
+                                            class="w-24 text-center border border-hairline dark:border-hairline-dark rounded-xl px-2.5 py-1.5 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl focus:border-action outline-none"
+                                          />
+                                        </td>
+                                      );
+                                    }}
+                                  </For>
+                                </tr>
+                              )}
+                            </For>
+                            {/* Baris Total B */}
+                            <tr class="bg-action/5 font-bold border-t-2 border-hairline dark:border-hairline-dark">
+                              <td colspan={3} class="py-2.5 px-4 text-right text-action">
+                                Nilai Total Kategori B (Skala 0 – 10):
+                              </td>
+                              <For each={sidangTa()?.anggota}>
+                                {(ang) => {
+                                  const listB = rubrikKriteria().filter((k) => k.kategori === 'alat_mesin');
+                                  let totB = 0;
+                                  let bobotB = 0;
+                                  for (const c of listB) {
+                                    const val = Number(nilaiMap()[`${c.id}_${ang.mahasiswaId}`]) || 0;
+                                    const w = Number(c.bobot || c.bobotPersen) || 0;
+                                    totB += (val * w) / 100;
+                                    bobotB += w;
+                                  }
+                                  const normB = bobotB > 0 ? (totB / bobotB) * 100 : 0;
+                                  return (
+                                    <td class="py-2.5 px-3 text-center font-mono text-action font-black text-table border-l border-hairline dark:border-hairline-dark">
+                                      {normB.toFixed(2)}
+                                    </td>
+                                  );
+                                }}
+                              </For>
+                            </tr>
+
+                            {/* ================= BLOK C: PENILAIAN LAPORAN TUGAS AKHIR (35%) ================= */}
+                            <tr class="bg-secondary-50/70 dark:bg-secondary-900/30">
+                              <td colspan={3 + (sidangTa()?.anggota?.length || 1)} class="py-2.5 px-4">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-caption font-black text-ink dark:text-pearl uppercase tracking-wider">
+                                    Kategori C — Penilaian Laporan Tugas Akhir (Bersifat Kelompok)
+                                  </span>
+                                  <Badge variant="accent" size="sm">
+                                    Kontribusi Nilai Akhir: 35%
+                                  </Badge>
+                                </div>
+                              </td>
+                            </tr>
+                            <For each={rubrikKriteria().filter((k) => k.kategori === 'laporan')}>
+                              {(crit) => (
+                                <tr class="hover:bg-pearl/50 dark:hover:bg-canvas-dark/50">
+                                  <td class="py-2.5 px-4 font-mono text-fine text-secondary-500 font-semibold">
+                                    {crit.kode || `C.${crit.id}`}
+                                  </td>
+                                  <td class="py-2.5 px-4 text-ink dark:text-pearl">{crit.nama || crit.namaKriteria}</td>
+                                  <td class="py-2.5 px-4 text-center font-semibold text-secondary-600">
+                                    {crit.bobot || crit.bobotPersen}%
+                                  </td>
+                                  <For each={sidangTa()?.anggota}>
+                                    {(ang) => {
+                                      const key = `${crit.id}_${ang.mahasiswaId}`;
+                                      return (
+                                        <td class="py-2 px-3 text-center border-l border-hairline dark:border-hairline-dark">
+                                          <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            max="10"
+                                            placeholder="0 - 10"
+                                            value={nilaiMap()[key] ?? ''}
+                                            onInput={(e) => {
+                                              const val = parseFloat(e.currentTarget.value);
+                                              const updatedVal = isNaN(val) ? 0 : val;
+                                              // Nilai kelompok: sinkronkan ke seluruh anggota tim
+                                              const newMap = { ...nilaiMap() };
+                                              sidangTa()?.anggota?.forEach((a) => {
+                                                newMap[`${crit.id}_${a.mahasiswaId}`] = updatedVal;
+                                              });
+                                              setNilaiMap(newMap);
+                                            }}
+                                            class="w-24 text-center border border-hairline dark:border-hairline-dark rounded-xl px-2.5 py-1.5 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl focus:border-action outline-none"
+                                          />
+                                        </td>
+                                      );
+                                    }}
+                                  </For>
+                                </tr>
+                              )}
+                            </For>
+                            {/* Baris Total C */}
+                            <tr class="bg-action/5 font-bold border-t-2 border-hairline dark:border-hairline-dark">
+                              <td colspan={3} class="py-2.5 px-4 text-right text-action">
+                                Nilai Total Kategori C (Skala 0 – 10):
+                              </td>
+                              <For each={sidangTa()?.anggota}>
+                                {(ang) => {
+                                  const listC = rubrikKriteria().filter((k) => k.kategori === 'laporan');
+                                  let totC = 0;
+                                  let bobotC = 0;
+                                  for (const c of listC) {
+                                    const val = Number(nilaiMap()[`${c.id}_${ang.mahasiswaId}`]) || 0;
+                                    const w = Number(c.bobot || c.bobotPersen) || 0;
+                                    totC += (val * w) / 100;
+                                    bobotC += w;
+                                  }
+                                  const normC = bobotC > 0 ? (totC / bobotC) * 100 : 0;
+                                  return (
+                                    <td class="py-2.5 px-3 text-center font-mono text-action font-black text-table border-l border-hairline dark:border-hairline-dark">
+                                      {normC.toFixed(2)}
+                                    </td>
+                                  );
+                                }}
+                              </For>
+                            </tr>
+
+                            {/* ================= REKAPITULASI NILAI AKHIR & HURUF MUTU BPA ================= */}
+                            <tr class="bg-action/10 font-bold border-t-4 border-hairline dark:border-hairline-dark">
+                              <td colspan={3} class="py-3.5 px-4 text-right">
+                                <span class="text-caption font-black text-action block uppercase tracking-wider">
+                                  NILAI AKHIR = 30% A + 35% B + 35% C:
+                                </span>
+                                <span class="text-fine text-secondary-500 font-normal">
+                                  Konversi Huruf Mutu Standar BPA Politeknik Sorowako
+                                </span>
+                              </td>
+                              <For each={sidangTa()?.anggota}>
+                                {(ang) => {
+                                  // Hitung A
+                                  const listA = rubrikKriteria().filter((k) => k.kategori === 'pembimbingan');
+                                  let totA = 0;
+                                  let bobotA = 0;
+                                  for (const c of listA) {
+                                    totA +=
+                                      ((Number(nilaiMap()[`${c.id}_${ang.mahasiswaId}`]) || 0) *
+                                        (Number(c.bobot || c.bobotPersen) || 0)) /
+                                      100;
+                                    bobotA += Number(c.bobot || c.bobotPersen) || 0;
+                                  }
+                                  const normA = bobotA > 0 ? (totA / bobotA) * 100 : 0;
+
+                                  // Hitung B
+                                  const listB = rubrikKriteria().filter((k) => k.kategori === 'alat_mesin');
+                                  let totB = 0;
+                                  let bobotB = 0;
+                                  for (const c of listB) {
+                                    totB +=
+                                      ((Number(nilaiMap()[`${c.id}_${ang.mahasiswaId}`]) || 0) *
+                                        (Number(c.bobot || c.bobotPersen) || 0)) /
+                                      100;
+                                    bobotB += Number(c.bobot || c.bobotPersen) || 0;
+                                  }
+                                  const normB = bobotB > 0 ? (totB / bobotB) * 100 : 0;
+
+                                  // Hitung C
+                                  const listC = rubrikKriteria().filter((k) => k.kategori === 'laporan');
+                                  let totC = 0;
+                                  let bobotC = 0;
+                                  for (const c of listC) {
+                                    totC +=
+                                      ((Number(nilaiMap()[`${c.id}_${ang.mahasiswaId}`]) || 0) *
+                                        (Number(c.bobot || c.bobotPersen) || 0)) /
+                                      100;
+                                    bobotC += Number(c.bobot || c.bobotPersen) || 0;
+                                  }
+                                  const normC = bobotC > 0 ? (totC / bobotC) * 100 : 0;
+
+                                  let finalCalc = 0;
+                                  if (bobotA > 0 && (bobotB > 0 || bobotC > 0)) {
+                                    finalCalc = 0.3 * normA + 0.35 * normB + 0.35 * normC;
+                                  } else if (bobotB > 0 || bobotC > 0) {
+                                    const sumW = (bobotB > 0 ? 0.35 : 0) + (bobotC > 0 ? 0.35 : 0);
+                                    finalCalc = sumW > 0 ? (0.35 * normB + 0.35 * normC) / sumW : 0;
+                                  } else {
+                                    finalCalc = normA;
+                                  }
+
+                                  const mutu = konversiBpaFrontend(finalCalc);
+
+                                  return (
+                                    <td class="py-3 px-3 text-center border-l border-hairline dark:border-hairline-dark">
+                                      <div class="text-title font-black text-action leading-tight">
+                                        {finalCalc.toFixed(2)}
+                                      </div>
+                                      <div class="mt-1 flex justify-center">
+                                        <Badge
+                                          variant={
+                                            mutu.huruf.startsWith('A')
+                                              ? 'success'
+                                              : mutu.huruf.startsWith('B')
+                                                ? 'accent'
+                                                : mutu.huruf.startsWith('C')
+                                                  ? 'warning'
+                                                  : 'danger'
+                                          }
+                                          size="sm"
+                                        >
+                                          {mutu.huruf} ({mutu.indeks})
+                                        </Badge>
+                                      </div>
+                                      <div class="text-fine text-secondary-500 mt-0.5 truncate max-w-[120px] mx-auto">
+                                        {mutu.predikat}
+                                      </div>
+                                    </td>
+                                  );
+                                }}
+                              </For>
+                            </tr>
+                          </Show>
+                        </tbody>
+                      </table>
                     </div>
 
+                    {/* Catatan Revisi & Saran Penguji */}
                     <div>
                       <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
-                        Catatan Revisi dari Penguji
+                        Catatan Revisi & Masukan Penguji / Pembimbing
                       </label>
                       <textarea
                         rows={3}
-                        placeholder="Rincian perbaikan naskah atau metodologi yang harus direvisi..."
+                        placeholder="Rincian perbaikan naskah, perhitungan bahan, atau perbaikan fungsional alat yang harus diselesaikan..."
                         value={nilaiCatatanRevisi()}
                         onInput={(e) => setNilaiCatatanRevisi(e.currentTarget.value)}
                         class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
@@ -2913,7 +3308,7 @@ export default function TugasAkhirPage() {
 
                     <div class="flex justify-end pt-2">
                       <Button type="submit" variant="primary" disabled={isSubmittingNilai()}>
-                        {isSubmittingNilai() ? 'Menyimpan...' : 'Simpan Penilaian Penguji'}
+                        {isSubmittingNilai() ? 'Menyimpan Penilaian...' : 'Simpan Lembar Penilaian Resmi (Skala 0–10)'}
                       </Button>
                     </div>
                   </form>

@@ -215,7 +215,7 @@ export const jadwalSidangBody = t.Object({
 export const nilaiItemSchema = t.Object({
   kriteriaId: t.Integer(),
   mahasiswaId: t.Integer(),
-  nilai: t.Numeric({ minimum: 0, maximum: 100 }),
+  nilai: t.Numeric({ minimum: 0, maximum: 10 }),
 });
 
 export const inputNilaiSidangBody = t.Object({

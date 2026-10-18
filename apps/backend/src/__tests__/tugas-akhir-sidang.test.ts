@@ -244,7 +244,7 @@ describe('Tugas Akhir - Milestone 3: Pendaftaran & Penjadwalan Sidang Proposal',
             {
               kriteriaId: rubrikKriteriaId,
               mahasiswaId: mhsId,
-              nilai: 85,
+              nilai: 8.5,
             },
           ],
           catatanRevisi: 'Perdalam spesifikasi sensor LiDAR dan algoritma pemetaan pada Bab 3.',
@@ -265,7 +265,7 @@ describe('Tugas Akhir - Milestone 3: Pendaftaran & Penjadwalan Sidang Proposal',
       .from(tugasAkhirPenguji)
       .where(and(eq(tugasAkhirPenguji.sidangId, sidangId), eq(tugasAkhirPenguji.dosenId, dosenPengujiId)))
       .limit(1);
-    expect(Number(pRow.nilaiTotal)).toBe(85);
+    expect(Number(pRow.nilaiTotal)).toBe(8.5);
   });
 
   it('4. Program Studi memfinalisasi hasil Sidang Proposal (Lulus Dengan Revisi)', async () => {

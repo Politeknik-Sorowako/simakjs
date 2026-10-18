@@ -3948,6 +3948,7 @@ export const tugasAkhirRubrikKriteria = pgTable(
     jenisSidang: varchar('jenis_sidang', { length: 20 }).notNull(), // 'proposal' | 'kemajuan' | 'akhir'
     kode: varchar('kode', { length: 20 }).notNull(),
     nama: varchar('nama', { length: 150 }).notNull(),
+    kategori: varchar('kategori', { length: 30 }).default('umum').notNull(), // 'pembimbingan' | 'alat_mesin' | 'laporan' | 'umum'
     deskripsi: text('deskripsi'),
     bobot: integer('bobot').notNull(), // e.g. 20 (percent)
     isIndividu: boolean('is_individu').default(false).notNull(), // true = nilai per individu mahasiswa; false = nilai kelompok
@@ -3955,7 +3956,11 @@ export const tugasAkhirRubrikKriteria = pgTable(
     isAktif: boolean('is_aktif').default(true).notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
-  (t) => [index('idx_ta_rubrik_prodi').on(t.programStudiId), index('idx_ta_rubrik_jenis').on(t.jenisSidang)],
+  (t) => [
+    index('idx_ta_rubrik_prodi').on(t.programStudiId),
+    index('idx_ta_rubrik_jenis').on(t.jenisSidang),
+    index('idx_ta_rubrik_kategori').on(t.kategori),
+  ],
 );
 
 export const tugasAkhirNilaiDetail = pgTable(
