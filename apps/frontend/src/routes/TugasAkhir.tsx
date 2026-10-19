@@ -1447,6 +1447,11 @@ export default function TugasAkhirPage() {
                                 icon: '💬',
                                 onClick: () => openBimbinganModal(item),
                               });
+                              items.push({
+                                label: 'Kartu Kendali',
+                                icon: '🖨️',
+                                onClick: () => window.open(`/tugas-akhir/${item.id}/kartu-kendali`, '_blank'),
+                              });
                             }
 
                             // 3. Sidang Proposal (Sempro)
@@ -2476,18 +2481,28 @@ export default function TugasAkhirPage() {
               </div>
             </div>
 
-            {/* Tombol Tambah Logbook */}
-            <div class="flex items-center justify-between">
+            {/* Tombol Tambah Logbook & Cetak Kartu Kendali */}
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h4 class="text-table font-bold text-ink dark:text-pearl">
                 Riwayat Logbook Konsultasi ({logbooks().length} Catatan)
               </h4>
-              <Button
-                variant={showAddLogbookForm() ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => setShowAddLogbookForm(!showAddLogbookForm())}
-              >
-                {showAddLogbookForm() ? 'Tutup Form' : '+ Catat Bimbingan'}
-              </Button>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => window.open(`/tugas-akhir/${bimbinganTa()?.id}/kartu-kendali`, '_blank')}
+                  title="Buka dokumen cetak kartu kendali bimbingan A4 / PDF"
+                >
+                  🖨️ Cetak Kartu Kendali
+                </Button>
+                <Button
+                  variant={showAddLogbookForm() ? 'secondary' : 'primary'}
+                  size="sm"
+                  onClick={() => setShowAddLogbookForm(!showAddLogbookForm())}
+                >
+                  {showAddLogbookForm() ? 'Tutup Form' : '+ Catat Bimbingan'}
+                </Button>
+              </div>
             </div>
 
             {/* Form Tambah Logbook */}

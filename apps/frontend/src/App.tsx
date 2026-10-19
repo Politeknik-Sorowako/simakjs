@@ -110,6 +110,7 @@ const LaporanYudisium = lazy(() => import('./routes/reports/LaporanYudisium'));
 const VisiMisiProdi = lazy(() => import('./routes/VisiMisiProdi'));
 const Yudisium = lazy(() => import('./routes/Yudisium'));
 const TugasAkhir = lazy(() => import('./routes/TugasAkhir'));
+const TugasAkhirKartuKendaliCetak = lazy(() => import('./routes/TugasAkhirKartuKendaliCetak'));
 
 import { queryClient } from './utils/queryClient';
 
@@ -449,6 +450,14 @@ function AppContent() {
             element={
               <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'lppm', 'dosen', 'mahasiswa']}>
                 <TugasAkhir />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tugas-akhir/:id/kartu-kendali"
+            element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin', 'prodi', 'kaprodi', 'lppm', 'dosen', 'mahasiswa']}>
+                <TugasAkhirKartuKendaliCetak />
               </ProtectedRoute>
             }
           />
