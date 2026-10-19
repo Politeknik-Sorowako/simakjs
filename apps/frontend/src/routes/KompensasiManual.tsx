@@ -19,7 +19,7 @@ import {
 } from '../controllers/kompensasiManualController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { type ExportColumn, exportToExcel } from '../utils/export';
-import { fmtWaktu, getTodayString } from '../utils/format';
+import { fmtWaktu, formatMahasiswaOption, getTodayString } from '../utils/format';
 
 const JENIS_OPTIONS: SelectOption[] = Object.entries(JENIS_KOMPEN_LABEL).map(([value, label]) => ({
   value,
@@ -291,7 +291,7 @@ export default function KompensasiManual() {
       .sort((a, b) => String(a.nim).localeCompare(String(b.nim), 'id', { numeric: true }))
       .map((m) => ({
         value: m.id,
-        label: `${m.nama} (${m.nim})${m.programStudi?.nama ? ` - ${m.programStudi.nama}` : ''}`,
+        label: formatMahasiswaOption(m),
       }));
   });
 

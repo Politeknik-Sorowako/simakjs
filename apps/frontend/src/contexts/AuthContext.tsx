@@ -34,7 +34,8 @@ export interface User {
     | 'calon_mahasiswa'
     | 'plp'
     | 'instruktur'
-    | 'kemahasiswaan';
+    | 'kemahasiswaan'
+    | 'lppm';
   roles?: User['role'][];
   mustChangePassword?: boolean;
   theme?: string;
@@ -68,6 +69,7 @@ export const MULTI_ROLE_ALLOWED: UserRole[] = [
   'plp',
   'instruktur',
   'kemahasiswaan',
+  'lppm',
 ];
 export const ALL_ROLES: UserRole[] = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
 

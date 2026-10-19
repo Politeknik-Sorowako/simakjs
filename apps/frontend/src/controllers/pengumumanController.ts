@@ -10,6 +10,8 @@ export interface LampiranItem {
   mimeType?: string | null;
 }
 
+export type PengumumanTargetRole = 'semua' | 'mahasiswa' | 'dosen' | 'admin';
+
 export interface PengumumanItem {
   id: number;
   judul: string;
@@ -19,7 +21,8 @@ export interface PengumumanItem {
   authorRole: string;
   authorNama?: string | null;
   status: 'draft' | 'scheduled' | 'published' | 'withdrawn' | 'archived';
-  targetRole: 'semua' | 'mahasiswa' | 'dosen' | 'admin';
+  targetRole: PengumumanTargetRole;
+  targetRoles?: PengumumanTargetRole[];
   targetProdiType: 'semua' | 'spesifik';
   targetScopeType: 'umum' | 'kelas' | 'rombel';
   isPinned: boolean;

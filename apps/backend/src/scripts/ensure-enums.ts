@@ -15,6 +15,7 @@ const ENUM_FIXES: EnumFix[] = [
   { name: 'user_role', value: 'plp' },
   { name: 'user_role', value: 'instruktur', before: 'guest' },
   { name: 'user_role', value: 'kemahasiswaan', before: 'guest' },
+  { name: 'user_role', value: 'lppm', before: 'guest' },
   { name: 'user_role', value: 'guest' },
   { name: 'user_role', value: 'calon_mahasiswa', before: 'guest' },
   { name: 'presensi_status', value: 'terlambat' },
@@ -308,6 +309,26 @@ async function ensureEnums() {
     console.log('[ENSURE ENUMS] Checked ketidakhadiran_mahasiswa table.');
   } catch (keErr: unknown) {
     console.log(`[ENSURE ENUMS] ketidakhadiran table check skipped: ${(keErr as Error).message || String(keErr)}`);
+  }
+
+  // Self-healing safety check untuk tabel tugas_akhir_rubrik_kriteria
+  try {
+    const taRubrikTable = await pool.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = 'tugas_akhir_rubrik_kriteria'`,
+    );
+    if (taRubrikTable.rows.length > 0) {
+      await pool.query(
+        `ALTER TABLE "tugas_akhir_rubrik_kriteria" ADD COLUMN IF NOT EXISTS "kategori" varchar(30) DEFAULT 'umum' NOT NULL;`,
+      );
+      await pool.query(
+        `CREATE INDEX IF NOT EXISTS "idx_ta_rubrik_kategori" ON "tugas_akhir_rubrik_kriteria" ("kategori");`,
+      );
+      console.log('[ENSURE ENUMS] Checked tugas_akhir_rubrik_kriteria columns.');
+    }
+  } catch (taErr: unknown) {
+    console.log(
+      `[ENSURE ENUMS] tugas_akhir_rubrik_kriteria check skipped: ${(taErr as Error).message || String(taErr)}`,
+    );
   }
 
   await pool.end();

@@ -47,3 +47,17 @@ export function fmtTanggal(tanggal?: string | null): string {
   if (Number.isNaN(d.getTime())) return tanggal;
   return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+
+/**
+ * Format label opsi dropdown mahasiswa seragam secara global:
+ * "{NIM} - {Nama} ({Program Studi})"
+ */
+export function formatMahasiswaOption(mhs: {
+  nim: string;
+  nama: string;
+  programStudi?: { nama: string } | null;
+  prodiNama?: string | null;
+}): string {
+  const prodi = mhs.programStudi?.nama || mhs.prodiNama;
+  return prodi ? `${mhs.nim} - ${mhs.nama} (${prodi})` : `${mhs.nim} - ${mhs.nama}`;
+}

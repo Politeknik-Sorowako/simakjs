@@ -12,7 +12,7 @@ import {
 import { systemController } from '../../controllers/systemController';
 import { usePagination } from '../../hooks/usePagination';
 import { type ExportColumn, exportToExcel, exportToPDF } from '../../utils/export';
-import { fmtTanggal, getTodayString } from '../../utils/format';
+import { fmtTanggal, formatMahasiswaOption, getTodayString } from '../../utils/format';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -85,11 +85,14 @@ export default function TabVerifikasi() {
     setMhsSearching(true);
     mhsTimer = setTimeout(async () => {
       try {
-        const res = await mahasiswaController.getAll(q || undefined, 1, 25, undefined, { allStudents: true });
+        const res = await mahasiswaController.getAll(q || undefined, 1, 25, undefined, {
+          filterStatus: 'aktif',
+          allStudents: true,
+        });
         setMhsOptions(
           res.data.map((m) => ({
             value: m.id,
-            label: `${m.nim} — ${m.nama}${m.programStudi?.nama ? ` (${m.programStudi.nama})` : ''}`,
+            label: formatMahasiswaOption(m),
           })),
         );
       } catch {

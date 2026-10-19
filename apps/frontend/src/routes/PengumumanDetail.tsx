@@ -163,7 +163,19 @@ export default function PengumumanDetail() {
                     </span>
                   </Show>
                   <span class="px-3 py-1 rounded-full text-xs font-medium bg-action-50 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300 border border-brand-200 dark:border-brand-800">
-                    🎯 Sasaran: {item().targetRole === 'semua' ? 'Semua Sivitas' : item().targetRole}
+                    🎯 Sasaran: {(() => {
+                      const roles =
+                        item().targetRoles && item().targetRoles!.length > 0
+                          ? item().targetRoles!
+                          : [item().targetRole];
+                      if (roles.includes('semua') || roles.length === 0) return 'Semua Sivitas';
+                      const labels: Record<string, string> = {
+                        mahasiswa: 'Mahasiswa',
+                        dosen: 'Dosen & Pengajar',
+                        admin: 'Admin / Staf',
+                      };
+                      return roles.map((r) => labels[r] ?? r).join(', ');
+                    })()}
                   </span>
                 </div>
 

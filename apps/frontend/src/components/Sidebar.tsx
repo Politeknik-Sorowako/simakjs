@@ -113,7 +113,18 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
     if (isMatch(['/krs', '/keuangan'])) {
       setIsRegistrasiOpen(true);
     }
-    if (isMatch(['/jurnal-presensi', '/presensi-apel', '/input-nilai', '/bimbingan', '/monitoring-bimbingan'])) {
+    if (
+      isMatch([
+        '/jurnal-presensi',
+        '/presensi-apel',
+        '/input-nilai',
+        '/bimbingan',
+        '/monitoring-bimbingan',
+        '/penetapan-pembimbing',
+        '/aktivitas-mbkm',
+        '/tugas-akhir',
+      ])
+    ) {
       setIsPelaksanaanOpen(true);
     }
     if (isMatch(['/khs', '/yudisium'])) {
@@ -181,12 +192,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const isSuperAdmin = () => auth.hasRole(['super_admin']);
   const isAdminMgmt = () => auth.hasRole(['admin', 'super_admin']);
   /**
-   * Penetapan Pembimbing tidak lagi dibuka untuk role dosen murni — verifikasi
-   * pembimbing PKL/TA dilakukan dari menu Bimbingan. Dosen yang sekaligus
-   * memegang role admin/kaprodi/prodi tetap melihat menu ini lewat role
-   * tersebut, sejalan dengan `allowedRoles` route di `App.tsx`.
+   * Penetapan Pembimbing hanya untuk pengelola akademik:
+   * - Role dosen murni tidak dibuka — verifikasi pembimbing PKL/TA dilakukan
+   *   dari menu Bimbingan.
+   * - Role mahasiswa tidak dibuka — halaman ini adalah alat penetapan (set/bulk/
+   *   impor) yang di backend dibatasi `MANAGER_ROLES`; mahasiswa cukup melihat
+   *   pembimbingnya lewat menu Bimbingan.
+   * Dosen/mahasiswa yang sekaligus memegang role admin/kaprodi/prodi tetap
+   * melihat menu ini lewat role tersebut, karena `hasRole` mengevaluasi seluruh
+   * daftar roles.
    */
-  const canSetPembimbing = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi', 'mahasiswa']);
+  const canSetPembimbing = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi']);
   const notGuest = () => !auth.hasRole(['guest']);
   const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
@@ -1016,6 +1032,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                       />
                     </svg>
                     Aktivitas MBKM
+                  </A>
+                </Show>
+                <Show when={isMahasiswaOrMore()}>
+                  <A
+                    href="/tugas-akhir"
+                    onClick={() => props.onClose()}
+                    activeClass="text-action-ondark font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                      />
+                    </svg>
+                    Tugas Akhir
                   </A>
                 </Show>
               </div>

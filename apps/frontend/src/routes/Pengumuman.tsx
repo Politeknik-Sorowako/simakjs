@@ -188,6 +188,7 @@ export default function Pengumuman() {
           judul: item.judul,
           konten: item.konten,
           targetRole: item.targetRole,
+          targetRoles: item.targetRoles && item.targetRoles.length > 0 ? item.targetRoles : [item.targetRole],
           targetProdiType: item.targetProdiType,
           targetProdiIds: item.targetProdiIds,
           targetScopeType: item.targetScopeType,
@@ -491,7 +492,12 @@ export default function Pengumuman() {
                         </td>
                         <td class="px-6 py-4 text-xs text-secondary-500 dark:text-secondary-400">
                           <div class="font-medium text-secondary-700 dark:text-secondary-200">
-                            {TARGET_ROLE_LABEL[item.targetRole] ?? item.targetRole}
+                            {(() => {
+                              const roles =
+                                item.targetRoles && item.targetRoles.length > 0 ? item.targetRoles : [item.targetRole];
+                              if (roles.includes('semua')) return 'Semua Civitas';
+                              return roles.map((r) => TARGET_ROLE_LABEL[r] ?? r).join(', ');
+                            })()}
                           </div>
                           <div class="text-fine">
                             {item.targetProdiType === 'spesifik'

@@ -84,7 +84,7 @@ export function PengumumanCard(props: PengumumanCardProps) {
   };
 
   const targetBadge = () => {
-    const r = p().targetRole;
+    const roles = p().targetRoles && p().targetRoles!.length > 0 ? p().targetRoles! : [p().targetRole];
     const scope = p().targetScopeType;
     let text = 'Semua Sivitas';
 
@@ -94,12 +94,15 @@ export function PengumumanCard(props: PengumumanCardProps) {
       text = 'Rombel Tertentu';
     } else if (p().targetProdiType === 'spesifik') {
       text = 'Prodi Tertentu';
-    } else if (r === 'mahasiswa') {
-      text = 'Seluruh Mahasiswa';
-    } else if (r === 'dosen') {
-      text = 'Seluruh Dosen';
-    } else if (r === 'admin') {
-      text = 'Khusus Admin/Staf';
+    } else if (roles.includes('semua') || roles.length === 0) {
+      text = 'Semua Sivitas';
+    } else {
+      const labels: Record<string, string> = {
+        mahasiswa: 'Mahasiswa',
+        dosen: 'Dosen',
+        admin: 'Admin/Staf',
+      };
+      text = roles.map((role) => labels[role] ?? role).join(', ');
     }
 
     return (
