@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { TugasAkhirController } from '../controllers/tugas-akhir.controller';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import {
+  accRevisiSchema,
   accSidangSchema,
   createLogbookSchema,
   createTugasAkhirSchema,
@@ -15,6 +16,8 @@ import {
   responUndanganSchema,
   reviewLogbookSchema,
   reviewTopikSchema,
+  sidangIdSchema,
+  submitRevisiSidangSchema,
   tugasAkhirIdSchema,
   updateLogbookSchema,
   updateTugasAkhirSchema,
@@ -43,4 +46,8 @@ export const tugasAkhirRoutes = new Elysia({ prefix: '/tugas-akhir' })
   .post('/:id/sidang/:sidangId/jadwal', TugasAkhirController.jadwalkanSidang, jadwalSidangSchema)
   .get('/:id/sidang/rubrik', TugasAkhirController.getRubrikKriteria, tugasAkhirIdSchema)
   .post('/:id/sidang/:sidangId/nilai', TugasAkhirController.inputNilaiSidang, inputNilaiSidangSchema)
-  .post('/:id/sidang/:sidangId/finalisasi', TugasAkhirController.finalisasiSidang, finalisasiSidangSchema);
+  .post('/:id/sidang/:sidangId/finalisasi', TugasAkhirController.finalisasiSidang, finalisasiSidangSchema)
+  // Milestone 4: Rekap Nilai Ekspor & Workflow Revisi Pasca Sidang
+  .get('/:id/sidang/:sidangId/rekap-nilai', TugasAkhirController.getRekapNilaiSidang, sidangIdSchema)
+  .post('/:id/sidang/:sidangId/revisi', TugasAkhirController.submitRevisiSidang, submitRevisiSidangSchema)
+  .post('/:id/sidang/:sidangId/penguji/:pengujiId/acc-revisi', TugasAkhirController.accRevisiPenguji, accRevisiSchema);
