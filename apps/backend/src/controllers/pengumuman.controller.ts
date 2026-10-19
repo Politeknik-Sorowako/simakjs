@@ -64,6 +64,44 @@ export class PengumumanController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getLoginPopups({ set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+
+      return await PengumumanService.getLoginPopups(user);
+    } catch (err: unknown) {
+      set.status = 500;
+      return { error: err instanceof Error ? err.message : 'Gagal mengambil pengumuman pop-up login' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async markAsRead({ params, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+
+      const id = Number(params.id);
+      if (isNaN(id)) {
+        set.status = 400;
+        return { error: 'ID pengumuman tidak valid' };
+      }
+
+      return await PengumumanService.markAsRead(id, user.id);
+    } catch (err: unknown) {
+      set.status = 500;
+      return { error: err instanceof Error ? err.message : 'Gagal menandai pengumuman sebagai dibaca' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async getDetail({ params, set, getCurrentUser }: AuthContext): Promise<any> {
     try {
       const user = await getCurrentUser();

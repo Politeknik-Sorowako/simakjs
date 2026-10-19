@@ -46,6 +46,7 @@ export interface SaveDraftPayload {
   targetKelasIds?: number[];
   targetRombelIds?: number[];
   isPinned?: boolean;
+  showModalOnLogin?: boolean;
   thumbnailUrl?: string | null;
   publishedAt?: string | null;
   expiresAt?: string | null;
@@ -65,6 +66,7 @@ export interface PublishPayload {
   targetKelasIds?: number[];
   targetRombelIds?: number[];
   isPinned?: boolean;
+  showModalOnLogin?: boolean;
   thumbnailUrl?: string | null;
   publishMode: 'now' | 'scheduled';
   scheduledPublishAt?: string | null;
@@ -385,6 +387,7 @@ export class PengumumanService {
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
+        showModalOnLogin: pengumuman.showModalOnLogin,
         thumbnailUrl: pengumuman.thumbnailUrl,
         publishedAt: pengumuman.publishedAt,
         createdAt: pengumuman.createdAt,
@@ -588,6 +591,7 @@ export class PengumumanService {
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
+        showModalOnLogin: pengumuman.showModalOnLogin,
         thumbnailUrl: pengumuman.thumbnailUrl,
         publishedAt: pengumuman.publishedAt,
         withdrawnAt: pengumuman.withdrawnAt,
@@ -791,6 +795,7 @@ export class PengumumanService {
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
+        showModalOnLogin: pengumuman.showModalOnLogin,
         thumbnailUrl: pengumuman.thumbnailUrl,
         publishedAt: pengumuman.publishedAt,
         withdrawnAt: pengumuman.withdrawnAt,
@@ -1046,6 +1051,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType ?? existing.targetProdiType,
           targetScopeType: payload.targetScopeType ?? existing.targetScopeType,
           isPinned: payload.isPinned ?? existing.isPinned,
+          showModalOnLogin: payload.showModalOnLogin ?? existing.showModalOnLogin,
           thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : existing.thumbnailUrl,
           expiresAt:
             payload.expiresAt !== undefined
@@ -1082,6 +1088,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType ?? 'semua',
           targetScopeType: payload.targetScopeType ?? 'umum',
           isPinned: payload.isPinned ?? false,
+          showModalOnLogin: payload.showModalOnLogin ?? false,
           thumbnailUrl: payload.thumbnailUrl ?? null,
           expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
           lastAutoSavedAt: now,
@@ -1209,6 +1216,8 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType,
           targetScopeType: payload.targetScopeType,
           isPinned: payload.isPinned ?? false,
+          showModalOnLogin:
+            payload.showModalOnLogin !== undefined ? payload.showModalOnLogin : existing.showModalOnLogin,
           thumbnailUrl: payload.thumbnailUrl !== undefined ? payload.thumbnailUrl : existing.thumbnailUrl,
           publishedAt,
           withdrawnAt: null,
@@ -1232,6 +1241,7 @@ export class PengumumanService {
           targetProdiType: payload.targetProdiType,
           targetScopeType: payload.targetScopeType,
           isPinned: payload.isPinned ?? false,
+          showModalOnLogin: payload.showModalOnLogin ?? false,
           thumbnailUrl: payload.thumbnailUrl ?? null,
           publishedAt,
           expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
@@ -1343,5 +1353,237 @@ export class PengumumanService {
 
     await db.delete(pengumuman).where(eq(pengumuman.id, id));
     return { message: 'Pengumuman berhasil dihapus', id };
+  }
+
+  /**
+   * Mengambil pengumuman aktif berstatus pop-up modal saat login yang relevan untuk pengguna
+   * dan belum ditandai dibaca oleh pengguna.
+   */
+  static async getLoginPopups(user: UserPayload) {
+    const userRoles = user.roles || [user.role];
+    const isMahasiswa = userRoles.includes('mahasiswa');
+    const isDosen = userRoles.some((r) => ['dosen', 'instruktur', 'kaprodi'].includes(r));
+    const isAdmin = userRoles.some((r) => ['admin', 'super_admin'].includes(r));
+
+    let mhsProdiId: number | null = null;
+    let mhsKelasIds: number[] = [];
+    let mhsRombelIds: number[] = [];
+
+    if (isMahasiswa) {
+      const [mhs] = await db
+        .select({ id: mahasiswa.id, prodiId: mahasiswa.programStudiId })
+        .from(mahasiswa)
+        .where(ilike(mahasiswa.email, user.email.trim()))
+        .limit(1);
+
+      if (mhs) {
+        mhsProdiId = mhs.prodiId;
+        const krsRows = await db
+          .select({ kelasKuliahId: krs.kelasKuliahId })
+          .from(krs)
+          .where(and(eq(krs.mahasiswaId, mhs.id), eq(krs.isApproved, true)));
+        mhsKelasIds = krsRows.map((k) => k.kelasKuliahId);
+
+        const rombelRows = await db
+          .select({ rombelId: rombelPraktikumMahasiswa.rombelPraktikumId })
+          .from(rombelPraktikumMahasiswa)
+          .where(eq(rombelPraktikumMahasiswa.mahasiswaId, mhs.id));
+        mhsRombelIds = rombelRows.map((r) => r.rombelId);
+      }
+    }
+
+    let dosenProdiId: number | null = null;
+    let dosenKelasIds: number[] = [];
+    let dosenRombelIds: number[] = [];
+
+    if (isDosen) {
+      const [dsn] = await db
+        .select({ id: dosen.id, prodiId: dosen.programStudiId })
+        .from(dosen)
+        .where(ilike(dosen.email, user.email.trim()))
+        .limit(1);
+
+      if (dsn) {
+        dosenProdiId = dsn.prodiId;
+        dosenKelasIds = await getDosenAllowedKelasIds(dsn.id);
+        const rRows = await db
+          .select({ id: rombelPraktikum.id })
+          .from(rombelPraktikum)
+          .where(
+            or(
+              dosenKelasIds.length > 0 ? inArray(rombelPraktikum.kelasKuliahId, dosenKelasIds) : sql`false`,
+              eq(rombelPraktikum.instrukturId, dsn.id),
+            ),
+          );
+        dosenRombelIds = rRows.map((r) => r.id);
+      }
+    }
+
+    const now = new Date();
+    const allowedRoles: ('semua' | 'mahasiswa' | 'dosen' | 'admin')[] = ['semua'];
+    if (isMahasiswa) allowedRoles.push('mahasiswa');
+    if (isDosen) allowedRoles.push('dosen');
+    if (isAdmin) allowedRoles.push('admin');
+
+    const conditions = [
+      eq(pengumuman.showModalOnLogin, true),
+      inArray(pengumuman.status, ['published', 'scheduled']),
+      lte(pengumuman.publishedAt, now),
+      or(isNull(pengumuman.expiresAt), sql`${pengumuman.expiresAt} >= ${now}`),
+      or(
+        sql`${pengumuman.targetRoles} && ARRAY[${sql.join(
+          allowedRoles.map((r) => sql`${r}`),
+          sql`, `,
+        )}]::text[]`,
+        inArray(pengumuman.targetRole, allowedRoles),
+      ),
+    ];
+
+    const baseCandidates = await db
+      .select({
+        id: pengumuman.id,
+        judul: pengumuman.judul,
+        ringkasan: pengumuman.ringkasan,
+        konten: pengumuman.konten,
+        authorId: pengumuman.authorId,
+        authorRole: pengumuman.authorRole,
+        targetRole: pengumuman.targetRole,
+        targetRoles: pengumuman.targetRoles,
+        targetProdiType: pengumuman.targetProdiType,
+        targetScopeType: pengumuman.targetScopeType,
+        isPinned: pengumuman.isPinned,
+        showModalOnLogin: pengumuman.showModalOnLogin,
+        thumbnailUrl: pengumuman.thumbnailUrl,
+        publishedAt: pengumuman.publishedAt,
+        expiresAt: pengumuman.expiresAt,
+        createdAt: pengumuman.createdAt,
+        authorNama: users.nama,
+      })
+      .from(pengumuman)
+      .leftJoin(users, eq(pengumuman.authorId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(pengumuman.isPinned), desc(pengumuman.publishedAt))
+      .limit(50);
+
+    const candidateIds = baseCandidates.map((c) => c.id);
+    if (candidateIds.length === 0) {
+      return [];
+    }
+
+    const targetProdis = await db
+      .select()
+      .from(pengumumanTargetProdi)
+      .where(inArray(pengumumanTargetProdi.pengumumanId, candidateIds));
+
+    const targetKelas = await db
+      .select()
+      .from(pengumumanTargetKelas)
+      .where(inArray(pengumumanTargetKelas.pengumumanId, candidateIds));
+
+    const targetRombel = await db
+      .select()
+      .from(pengumumanTargetRombel)
+      .where(inArray(pengumumanTargetRombel.pengumumanId, candidateIds));
+
+    const readReceipts = await db
+      .select({ pengumumanId: pengumumanDibaca.pengumumanId })
+      .from(pengumumanDibaca)
+      .where(and(inArray(pengumumanDibaca.pengumumanId, candidateIds), eq(pengumumanDibaca.userId, user.id)));
+
+    const readSet = new Set(readReceipts.map((r) => r.pengumumanId));
+
+    const prodiMap = new Map<number, number[]>();
+    for (const p of targetProdis) {
+      if (!prodiMap.has(p.pengumumanId)) prodiMap.set(p.pengumumanId, []);
+      prodiMap.get(p.pengumumanId)!.push(p.programStudiId);
+    }
+
+    const kelasMap = new Map<number, number[]>();
+    for (const k of targetKelas) {
+      if (!kelasMap.has(k.pengumumanId)) kelasMap.set(k.pengumumanId, []);
+      kelasMap.get(k.pengumumanId)!.push(k.kelasKuliahId);
+    }
+
+    const rombelMap = new Map<number, number[]>();
+    for (const r of targetRombel) {
+      if (!rombelMap.has(r.pengumumanId)) rombelMap.set(r.pengumumanId, []);
+      rombelMap.get(r.pengumumanId)!.push(r.rombelPraktikumId);
+    }
+
+    const filtered = baseCandidates.filter((p) => {
+      // Catatan: Pengumuman pop-up tetap tampil saat login selama periode batas aktifnya belum berakhir.
+      // Riwayat dibaca (readSet) tidak memblokir kemunculan popup.
+
+      if (isAdmin) return true;
+
+      if (p.targetProdiType === 'spesifik') {
+        const pProdis = prodiMap.get(p.id) || [];
+        if (isMahasiswa && mhsProdiId && !pProdis.includes(mhsProdiId)) {
+          return false;
+        }
+        if (isDosen && dosenProdiId && !pProdis.includes(dosenProdiId)) {
+          return false;
+        }
+      }
+
+      if (p.targetScopeType === 'kelas') {
+        const pKelas = kelasMap.get(p.id) || [];
+        if (isMahasiswa) {
+          const hasCommon = mhsKelasIds.some((kId) => pKelas.includes(kId));
+          if (!hasCommon) return false;
+        } else if (isDosen) {
+          const hasCommon = dosenKelasIds.some((kId) => pKelas.includes(kId));
+          if (!hasCommon) return false;
+        } else {
+          return false;
+        }
+      } else if (p.targetScopeType === 'rombel') {
+        const pRombel = rombelMap.get(p.id) || [];
+        if (isMahasiswa) {
+          const hasCommon = mhsRombelIds.some((rId) => pRombel.includes(rId));
+          if (!hasCommon) return false;
+        } else if (isDosen) {
+          const hasCommon = dosenRombelIds.some((rId) => pRombel.includes(rId));
+          if (!hasCommon) return false;
+        } else {
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    const filteredIds = filtered.map((f) => f.id);
+    let lampiranList: (typeof pengumumanLampiran.$inferSelect)[] = [];
+    if (filteredIds.length > 0) {
+      lampiranList = await db
+        .select()
+        .from(pengumumanLampiran)
+        .where(inArray(pengumumanLampiran.pengumumanId, filteredIds));
+    }
+
+    const lampiranMap = new Map<number, typeof lampiranList>();
+    for (const l of lampiranList) {
+      if (!lampiranMap.has(l.pengumumanId)) lampiranMap.set(l.pengumumanId, []);
+      lampiranMap.get(l.pengumumanId)!.push(l);
+    }
+
+    return filtered.map((p) => ({
+      ...p,
+      isRead: readSet.has(p.id),
+      lampiran: lampiranMap.get(p.id) || [],
+    }));
+  }
+
+  /**
+   * Menandai pengumuman sebagai sudah dibaca
+   */
+  static async markAsRead(id: number, userId: number) {
+    await db.insert(pengumumanDibaca).values({ pengumumanId: id, userId }).onConflictDoNothing();
+    await db
+      .update(pengumuman)
+      .set({ viewCount: sql`${pengumuman.viewCount} + 1` })
+      .where(eq(pengumuman.id, id));
+    return { success: true };
   }
 }

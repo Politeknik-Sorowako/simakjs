@@ -147,4 +147,15 @@ export const userController = {
       body: JSON.stringify({ targetType, ids }),
     });
   },
+
+  async getQuickMenu(): Promise<{ quickMenu: string[] }> {
+    return fetchApi<{ quickMenu: string[] }>('/users/quick-menu');
+  },
+
+  async updateQuickMenu(quickMenu: string[]): Promise<{ message: string; quickMenu: string[] }> {
+    return fetchApi<{ message: string; quickMenu: string[] }>('/users/quick-menu', {
+      method: 'PUT',
+      body: JSON.stringify({ quickMenu }),
+    });
+  },
 };

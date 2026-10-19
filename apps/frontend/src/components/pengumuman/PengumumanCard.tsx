@@ -154,6 +154,11 @@ export function PengumumanCard(props: PengumumanCardProps) {
             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 border border-amber-300">
               📌 Pinned
             </span>
+            <Show when={props.isManageMode && p().showModalOnLogin}>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                🔔 Pop-up Login
+              </span>
+            </Show>
             {targetBadge()}
             <Show when={!props.isManageMode && p().isRead === false}>
               <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500 text-white animate-pulse">
@@ -257,6 +262,12 @@ export function PengumumanCard(props: PengumumanCardProps) {
             </Show>
 
             <Show when={props.isManageMode}>{statusBadge()}</Show>
+
+            <Show when={props.isManageMode && p().showModalOnLogin}>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300 dark:border-sky-800">
+                🔔 Pop-up Login
+              </span>
+            </Show>
 
             {targetBadge()}
 

@@ -104,6 +104,21 @@ export function AuthProvider(props: { children: JSX.Element }) {
       setLocalTheme(newUser.theme);
       localStorage.setItem('theme', newUser.theme);
     }
+    // Bersihkan riwayat dismiss pop-up sesi sebelumnya agar pop-up aktif muncul kembali pada login baru
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('simak_popup_dismissed_')) {
+          keysToRemove.push(key);
+        }
+      }
+      for (const k of keysToRemove) {
+        sessionStorage.removeItem(k);
+      }
+    } catch {
+      // Best-effort
+    }
     // Ambil exp sesi via /auth/me agar idle timer aktif segera
     // (terutama untuk SSO & 2FA di mana bootstrap belum punya cookie).
     try {
@@ -124,6 +139,20 @@ export function AuthProvider(props: { children: JSX.Element }) {
   const logout = () => {
     setUser(null);
     setSessionExp(null);
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('simak_popup_dismissed_')) {
+          keysToRemove.push(key);
+        }
+      }
+      for (const k of keysToRemove) {
+        sessionStorage.removeItem(k);
+      }
+    } catch {
+      // Best-effort
+    }
     void fetch(`${API_URL}/auth/logout`, {
       method: 'POST',
       credentials: 'include',
