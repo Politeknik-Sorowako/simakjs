@@ -3128,6 +3128,7 @@ export const pengumuman = pgTable(
     authorRole: varchar('author_role', { length: 50 }).notNull(),
     status: pengumumanStatusEnum('status').default('draft').notNull(),
     targetRole: pengumumanTargetRoleEnum('target_role').default('semua').notNull(),
+    targetRoles: text('target_roles').array().default(['semua']).notNull(),
     targetProdiType: pengumumanTargetProdiTypeEnum('target_prodi_type').default('semua').notNull(),
     targetScopeType: pengumumanTargetScopeTypeEnum('target_scope_type').default('umum').notNull(),
     isPinned: boolean('is_pinned').default(false).notNull(),
@@ -3147,6 +3148,7 @@ export const pengumuman = pgTable(
   (table) => ({
     statusPublishedIdx: index('idx_pengumuman_status_published').on(table.status, table.publishedAt),
     targetRoleIdx: index('idx_pengumuman_target_role').on(table.targetRole),
+    targetRolesGinIdx: index('idx_pengumuman_target_roles_gin').using('gin', table.targetRoles),
     authorIdx: index('idx_pengumuman_author').on(table.authorId),
   }),
 );

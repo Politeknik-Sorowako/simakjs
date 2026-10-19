@@ -652,6 +652,13 @@
       "when": 1789920000000,
       "tag": "0093_ta_rubrik_kategori",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1789930000000,
+      "tag": "0094_pengumuman_multi_target_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -31,12 +31,15 @@ export interface LampiranPayload {
   mimeType?: string | null;
 }
 
+export type PengumumanTargetRole = 'semua' | 'mahasiswa' | 'dosen' | 'admin';
+
 export interface SaveDraftPayload {
   id?: number;
   judul?: string;
   konten?: string;
   ringkasan?: string | null;
-  targetRole?: 'semua' | 'mahasiswa' | 'dosen' | 'admin';
+  targetRole?: PengumumanTargetRole;
+  targetRoles?: PengumumanTargetRole[];
   targetProdiType?: 'semua' | 'spesifik';
   targetProdiIds?: number[];
   targetScopeType?: 'umum' | 'kelas' | 'rombel';
@@ -54,7 +57,8 @@ export interface PublishPayload {
   judul: string;
   konten: string;
   ringkasan?: string | null;
-  targetRole: 'semua' | 'mahasiswa' | 'dosen' | 'admin';
+  targetRole?: PengumumanTargetRole;
+  targetRoles?: PengumumanTargetRole[];
   targetProdiType: 'semua' | 'spesifik';
   targetProdiIds?: number[];
   targetScopeType: 'umum' | 'kelas' | 'rombel';
@@ -354,7 +358,13 @@ export class PengumumanService {
       inArray(pengumuman.status, ['published', 'scheduled']),
       lte(pengumuman.publishedAt, now),
       or(isNull(pengumuman.expiresAt), sql`${pengumuman.expiresAt} >= ${now}`),
-      inArray(pengumuman.targetRole, allowedRoles),
+      or(
+        sql`${pengumuman.targetRoles} && ARRAY[${sql.join(
+          allowedRoles.map((r) => sql`${r}`),
+          sql`, `,
+        )}]::text[]`,
+        inArray(pengumuman.targetRole, allowedRoles),
+      ),
     ];
 
     if (query.search?.trim()) {
@@ -371,6 +381,7 @@ export class PengumumanService {
         authorId: pengumuman.authorId,
         authorRole: pengumuman.authorRole,
         targetRole: pengumuman.targetRole,
+        targetRoles: pengumuman.targetRoles,
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
@@ -573,6 +584,7 @@ export class PengumumanService {
         authorRole: pengumuman.authorRole,
         status: pengumuman.status,
         targetRole: pengumuman.targetRole,
+        targetRoles: pengumuman.targetRoles,
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
@@ -775,6 +787,7 @@ export class PengumumanService {
         authorRole: pengumuman.authorRole,
         status: pengumuman.status,
         targetRole: pengumuman.targetRole,
+        targetRoles: pengumuman.targetRoles,
         targetProdiType: pengumuman.targetProdiType,
         targetScopeType: pengumuman.targetScopeType,
         isPinned: pengumuman.isPinned,
@@ -815,15 +828,14 @@ export class PengumumanService {
       const isMahasiswa = userRoles.includes('mahasiswa');
       const isDosen = userRoles.some((r) => ['dosen', 'instruktur', 'kaprodi'].includes(r));
 
-      // Verifikasi target role
-      if (row.targetRole !== 'semua') {
-        if (row.targetRole === 'mahasiswa' && !isMahasiswa) {
-          throw new Error('Anda tidak memiliki akses ke pengumuman ini');
-        }
-        if (row.targetRole === 'dosen' && !isDosen) {
-          throw new Error('Anda tidak memiliki akses ke pengumuman ini');
-        }
-        if (row.targetRole === 'admin' && !isAdmin) {
+      // Verifikasi target role (dukung targetRoles array & fallback targetRole)
+      const effectiveRoles = row.targetRoles && row.targetRoles.length > 0 ? row.targetRoles : [row.targetRole];
+      if (!effectiveRoles.includes('semua')) {
+        const hasRoleAccess =
+          (effectiveRoles.includes('mahasiswa') && isMahasiswa) ||
+          (effectiveRoles.includes('dosen') && isDosen) ||
+          (effectiveRoles.includes('admin') && isAdmin);
+        if (!hasRoleAccess) {
           throw new Error('Anda tidak memiliki akses ke pengumuman ini');
         }
       }
@@ -1007,13 +1019,30 @@ export class PengumumanService {
         throw new Error('Anda tidak memiliki izin mengubah draf pengumuman ini');
       }
 
+      let targetRoles = payload.targetRoles;
+      if (!targetRoles || targetRoles.length === 0) {
+        if (payload.targetRole) {
+          targetRoles = [payload.targetRole];
+        } else if (existing.targetRoles && existing.targetRoles.length > 0) {
+          targetRoles = existing.targetRoles as PengumumanTargetRole[];
+        } else {
+          targetRoles = [existing.targetRole];
+        }
+      }
+      targetRoles = Array.from(new Set(targetRoles));
+      if (targetRoles.includes('semua') && targetRoles.length > 1) {
+        targetRoles = targetRoles.filter((r) => r !== 'semua');
+      }
+      const targetRoleFallback = targetRoles[0] ?? 'semua';
+
       await db
         .update(pengumuman)
         .set({
           judul,
           konten,
           ringkasan,
-          targetRole: payload.targetRole ?? existing.targetRole,
+          targetRole: targetRoleFallback,
+          targetRoles,
           targetProdiType: payload.targetProdiType ?? existing.targetProdiType,
           targetScopeType: payload.targetScopeType ?? existing.targetScopeType,
           isPinned: payload.isPinned ?? existing.isPinned,
@@ -1029,6 +1058,16 @@ export class PengumumanService {
         })
         .where(eq(pengumuman.id, pengumumanId));
     } else {
+      let targetRoles = payload.targetRoles;
+      if (!targetRoles || targetRoles.length === 0) {
+        targetRoles = payload.targetRole ? [payload.targetRole] : ['semua'];
+      }
+      targetRoles = Array.from(new Set(targetRoles));
+      if (targetRoles.includes('semua') && targetRoles.length > 1) {
+        targetRoles = targetRoles.filter((r) => r !== 'semua');
+      }
+      const targetRoleFallback = targetRoles[0] ?? 'semua';
+
       const [inserted] = await db
         .insert(pengumuman)
         .values({
@@ -1038,7 +1077,8 @@ export class PengumumanService {
           authorId: user.id,
           authorRole: user.role,
           status: 'draft',
-          targetRole: payload.targetRole ?? 'semua',
+          targetRole: targetRoleFallback,
+          targetRoles,
           targetProdiType: payload.targetProdiType ?? 'semua',
           targetScopeType: payload.targetScopeType ?? 'umum',
           isPinned: payload.isPinned ?? false,
@@ -1137,6 +1177,16 @@ export class PengumumanService {
 
     const ringkasan = payload.ringkasan ?? payload.konten.slice(0, 160).replace(/[#*`_~]/g, '');
 
+    let targetRoles = payload.targetRoles;
+    if (!targetRoles || targetRoles.length === 0) {
+      targetRoles = payload.targetRole ? [payload.targetRole] : ['semua'];
+    }
+    targetRoles = Array.from(new Set(targetRoles));
+    if (targetRoles.includes('semua') && targetRoles.length > 1) {
+      targetRoles = targetRoles.filter((r) => r !== 'semua');
+    }
+    const targetRoleFallback = targetRoles[0] ?? 'semua';
+
     let pengumumanId = payload.id;
 
     if (pengumumanId) {
@@ -1154,7 +1204,8 @@ export class PengumumanService {
           konten: payload.konten,
           ringkasan,
           status,
-          targetRole: payload.targetRole,
+          targetRole: targetRoleFallback,
+          targetRoles,
           targetProdiType: payload.targetProdiType,
           targetScopeType: payload.targetScopeType,
           isPinned: payload.isPinned ?? false,
@@ -1176,7 +1227,8 @@ export class PengumumanService {
           authorId: user.id,
           authorRole: user.role,
           status,
-          targetRole: payload.targetRole,
+          targetRole: targetRoleFallback,
+          targetRoles,
           targetProdiType: payload.targetProdiType,
           targetScopeType: payload.targetScopeType,
           isPinned: payload.isPinned ?? false,

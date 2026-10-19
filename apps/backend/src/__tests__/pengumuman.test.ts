@@ -310,4 +310,103 @@ describe('Pengumuman Service & API Lifecycle', () => {
       await unlink(testFilePath).catch(() => {});
     }
   });
+
+  it('12. dapat menargetkan multi-role (mis. mahasiswa dan dosen) dan memverifikasi akses sesuai role pembaca', async () => {
+    const multiTag = `MULTI-ROLE-${Date.now()}`;
+    const pubRes = await PengumumanService.publish(adminUser, {
+      judul: `Pengumuman Multi Role ${multiTag}`,
+      konten: 'Pengumuman khusus Mahasiswa dan Dosen.',
+      targetRoles: ['mahasiswa', 'dosen'],
+      targetProdiType: 'semua',
+      targetScopeType: 'umum',
+      publishMode: 'now',
+    });
+
+    const [mhsDb] = await db
+      .insert(users)
+      .values({
+        email: `mhs-multi-${Date.now()}@simak.ac.id`,
+        password: 'hashed-password-test',
+        nama: 'Mhs Multi Target',
+        role: 'mahasiswa',
+        isActive: true,
+      })
+      .returning({ id: users.id, email: users.email, nama: users.nama });
+
+    const [dsnDb] = await db
+      .insert(users)
+      .values({
+        email: `dsn-multi-${Date.now()}@simak.ac.id`,
+        password: 'hashed-password-test',
+        nama: 'Dosen Multi Target',
+        role: 'dosen',
+        isActive: true,
+      })
+      .returning({ id: users.id, email: users.email, nama: users.nama });
+
+    const [guestDb] = await db
+      .insert(users)
+      .values({
+        email: `guest-multi-${Date.now()}@simak.ac.id`,
+        password: 'hashed-password-test',
+        nama: 'Guest Luar',
+        role: 'guest',
+        isActive: true,
+      })
+      .returning({ id: users.id, email: users.email, nama: users.nama });
+
+    const mhsUser: UserPayload = {
+      id: mhsDb.id,
+      email: mhsDb.email,
+      nama: mhsDb.nama,
+      role: 'mahasiswa',
+      roles: ['mahasiswa'],
+    };
+
+    const dsnUser: UserPayload = {
+      id: dsnDb.id,
+      email: dsnDb.email,
+      nama: dsnDb.nama,
+      role: 'dosen',
+      roles: ['dosen'],
+    };
+
+    const nonTargetUser: UserPayload = {
+      id: guestDb.id,
+      email: guestDb.email,
+      nama: guestDb.nama,
+      role: 'guest',
+      roles: ['guest'],
+    };
+
+    try {
+      // 1. Verifikasi getDetail
+      const detailMhs = await PengumumanService.getDetail(pubRes.id, mhsUser);
+      expect(detailMhs.id).toBe(pubRes.id);
+      expect(detailMhs.targetRoles).toEqual(['mahasiswa', 'dosen']);
+
+      const detailDsn = await PengumumanService.getDetail(pubRes.id, dsnUser);
+      expect(detailDsn.id).toBe(pubRes.id);
+
+      // User tanpa role yang ditargetkan harus ditolak
+      await expect(PengumumanService.getDetail(pubRes.id, nonTargetUser)).rejects.toThrow(
+        'Anda tidak memiliki akses ke pengumuman ini',
+      );
+
+      // 2. Verifikasi getFeed
+      const mhsFeed = await PengumumanService.getFeed(mhsUser, { search: multiTag });
+      expect(mhsFeed.data.some((p) => p.id === pubRes.id)).toBe(true);
+
+      const dsnFeed = await PengumumanService.getFeed(dsnUser, { search: multiTag });
+      expect(dsnFeed.data.some((p) => p.id === pubRes.id)).toBe(true);
+
+      const nonTargetFeed = await PengumumanService.getFeed(nonTargetUser, { search: multiTag });
+      expect(nonTargetFeed.data.some((p) => p.id === pubRes.id)).toBe(false);
+    } finally {
+      await db.delete(pengumuman).where(eq(pengumuman.id, pubRes.id));
+      await db.delete(users).where(eq(users.id, mhsDb.id));
+      await db.delete(users).where(eq(users.id, dsnDb.id));
+      await db.delete(users).where(eq(users.id, guestDb.id));
+    }
+  });
 });

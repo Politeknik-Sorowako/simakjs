@@ -8,12 +8,20 @@ export const lampiranInputSchema = t.Object({
   mimeType: t.Optional(t.Union([t.String(), t.Null()])),
 });
 
+export const targetRoleItemSchema = t.Union([
+  t.Literal('semua'),
+  t.Literal('mahasiswa'),
+  t.Literal('dosen'),
+  t.Literal('admin'),
+]);
+
 export const saveDraftSchema = t.Object({
   id: t.Optional(t.Integer()),
   judul: t.Optional(t.String({ maxLength: 255 })),
   konten: t.Optional(t.String()),
   ringkasan: t.Optional(t.Union([t.String(), t.Null()])),
-  targetRole: t.Optional(t.Union([t.Literal('semua'), t.Literal('mahasiswa'), t.Literal('dosen'), t.Literal('admin')])),
+  targetRole: t.Optional(targetRoleItemSchema),
+  targetRoles: t.Optional(t.Array(targetRoleItemSchema)),
   targetProdiType: t.Optional(t.Union([t.Literal('semua'), t.Literal('spesifik')])),
   targetProdiIds: t.Optional(t.Array(t.Integer())),
   targetScopeType: t.Optional(t.Union([t.Literal('umum'), t.Literal('kelas'), t.Literal('rombel')])),
@@ -31,7 +39,8 @@ export const publishPengumumanSchema = t.Object({
   judul: t.String({ minLength: 1, maxLength: 255 }),
   konten: t.String({ minLength: 1 }),
   ringkasan: t.Optional(t.Union([t.String(), t.Null()])),
-  targetRole: t.Union([t.Literal('semua'), t.Literal('mahasiswa'), t.Literal('dosen'), t.Literal('admin')]),
+  targetRole: t.Optional(targetRoleItemSchema),
+  targetRoles: t.Optional(t.Array(targetRoleItemSchema)),
   targetProdiType: t.Union([t.Literal('semua'), t.Literal('spesifik')]),
   targetProdiIds: t.Optional(t.Array(t.Integer())),
   targetScopeType: t.Union([t.Literal('umum'), t.Literal('kelas'), t.Literal('rombel')]),
