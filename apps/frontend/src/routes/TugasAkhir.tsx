@@ -1368,14 +1368,16 @@ export default function TugasAkhirPage() {
                             <DropdownMenu
                               triggerAriaLabel={`Aksi tugas akhir ${item.kodeTa}`}
                               position="right"
+                              triggerClass="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-full bg-pearl dark:bg-canvas-dark border border-hairline dark:border-hairline-dark hover:bg-secondary-100 dark:hover:bg-secondary-800 text-ink dark:text-pearl transition-all shadow-2xs"
                               trigger={
-                                <div class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-pearl dark:bg-canvas-dark border border-hairline dark:border-hairline-dark hover:bg-secondary-100 dark:hover:bg-secondary-800 text-ink dark:text-pearl transition-all shadow-2xs">
+                                <>
                                   <span>Aksi</span>
                                   <svg
                                     class="w-3.5 h-3.5 text-secondary-500"
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
+                                    aria-hidden="true"
                                   >
                                     <path
                                       stroke-linecap="round"
@@ -1384,7 +1386,7 @@ export default function TugasAkhirPage() {
                                       d="M19 9l-7 7-7-7"
                                     />
                                   </svg>
-                                </div>
+                                </>
                               }
                               items={actionItems()}
                             />
