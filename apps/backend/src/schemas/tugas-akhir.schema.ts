@@ -262,3 +262,24 @@ export const finalisasiSidangSchema = {
 export const sidangIdSchema = {
   params: sidangIdParam,
 };
+
+// Milestone 4: Schemas untuk Revisi Pasca Sidang
+export const submitRevisiSidangBody = t.Object({
+  fileRevisiUrl: t.String({ minLength: 3 }),
+  catatanMahasiswa: t.Optional(t.Union([t.String(), t.Null()])),
+});
+
+export const submitRevisiSidangSchema = {
+  params: sidangIdParam,
+  body: submitRevisiSidangBody,
+};
+
+export const accRevisiParam = t.Object({
+  id: t.Numeric(),
+  sidangId: t.Numeric(),
+  pengujiId: t.Numeric(),
+});
+
+export const accRevisiSchema = {
+  params: accRevisiParam,
+};

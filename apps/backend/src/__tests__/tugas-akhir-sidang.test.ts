@@ -297,4 +297,80 @@ describe('Tugas Akhir - Milestone 3: Pendaftaran & Penjadwalan Sidang Proposal',
     const [taRow] = await db.select().from(tugasAkhir).where(eq(tugasAkhir.id, taId)).limit(1);
     expect(taRow.status).toBe('sempro_selesai');
   });
+
+  it('5. Endpoint Rekap Nilai Sidang menghasilkan baris data ekspor (0-10, 0-100, Huruf Mutu BPA)', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${taId}/sidang/${sidangId}/rekap-nilai`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+
+    const body = (await res.json()) as {
+      data?: {
+        exportRows: {
+          nim: string;
+          nama: string;
+          nilaiAkhir: string;
+          nilaiAkhirSkala100: string;
+          hurufMutu: string;
+          statusHasil: string;
+        }[];
+      };
+      error?: unknown;
+    };
+    expect(res.status).toBe(200);
+    expect(body.data?.exportRows).toBeDefined();
+    expect(body.data!.exportRows.length).toBeGreaterThan(0);
+
+    const firstRow = body.data!.exportRows[0];
+    expect(firstRow.nim).toBeDefined();
+    expect(firstRow.nilaiAkhir).toBe('8.50');
+    expect(firstRow.nilaiAkhirSkala100).toBe('85.00');
+    expect(firstRow.hurufMutu).toBe('A');
+  });
+
+  it('6. Workflow Revisi: Mahasiswa submit naskah revisi, penguji beri ACC, dan status revisi tuntas', async () => {
+    // A. Mahasiswa mengunggah naskah revisi
+    const submitRes = await app.handle(
+      new Request(`http://localhost/tugas-akhir/${taId}/sidang/${sidangId}/revisi`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${mhsToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileRevisiUrl: 'https://drive.google.com/file/d/revisi-final-proposal/view',
+          catatanMahasiswa: 'Telah memperbaiki spesifikasi sensor dan algoritma pada Bab 3.',
+        }),
+      }),
+    );
+    expect(submitRes.status).toBe(200);
+
+    // Verifikasi statusRevisi di database menjadi 'diverifikasi_penguji'
+    const [sidangAfterUpload] = await db
+      .select()
+      .from(tugasAkhirSidang)
+      .where(eq(tugasAkhirSidang.id, sidangId))
+      .limit(1);
+    expect(sidangAfterUpload.statusRevisi).toBe('diverifikasi_penguji');
+
+    // B. Dosen Penguji menyetujui revisi (ACC Revisi)
+    const pengujiRows = await db.select().from(tugasAkhirPenguji).where(eq(tugasAkhirPenguji.sidangId, sidangId));
+
+    for (const p of pengujiRows) {
+      const accRes = await app.handle(
+        new Request(`http://localhost/tugas-akhir/${taId}/sidang/${sidangId}/penguji/${p.id}/acc-revisi`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${prodiToken}` },
+        }),
+      );
+      expect(accRes.status).toBe(200);
+    }
+
+    // Verifikasi statusRevisi di database menjadi 'tuntas'
+    const [sidangAfterAllAcc] = await db
+      .select()
+      .from(tugasAkhirSidang)
+      .where(eq(tugasAkhirSidang.id, sidangId))
+      .limit(1);
+    expect(sidangAfterAllAcc.statusRevisi).toBe('tuntas');
+  });
 });

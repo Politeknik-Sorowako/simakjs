@@ -32,6 +32,7 @@ import {
   type UpdateTugasAkhirPayload,
 } from '../controllers/tugasAkhirController';
 import { usePagination } from '../hooks/usePagination';
+import { type ExportColumn, exportToCSV, exportToExcel } from '../utils/export';
 import { formatMahasiswaOption } from '../utils/format';
 
 const STATUS_META: Record<
@@ -190,11 +191,19 @@ export default function TugasAkhirPage() {
   const [sidangActiveTab, setSidangActiveTab] = createSignal<'daftar' | 'jadwal' | 'nilai' | 'hasil'>('daftar');
 
   // Form Pendaftaran Sidang
+  const [daftarJenisSidang, setDaftarJenisSidang] = createSignal<'proposal' | 'akhir'>('proposal');
   const [daftarBerkasProposalUrl, setDaftarBerkasProposalUrl] = createSignal('');
   const [daftarBuktiKompensasiUrl, setDaftarBuktiKompensasiUrl] = createSignal('');
   const [daftarBuktiPlagiasiUrl, setDaftarBuktiPlagiasiUrl] = createSignal('');
   const [daftarCatatanMhs, setDaftarCatatanMhs] = createSignal('');
   const [isSubmittingDaftarSidang, setIsSubmittingDaftarSidang] = createSignal(false);
+
+  // Form & Workflow Revisi Pasca Sidang
+  const [revisiNaskahUrl, setRevisiNaskahUrl] = createSignal('');
+  const [revisiCatatanMhs, setRevisiCatatanMhs] = createSignal('');
+  const [isSubmittingRevisi, setIsSubmittingRevisi] = createSignal(false);
+  const [isAccingRevisi, setIsAccingRevisi] = createSignal(false);
+  const [isExportingNilai, setIsExportingNilai] = createSignal(false);
 
   // Form Penjadwalan Sidang (Prodi/Staf)
   const [selectedSidangForJadwal, setSelectedSidangForJadwal] = createSignal<TugasAkhirSidang | null>(null);
@@ -839,19 +848,133 @@ export default function TugasAkhirPage() {
     try {
       setIsSubmittingDaftarSidang(true);
       await tugasAkhirController.daftarSidang(sidangTa()!.id, {
-        jenisSidang: 'proposal',
+        jenisSidang: daftarJenisSidang(),
         berkasProposalUrl: daftarBerkasProposalUrl().trim() || null,
         buktiBebasKompensasiUrl: daftarBuktiKompensasiUrl().trim() || null,
         buktiPlagiasiUrl: daftarBuktiPlagiasiUrl().trim() || null,
         catatanMahasiswa: daftarCatatanMhs().trim() || null,
       });
-      showToast('Pendaftaran sidang proposal berhasil diajukan!', 'success');
+      showToast(
+        `Pendaftaran ${daftarJenisSidang() === 'proposal' ? 'sidang proposal' : 'sidang akhir'} berhasil diajukan!`,
+        'success',
+      );
+      setDaftarBerkasProposalUrl('');
+      setDaftarBuktiKompensasiUrl('');
+      setDaftarBuktiPlagiasiUrl('');
+      setDaftarCatatanMhs('');
       await loadSidangData(sidangTa()!.id);
       refetch();
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Gagal mendaftar sidang proposal', 'error');
+      showToast(err instanceof Error ? err.message : 'Gagal mendaftar sidang', 'error');
     } finally {
       setIsSubmittingDaftarSidang(false);
+    }
+  };
+
+  const handleExportNilaiExcel = async (sidangId: number) => {
+    const ta = sidangTa();
+    if (!ta) return;
+    setIsExportingNilai(true);
+    try {
+      const rekap = await tugasAkhirController.getRekapNilaiSidang(ta.id, sidangId);
+      const columns: ExportColumn[] = [
+        { header: 'No', accessor: 'no' },
+        { header: 'NIM', accessor: 'nim' },
+        { header: 'Nama Mahasiswa', accessor: 'nama' },
+        { header: 'Peran Tim', accessor: 'peran' },
+        { header: 'Judul Tugas Akhir', accessor: 'judulTa' },
+        { header: 'Program Studi', accessor: 'programStudi' },
+        { header: 'Jenis Sidang', accessor: 'jenisSidang' },
+        { header: 'Tanggal Sidang', accessor: 'tanggalSidang' },
+        { header: 'Ruangan', accessor: 'ruangan' },
+        { header: 'Nilai Akhir (0-10)', accessor: 'nilaiAkhir' },
+        { header: 'Nilai Skala 100', accessor: 'nilaiAkhirSkala100' },
+        { header: 'Huruf Mutu BPA', accessor: 'hurufMutu' },
+        { header: 'Indeks Mutu', accessor: 'indeksMutu' },
+        { header: 'Keputusan Sidang', accessor: 'statusHasil' },
+        { header: 'Status Revisi', accessor: 'statusRevisi' },
+        { header: 'Catatan Sidang', accessor: 'catatanSidang' },
+      ];
+      exportToExcel(
+        rekap.exportRows,
+        columns,
+        `Rekap_Nilai_Sidang_${rekap.tugasAkhir.kodeTa || rekap.tugasAkhir.id}_${rekap.sidang.jenisSidang}`,
+      );
+      showToast('Rekap nilai sidang berhasil diekspor ke Excel.', 'success');
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengekspor nilai sidang ke Excel', 'error');
+    } finally {
+      setIsExportingNilai(false);
+    }
+  };
+
+  const handleExportNilaiCsv = async (sidangId: number) => {
+    const ta = sidangTa();
+    if (!ta) return;
+    setIsExportingNilai(true);
+    try {
+      const rekap = await tugasAkhirController.getRekapNilaiSidang(ta.id, sidangId);
+      // Kolom disesuaikan dengan template impor /input-nilai: nim, nama, nilai, nilai_skala_100, huruf_mutu
+      const columns: ExportColumn[] = [
+        { header: 'nim', accessor: 'nim' },
+        { header: 'nama', accessor: 'nama' },
+        { header: 'nilai', accessor: 'nilaiAkhir' },
+        { header: 'nilai_skala_100', accessor: 'nilaiAkhirSkala100' },
+        { header: 'huruf_mutu', accessor: 'hurufMutu' },
+        { header: 'keterangan', accessor: 'statusHasil' },
+      ];
+      exportToCSV(rekap.exportRows, columns, `Nilai_TA_${rekap.tugasAkhir.kodeTa || rekap.tugasAkhir.id}_input_nilai`);
+      showToast('Data nilai sidang berhasil diekspor format CSV (/input-nilai).', 'success');
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Gagal mengekspor CSV untuk /input-nilai', 'error');
+    } finally {
+      setIsExportingNilai(false);
+    }
+  };
+
+  const handleSubmitRevisi = async (e: Event) => {
+    e.preventDefault();
+    const ta = sidangTa();
+    const sidang = selectedSidangForJadwal();
+    if (!ta || !sidang) return;
+
+    if (!revisiNaskahUrl().trim()) {
+      showToast('Tautan berkas naskah revisi wajib diisi.', 'error');
+      return;
+    }
+
+    setIsSubmittingRevisi(true);
+    try {
+      const res = await tugasAkhirController.submitRevisiSidang(ta.id, sidang.id, {
+        fileRevisiUrl: revisiNaskahUrl().trim(),
+        catatanMahasiswa: revisiCatatanMhs().trim() || null,
+      });
+      showToast(res.message, 'success');
+      setRevisiNaskahUrl('');
+      setRevisiCatatanMhs('');
+      await loadSidangData(ta.id);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengirim naskah revisi', 'error');
+    } finally {
+      setIsSubmittingRevisi(false);
+    }
+  };
+
+  const handleAccRevisiPenguji = async (pengujiId: number) => {
+    const ta = sidangTa();
+    const sidang = selectedSidangForJadwal();
+    if (!ta || !sidang) return;
+
+    setIsAccingRevisi(true);
+    try {
+      const res = await tugasAkhirController.accRevisiPenguji(ta.id, sidang.id, pengujiId);
+      showToast(res.message, 'success');
+      await loadSidangData(ta.id);
+      refetch();
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menyetujui revisi', 'error');
+    } finally {
+      setIsAccingRevisi(false);
     }
   };
 
@@ -2583,122 +2706,164 @@ export default function TugasAkhirPage() {
             {/* TAB 1: PENDAFTARAN SIDANG */}
             <Show when={sidangActiveTab() === 'daftar'}>
               <div class="space-y-4">
-                <Show
-                  when={sidangList().find((s) => s.jenisSidang === 'proposal')}
-                  fallback={
-                    <form onSubmit={handleDaftarSidangSubmit} class="space-y-4">
-                      <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
-                        Pastikan seluruh pembimbing telah memberikan ACC Sidang Proposal sebelum mengajukan pendaftaran.
-                      </div>
-
-                      <div>
-                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
-                          Link Berkas Naskah Proposal (Cloud / Drive)
-                        </label>
-                        <Input
-                          type="url"
-                          placeholder="https://drive.google.com/..."
-                          value={daftarBerkasProposalUrl()}
-                          onInput={(e) => setDaftarBerkasProposalUrl(e.currentTarget.value)}
-                        />
-                      </div>
-
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
-                            Link Bukti Bebas Kompensasi (Opsional)
-                          </label>
-                          <Input
-                            type="url"
-                            placeholder="https://..."
-                            value={daftarBuktiKompensasiUrl()}
-                            onInput={(e) => setDaftarBuktiKompensasiUrl(e.currentTarget.value)}
-                          />
-                        </div>
-                        <div>
-                          <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
-                            Link Bukti Cek Plagiasi (Turnitin)
-                          </label>
-                          <Input
-                            type="url"
-                            placeholder="https://..."
-                            value={daftarBuktiPlagiasiUrl()}
-                            onInput={(e) => setDaftarBuktiPlagiasiUrl(e.currentTarget.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
-                          Catatan Tambahan Mahasiswa
-                        </label>
-                        <textarea
-                          rows={2}
-                          placeholder="Catatan atau pengantar untuk prodi..."
-                          value={daftarCatatanMhs()}
-                          onInput={(e) => setDaftarCatatanMhs(e.currentTarget.value)}
-                          class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
-                        />
-                      </div>
-
-                      <div class="flex justify-end pt-2">
-                        <Button type="submit" variant="primary" disabled={isSubmittingDaftarSidang()}>
-                          {isSubmittingDaftarSidang() ? 'Mendaftarkan...' : 'Daftarkan Sidang Proposal'}
-                        </Button>
-                      </div>
-                    </form>
-                  }
-                >
-                  {(s) => (
-                    <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-3">
-                      <div class="flex items-center justify-between">
-                        <span class="text-caption font-bold text-success-600 dark:text-success-400">
-                          Pendaftaran Sidang Proposal Terdaftar
-                        </span>
-                        <Badge variant="success" size="sm">
-                          {s().statusSidang.toUpperCase()}
-                        </Badge>
-                      </div>
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-fine">
-                        <div>
-                          <span class="text-secondary-400 block">Berkas Proposal:</span>
-                          {s().berkasProposalUrl ? (
-                            <a
-                              href={s().berkasProposalUrl!}
-                              target="_blank"
-                              rel="noreferrer"
-                              class="text-action hover:underline truncate block"
+                {/* Daftar Sesi Sidang yang Sudah Diajukan */}
+                <Show when={sidangList().length > 0}>
+                  <div class="space-y-3">
+                    <span class="text-caption font-bold text-ink dark:text-pearl block">
+                      Riwayat Pendaftaran Sidang
+                    </span>
+                    <For each={sidangList()}>
+                      {(s) => (
+                        <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-2">
+                          <div class="flex items-center justify-between">
+                            <span class="text-caption font-bold text-ink dark:text-pearl">
+                              {s.jenisSidang === 'proposal' ? 'Sidang Proposal (Sempro)' : 'Sidang Akhir (Pendadaran)'}
+                            </span>
+                            <Badge
+                              variant={
+                                s.statusSidang === 'selesai'
+                                  ? 'success'
+                                  : s.statusSidang === 'dijadwalkan'
+                                    ? 'warning'
+                                    : 'info'
+                              }
+                              size="sm"
                             >
-                              Lihat Naskah Proposal ↗
-                            </a>
-                          ) : (
-                            '-'
-                          )}
+                              {(s.statusSidang || 'diajukan').toUpperCase()}
+                            </Badge>
+                          </div>
+                          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-fine">
+                            <div>
+                              <span class="text-secondary-400 block">Berkas Naskah:</span>
+                              {s.berkasProposalUrl ? (
+                                <a
+                                  href={s.berkasProposalUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  class="text-action hover:underline truncate block"
+                                >
+                                  Lihat Naskah ↗
+                                </a>
+                              ) : (
+                                '-'
+                              )}
+                            </div>
+                            <div>
+                              <span class="text-secondary-400 block">Bukti Plagiasi / Turnitin:</span>
+                              {s.buktiPlagiasiUrl ? (
+                                <a
+                                  href={s.buktiPlagiasiUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  class="text-action hover:underline truncate block"
+                                >
+                                  Lihat Bukti Plagiasi ↗
+                                </a>
+                              ) : (
+                                '-'
+                              )}
+                            </div>
+                          </div>
+                          <Show when={s.catatanMahasiswa}>
+                            <div class="text-fine text-secondary-500 bg-secondary-50 dark:bg-secondary-900/30 p-2.5 rounded-lg">
+                              <span class="font-semibold">Catatan:</span> {s.catatanMahasiswa}
+                            </div>
+                          </Show>
                         </div>
-                        <div>
-                          <span class="text-secondary-400 block">Bukti Plagiasi:</span>
-                          {s().buktiPlagiasiUrl ? (
-                            <a
-                              href={s().buktiPlagiasiUrl!}
-                              target="_blank"
-                              rel="noreferrer"
-                              class="text-action hover:underline truncate block"
-                            >
-                              Lihat Bukti Plagiasi ↗
-                            </a>
-                          ) : (
-                            '-'
-                          )}
-                        </div>
-                      </div>
-                      <Show when={s().catatanMahasiswa}>
-                        <div class="text-fine text-secondary-500 bg-secondary-50 dark:bg-secondary-900/30 p-2.5 rounded-lg">
-                          <span class="font-semibold">Catatan:</span> {s().catatanMahasiswa}
-                        </div>
-                      </Show>
-                    </div>
-                  )}
+                      )}
+                    </For>
+                  </div>
                 </Show>
+
+                {/* Form Pendaftaran Sidang Baru (Proposal / Akhir) */}
+                <form
+                  onSubmit={handleDaftarSidangSubmit}
+                  class="p-4 bg-pearl dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-4"
+                >
+                  <div class="flex items-center justify-between border-b border-hairline dark:border-hairline-dark pb-2">
+                    <span class="text-caption font-bold text-ink dark:text-pearl">
+                      Formulir Pendaftaran Sidang Baru
+                    </span>
+                    <div class="flex items-center gap-2">
+                      <label class="text-fine font-semibold text-secondary-500">Jenis Sidang:</label>
+                      <select
+                        value={daftarJenisSidang()}
+                        onChange={(e) => setDaftarJenisSidang(e.currentTarget.value as 'proposal' | 'akhir')}
+                        class="border border-hairline dark:border-hairline-dark rounded-xl px-2.5 py-1 text-fine bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                      >
+                        <option value="proposal">Sidang Proposal</option>
+                        <option value="akhir">Sidang Akhir (Pendadaran)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
+                    Pastikan seluruh pembimbing telah memberikan ACC{' '}
+                    {daftarJenisSidang() === 'proposal' ? 'Sidang Proposal' : 'Sidang Akhir'} sebelum mengajukan
+                    pendaftaran.
+                  </div>
+
+                  <div>
+                    <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                      Link Berkas Naskah {daftarJenisSidang() === 'proposal' ? 'Proposal' : 'Laporan Akhir'} (Cloud /
+                      Drive) *
+                    </label>
+                    <Input
+                      type="url"
+                      placeholder="https://drive.google.com/..."
+                      value={daftarBerkasProposalUrl()}
+                      onInput={(e) => setDaftarBerkasProposalUrl(e.currentTarget.value)}
+                    />
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                        Link Bukti Bebas Kompensasi {daftarJenisSidang() === 'akhir' ? '*' : '(Opsional)'}
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        value={daftarBuktiKompensasiUrl()}
+                        onInput={(e) => setDaftarBuktiKompensasiUrl(e.currentTarget.value)}
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                        Link Bukti Cek Plagiasi (Turnitin) {daftarJenisSidang() === 'akhir' ? '*' : '(Opsional)'}
+                      </label>
+                      <Input
+                        type="url"
+                        placeholder="https://..."
+                        value={daftarBuktiPlagiasiUrl()}
+                        onInput={(e) => setDaftarBuktiPlagiasiUrl(e.currentTarget.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-caption font-semibold text-ink dark:text-pearl mb-1">
+                      Catatan Tambahan Mahasiswa
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Catatan atau pengantar untuk prodi..."
+                      value={daftarCatatanMhs()}
+                      onInput={(e) => setDaftarCatatanMhs(e.currentTarget.value)}
+                      class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-3 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                    />
+                  </div>
+
+                  <div class="flex justify-end pt-1">
+                    <Button type="submit" variant="primary" disabled={isSubmittingDaftarSidang()}>
+                      {isSubmittingDaftarSidang()
+                        ? 'Mendaftarkan...'
+                        : daftarJenisSidang() === 'proposal'
+                          ? 'Daftarkan Sidang Proposal'
+                          : 'Daftarkan Sidang Akhir'}
+                    </Button>
+                  </div>
+                </form>
               </div>
             </Show>
 
@@ -3322,6 +3487,38 @@ export default function TugasAkhirPage() {
                 <Show when={selectedSidangForJadwal()}>
                   {(sidang) => (
                     <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-4">
+                      {/* Action Bar Ekspor Nilai Sidang */}
+                      <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-action/5 dark:bg-action/10 rounded-2xl border border-action/20">
+                        <div>
+                          <span class="text-caption font-bold text-ink dark:text-pearl block">
+                            Ekspor Nilai & Rekap Berita Acara
+                          </span>
+                          <span class="text-fine text-secondary-500">
+                            Unduh nilai untuk arsip prodi atau diimpor langsung ke menu /input-nilai
+                          </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={isExportingNilai()}
+                            onClick={() => handleExportNilaiExcel(sidang().id)}
+                          >
+                            📊 Ekspor Excel (.xlsx)
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            disabled={isExportingNilai()}
+                            onClick={() => handleExportNilaiCsv(sidang().id)}
+                          >
+                            📥 Ekspor CSV (/input-nilai)
+                          </Button>
+                        </div>
+                      </div>
+
                       <div class="flex items-center justify-between">
                         <div>
                           <span class="text-caption font-bold text-secondary-500 uppercase">Status Kelulusan:</span>
@@ -3353,6 +3550,157 @@ export default function TugasAkhirPage() {
                           {sidang().catatanSidang}
                         </div>
                       </Show>
+
+                      {/* PANEL PELACAKAN & PERSETUJUAN REVISI PASCA SIDANG */}
+                      <div class="pt-4 border-t border-hairline dark:border-hairline-dark space-y-3">
+                        <div class="flex items-center justify-between">
+                          <span class="text-caption font-bold text-ink dark:text-pearl">
+                            Pelacakan & Persetujuan Revisi Naskah Pasca Sidang
+                          </span>
+                          <Badge
+                            variant={
+                              sidang().statusRevisi === 'tuntas'
+                                ? 'success'
+                                : sidang().statusRevisi === 'diverifikasi_penguji'
+                                  ? 'info'
+                                  : 'warning'
+                            }
+                            size="sm"
+                          >
+                            {sidang().statusRevisi === 'tuntas'
+                              ? 'REVISI TUNTAS (ACC LENGKAP)'
+                              : sidang().statusRevisi === 'diverifikasi_penguji'
+                                ? 'DALAM REVIEW PENGUJI'
+                                : 'MENUNGGU REVISI MAHASISWA'}
+                          </Badge>
+                        </div>
+
+                        {/* Info Berkas Revisi Jika Sudah Diunggah */}
+                        <Show when={(sidang().berkasSyarat as Record<string, unknown> | null)?.fileRevisiUrl}>
+                          <div class="p-3 bg-secondary-50 dark:bg-secondary-900/30 rounded-xl text-fine space-y-1 border border-hairline dark:border-hairline-dark">
+                            <div class="flex items-center justify-between">
+                              <span class="font-semibold text-ink dark:text-pearl">Naskah Perbaikan Mahasiswa:</span>
+                              <a
+                                href={String((sidang().berkasSyarat as Record<string, unknown>)?.fileRevisiUrl)}
+                                target="_blank"
+                                rel="noreferrer"
+                                class="text-action font-semibold hover:underline"
+                              >
+                                Buka Naskah Revisi ↗
+                              </a>
+                            </div>
+                            <Show when={(sidang().berkasSyarat as Record<string, unknown>)?.catatanRevisiMahasiswa}>
+                              <p class="text-secondary-600 dark:text-secondary-400">
+                                <span class="font-semibold">Catatan Perbaikan:</span>{' '}
+                                {String((sidang().berkasSyarat as Record<string, unknown>)?.catatanRevisiMahasiswa)}
+                              </p>
+                            </Show>
+                          </div>
+                        </Show>
+
+                        {/* Form Unggah Revisi untuk Mahasiswa */}
+                        <Show
+                          when={
+                            isMahasiswa() &&
+                            sidang().statusHasil === 'lulus_dengan_revisi' &&
+                            sidang().statusRevisi !== 'tuntas'
+                          }
+                        >
+                          <form
+                            onSubmit={handleSubmitRevisi}
+                            class="p-3 bg-warning-50/50 dark:bg-warning-950/20 border border-warning-200 dark:border-warning-900/40 rounded-xl space-y-2.5"
+                          >
+                            <span class="text-fine font-bold text-ink dark:text-pearl block">
+                              Unggah Naskah Revisi Terbaru
+                            </span>
+                            <div>
+                              <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                                Link Naskah Revisi (Google Drive / Cloud) *
+                              </label>
+                              <Input
+                                type="url"
+                                placeholder="https://drive.google.com/..."
+                                value={revisiNaskahUrl()}
+                                onInput={(e) => setRevisiNaskahUrl(e.currentTarget.value)}
+                              />
+                            </div>
+                            <div>
+                              <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                                Catatan Matriks Perbaikan (Opsional)
+                              </label>
+                              <textarea
+                                rows={2}
+                                placeholder="Jelaskan bagian bab/halaman yang telah diperbaiki sesuai masukan penguji..."
+                                value={revisiCatatanMhs()}
+                                onInput={(e) => setRevisiCatatanMhs(e.currentTarget.value)}
+                                class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-2.5 text-fine bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                              />
+                            </div>
+                            <div class="flex justify-end">
+                              <Button type="submit" variant="primary" size="sm" disabled={isSubmittingRevisi()}>
+                                {isSubmittingRevisi() ? 'Mengirim...' : 'Kirim Naskah Revisi'}
+                              </Button>
+                            </div>
+                          </form>
+                        </Show>
+
+                        {/* Checklist Persetujuan Dosen Penguji */}
+                        <div class="space-y-2">
+                          <span class="text-fine font-semibold text-secondary-500 block">
+                            Daftar Persetujuan Dewan Penguji:
+                          </span>
+                          <div class="divide-y divide-hairline dark:divide-hairline-dark border border-hairline dark:border-hairline-dark rounded-xl overflow-hidden bg-pearl dark:bg-canvas-dark">
+                            <For each={sidang().timPenguji || sidang().penguji || []}>
+                              {(p) => (
+                                <div class="p-3 flex items-center justify-between text-fine gap-3">
+                                  <div>
+                                    <span class="font-bold text-ink dark:text-pearl block">
+                                      {p.dosenNama || 'Dosen Penguji'}
+                                    </span>
+                                    <span class="text-caption text-secondary-500">
+                                      {p.peranPenguji.replace(/_/g, ' ').toUpperCase()} • NIP: {p.dosenNip || '-'}
+                                    </span>
+                                    <Show when={p.catatanRevisi}>
+                                      <p class="text-caption text-secondary-600 dark:text-secondary-400 mt-0.5 italic">
+                                        "{p.catatanRevisi}"
+                                      </p>
+                                    </Show>
+                                  </div>
+                                  <div class="flex items-center gap-2">
+                                    <Show
+                                      when={p.statusAccRevisi}
+                                      fallback={
+                                        <Show
+                                          when={hasRole(['dosen', 'kaprodi', 'prodi', 'admin', 'super_admin'])}
+                                          fallback={
+                                            <Badge variant="warning" size="sm">
+                                              Belum ACC
+                                            </Badge>
+                                          }
+                                        >
+                                          <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="sm"
+                                            disabled={isAccingRevisi()}
+                                            onClick={() => handleAccRevisiPenguji(p.id)}
+                                          >
+                                            {isAccingRevisi() ? 'Memproses...' : '✓ Setujui Revisi (ACC)'}
+                                          </Button>
+                                        </Show>
+                                      }
+                                    >
+                                      <Badge variant="success" size="sm">
+                                        ✓ Disetujui
+                                      </Badge>
+                                    </Show>
+                                  </div>
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* Form Finalisasi untuk Staf/Kaprodi */}
                       <Show when={isStaff()}>

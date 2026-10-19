@@ -93,6 +93,8 @@ export class TugasAkhirSidangService {
       kehadiran: boolean;
       nilaiTotal: string | null;
       catatanRevisi: string | null;
+      statusAccRevisi: boolean;
+      accRevisiAt: Date | null;
       dosenNama: string | null;
       dosenNip: string | null;
     }[] = [];
@@ -107,6 +109,8 @@ export class TugasAkhirSidangService {
           kehadiran: tugasAkhirPenguji.kehadiran,
           nilaiTotal: tugasAkhirPenguji.nilaiTotal,
           catatanRevisi: tugasAkhirPenguji.catatanRevisi,
+          statusAccRevisi: tugasAkhirPenguji.statusAccRevisi,
+          accRevisiAt: tugasAkhirPenguji.accRevisiAt,
           dosenNama: dosen.nama,
           dosenNip: dosen.nip,
         })
@@ -749,6 +753,216 @@ export class TugasAkhirSidangService {
       });
 
       return finalizedSidang;
+    });
+  }
+
+  /**
+   * Rekapitulasi Nilai Sidang untuk Ekspor Excel / CSV (kompatibel dengan /input-nilai)
+   */
+  static async getRekapNilaiSidang(taId: number, sidangId: number) {
+    const [ta] = await db
+      .select({
+        id: tugasAkhir.id,
+        kodeTa: tugasAkhir.kodeTa,
+        judul: tugasAkhir.judul,
+        jenisKarya: tugasAkhir.jenisKarya,
+        programStudiId: tugasAkhir.programStudiId,
+        prodiNama: programStudi.nama,
+        status: tugasAkhir.status,
+      })
+      .from(tugasAkhir)
+      .leftJoin(programStudi, eq(tugasAkhir.programStudiId, programStudi.id))
+      .where(eq(tugasAkhir.id, taId))
+      .limit(1);
+
+    if (!ta) throw new Error('Data tugas akhir tidak ditemukan.');
+
+    const [sidang] = await db
+      .select()
+      .from(tugasAkhirSidang)
+      .where(and(eq(tugasAkhirSidang.id, sidangId), eq(tugasAkhirSidang.tugasAkhirId, taId)))
+      .limit(1);
+
+    if (!sidang) throw new Error('Data sidang tidak ditemukan.');
+
+    const anggotaList = await db
+      .select({
+        id: tugasAkhirAnggota.id,
+        mahasiswaId: tugasAkhirAnggota.mahasiswaId,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        peran: tugasAkhirAnggota.peran,
+      })
+      .from(tugasAkhirAnggota)
+      .innerJoin(mahasiswa, eq(tugasAkhirAnggota.mahasiswaId, mahasiswa.id))
+      .where(eq(tugasAkhirAnggota.tugasAkhirId, taId))
+      .orderBy(asc(tugasAkhirAnggota.id));
+
+    const pengujiList = await db
+      .select({
+        id: tugasAkhirPenguji.id,
+        dosenId: tugasAkhirPenguji.dosenId,
+        dosenNama: dosen.nama,
+        dosenNip: dosen.nip,
+        peranPenguji: tugasAkhirPenguji.peranPenguji,
+        kehadiran: tugasAkhirPenguji.kehadiran,
+        nilaiTotal: tugasAkhirPenguji.nilaiTotal,
+        catatanRevisi: tugasAkhirPenguji.catatanRevisi,
+        statusAccRevisi: tugasAkhirPenguji.statusAccRevisi,
+        accRevisiAt: tugasAkhirPenguji.accRevisiAt,
+      })
+      .from(tugasAkhirPenguji)
+      .leftJoin(dosen, eq(tugasAkhirPenguji.dosenId, dosen.id))
+      .where(eq(tugasAkhirPenguji.sidangId, sidangId))
+      .orderBy(asc(tugasAkhirPenguji.id));
+
+    const nilaiAkhirNum = Number(sidang.nilaiAkhirAngka || 0);
+    const mutuBpa = TugasAkhirSidangService.konversiNilaiBpa(nilaiAkhirNum);
+
+    // Format baris ekspor per mahasiswa (kompatibel impor CSV /input-nilai)
+    const exportRows = anggotaList.map((mhs, idx) => ({
+      no: idx + 1,
+      nim: mhs.nim,
+      nama: mhs.nama,
+      peran: mhs.peran === 'ketua' ? 'Ketua Tim' : 'Anggota Tim',
+      judulTa: ta.judul,
+      programStudi: ta.prodiNama || '-',
+      jenisSidang: sidang.jenisSidang === 'proposal' ? 'Seminar Proposal' : 'Sidang Akhir',
+      tanggalSidang: sidang.tanggalSidang || '-',
+      ruangan: sidang.ruangan || '-',
+      nilaiAkhir: nilaiAkhirNum.toFixed(2), // Skala 0 - 10
+      nilaiAkhirSkala100: (nilaiAkhirNum * 10).toFixed(2), // Skala 0 - 100
+      hurufMutu: sidang.nilaiAkhirHuruf || mutuBpa.huruf,
+      indeksMutu: mutuBpa.indeks.toFixed(2),
+      statusHasil: (sidang.statusHasil || '').replace(/_/g, ' ').toUpperCase(),
+      statusRevisi: (sidang.statusRevisi || '').replace(/_/g, ' ').toUpperCase(),
+      catatanSidang: sidang.catatanSidang || '-',
+    }));
+
+    return {
+      tugasAkhir: ta,
+      sidang,
+      timPenguji: pengujiList,
+      anggotaList,
+      exportRows,
+    };
+  }
+
+  /**
+   * Mahasiswa mengunggah naskah revisi pasca sidang
+   */
+  static async submitRevisiNaskah(
+    taId: number,
+    sidangId: number,
+    input: { fileRevisiUrl: string; catatanMahasiswa?: string | null },
+    user: UserPayload,
+  ) {
+    const [sidang] = await db
+      .select()
+      .from(tugasAkhirSidang)
+      .where(and(eq(tugasAkhirSidang.id, sidangId), eq(tugasAkhirSidang.tugasAkhirId, taId)))
+      .limit(1);
+
+    if (!sidang) throw new Error('Data sidang tidak ditemukan.');
+
+    const currentBerkas = (sidang.berkasSyarat as Record<string, unknown>) || {};
+    const updatedBerkas = {
+      ...currentBerkas,
+      fileRevisiUrl: input.fileRevisiUrl.trim(),
+      catatanRevisiMahasiswa: input.catatanMahasiswa?.trim() || null,
+      revisiUploadedAt: new Date().toISOString(),
+    };
+
+    await db
+      .update(tugasAkhirSidang)
+      .set({
+        berkasSyarat: updatedBerkas,
+        statusRevisi: 'diverifikasi_penguji',
+        updatedAt: new Date(),
+      })
+      .where(eq(tugasAkhirSidang.id, sidangId));
+
+    return {
+      message: 'Naskah revisi berhasil dikirim untuk diverifikasi dewan penguji.',
+      berkasSyarat: updatedBerkas,
+      statusRevisi: 'diverifikasi_penguji',
+    };
+  }
+
+  /**
+   * Dosen Penguji / Kaprodi menyetujui revisi naskah (ACC Revisi)
+   */
+  static async accRevisiPenguji(taId: number, sidangId: number, pengujiId: number, user: UserPayload) {
+    const [penguji] = await db
+      .select()
+      .from(tugasAkhirPenguji)
+      .where(and(eq(tugasAkhirPenguji.id, pengujiId), eq(tugasAkhirPenguji.sidangId, sidangId)))
+      .limit(1);
+
+    if (!penguji) throw new Error('Data dosen penguji sidang tidak ditemukan.');
+
+    // Hak akses: Dosen yang bersangkutan atau Staf Prodi/Admin
+    const isStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi']);
+    if (!isStaff) {
+      const [dosenRow] = await db.select({ id: dosen.id }).from(dosen).where(eq(dosen.email, user.email)).limit(1);
+      if (!dosenRow || dosenRow.id !== penguji.dosenId) {
+        throw new Error('Akses ditolak. Anda bukan dosen penguji yang ditugaskan.');
+      }
+    }
+
+    return await db.transaction(async (tx) => {
+      await tx
+        .update(tugasAkhirPenguji)
+        .set({
+          statusAccRevisi: true,
+          accRevisiAt: new Date(),
+        })
+        .where(eq(tugasAkhirPenguji.id, pengujiId));
+
+      // Cek apakah seluruh penguji sudah memberikan ACC Revisi
+      const allPenguji = await tx.select().from(tugasAkhirPenguji).where(eq(tugasAkhirPenguji.sidangId, sidangId));
+
+      const isAllAcc = allPenguji.every((p) => (p.id === pengujiId ? true : p.statusAccRevisi));
+
+      let sidangUpdatedStatus = 'diverifikasi_penguji';
+      if (isAllAcc) {
+        sidangUpdatedStatus = 'tuntas';
+        await tx
+          .update(tugasAkhirSidang)
+          .set({
+            statusRevisi: 'tuntas',
+            updatedAt: new Date(),
+          })
+          .where(eq(tugasAkhirSidang.id, sidangId));
+
+        // Jika ini sidang akhir dan berstatus lulus, update status TA menjadi lulus
+        const [sidangRow] = await tx.select().from(tugasAkhirSidang).where(eq(tugasAkhirSidang.id, sidangId)).limit(1);
+
+        if (
+          sidangRow &&
+          sidangRow.jenisSidang === 'akhir' &&
+          ['lulus_tanpa_revisi', 'lulus_dengan_revisi'].includes(sidangRow.statusHasil)
+        ) {
+          await tx.update(tugasAkhir).set({ status: 'lulus', updatedAt: new Date() }).where(eq(tugasAkhir.id, taId));
+
+          await tx.insert(tugasAkhirStatusLog).values({
+            tugasAkhirId: taId,
+            dariStatus: 'revisi',
+            keStatus: 'lulus',
+            alasan: 'Seluruh dewan penguji telah menyetujui revisi naskah akhir (Revisi Tuntas).',
+            olehUserId: user.id,
+          });
+        }
+      }
+
+      return {
+        message: isAllAcc
+          ? 'Seluruh dewan penguji telah menyetujui revisi. Status revisi TUNTAS.'
+          : 'Persetujuan revisi berhasil dicatat.',
+        statusAccRevisi: true,
+        isAllAcc,
+        statusRevisi: sidangUpdatedStatus,
+      };
     });
   }
 }

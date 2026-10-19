@@ -500,4 +500,82 @@ export class TugasAkhirController {
       return { error: e instanceof Error ? e.message : 'Gagal memfinalisasi sidang' };
     }
   }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getRekapNilaiSidang({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const sidangId = parseInt(params.sidangId, 10);
+      if (isNaN(id) || isNaN(sidangId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const data = await TugasAkhirSidangService.getRekapNilaiSidang(id, sidangId);
+      return { data };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat rekap nilai sidang' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async submitRevisiSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const sidangId = parseInt(params.sidangId, 10);
+      if (isNaN(id) || isNaN(sidangId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const res = await TugasAkhirSidangService.submitRevisiNaskah(
+        id,
+        sidangId,
+        body as { fileRevisiUrl: string; catatanMahasiswa?: string },
+        user,
+      );
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal mengirim berkas revisi' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async accRevisiPenguji({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const id = parseInt(params.id, 10);
+      const sidangId = parseInt(params.sidangId, 10);
+      const pengujiId = parseInt(params.pengujiId, 10);
+      if (isNaN(id) || isNaN(sidangId) || isNaN(pengujiId)) {
+        set.status = 400;
+        return { error: 'Parameter ID tidak valid' };
+      }
+
+      const res = await TugasAkhirSidangService.accRevisiPenguji(id, sidangId, pengujiId, user);
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memverifikasi revisi penguji' };
+    }
+  }
 }

@@ -353,6 +353,93 @@ export const tugasAkhirController = {
     );
     return res.data;
   },
+
+  async getRekapNilaiSidang(
+    id: number,
+    sidangId: number,
+  ): Promise<{
+    tugasAkhir: TugasAkhir;
+    sidang: TugasAkhirSidang;
+    timPenguji: TugasAkhirPenguji[];
+    anggotaList: { id: number; mahasiswaId: number; nim: string; nama: string; peran: string }[];
+    exportRows: {
+      no: number;
+      nim: string;
+      nama: string;
+      peran: string;
+      judulTa: string;
+      programStudi: string;
+      jenisSidang: string;
+      tanggalSidang: string;
+      ruangan: string;
+      nilaiAkhir: string;
+      nilaiAkhirSkala100: string;
+      hurufMutu: string;
+      indeksMutu: string;
+      statusHasil: string;
+      statusRevisi: string;
+      catatanSidang: string;
+    }[];
+  }> {
+    const res = await fetchApi<{
+      data: {
+        tugasAkhir: TugasAkhir;
+        sidang: TugasAkhirSidang;
+        timPenguji: TugasAkhirPenguji[];
+        anggotaList: { id: number; mahasiswaId: number; nim: string; nama: string; peran: string }[];
+        exportRows: {
+          no: number;
+          nim: string;
+          nama: string;
+          peran: string;
+          judulTa: string;
+          programStudi: string;
+          jenisSidang: string;
+          tanggalSidang: string;
+          ruangan: string;
+          nilaiAkhir: string;
+          nilaiAkhirSkala100: string;
+          hurufMutu: string;
+          indeksMutu: string;
+          statusHasil: string;
+          statusRevisi: string;
+          catatanSidang: string;
+        }[];
+      };
+    }>(`/tugas-akhir/${id}/sidang/${sidangId}/rekap-nilai`);
+    return res.data;
+  },
+
+  async submitRevisiSidang(
+    id: number,
+    sidangId: number,
+    payload: { fileRevisiUrl: string; catatanMahasiswa?: string | null },
+  ): Promise<{ message: string; statusRevisi: string }> {
+    const res = await fetchApi<{ message: string; statusRevisi: string }>(
+      `/tugas-akhir/${id}/sidang/${sidangId}/revisi`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    );
+    return res;
+  },
+
+  async accRevisiPenguji(
+    id: number,
+    sidangId: number,
+    pengujiId: number,
+  ): Promise<{ message: string; statusAccRevisi: boolean; isAllAcc: boolean; statusRevisi: string }> {
+    const res = await fetchApi<{
+      message: string;
+      statusAccRevisi: boolean;
+      isAllAcc: boolean;
+      statusRevisi: string;
+    }>(`/tugas-akhir/${id}/sidang/${sidangId}/penguji/${pengujiId}/acc-revisi`, {
+      method: 'POST',
+    });
+    return res;
+  },
 };
 
 export interface TugasAkhirLogbook {
@@ -415,9 +502,11 @@ export interface TugasAkhirPenguji {
   sidangId: number;
   dosenId: number;
   peranPenguji: 'ketua_penguji' | 'sekretaris' | 'penguji_1' | 'penguji_2' | 'pembimbing_1' | 'pembimbing_2';
-  kehadiran: 'hadir' | 'izin' | 'digantikan' | 'belum_konfirmasi';
+  kehadiran: 'hadir' | 'izin' | 'digantikan' | 'belum_konfirmasi' | boolean;
   nilaiTotal: string | number | null;
   catatanRevisi: string | null;
+  statusAccRevisi?: boolean;
+  accRevisiAt?: string | null;
   dosenNama?: string;
   dosenNip?: string;
 }
@@ -426,23 +515,27 @@ export interface TugasAkhirSidang {
   id: number;
   tugasAkhirId: number;
   jenisSidang: 'proposal' | 'kemajuan' | 'akhir';
-  statusSidang: 'mendaftar' | 'dijadwalkan' | 'berlangsung' | 'selesai' | 'dibatalkan';
+  statusSidang?: 'mendaftar' | 'dijadwalkan' | 'berlangsung' | 'selesai' | 'dibatalkan';
+  status?: string;
   tanggalSidang: string | null;
   jamMulai: string | null;
   jamSelesai: string | null;
   ruangan: string | null;
-  berkasProposalUrl: string | null;
-  buktiBebasKompensasiUrl: string | null;
-  buktiPlagiasiUrl: string | null;
-  catatanMahasiswa: string | null;
+  berkasProposalUrl?: string | null;
+  buktiBebasKompensasiUrl?: string | null;
+  buktiPlagiasiUrl?: string | null;
+  catatanMahasiswa?: string | null;
+  berkasSyarat?: Record<string, unknown> | null;
   nilaiAkhirAngka: string | number | null;
   nilaiAkhirHuruf: string | null;
   statusHasil: 'lulus_tanpa_revisi' | 'lulus_dengan_revisi' | 'sidang_ulang' | 'tidak_lulus' | 'belum_ditentukan';
   batasWaktuRevisi: string | null;
+  statusRevisi?: 'belum_selesai' | 'diverifikasi_penguji' | 'tuntas' | string;
   catatanSidang: string | null;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   penguji?: TugasAkhirPenguji[];
+  timPenguji?: TugasAkhirPenguji[];
 }
 
 export interface DaftarSidangPayload {
