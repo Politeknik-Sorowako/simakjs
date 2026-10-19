@@ -192,12 +192,17 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
   const isSuperAdmin = () => auth.hasRole(['super_admin']);
   const isAdminMgmt = () => auth.hasRole(['admin', 'super_admin']);
   /**
-   * Penetapan Pembimbing tidak lagi dibuka untuk role dosen murni — verifikasi
-   * pembimbing PKL/TA dilakukan dari menu Bimbingan. Dosen yang sekaligus
-   * memegang role admin/kaprodi/prodi tetap melihat menu ini lewat role
-   * tersebut, sejalan dengan `allowedRoles` route di `App.tsx`.
+   * Penetapan Pembimbing hanya untuk pengelola akademik:
+   * - Role dosen murni tidak dibuka — verifikasi pembimbing PKL/TA dilakukan
+   *   dari menu Bimbingan.
+   * - Role mahasiswa tidak dibuka — halaman ini adalah alat penetapan (set/bulk/
+   *   impor) yang di backend dibatasi `MANAGER_ROLES`; mahasiswa cukup melihat
+   *   pembimbingnya lewat menu Bimbingan.
+   * Dosen/mahasiswa yang sekaligus memegang role admin/kaprodi/prodi tetap
+   * melihat menu ini lewat role tersebut, karena `hasRole` mengevaluasi seluruh
+   * daftar roles.
    */
-  const canSetPembimbing = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi', 'mahasiswa']);
+  const canSetPembimbing = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi']);
   const notGuest = () => !auth.hasRole(['guest']);
   const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
