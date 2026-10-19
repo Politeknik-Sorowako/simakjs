@@ -13,6 +13,7 @@ import {
   inputNilaiSidangSchema,
   jadwalSidangSchema,
   overrideStatusSchema,
+  rekapKolektifSidangSchema,
   responUndanganSchema,
   reviewLogbookSchema,
   reviewTopikSchema,
@@ -26,6 +27,7 @@ import {
 export const tugasAkhirRoutes = new Elysia({ prefix: '/tugas-akhir' })
   .use(authMiddleware)
   .get('/', TugasAkhirController.getAll, getTugasAkhirSchema)
+  .get('/sidang/rekap-kolektif', TugasAkhirController.getRekapKolektifSidang, rekapKolektifSidangSchema)
   .get('/:id', TugasAkhirController.getById, tugasAkhirIdSchema)
   .post('/', TugasAkhirController.create, createTugasAkhirSchema)
   .put('/:id', TugasAkhirController.update, updateTugasAkhirSchema)

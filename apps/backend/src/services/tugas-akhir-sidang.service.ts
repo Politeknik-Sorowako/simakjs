@@ -965,4 +965,183 @@ export class TugasAkhirSidangService {
       };
     });
   }
+
+  /**
+   * Rekapitulasi Sidang Kolektif (Batch Export untuk Excel & CSV /input-nilai)
+   * Mengumpulkan seluruh sidang yang telah memiliki jadwal / nilai pada prodi & periode terpilih
+   */
+  static async getRekapKolektifSidang(
+    filters: {
+      periodeId?: string;
+      programStudiId?: number;
+      jenisSidang?: 'proposal' | 'kemajuan' | 'akhir' | 'semua';
+      statusHasil?: string;
+    },
+    user: UserPayload,
+  ) {
+    const isStaff = hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi', 'lppm']);
+    if (!isStaff) {
+      throw new Error('Akses ditolak. Hanya staf prodi, kaprodi, dan admin yang dapat mengakses rekap kolektif.');
+    }
+
+    const conditions = [];
+
+    if (filters.periodeId) {
+      conditions.push(eq(tugasAkhirSidang.periodeId, filters.periodeId));
+    }
+    if (filters.programStudiId) {
+      conditions.push(eq(tugasAkhir.programStudiId, filters.programStudiId));
+    }
+    if (filters.jenisSidang && filters.jenisSidang !== 'semua') {
+      conditions.push(eq(tugasAkhirSidang.jenisSidang, filters.jenisSidang));
+    }
+    if (filters.statusHasil && filters.statusHasil !== 'semua') {
+      conditions.push(eq(tugasAkhirSidang.statusHasil, filters.statusHasil));
+    }
+
+    const sidangs = await db
+      .select({
+        sidangId: tugasAkhirSidang.id,
+        tugasAkhirId: tugasAkhirSidang.tugasAkhirId,
+        jenisSidang: tugasAkhirSidang.jenisSidang,
+        periodeId: tugasAkhirSidang.periodeId,
+        tanggalSidang: tugasAkhirSidang.tanggalSidang,
+        jamMulai: tugasAkhirSidang.jamMulai,
+        jamSelesai: tugasAkhirSidang.jamSelesai,
+        ruangan: tugasAkhirSidang.ruangan,
+        statusHasil: tugasAkhirSidang.statusHasil,
+        statusRevisi: tugasAkhirSidang.statusRevisi,
+        nilaiAkhirAngka: tugasAkhirSidang.nilaiAkhirAngka,
+        nilaiAkhirHuruf: tugasAkhirSidang.nilaiAkhirHuruf,
+        catatanSidang: tugasAkhirSidang.catatanSidang,
+        kodeTa: tugasAkhir.kodeTa,
+        judulTa: tugasAkhir.judul,
+        tipeTa: tugasAkhir.tipe,
+        programStudiId: tugasAkhir.programStudiId,
+        prodiNama: programStudi.nama,
+        prodiKode: programStudi.kode,
+      })
+      .from(tugasAkhirSidang)
+      .innerJoin(tugasAkhir, eq(tugasAkhirSidang.tugasAkhirId, tugasAkhir.id))
+      .leftJoin(programStudi, eq(tugasAkhir.programStudiId, programStudi.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(tugasAkhirSidang.tanggalSidang), asc(tugasAkhirSidang.id));
+
+    if (sidangs.length === 0) {
+      return {
+        totalSidang: 0,
+        totalMahasiswa: 0,
+        exportRows: [],
+      };
+    }
+
+    const sidangIds = sidangs.map((s) => s.sidangId);
+    const taIds = [...new Set(sidangs.map((s) => s.tugasAkhirId))];
+
+    const anggotaList = await db
+      .select({
+        id: tugasAkhirAnggota.id,
+        tugasAkhirId: tugasAkhirAnggota.tugasAkhirId,
+        mahasiswaId: tugasAkhirAnggota.mahasiswaId,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        peran: tugasAkhirAnggota.peran,
+      })
+      .from(tugasAkhirAnggota)
+      .innerJoin(mahasiswa, eq(tugasAkhirAnggota.mahasiswaId, mahasiswa.id))
+      .where(inArray(tugasAkhirAnggota.tugasAkhirId, taIds))
+      .orderBy(asc(tugasAkhirAnggota.id));
+
+    const anggotaMap = new Map<number, typeof anggotaList>();
+    for (const a of anggotaList) {
+      if (!anggotaMap.has(a.tugasAkhirId)) {
+        anggotaMap.set(a.tugasAkhirId, []);
+      }
+      anggotaMap.get(a.tugasAkhirId)!.push(a);
+    }
+
+    const pembimbingList = await db
+      .select({
+        tugasAkhirId: tugasAkhirPembimbing.tugasAkhirId,
+        peran: tugasAkhirPembimbing.peran,
+        dosenNama: dosen.nama,
+        namaEksternal: tugasAkhirPembimbing.namaEksternal,
+      })
+      .from(tugasAkhirPembimbing)
+      .leftJoin(dosen, eq(tugasAkhirPembimbing.dosenId, dosen.id))
+      .where(inArray(tugasAkhirPembimbing.tugasAkhirId, taIds));
+
+    const pembimbingMap = new Map<number, { p1?: string; p2?: string }>();
+    for (const p of pembimbingList) {
+      const nama = p.dosenNama || p.namaEksternal || '-';
+      if (!pembimbingMap.has(p.tugasAkhirId)) {
+        pembimbingMap.set(p.tugasAkhirId, {});
+      }
+      const entry = pembimbingMap.get(p.tugasAkhirId)!;
+      if (p.peran === 'pembimbing_1') entry.p1 = nama;
+      else if (p.peran === 'pembimbing_2') entry.p2 = nama;
+    }
+
+    const pengujiList = await db
+      .select({
+        sidangId: tugasAkhirPenguji.sidangId,
+        dosenNama: dosen.nama,
+        peranPenguji: tugasAkhirPenguji.peranPenguji,
+      })
+      .from(tugasAkhirPenguji)
+      .leftJoin(dosen, eq(tugasAkhirPenguji.dosenId, dosen.id))
+      .where(inArray(tugasAkhirPenguji.sidangId, sidangIds));
+
+    const pengujiMap = new Map<number, string[]>();
+    for (const p of pengujiList) {
+      if (!pengujiMap.has(p.sidangId)) {
+        pengujiMap.set(p.sidangId, []);
+      }
+      pengujiMap.get(p.sidangId)!.push(`${p.dosenNama || '-'} (${p.peranPenguji})`);
+    }
+
+    let counter = 1;
+    const exportRows = [];
+
+    for (const s of sidangs) {
+      const mhsList = anggotaMap.get(s.tugasAkhirId) || [];
+      const pembimbing = pembimbingMap.get(s.tugasAkhirId) || {};
+      const penguji = (pengujiMap.get(s.sidangId) || []).join('; ');
+
+      const nilaiAkhirNum = Number(s.nilaiAkhirAngka || 0);
+      const mutuBpa = TugasAkhirSidangService.konversiNilaiBpa(nilaiAkhirNum);
+
+      for (const mhs of mhsList) {
+        exportRows.push({
+          no: counter++,
+          nim: mhs.nim,
+          nama: mhs.nama,
+          peran: mhs.peran === 'ketua' ? 'Ketua Tim' : 'Anggota Tim',
+          kodeTa: s.kodeTa || '-',
+          judulTa: s.judulTa,
+          programStudi: s.prodiNama || '-',
+          periodeId: s.periodeId || '-',
+          jenisSidang: s.jenisSidang === 'proposal' ? 'Seminar Proposal' : 'Sidang Akhir',
+          tanggalSidang: s.tanggalSidang || '-',
+          ruangan: s.ruangan || '-',
+          pembimbing1: pembimbing.p1 || '-',
+          pembimbing2: pembimbing.p2 || '-',
+          dewanPenguji: penguji || '-',
+          nilaiAkhir: nilaiAkhirNum > 0 ? nilaiAkhirNum.toFixed(2) : '-',
+          nilaiAkhirSkala100: nilaiAkhirNum > 0 ? (nilaiAkhirNum * 10).toFixed(2) : '-',
+          hurufMutu: s.nilaiAkhirHuruf || (nilaiAkhirNum > 0 ? mutuBpa.huruf : '-'),
+          indeksMutu: nilaiAkhirNum > 0 ? mutuBpa.indeks.toFixed(2) : '-',
+          statusHasil: (s.statusHasil || '').replace(/_/g, ' ').toUpperCase(),
+          statusRevisi: (s.statusRevisi || '').replace(/_/g, ' ').toUpperCase(),
+          catatanSidang: s.catatanSidang || '-',
+        });
+      }
+    }
+
+    return {
+      totalSidang: sidangs.length,
+      totalMahasiswa: exportRows.length,
+      exportRows,
+    };
+  }
 }

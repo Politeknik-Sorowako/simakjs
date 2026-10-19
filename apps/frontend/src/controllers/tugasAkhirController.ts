@@ -410,6 +410,78 @@ export const tugasAkhirController = {
     return res.data;
   },
 
+  async getRekapKolektifSidang(params?: {
+    periodeId?: string;
+    programStudiId?: number;
+    jenisSidang?: string;
+    statusHasil?: string;
+  }): Promise<{
+    totalSidang: number;
+    totalMahasiswa: number;
+    exportRows: {
+      no: number;
+      nim: string;
+      nama: string;
+      peran: string;
+      kodeTa: string;
+      judulTa: string;
+      programStudi: string;
+      periodeId: string;
+      jenisSidang: string;
+      tanggalSidang: string;
+      ruangan: string;
+      pembimbing1: string;
+      pembimbing2: string;
+      dewanPenguji: string;
+      nilaiAkhir: string;
+      nilaiAkhirSkala100: string;
+      hurufMutu: string;
+      indeksMutu: string;
+      statusHasil: string;
+      statusRevisi: string;
+      catatanSidang: string;
+    }[];
+  }> {
+    const q = new URLSearchParams();
+    if (params?.periodeId) q.append('periodeId', params.periodeId);
+    if (params?.programStudiId) q.append('programStudiId', String(params.programStudiId));
+    if (params?.jenisSidang) q.append('jenisSidang', params.jenisSidang);
+    if (params?.statusHasil) q.append('statusHasil', params.statusHasil);
+
+    const qs = q.toString();
+    const url = `/tugas-akhir/sidang/rekap-kolektif${qs ? `?${qs}` : ''}`;
+    const res = await fetchApi<{
+      data: {
+        totalSidang: number;
+        totalMahasiswa: number;
+        exportRows: {
+          no: number;
+          nim: string;
+          nama: string;
+          peran: string;
+          kodeTa: string;
+          judulTa: string;
+          programStudi: string;
+          periodeId: string;
+          jenisSidang: string;
+          tanggalSidang: string;
+          ruangan: string;
+          pembimbing1: string;
+          pembimbing2: string;
+          dewanPenguji: string;
+          nilaiAkhir: string;
+          nilaiAkhirSkala100: string;
+          hurufMutu: string;
+          indeksMutu: string;
+          statusHasil: string;
+          statusRevisi: string;
+          catatanSidang: string;
+        }[];
+      };
+    }>(url);
+    return res.data;
+  },
+
   async submitRevisiSidang(
     id: number,
     sidangId: number,

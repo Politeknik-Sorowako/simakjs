@@ -283,3 +283,17 @@ export const accRevisiParam = t.Object({
 export const accRevisiSchema = {
   params: accRevisiParam,
 };
+
+// Milestone 4: Ekspor Rekap Sidang Kolektif (Batch)
+export const rekapKolektifSidangQuery = t.Object({
+  periodeId: t.Optional(t.String()),
+  programStudiId: t.Optional(t.Numeric()),
+  jenisSidang: t.Optional(
+    t.Union([t.Literal('proposal'), t.Literal('kemajuan'), t.Literal('akhir'), t.Literal('semua')]),
+  ),
+  statusHasil: t.Optional(t.String()),
+});
+
+export const rekapKolektifSidangSchema = {
+  query: rekapKolektifSidangQuery,
+};
