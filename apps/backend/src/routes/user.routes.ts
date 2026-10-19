@@ -7,6 +7,7 @@ import {
   importUsersCsvSchema,
   toggleActiveSchema,
   updateProfileSchema,
+  updateQuickMenuSchema,
   updateRoleSchema,
   updateUserRolesSchema,
 } from '../schemas/user.schema';
@@ -17,6 +18,10 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   .post('/', UserController.createUser, {
     detail: { tags: ['Pengguna'], summary: 'Tambah pengguna baru (Admin/Super Admin)' },
   })
+  .get('/quick-menu', UserController.getQuickMenu, {
+    detail: { tags: ['Pengguna'], summary: 'Ambil preferensi menu cepat pengguna' },
+  })
+  .put('/quick-menu', UserController.updateQuickMenu, updateQuickMenuSchema)
   .put('/profile', UserController.updateProfile, updateProfileSchema)
   .put('/:id/activate', UserController.toggleActive, toggleActiveSchema)
   .put('/:id/role', UserController.updateRole, updateRoleSchema)

@@ -36,6 +36,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
   const [targetKelasIds, setTargetKelasIds] = createSignal<number[]>([]);
   const [targetRombelIds, setTargetRombelIds] = createSignal<number[]>([]);
   const [isPinned, setIsPinned] = createSignal(false);
+  const [showModalOnLogin, setShowModalOnLogin] = createSignal(false);
   const [thumbnailUrl, setThumbnailUrl] = createSignal<string | null>(null);
   const [publishMode, setPublishMode] = createSignal<'now' | 'scheduled'>('now');
   const [scheduledPublishAt, setScheduledPublishAt] = createSignal('');
@@ -76,6 +77,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         setTargetKelasIds(props.initialData.targetKelasIds || []);
         setTargetRombelIds(props.initialData.targetRombelIds || []);
         setIsPinned(props.initialData.isPinned);
+        setShowModalOnLogin(props.initialData.showModalOnLogin ?? false);
         setThumbnailUrl(props.initialData.thumbnailUrl || null);
         setLampiran(props.initialData.lampiran || []);
         if (props.initialData.status === 'scheduled' && props.initialData.publishedAt) {
@@ -103,6 +105,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         setTargetKelasIds([]);
         setTargetRombelIds([]);
         setIsPinned(false);
+        setShowModalOnLogin(false);
         setThumbnailUrl(null);
         setPublishMode('now');
         setScheduledPublishAt('');
@@ -139,6 +142,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
           targetKelasIds: targetKelasIds(),
           targetRombelIds: targetRombelIds(),
           isPinned: isPinned(),
+          showModalOnLogin: showModalOnLogin(),
           thumbnailUrl: thumbnailUrl(),
           expiresAt: expiresMode() === 'scheduled' && expiresAt() ? new Date(expiresAt()).toISOString() : null,
           lampiran: lampiran(),
@@ -242,6 +246,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         targetKelasIds: targetKelasIds(),
         targetRombelIds: targetRombelIds(),
         isPinned: isPinned(),
+        showModalOnLogin: showModalOnLogin(),
         thumbnailUrl: thumbnailUrl(),
         publishMode: publishMode(),
         scheduledPublishAt: publishMode() === 'scheduled' ? new Date(scheduledPublishAt()).toISOString() : null,
@@ -331,22 +336,36 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
           <form onSubmit={handlePublishSubmit} class="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Judul & Pin Option */}
             <div class="space-y-4">
-              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap">
                 <label class="block text-xs font-bold uppercase tracking-wider text-secondary-600 dark:text-secondary-400">
                   Judul Pengumuman *
                 </label>
-                <label class="inline-flex items-center gap-2 text-xs font-medium text-secondary-700 dark:text-secondary-300 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isPinned()}
-                    onChange={(e) => {
-                      setIsPinned(e.currentTarget.checked);
-                      triggerAutoSave();
-                    }}
-                    class="rounded border-secondary-300 text-[#0066cc] focus:ring-[#0066cc]"
-                  />
-                  <span>📌 Sematkan di Baris Atas (Pin Slide)</span>
-                </label>
+                <div class="flex items-center gap-4 flex-wrap">
+                  <label class="inline-flex items-center gap-2 text-xs font-medium text-secondary-700 dark:text-secondary-300 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isPinned()}
+                      onChange={(e) => {
+                        setIsPinned(e.currentTarget.checked);
+                        triggerAutoSave();
+                      }}
+                      class="rounded border-secondary-300 text-[#0066cc] focus:ring-[#0066cc]"
+                    />
+                    <span>📌 Sematkan (Pin)</span>
+                  </label>
+                  <label class="inline-flex items-center gap-2 text-xs font-medium text-secondary-700 dark:text-secondary-300 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showModalOnLogin()}
+                      onChange={(e) => {
+                        setShowModalOnLogin(e.currentTarget.checked);
+                        triggerAutoSave();
+                      }}
+                      class="rounded border-secondary-300 text-[#0066cc] focus:ring-[#0066cc]"
+                    />
+                    <span>🔔 Pop-up Saat Login</span>
+                  </label>
+                </div>
               </div>
               <input
                 type="text"
@@ -833,6 +852,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                     targetKelasIds: targetKelasIds(),
                     targetRombelIds: targetRombelIds(),
                     isPinned: isPinned(),
+                    showModalOnLogin: showModalOnLogin(),
                     thumbnailUrl: thumbnailUrl(),
                     expiresAt:
                       expiresMode() === 'scheduled' && expiresAt() ? new Date(expiresAt()).toISOString() : null,

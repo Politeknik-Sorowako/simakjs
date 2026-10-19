@@ -1447,6 +1447,11 @@ export default function TugasAkhirPage() {
                                 icon: '💬',
                                 onClick: () => openBimbinganModal(item),
                               });
+                              items.push({
+                                label: 'Kartu Kendali',
+                                icon: '🖨️',
+                                onClick: () => window.open(`/tugas-akhir/${item.id}/kartu-kendali`, '_blank'),
+                              });
                             }
 
                             // 3. Sidang Proposal (Sempro)
@@ -1467,6 +1472,15 @@ export default function TugasAkhirPage() {
                                 label: 'Sidang Sempro',
                                 icon: '🎓',
                                 onClick: () => openSidangModal(item),
+                              });
+                            }
+
+                            // 3b. Lembar Pengesahan Laporan TA (Jika lulus / revisi selesai)
+                            if (['lulus', 'sidang_selesai', 'revisi'].includes(item.status)) {
+                              items.push({
+                                label: 'Lembar Pengesahan',
+                                icon: '📜',
+                                onClick: () => window.open(`/tugas-akhir/${item.id}/pengesahan`, '_blank'),
                               });
                             }
 
@@ -2476,18 +2490,28 @@ export default function TugasAkhirPage() {
               </div>
             </div>
 
-            {/* Tombol Tambah Logbook */}
-            <div class="flex items-center justify-between">
+            {/* Tombol Tambah Logbook & Cetak Kartu Kendali */}
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <h4 class="text-table font-bold text-ink dark:text-pearl">
                 Riwayat Logbook Konsultasi ({logbooks().length} Catatan)
               </h4>
-              <Button
-                variant={showAddLogbookForm() ? 'secondary' : 'primary'}
-                size="sm"
-                onClick={() => setShowAddLogbookForm(!showAddLogbookForm())}
-              >
-                {showAddLogbookForm() ? 'Tutup Form' : '+ Catat Bimbingan'}
-              </Button>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => window.open(`/tugas-akhir/${bimbinganTa()?.id}/kartu-kendali`, '_blank')}
+                  title="Buka dokumen cetak kartu kendali bimbingan A4 / PDF"
+                >
+                  🖨️ Cetak Kartu Kendali
+                </Button>
+                <Button
+                  variant={showAddLogbookForm() ? 'secondary' : 'primary'}
+                  size="sm"
+                  onClick={() => setShowAddLogbookForm(!showAddLogbookForm())}
+                >
+                  {showAddLogbookForm() ? 'Tutup Form' : '+ Catat Bimbingan'}
+                </Button>
+              </div>
             </div>
 
             {/* Form Tambah Logbook */}
@@ -2916,6 +2940,21 @@ export default function TugasAkhirPage() {
                           <Show when={s.catatanMahasiswa}>
                             <div class="text-fine text-secondary-500 bg-secondary-50 dark:bg-secondary-900/30 p-2.5 rounded-lg">
                               <span class="font-semibold">Catatan:</span> {s.catatanMahasiswa}
+                            </div>
+                          </Show>
+
+                          <Show when={s.statusSidang === 'selesai' || s.nilaiAkhirHuruf || s.statusHasil}>
+                            <div class="flex justify-end pt-1">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(`/tugas-akhir/${sidangTa()?.id}/sidang/${s.id}/berita-acara`, '_blank')
+                                }
+                              >
+                                🖨️ Cetak Berita Acara Sidang
+                              </Button>
                             </div>
                           </Show>
                         </div>
@@ -3649,6 +3688,17 @@ export default function TugasAkhirPage() {
                         <div class="flex flex-wrap items-center gap-2">
                           <Button
                             type="button"
+                            variant="primary"
+                            size="sm"
+                            onClick={() =>
+                              window.open(`/tugas-akhir/${sidangTa()?.id}/sidang/${sidang().id}/berita-acara`, '_blank')
+                            }
+                            title="Buka dokumen cetak berita acara ujian sidang resmi A4 / PDF"
+                          >
+                            🖨️ Cetak Berita Acara
+                          </Button>
+                          <Button
+                            type="button"
                             variant="secondary"
                             size="sm"
                             disabled={isExportingNilai()}
@@ -3658,7 +3708,7 @@ export default function TugasAkhirPage() {
                           </Button>
                           <Button
                             type="button"
-                            variant="primary"
+                            variant="secondary"
                             size="sm"
                             disabled={isExportingNilai()}
                             onClick={() => handleExportNilaiCsv(sidang().id)}
