@@ -1475,6 +1475,15 @@ export default function TugasAkhirPage() {
                               });
                             }
 
+                            // 3b. Lembar Pengesahan Laporan TA (Jika lulus / revisi selesai)
+                            if (['lulus', 'sidang_selesai', 'revisi'].includes(item.status)) {
+                              items.push({
+                                label: 'Lembar Pengesahan',
+                                icon: '📜',
+                                onClick: () => window.open(`/tugas-akhir/${item.id}/pengesahan`, '_blank'),
+                              });
+                            }
+
                             // 4. Edit (Mahasiswa pembuat atau Staf/Admin)
                             if (canEdit(item)) {
                               items.push({
@@ -2933,6 +2942,21 @@ export default function TugasAkhirPage() {
                               <span class="font-semibold">Catatan:</span> {s.catatanMahasiswa}
                             </div>
                           </Show>
+
+                          <Show when={s.statusSidang === 'selesai' || s.nilaiAkhirHuruf || s.statusHasil}>
+                            <div class="flex justify-end pt-1">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(`/tugas-akhir/${sidangTa()?.id}/sidang/${s.id}/berita-acara`, '_blank')
+                                }
+                              >
+                                🖨️ Cetak Berita Acara Sidang
+                              </Button>
+                            </div>
+                          </Show>
                         </div>
                       )}
                     </For>
@@ -3664,6 +3688,17 @@ export default function TugasAkhirPage() {
                         <div class="flex flex-wrap items-center gap-2">
                           <Button
                             type="button"
+                            variant="primary"
+                            size="sm"
+                            onClick={() =>
+                              window.open(`/tugas-akhir/${sidangTa()?.id}/sidang/${sidang().id}/berita-acara`, '_blank')
+                            }
+                            title="Buka dokumen cetak berita acara ujian sidang resmi A4 / PDF"
+                          >
+                            🖨️ Cetak Berita Acara
+                          </Button>
+                          <Button
+                            type="button"
                             variant="secondary"
                             size="sm"
                             disabled={isExportingNilai()}
@@ -3673,7 +3708,7 @@ export default function TugasAkhirPage() {
                           </Button>
                           <Button
                             type="button"
-                            variant="primary"
+                            variant="secondary"
                             size="sm"
                             disabled={isExportingNilai()}
                             onClick={() => handleExportNilaiCsv(sidang().id)}
