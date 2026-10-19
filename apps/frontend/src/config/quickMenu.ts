@@ -53,13 +53,23 @@ export const MASTER_QUICK_MENUS: QuickMenuItem[] = [
   },
   {
     id: 'bimbingan',
-    title: 'Bimbingan PA',
-    description: 'Konsultasi akademik',
+    title: 'Bimbingan Akademik',
+    description: 'Konsultasi PA & akademik',
     href: '/bimbingan',
     roles: ['mahasiswa', 'dosen', 'instruktur', 'kaprodi', 'prodi', 'admin', 'super_admin'],
     color: 'purple',
     svgPath:
       'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+  },
+  {
+    id: 'presensi-apel',
+    title: 'Presensi Apel',
+    description: 'Catatan & verifikasi apel',
+    href: '/presensi-apel',
+    roles: ['dosen', 'instruktur', 'prodi', 'kaprodi', 'admin', 'super_admin'],
+    color: 'orange',
+    svgPath:
+      'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.478 4.482 9.957 9 10.886V21h-2v2h6v-2h-2v-1.114a11.005 11.005 0 006-3.136',
   },
   {
     id: 'pengumuman',
