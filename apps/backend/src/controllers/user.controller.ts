@@ -508,6 +508,69 @@ export class UserController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async getQuickMenu({ set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+
+      const [row] = await db
+        .select({ quickMenu: users.quickMenu })
+        .from(users)
+        .where(eq(users.id, currentUser.id))
+        .limit(1);
+
+      return {
+        quickMenu: row?.quickMenu ?? [],
+      };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal mengambil preferensi menu cepat' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
+  static async updateQuickMenu({ body, set, getCurrentUser }: AuthContext): Promise<any> {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        set.status = 401;
+        return { error: 'Silakan login terlebih dahulu' };
+      }
+
+      const quickMenu = (body as { quickMenu?: string[] })?.quickMenu;
+      if (!Array.isArray(quickMenu)) {
+        set.status = 400;
+        return { error: 'Daftar menu cepat harus berupa array string' };
+      }
+
+      if (quickMenu.length > 6) {
+        set.status = 400;
+        return { error: 'Menu cepat dibatasi maksimal 6 item untuk menjaga estetika tampilan' };
+      }
+
+      const [updated] = await db
+        .update(users)
+        .set({
+          quickMenu,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, currentUser.id))
+        .returning({ quickMenu: users.quickMenu });
+
+      return {
+        message: 'Preferensi menu cepat berhasil disimpan',
+        quickMenu: updated.quickMenu,
+      };
+    } catch (error: unknown) {
+      set.status = 500;
+      return { error: 'Gagal memperbarui menu cepat' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement — route inference needs any
   static async importCsv({ request, set, getCurrentUser }: AuthContext): Promise<any> {
     const user = await getCurrentUser();
     if (!user) {

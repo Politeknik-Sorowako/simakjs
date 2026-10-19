@@ -244,3 +244,14 @@ export const userResponseObject = t.Object({
   createdAt: t.Union([t.Date(), t.Null()], { default: null }),
   updatedAt: t.Union([t.Date(), t.Null()], { default: null }),
 });
+
+export const updateQuickMenuSchema = {
+  detail: {
+    tags: ['Pengguna'],
+    summary: 'Perbarui Menu Cepat Pengguna',
+    description: 'Menyimpan preferensi daftar akses menu cepat pengguna (maksimal 6 item).',
+  },
+  body: t.Object({
+    quickMenu: t.Array(t.String({ minLength: 1, maxLength: 100 }), { minItems: 0, maxItems: 6 }),
+  }),
+};

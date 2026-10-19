@@ -22,6 +22,12 @@ export const pengumumanRoutes = new Elysia({ prefix: '/pengumuman' })
     query: pengumumanManageQuerySchema,
     detail: { tags: ['Pengumuman'], summary: 'Daftar pengumuman yang dikelola user' },
   })
+  .get('/login-popups', PengumumanController.getLoginPopups, {
+    detail: { tags: ['Pengumuman'], summary: 'Ambil pengumuman aktif berstatus pop-up modal saat login' },
+  })
+  .post('/:id/read', PengumumanController.markAsRead, {
+    detail: { tags: ['Pengumuman'], summary: 'Tandai pengumuman sebagai sudah dibaca' },
+  })
   .get('/:id', PengumumanController.getDetail, {
     detail: { tags: ['Pengumuman'], summary: 'Detail pengumuman & mark as read' },
   })

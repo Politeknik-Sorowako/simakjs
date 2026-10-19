@@ -1,7 +1,9 @@
 import { createResource, createSignal, For, Show } from 'solid-js';
 import { BarChart, LineChart, PieChart, StatCard } from '../components/charts';
+import { QuickMenuWidget } from '../components/dashboard/QuickMenuWidget';
 import { MainLayout } from '../components/MainLayout';
 import { DashboardPengumumanWidget } from '../components/pengumuman/DashboardPengumumanWidget';
+import { LoginPengumumanModal } from '../components/pengumuman/LoginPengumumanModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { bimbinganController } from '../controllers/bimbinganController';
@@ -793,6 +795,7 @@ export default function Dashboard() {
 
   return (
     <MainLayout>
+      <LoginPengumumanModal />
       <div class="flex flex-col gap-8 text-secondary-800 dark:text-white transition-colors duration-200">
         {/* Welcome Section */}
         <div class="bg-gradient-to-r from-brand-600 to-accent-700 text-white rounded-2xl p-8 shadow-lg relative overflow-hidden">
@@ -805,6 +808,9 @@ export default function Dashboard() {
             </p>
           </div>
         </div>
+
+        {/* Panel Akses Cepat */}
+        <QuickMenuWidget />
 
         {/* Pengumuman Terbaru Widget untuk role non-admin (admin sudah punya di dalam AdminWidgets) */}
         <Show when={!auth.hasRole(['admin', 'super_admin'])}>

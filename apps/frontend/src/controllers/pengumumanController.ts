@@ -26,6 +26,7 @@ export interface PengumumanItem {
   targetProdiType: 'semua' | 'spesifik';
   targetScopeType: 'umum' | 'kelas' | 'rombel';
   isPinned: boolean;
+  showModalOnLogin?: boolean;
   thumbnailUrl?: string | null;
   publishedAt?: string | null;
   withdrawnAt?: string | null;
@@ -150,6 +151,16 @@ export const pengumumanController = {
     return fetchApi<LampiranItem>('/pengumuman/upload-attachment', {
       method: 'POST',
       body: fd,
+    });
+  },
+
+  async getLoginPopups(): Promise<PengumumanItem[]> {
+    return fetchApi<PengumumanItem[]>('/pengumuman/login-popups');
+  },
+
+  async markAsRead(id: number): Promise<{ success: boolean }> {
+    return fetchApi<{ success: boolean }>(`/pengumuman/${id}/read`, {
+      method: 'POST',
     });
   },
 };
