@@ -29,7 +29,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
   const [currentId, setCurrentId] = createSignal<number | undefined>(undefined);
   const [judul, setJudul] = createSignal('');
   const [konten, setKonten] = createSignal('');
-  const [targetRole, setTargetRole] = createSignal<'semua' | 'mahasiswa' | 'dosen' | 'admin'>('semua');
+  const [targetRoles, setTargetRoles] = createSignal<('semua' | 'mahasiswa' | 'dosen' | 'admin')[]>(['semua']);
   const [targetProdiType, setTargetProdiType] = createSignal<'semua' | 'spesifik'>('semua');
   const [targetProdiIds, setTargetProdiIds] = createSignal<number[]>([]);
   const [targetScopeType, setTargetScopeType] = createSignal<'umum' | 'kelas' | 'rombel'>('umum');
@@ -63,7 +63,13 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         setCurrentId(props.initialData.id);
         setJudul(props.initialData.judul);
         setKonten(props.initialData.konten);
-        setTargetRole(props.initialData.targetRole);
+        if (props.initialData.targetRoles && props.initialData.targetRoles.length > 0) {
+          setTargetRoles(props.initialData.targetRoles);
+        } else if (props.initialData.targetRole) {
+          setTargetRoles([props.initialData.targetRole]);
+        } else {
+          setTargetRoles(['semua']);
+        }
         setTargetProdiType(props.initialData.targetProdiType);
         setTargetProdiIds(props.initialData.targetProdiIds || []);
         setTargetScopeType(props.initialData.targetScopeType);
@@ -90,7 +96,7 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         setCurrentId(undefined);
         setJudul('');
         setKonten('');
-        setTargetRole('semua');
+        setTargetRoles(['semua']);
         setTargetProdiType('semua');
         setTargetProdiIds([]);
         setTargetScopeType('umum');
@@ -125,7 +131,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
           id: currentId(),
           judul: judul().trim() || 'Draf Pengumuman',
           konten: konten(),
-          targetRole: targetRole(),
+          targetRole: targetRoles()[0] ?? 'semua',
+          targetRoles: targetRoles(),
           targetProdiType: targetProdiType(),
           targetProdiIds: targetProdiIds(),
           targetScopeType: targetScopeType(),
@@ -227,7 +234,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
         id: currentId(),
         judul: judul().trim(),
         konten: konten(),
-        targetRole: targetRole(),
+        targetRole: targetRoles()[0] ?? 'semua',
+        targetRoles: targetRoles(),
         targetProdiType: targetProdiType(),
         targetProdiIds: targetProdiIds(),
         targetScopeType: targetScopeType(),
@@ -442,33 +450,59 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
 
               {/* Target Role */}
               <div class="space-y-1.5">
-                <label class="block text-xs font-medium text-secondary-600 dark:text-secondary-400">
-                  Ditujukan Kepada (Role):
-                </label>
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-medium text-secondary-600 dark:text-secondary-400">
+                    Ditujukan Kepada (Role):
+                  </label>
+                  <span class="text-caption text-secondary-400">Dapat memilih lebih dari satu</span>
+                </div>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <For each={['semua', 'mahasiswa', 'dosen', 'admin'] as const}>
-                    {(role) => (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setTargetRole(role);
-                          triggerAutoSave();
-                        }}
-                        class={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-center ${
-                          targetRole() === role
-                            ? 'bg-[#0066cc] text-white border-[#0066cc]'
-                            : 'bg-white dark:bg-secondary-900 text-secondary-700 dark:text-secondary-300 border-secondary-200 dark:border-secondary-700 hover:border-secondary-300'
-                        }`}
-                      >
-                        {role === 'semua'
-                          ? 'Semua Civitas'
-                          : role === 'mahasiswa'
-                            ? 'Mahasiswa'
-                            : role === 'dosen'
-                              ? 'Dosen & Pengajar'
-                              : 'Admin / Staf'}
-                      </button>
-                    )}
+                    {(role) => {
+                      const isSelected = () => targetRoles().includes(role);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (role === 'semua') {
+                              setTargetRoles(['semua']);
+                            } else {
+                              const current = targetRoles().filter((r) => r !== 'semua');
+                              const exists = current.includes(role);
+                              let next: ('semua' | 'mahasiswa' | 'dosen' | 'admin')[];
+                              if (exists) {
+                                next = current.filter((r) => r !== role);
+                                if (next.length === 0) {
+                                  next = ['semua'];
+                                }
+                              } else {
+                                next = [...current, role];
+                              }
+                              setTargetRoles(next);
+                            }
+                            triggerAutoSave();
+                          }}
+                          class={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all text-center flex items-center justify-center gap-1.5 ${
+                            isSelected()
+                              ? 'bg-[#0066cc] text-white border-[#0066cc] shadow-sm'
+                              : 'bg-white dark:bg-secondary-900 text-secondary-700 dark:text-secondary-300 border-secondary-200 dark:border-secondary-700 hover:border-secondary-300'
+                          }`}
+                        >
+                          <Show when={isSelected()}>
+                            <span class="text-xs">✓</span>
+                          </Show>
+                          <span>
+                            {role === 'semua'
+                              ? 'Semua Civitas'
+                              : role === 'mahasiswa'
+                                ? 'Mahasiswa'
+                                : role === 'dosen'
+                                  ? 'Dosen & Pengajar'
+                                  : 'Admin / Staf'}
+                          </span>
+                        </button>
+                      );
+                    }}
                   </For>
                 </div>
               </div>
@@ -791,7 +825,8 @@ export function PengumumanFormModal(props: PengumumanFormModalProps) {
                     id: currentId(),
                     judul: judul().trim() || 'Draf Pengumuman',
                     konten: konten(),
-                    targetRole: targetRole(),
+                    targetRole: targetRoles()[0] ?? 'semua',
+                    targetRoles: targetRoles(),
                     targetProdiType: targetProdiType(),
                     targetProdiIds: targetProdiIds(),
                     targetScopeType: targetScopeType(),
