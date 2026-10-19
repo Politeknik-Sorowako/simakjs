@@ -373,4 +373,39 @@ describe('Tugas Akhir - Milestone 3: Pendaftaran & Penjadwalan Sidang Proposal',
       .limit(1);
     expect(sidangAfterAllAcc.statusRevisi).toBe('tuntas');
   });
+
+  it('7. Endpoint Rekap Kolektif Sidang (Batch) mengembalikan data sidang per prodi & periode', async () => {
+    const res = await app.handle(
+      new Request(`http://localhost/tugas-akhir/sidang/rekap-kolektif?programStudiId=${prodiId}&periodeId=20261`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${prodiToken}` },
+      }),
+    );
+    const body = (await res.json()) as {
+      data?: {
+        totalSidang: number;
+        totalMahasiswa: number;
+        exportRows: {
+          nim: string;
+          nama: string;
+          nilaiAkhir: string;
+          nilaiAkhirSkala100: string;
+          hurufMutu: string;
+          statusHasil: string;
+          statusRevisi: string;
+        }[];
+      };
+      error?: unknown;
+    };
+    expect(res.status).toBe(200);
+    expect(body.data?.exportRows).toBeDefined();
+    expect(body.data!.exportRows.length).toBeGreaterThan(0);
+
+    const row = body.data!.exportRows[0];
+    expect(row.nim).toBeDefined();
+    expect(row.nilaiAkhir).toBe('8.50');
+    expect(row.nilaiAkhirSkala100).toBe('85.00');
+    expect(row.hurufMutu).toBe('A');
+    expect(row.statusRevisi).toBe('TUNTAS');
+  });
 });

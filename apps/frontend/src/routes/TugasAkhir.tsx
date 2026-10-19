@@ -11,6 +11,7 @@ import { Table } from '../components/ui/Table';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { dosenController } from '../controllers/dosenController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
@@ -58,10 +59,13 @@ const STATUS_META: Record<
 export default function TugasAkhirPage() {
   const { user, hasRole } = useAuth();
   const { showToast } = useToast();
+  const workspace = useWorkspace();
 
   const isStaff = () => hasRole(['super_admin', 'admin', 'prodi', 'kaprodi', 'lppm']);
   const isLppmOrAdmin = () => hasRole(['super_admin', 'admin', 'lppm']);
   const isMahasiswa = () => hasRole(['mahasiswa']);
+
+  const [isExportingKolektif, setIsExportingKolektif] = createSignal(false);
 
   // Filters & Pagination
   const [statusFilter, setStatusFilter] = createSignal('');
@@ -932,6 +936,93 @@ export default function TugasAkhirPage() {
     }
   };
 
+  const handleExportKolektifExcel = async (jenisSidang: 'semua' | 'proposal' | 'akhir' = 'semua') => {
+    setIsExportingKolektif(true);
+    try {
+      const periodeId = workspace?.selectedPeriodeId() || undefined;
+      const prodiId = workspace?.selectedProdiId() || undefined;
+
+      const res = await tugasAkhirController.getRekapKolektifSidang({
+        periodeId: periodeId || undefined,
+        programStudiId: prodiId ? Number(prodiId) : undefined,
+        jenisSidang: jenisSidang === 'semua' ? undefined : jenisSidang,
+      });
+
+      if (!res.exportRows || res.exportRows.length === 0) {
+        showToast('Tidak ada data sidang yang ditemukan untuk diekspor pada filter ini.', 'error');
+        return;
+      }
+
+      const columns: ExportColumn[] = [
+        { header: 'No', accessor: 'no' },
+        { header: 'NIM', accessor: 'nim' },
+        { header: 'Nama Mahasiswa', accessor: 'nama' },
+        { header: 'Peran Tim', accessor: 'peran' },
+        { header: 'Kode TA', accessor: 'kodeTa' },
+        { header: 'Judul Tugas Akhir', accessor: 'judulTa' },
+        { header: 'Program Studi', accessor: 'programStudi' },
+        { header: 'Periode', accessor: 'periodeId' },
+        { header: 'Jenis Sidang', accessor: 'jenisSidang' },
+        { header: 'Tanggal Sidang', accessor: 'tanggalSidang' },
+        { header: 'Ruangan', accessor: 'ruangan' },
+        { header: 'Pembimbing 1', accessor: 'pembimbing1' },
+        { header: 'Pembimbing 2', accessor: 'pembimbing2' },
+        { header: 'Dewan Penguji', accessor: 'dewanPenguji' },
+        { header: 'Nilai Akhir (0-10)', accessor: 'nilaiAkhir' },
+        { header: 'Nilai Skala 100', accessor: 'nilaiAkhirSkala100' },
+        { header: 'Huruf Mutu', accessor: 'hurufMutu' },
+        { header: 'Indeks Mutu', accessor: 'indeksMutu' },
+        { header: 'Keputusan Sidang', accessor: 'statusHasil' },
+        { header: 'Status Revisi', accessor: 'statusRevisi' },
+        { header: 'Catatan Sidang', accessor: 'catatanSidang' },
+      ];
+
+      const fileName = `Rekap_Kolektif_Sidang_TA_${periodeId || 'SemuaPeriode'}_${jenisSidang}`;
+      exportToExcel(res.exportRows, columns, fileName);
+      showToast(`Berhasil mengekspor ${res.totalMahasiswa} data mahasiswa ke Excel.`, 'success');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengekspor rekap sidang kolektif', 'error');
+    } finally {
+      setIsExportingKolektif(false);
+    }
+  };
+
+  const handleExportKolektifCsv = async (jenisSidang: 'semua' | 'proposal' | 'akhir' = 'semua') => {
+    setIsExportingKolektif(true);
+    try {
+      const periodeId = workspace?.selectedPeriodeId() || undefined;
+      const prodiId = workspace?.selectedProdiId() || undefined;
+
+      const res = await tugasAkhirController.getRekapKolektifSidang({
+        periodeId: periodeId || undefined,
+        programStudiId: prodiId ? Number(prodiId) : undefined,
+        jenisSidang: jenisSidang === 'semua' ? undefined : jenisSidang,
+      });
+
+      if (!res.exportRows || res.exportRows.length === 0) {
+        showToast('Tidak ada data sidang yang ditemukan untuk diekspor pada filter ini.', 'error');
+        return;
+      }
+
+      const columns: ExportColumn[] = [
+        { header: 'nim', accessor: 'nim' },
+        { header: 'nama', accessor: 'nama' },
+        { header: 'nilai', accessor: 'nilaiAkhir' },
+        { header: 'nilai_skala_100', accessor: 'nilaiAkhirSkala100' },
+        { header: 'huruf_mutu', accessor: 'hurufMutu' },
+        { header: 'keterangan', accessor: 'statusHasil' },
+      ];
+
+      const fileName = `Nilai_TA_Input_Nilai_${periodeId || 'Semua'}_${jenisSidang}`;
+      exportToCSV(res.exportRows, columns, fileName);
+      showToast(`Berhasil mengekspor ${res.totalMahasiswa} data format CSV (/input-nilai).`, 'success');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengekspor CSV /input-nilai', 'error');
+    } finally {
+      setIsExportingKolektif(false);
+    }
+  };
+
   const handleSubmitRevisi = async (e: Event) => {
     e.preventDefault();
     const ta = sidangTa();
@@ -1113,6 +1204,62 @@ export default function TugasAkhirPage() {
             </p>
           </div>
           <div class="flex items-center gap-3">
+            <Show when={isStaff()}>
+              <DropdownMenu
+                position="right"
+                disabled={isExportingKolektif()}
+                triggerAriaLabel="Ekspor Rekap Nilai Sidang Kolektif"
+                triggerClass="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-full bg-white dark:bg-secondary-800 border border-hairline dark:border-secondary-700 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-ink dark:text-pearl transition-all shadow-2xs active:scale-95 disabled:opacity-50"
+                trigger={
+                  <>
+                    <svg
+                      class="w-4 h-4 text-emerald-600 dark:text-emerald-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span>{isExportingKolektif() ? 'Mengekspor...' : 'Ekspor Rekap Sidang'}</span>
+                    <svg class="w-3.5 h-3.5 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                }
+                items={[
+                  {
+                    label: 'Rekap Semua Sidang (Excel)',
+                    icon: '📊',
+                    onClick: () => handleExportKolektifExcel('semua'),
+                    disabled: isExportingKolektif(),
+                  },
+                  {
+                    label: 'Rekap Sidang Proposal (Excel)',
+                    icon: '📑',
+                    onClick: () => handleExportKolektifExcel('proposal'),
+                    disabled: isExportingKolektif(),
+                  },
+                  {
+                    label: 'Rekap Sidang Akhir (Excel)',
+                    icon: '🎓',
+                    onClick: () => handleExportKolektifExcel('akhir'),
+                    disabled: isExportingKolektif(),
+                  },
+                  { separator: true },
+                  {
+                    label: 'Template Impor /input-nilai (CSV)',
+                    icon: '📥',
+                    onClick: () => handleExportKolektifCsv('semua'),
+                    disabled: isExportingKolektif(),
+                  },
+                ]}
+              />
+            </Show>
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
               <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

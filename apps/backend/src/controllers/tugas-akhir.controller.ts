@@ -526,6 +526,41 @@ export class TugasAkhirController {
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getRekapKolektifSidang({ query, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const q = query as {
+        periodeId?: string;
+        programStudiId?: string;
+        jenisSidang?: 'proposal' | 'kemajuan' | 'akhir' | 'semua';
+        statusHasil?: string;
+      };
+
+      const prodiId = q.programStudiId ? parseInt(q.programStudiId, 10) : undefined;
+
+      const data = await TugasAkhirSidangService.getRekapKolektifSidang(
+        {
+          periodeId: q.periodeId,
+          programStudiId: isNaN(prodiId as number) ? undefined : prodiId,
+          jenisSidang: q.jenisSidang,
+          statusHasil: q.statusHasil,
+        },
+        user,
+      );
+
+      return { data };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat rekap kolektif sidang' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
   static async submitRevisiSidang({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
     try {
       const user = await getCurrentUser();
