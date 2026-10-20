@@ -1,3 +1,4 @@
+import { ProdiScopeService } from '../services/prodi-scope.service';
 import {
   type CreateTugasAkhirInput,
   type ReviewTopikInput,
@@ -12,12 +13,18 @@ import {
   type UpdateLogbookInput,
 } from '../services/tugas-akhir-bimbingan.service';
 import {
+  type CreateRubrikKriteriaInput,
+  TugasAkhirRubrikService,
+  type UpdateRubrikKriteriaInput,
+} from '../services/tugas-akhir-rubrik.service';
+import {
   type DaftarSidangInput,
   type FinalisasiSidangInput,
   type InputNilaiSidangInput,
   type JadwalSidangInput,
   TugasAkhirSidangService,
 } from '../services/tugas-akhir-sidang.service';
+import { hasRole } from '../utils/role';
 import type { AuthContext } from '../utils/types';
 
 export class TugasAkhirController {
@@ -611,6 +618,153 @@ export class TugasAkhirController {
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal memverifikasi revisi penguji' };
+    }
+  }
+
+  // Backlog 3: Manajemen Rubrik Kriteria Penilaian TA per Program Studi
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async getRubrikKriteriaByProdi({ query, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      const q = query as { programStudiId?: string | number; jenisSidang?: string };
+      const prodiId = Number(q.programStudiId);
+      if (!prodiId || isNaN(prodiId)) {
+        set.status = 400;
+        return { error: 'programStudiId tidak valid' };
+      }
+
+      const canAccess = await ProdiScopeService.canAccessProdi(user, prodiId);
+      if (!canAccess) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Program studi di luar lingkup wewenang Anda.' };
+      }
+
+      const items = await TugasAkhirRubrikService.getByProdiAndJenis(prodiId, q.jenisSidang);
+      return { data: items };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memuat rubrik kriteria' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async createRubrikKriteria({ body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      if (!hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya kaprodi/admin yang berwenang mengelola rubrik kriteria.' };
+      }
+
+      const input = body as CreateRubrikKriteriaInput;
+      const canAccess = await ProdiScopeService.canAccessProdi(user, input.programStudiId);
+      if (!canAccess) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Program studi di luar lingkup wewenang Anda.' };
+      }
+
+      const created = await TugasAkhirRubrikService.create(input);
+      set.status = 201;
+      return { data: created, message: 'Kriteria rubrik berhasil ditambahkan.' };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menambahkan kriteria rubrik' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async updateRubrikKriteria({ params, body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      if (!hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya kaprodi/admin yang berwenang mengelola rubrik kriteria.' };
+      }
+
+      const rubrikId = Number(params.rubrikId);
+      if (!rubrikId || isNaN(rubrikId)) {
+        set.status = 400;
+        return { error: 'ID kriteria rubrik tidak valid' };
+      }
+
+      const updated = await TugasAkhirRubrikService.update(rubrikId, body as UpdateRubrikKriteriaInput);
+      return { data: updated, message: 'Kriteria rubrik berhasil diperbarui.' };
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal memperbarui kriteria rubrik' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async deleteRubrikKriteria({ params, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      if (!hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya kaprodi/admin yang berwenang mengelola rubrik kriteria.' };
+      }
+
+      const rubrikId = Number(params.rubrikId);
+      if (!rubrikId || isNaN(rubrikId)) {
+        set.status = 400;
+        return { error: 'ID kriteria rubrik tidak valid' };
+      }
+
+      const res = await TugasAkhirRubrikService.delete(rubrikId);
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menghapus kriteria rubrik' };
+    }
+  }
+
+  // biome-ignore lint/suspicious/noExplicitAny: Elysia framework requirement
+  static async salinTemplateRubrik({ body, set, getCurrentUser }: AuthContext<any, any, any>): Promise<any> {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        set.status = 401;
+        return { error: 'Sesi tidak valid' };
+      }
+
+      if (!hasRole(user, ['super_admin', 'admin', 'prodi', 'kaprodi'])) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Hanya kaprodi/admin yang berwenang mengelola rubrik kriteria.' };
+      }
+
+      const b = body as { programStudiId: number; jenisSidang: 'proposal' | 'kemajuan' | 'akhir' };
+      const canAccess = await ProdiScopeService.canAccessProdi(user, b.programStudiId);
+      if (!canAccess) {
+        set.status = 403;
+        return { error: 'Akses ditolak. Program studi di luar lingkup wewenang Anda.' };
+      }
+
+      const res = await TugasAkhirRubrikService.salinTemplateStandar(b.programStudiId, b.jenisSidang);
+      set.status = 201;
+      return res;
+    } catch (e: unknown) {
+      set.status = 400;
+      return { error: e instanceof Error ? e.message : 'Gagal menyalin template standar rubrik' };
     }
   }
 }
