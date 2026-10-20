@@ -297,3 +297,55 @@ export const rekapKolektifSidangQuery = t.Object({
 export const rekapKolektifSidangSchema = {
   query: rekapKolektifSidangQuery,
 };
+
+// Backlog 3: Manajemen Rubrik Kriteria Tugas Akhir per Program Studi
+export const getRubrikKriteriaProdiQuery = t.Object({
+  programStudiId: t.Numeric(),
+  jenisSidang: t.Optional(t.Union([t.Literal('proposal'), t.Literal('kemajuan'), t.Literal('akhir')])),
+});
+
+export const getRubrikKriteriaProdiSchema = {
+  query: getRubrikKriteriaProdiQuery,
+};
+
+export const createRubrikKriteriaBody = t.Object({
+  programStudiId: t.Integer(),
+  jenisSidang: t.Union([t.Literal('proposal'), t.Literal('kemajuan'), t.Literal('akhir')]),
+  kode: t.String({ minLength: 1, maxLength: 20 }),
+  nama: t.String({ minLength: 2, maxLength: 150 }),
+  kategori: t.Optional(
+    t.Union([t.Literal('pembimbingan'), t.Literal('alat_mesin'), t.Literal('laporan'), t.Literal('umum')]),
+  ),
+  deskripsi: t.Optional(t.Union([t.String(), t.Null()])),
+  bobot: t.Integer({ minimum: 1, maximum: 100 }),
+  isIndividu: t.Optional(t.Boolean()),
+  urutan: t.Optional(t.Integer()),
+});
+
+export const createRubrikKriteriaSchema = {
+  body: createRubrikKriteriaBody,
+};
+
+export const updateRubrikKriteriaParam = t.Object({
+  rubrikId: t.Numeric(),
+});
+
+export const updateRubrikKriteriaBody = t.Partial(createRubrikKriteriaBody);
+
+export const updateRubrikKriteriaSchema = {
+  params: updateRubrikKriteriaParam,
+  body: updateRubrikKriteriaBody,
+};
+
+export const deleteRubrikKriteriaSchema = {
+  params: updateRubrikKriteriaParam,
+};
+
+export const salinTemplateRubrikBody = t.Object({
+  programStudiId: t.Integer(),
+  jenisSidang: t.Union([t.Literal('proposal'), t.Literal('kemajuan'), t.Literal('akhir')]),
+});
+
+export const salinTemplateRubrikSchema = {
+  body: salinTemplateRubrikBody,
+};

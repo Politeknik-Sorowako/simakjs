@@ -16,6 +16,7 @@ import { dosenController } from '../controllers/dosenController';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { prodiController } from '../controllers/prodiController';
 import {
+  type CreateRubrikKriteriaPayload,
   type CreateTugasAkhirPayload,
   type FinalisasiSidangPayload,
   type InputNilaiSidangPayload,
@@ -249,6 +250,28 @@ export default function TugasAkhirPage() {
   const [finalisasiBatasRevisi, setFinalisasiBatasRevisi] = createSignal('');
   const [finalisasiCatatan, setFinalisasiCatatan] = createSignal('');
   const [isSubmittingFinalisasi, setIsSubmittingFinalisasi] = createSignal(false);
+
+  // Backlog 3: Modal Kelola Rubrik Kriteria Tugas Akhir (Kaprodi / Admin)
+  const [showRubrikModal, setShowRubrikModal] = createSignal(false);
+  const [rubrikProdiId, setRubrikProdiId] = createSignal<number | null>(null);
+  const [rubrikJenisSidang, setRubrikJenisSidang] = createSignal<'proposal' | 'kemajuan' | 'akhir'>('akhir');
+  const [rubrikList, setRubrikList] = createSignal<RubrikKriteriaItem[]>([]);
+  const [isLoadingRubrik, setIsLoadingRubrik] = createSignal(false);
+  const [isSalinTemplate, setIsSalinTemplate] = createSignal(false);
+
+  // Form Tambah / Edit Kriteria
+  const [showRubrikForm, setShowRubrikForm] = createSignal(false);
+  const [editingRubrikId, setEditingRubrikId] = createSignal<number | null>(null);
+  const [formRubrikKode, setFormRubrikKode] = createSignal('');
+  const [formRubrikNama, setFormRubrikNama] = createSignal('');
+  const [formRubrikKategori, setFormRubrikKategori] = createSignal<'pembimbingan' | 'alat_mesin' | 'laporan' | 'umum'>(
+    'umum',
+  );
+  const [formRubrikDeskripsi, setFormRubrikDeskripsi] = createSignal('');
+  const [formRubrikBobot, setFormRubrikBobot] = createSignal<number>(20);
+  const [formRubrikIsIndividu, setFormRubrikIsIndividu] = createSignal(false);
+  const [formRubrikUrutan, setFormRubrikUrutan] = createSignal<number>(1);
+  const [isSubmittingRubrikForm, setIsSubmittingRubrikForm] = createSignal(false);
 
   // Review Modal (Kaprodi / Prodi / Admin / LPPM)
   const [showReviewModal, setShowReviewModal] = createSignal(false);
@@ -1190,6 +1213,161 @@ export default function TugasAkhirPage() {
     }
   };
 
+  // Handlers untuk Rubrik Kriteria per Prodi
+  const loadRubrikKriteriaProdi = async (pId: number, jenis: 'proposal' | 'kemajuan' | 'akhir') => {
+    setIsLoadingRubrik(true);
+    try {
+      const data = await tugasAkhirController.getRubrikKriteriaByProdi(pId, jenis);
+      setRubrikList(data);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal memuat kriteria rubrik', 'error');
+    } finally {
+      setIsLoadingRubrik(false);
+    }
+  };
+
+  const handleOpenRubrikModal = () => {
+    // Defaultkan ke prodi pertama user / prodi filter / prodi pertama di prodiList
+    const pList = prodiList() || [];
+    const defaultProdiId = workspace?.selectedProdiId()
+      ? Number(workspace.selectedProdiId())
+      : pList.length > 0
+        ? Number(pList[0].value)
+        : null;
+
+    setRubrikProdiId(defaultProdiId);
+    setRubrikJenisSidang('akhir');
+    setShowRubrikForm(false);
+    setEditingRubrikId(null);
+    setShowRubrikModal(true);
+
+    if (defaultProdiId) {
+      loadRubrikKriteriaProdi(defaultProdiId, 'akhir');
+    }
+  };
+
+  const handleSalinTemplateRubrik = async () => {
+    const pId = rubrikProdiId();
+    if (!pId) {
+      showToast('Pilih Program Studi terlebih dahulu.', 'error');
+      return;
+    }
+    const jenis = rubrikJenisSidang();
+    if (
+      !confirm(
+        `Salin template standar resmi BPA 2025 untuk jenis sidang "${jenis.toUpperCase()}"? Butir kriteria standar akan ditambahkan ke program studi ini.`,
+      )
+    ) {
+      return;
+    }
+
+    setIsSalinTemplate(true);
+    try {
+      const res = await tugasAkhirController.salinTemplateRubrik(pId, jenis);
+      showToast(res.message, 'success');
+      await loadRubrikKriteriaProdi(pId, jenis);
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menyalin template standar', 'error');
+    } finally {
+      setIsSalinTemplate(false);
+    }
+  };
+
+  const handleOpenAddRubrik = () => {
+    setEditingRubrikId(null);
+    setFormRubrikKode('');
+    setFormRubrikNama('');
+    setFormRubrikKategori(rubrikJenisSidang() === 'akhir' ? 'pembimbingan' : 'umum');
+    setFormRubrikDeskripsi('');
+    setFormRubrikBobot(20);
+    setFormRubrikIsIndividu(false);
+    setFormRubrikUrutan(rubrikList().length + 1);
+    setShowRubrikForm(true);
+  };
+
+  const handleOpenEditRubrik = (item: RubrikKriteriaItem) => {
+    setEditingRubrikId(item.id);
+    setFormRubrikKode(item.kode || '');
+    setFormRubrikNama(item.nama || item.namaKriteria || '');
+    setFormRubrikKategori(item.kategori || 'umum');
+    setFormRubrikDeskripsi(item.deskripsi || '');
+    setFormRubrikBobot(Number(item.bobot ?? item.bobotPersen ?? 10));
+    setFormRubrikIsIndividu(!!item.isIndividu);
+    setFormRubrikUrutan(item.urutan || 1);
+    setShowRubrikForm(true);
+  };
+
+  const handleSaveRubrikSubmit = async (e: Event) => {
+    e.preventDefault();
+    const pId = rubrikProdiId();
+    if (!pId) {
+      showToast('Pilih Program Studi terlebih dahulu.', 'error');
+      return;
+    }
+    if (!formRubrikKode().trim() || !formRubrikNama().trim()) {
+      showToast('Kode dan Nama kriteria wajib diisi.', 'error');
+      return;
+    }
+    if (formRubrikBobot() <= 0 || formRubrikBobot() > 100) {
+      showToast('Bobot harus berada di antara 1 dan 100%.', 'error');
+      return;
+    }
+
+    setIsSubmittingRubrikForm(true);
+    try {
+      if (editingRubrikId()) {
+        await tugasAkhirController.updateRubrikKriteria(editingRubrikId()!, {
+          kode: formRubrikKode().trim().toUpperCase(),
+          nama: formRubrikNama().trim(),
+          kategori: formRubrikKategori(),
+          deskripsi: formRubrikDeskripsi().trim() || null,
+          bobot: Number(formRubrikBobot()),
+          isIndividu: formRubrikIsIndividu(),
+          urutan: Number(formRubrikUrutan()),
+        });
+        showToast('Kriteria rubrik berhasil diperbarui.', 'success');
+      } else {
+        await tugasAkhirController.createRubrikKriteria({
+          programStudiId: pId,
+          jenisSidang: rubrikJenisSidang(),
+          kode: formRubrikKode().trim().toUpperCase(),
+          nama: formRubrikNama().trim(),
+          kategori: formRubrikKategori(),
+          deskripsi: formRubrikDeskripsi().trim() || null,
+          bobot: Number(formRubrikBobot()),
+          isIndividu: formRubrikIsIndividu(),
+          urutan: Number(formRubrikUrutan()),
+        });
+        showToast('Kriteria rubrik baru berhasil ditambahkan.', 'success');
+      }
+
+      setShowRubrikForm(false);
+      await loadRubrikKriteriaProdi(pId, rubrikJenisSidang());
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menyimpan kriteria rubrik', 'error');
+    } finally {
+      setIsSubmittingRubrikForm(false);
+    }
+  };
+
+  const handleDeleteRubrik = async (id: number, nama: string) => {
+    if (!confirm(`Hapus atau nonaktifkan kriteria "${nama}"?`)) return;
+    try {
+      const res = await tugasAkhirController.deleteRubrikKriteria(id);
+      showToast(res.message, 'success');
+      if (rubrikProdiId()) {
+        await loadRubrikKriteriaProdi(rubrikProdiId()!, rubrikJenisSidang());
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus kriteria rubrik', 'error');
+    }
+  };
+
+  // Helper kalkulasi total bobot rubrik
+  const totalBobotRubrik = () => {
+    return rubrikList().reduce((acc, curr) => acc + (Number(curr.bobot ?? curr.bobotPersen) || 0), 0);
+  };
+
   const tableHeaders = ['Kode & Judul', 'Tipe & Karya', 'Pengusul / Anggota', 'Pembimbing', 'Status', 'Aksi'];
 
   return (
@@ -1259,6 +1437,17 @@ export default function TugasAkhirPage() {
                   },
                 ]}
               />
+              <Button variant="secondary" onClick={handleOpenRubrikModal}>
+                <svg class="w-4 h-4 mr-2 text-action" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                  />
+                </svg>
+                Kelola Rubrik Nilai
+              </Button>
             </Show>
             <Button variant="primary" onClick={() => setShowCreateModal(true)}>
               <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -3983,6 +4172,365 @@ export default function TugasAkhirPage() {
 
             <div class="flex justify-end pt-4 border-t border-hairline dark:border-hairline-dark">
               <Button type="button" variant="ghost" onClick={() => setShowSidangModal(false)}>
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </Show>
+
+      {/* BACKLOG 3: MODAL KELOLA RUBRIK KRITERIA TUGAS AKHIR */}
+      <Show when={showRubrikModal()}>
+        <Modal
+          title="Manajemen Rubrik Kriteria Penilaian Tugas Akhir"
+          isOpen={showRubrikModal()}
+          onClose={() => setShowRubrikModal(false)}
+          maxWidth="xl"
+        >
+          <div class="space-y-5 max-h-[80vh] overflow-y-auto px-1">
+            {/* Filter Prodi & Pilihan Sidang */}
+            <div class="p-4 bg-secondary-50/70 dark:bg-secondary-900/40 rounded-xl border border-hairline dark:border-hairline-dark flex flex-col md:flex-row items-center justify-between gap-4">
+              <div class="w-full md:w-1/2">
+                <label class="block text-fine font-semibold text-secondary-600 dark:text-secondary-300 mb-1">
+                  Program Studi *
+                </label>
+                <select
+                  value={rubrikProdiId() ?? ''}
+                  onChange={(e) => {
+                    const val = e.currentTarget.value ? Number(e.currentTarget.value) : null;
+                    setRubrikProdiId(val);
+                    if (val) loadRubrikKriteriaProdi(val, rubrikJenisSidang());
+                    else setRubrikList([]);
+                  }}
+                  class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                >
+                  <option value="">-- Pilih Program Studi --</option>
+                  <For each={prodiList() || []}>{(p) => <option value={p.value}>{p.label}</option>}</For>
+                </select>
+              </div>
+
+              {/* Tab Tahapan Sidang */}
+              <div class="flex items-center gap-1.5 bg-white dark:bg-canvas-dark p-1 rounded-xl border border-hairline dark:border-hairline-dark">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRubrikJenisSidang('proposal');
+                    if (rubrikProdiId()) loadRubrikKriteriaProdi(rubrikProdiId()!, 'proposal');
+                  }}
+                  class={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    rubrikJenisSidang() === 'proposal'
+                      ? 'bg-action text-white shadow-2xs'
+                      : 'text-secondary-600 hover:text-ink dark:text-secondary-300'
+                  }`}
+                >
+                  Sidang Proposal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRubrikJenisSidang('kemajuan');
+                    if (rubrikProdiId()) loadRubrikKriteriaProdi(rubrikProdiId()!, 'kemajuan');
+                  }}
+                  class={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    rubrikJenisSidang() === 'kemajuan'
+                      ? 'bg-action text-white shadow-2xs'
+                      : 'text-secondary-600 hover:text-ink dark:text-secondary-300'
+                  }`}
+                >
+                  Sidang Kemajuan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRubrikJenisSidang('akhir');
+                    if (rubrikProdiId()) loadRubrikKriteriaProdi(rubrikProdiId()!, 'akhir');
+                  }}
+                  class={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                    rubrikJenisSidang() === 'akhir'
+                      ? 'bg-action text-white shadow-2xs'
+                      : 'text-secondary-600 hover:text-ink dark:text-secondary-300'
+                  }`}
+                >
+                  Sidang Akhir
+                </button>
+              </div>
+            </div>
+
+            {/* Rekap Total Bobot & Actions */}
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white dark:bg-canvas-dark p-4 rounded-xl border border-hairline dark:border-hairline-dark">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-caption font-bold text-ink dark:text-pearl">Total Bobot Terpasang:</span>
+                  <span
+                    class={`text-caption font-bold px-2 py-0.5 rounded-full ${
+                      totalBobotRubrik() === 100
+                        ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    {totalBobotRubrik()}%{' '}
+                    {totalBobotRubrik() === 100 ? '✓ Sesuai (100%)' : `(Selisih ${100 - totalBobotRubrik()}%)`}
+                  </span>
+                </div>
+                <Show when={rubrikJenisSidang() === 'akhir'}>
+                  <p class="text-fine text-secondary-500 mt-1">
+                    Pedoman Vokasi BPA: Kategori A Pembimbingan (30%), Kategori B Alat/Mesin (35%), Kategori C Laporan
+                    (35%).
+                  </p>
+                </Show>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSalinTemplateRubrik}
+                  disabled={!rubrikProdiId() || isSalinTemplate()}
+                >
+                  <svg class="w-3.5 h-3.5 mr-1 text-action" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"
+                    />
+                  </svg>
+                  {isSalinTemplate() ? 'Menyalin...' : 'Salin Template Standar BPA'}
+                </Button>
+                <Button variant="primary" size="sm" onClick={handleOpenAddRubrik} disabled={!rubrikProdiId()}>
+                  <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Tambah Kriteria
+                </Button>
+              </div>
+            </div>
+
+            {/* Form Tambah/Edit Butir Kriteria */}
+            <Show when={showRubrikForm()}>
+              <form
+                onSubmit={handleSaveRubrikSubmit}
+                class="p-4 bg-pearl dark:bg-canvas-dark/60 rounded-xl border-2 border-action/40 space-y-3"
+              >
+                <div class="flex items-center justify-between pb-2 border-b border-hairline dark:border-hairline-dark">
+                  <h4 class="text-caption font-bold text-ink dark:text-pearl">
+                    {editingRubrikId() ? 'Ubah Butir Kriteria Rubrik' : 'Tambah Butir Kriteria Rubrik Baru'}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowRubrikForm(false)}
+                    class="text-secondary-400 hover:text-secondary-600 text-xs font-semibold"
+                  >
+                    Batal
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">Kode *</label>
+                    <Input
+                      placeholder="Misal: A.1 / P.1 / C.2"
+                      value={formRubrikKode()}
+                      onInput={(e) => setFormRubrikKode(e.currentTarget.value)}
+                    />
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">Nama Kriteria *</label>
+                    <Input
+                      placeholder="Nama aspek atau butir penilaian..."
+                      value={formRubrikNama()}
+                      onInput={(e) => setFormRubrikNama(e.currentTarget.value)}
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <div>
+                    <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">Kategori *</label>
+                    <select
+                      value={formRubrikKategori()}
+                      onChange={(e) =>
+                        setFormRubrikKategori(
+                          e.currentTarget.value as 'pembimbingan' | 'alat_mesin' | 'laporan' | 'umum',
+                        )
+                      }
+                      class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                    >
+                      <option value="umum">Umum</option>
+                      <option value="pembimbingan">Kategori A - Pembimbingan</option>
+                      <option value="alat_mesin">Kategori B - Alat / Mesin</option>
+                      <option value="laporan">Kategori C - Laporan TA</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">Bobot (%) *</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={String(formRubrikBobot())}
+                      onInput={(e) => setFormRubrikBobot(parseInt(e.currentTarget.value, 10) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">Tipe Penilaian</label>
+                    <select
+                      value={formRubrikIsIndividu() ? 'true' : 'false'}
+                      onChange={(e) => setFormRubrikIsIndividu(e.currentTarget.value === 'true')}
+                      class="w-full border border-hairline dark:border-hairline-dark rounded-xl px-3 py-2 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                    >
+                      <option value="false">Nilai Kelompok (Tim)</option>
+                      <option value="true">Nilai Individu (Per Mhs)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">Urutan Tampil</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={99}
+                      value={String(formRubrikUrutan())}
+                      onInput={(e) => setFormRubrikUrutan(parseInt(e.currentTarget.value, 10) || 1)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-fine font-semibold text-ink dark:text-pearl mb-1">
+                    Deskripsi & Panduan Penilaian
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Keterangan atau indikator capaian penilaian bagi penguji..."
+                    value={formRubrikDeskripsi()}
+                    onInput={(e) => setFormRubrikDeskripsi(e.currentTarget.value)}
+                    class="w-full border border-hairline dark:border-hairline-dark rounded-xl p-2.5 text-table bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
+                  />
+                </div>
+
+                <div class="flex justify-end gap-2 pt-1">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowRubrikForm(false)}>
+                    Batal
+                  </Button>
+                  <Button type="submit" variant="primary" size="sm" disabled={isSubmittingRubrikForm()}>
+                    {isSubmittingRubrikForm()
+                      ? 'Menyimpan...'
+                      : editingRubrikId()
+                        ? 'Perbarui Kriteria'
+                        : 'Simpan Kriteria'}
+                  </Button>
+                </div>
+              </form>
+            </Show>
+
+            {/* Tabel Daftar Butir Rubrik */}
+            <div class="border border-hairline dark:border-hairline-dark rounded-xl overflow-hidden">
+              <Show
+                when={!isLoadingRubrik()}
+                fallback={<div class="p-8 text-center text-secondary-500">Memuat butir rubrik kriteria...</div>}
+              >
+                <Show
+                  when={rubrikList().length > 0}
+                  fallback={
+                    <div class="p-8 text-center text-secondary-500">
+                      <p class="font-medium">
+                        Belum ada butir kriteria rubrik kustom di database untuk program studi ini.
+                      </p>
+                      <p class="text-fine mt-1">
+                        Sistem saat ini menggunakan rubrik standar bawaan formulir resmi Politeknik Sorowako. Klik{' '}
+                        <strong>"Salin Template Standar BPA"</strong> di atas jika ingin menduplikasi dan
+                        mengkustomisasi bobot kriteria.
+                      </p>
+                    </div>
+                  }
+                >
+                  <table class="w-full text-left text-table">
+                    <thead class="bg-secondary-50 dark:bg-secondary-900/60 text-secondary-600 dark:text-secondary-300 font-semibold border-b border-hairline dark:border-hairline-dark">
+                      <tr>
+                        <th class="py-2.5 px-3 w-12 text-center">No</th>
+                        <th class="py-2.5 px-3 w-20">Kode</th>
+                        <th class="py-2.5 px-3">Nama Kriteria</th>
+                        <th class="py-2.5 px-3 w-32">Kategori</th>
+                        <th class="py-2.5 px-3 w-24 text-center">Bobot</th>
+                        <th class="py-2.5 px-3 w-28 text-center">Tipe</th>
+                        <th class="py-2.5 px-3 w-28 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-hairline dark:divide-hairline-dark bg-white dark:bg-canvas-dark">
+                      <For each={rubrikList()}>
+                        {(item, idx) => (
+                          <tr class="hover:bg-secondary-50/50 dark:hover:bg-secondary-900/30 transition-colors">
+                            <td class="py-2.5 px-3 text-center text-secondary-500 text-fine">
+                              {item.urutan || idx() + 1}
+                            </td>
+                            <td class="py-2.5 px-3 font-mono font-bold text-action text-fine">{item.kode}</td>
+                            <td class="py-2.5 px-3">
+                              <p class="font-medium text-ink dark:text-pearl">{item.nama || item.namaKriteria}</p>
+                              <Show when={item.deskripsi}>
+                                <p class="text-fine text-secondary-500 mt-0.5 line-clamp-1">{item.deskripsi}</p>
+                              </Show>
+                            </td>
+                            <td class="py-2.5 px-3 text-fine">
+                              <Badge
+                                variant={
+                                  item.kategori === 'pembimbingan'
+                                    ? 'info'
+                                    : item.kategori === 'alat_mesin'
+                                      ? 'warning'
+                                      : item.kategori === 'laporan'
+                                        ? 'success'
+                                        : 'default'
+                                }
+                              >
+                                {item.kategori === 'pembimbingan'
+                                  ? 'A. Pembimbingan'
+                                  : item.kategori === 'alat_mesin'
+                                    ? 'B. Alat/Mesin'
+                                    : item.kategori === 'laporan'
+                                      ? 'C. Laporan'
+                                      : 'Umum'}
+                              </Badge>
+                            </td>
+                            <td class="py-2.5 px-3 text-center font-bold text-ink dark:text-pearl">
+                              {item.bobot ?? item.bobotPersen}%
+                            </td>
+                            <td class="py-2.5 px-3 text-center text-fine">
+                              {item.isIndividu ? (
+                                <span class="text-indigo-600 dark:text-indigo-400 font-medium">Individu</span>
+                              ) : (
+                                <span class="text-secondary-600 dark:text-secondary-400">Kelompok</span>
+                              )}
+                            </td>
+                            <td class="py-2.5 px-3 text-center">
+                              <div class="flex items-center justify-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditRubrik(item)}
+                                  class="text-action hover:text-action-ondark font-semibold text-fine"
+                                >
+                                  Edit
+                                </button>
+                                <span class="text-secondary-300">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteRubrik(item.id, item.nama || item.kode || '')}
+                                  class="text-danger-600 hover:text-danger-800 font-semibold text-fine"
+                                >
+                                  Hapus
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </Show>
+              </Show>
+            </div>
+
+            <div class="flex justify-end pt-3 border-t border-hairline dark:border-hairline-dark">
+              <Button type="button" variant="secondary" onClick={() => setShowRubrikModal(false)}>
                 Tutup
               </Button>
             </div>
