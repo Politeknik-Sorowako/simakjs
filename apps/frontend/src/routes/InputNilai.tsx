@@ -1,5 +1,5 @@
 import { useSearchParams } from '@solidjs/router';
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import logoImg from '../assets/logo.png';
 import KomposisiBobotPanel from '../components/input-nilai/KomposisiBobotPanel';
 import SubNilaiPopup from '../components/input-nilai/SubNilaiPopup';
@@ -11,6 +11,7 @@ import { ImportCsvModal } from '../components/ui/ImportCsvModal';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
+import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -212,15 +213,54 @@ export default function InputNilai() {
   });
 
   // 3. Load students and their grades for selected class
-  const [studentsGrades, { refetch: refetchStudentsGrades }] = createResource(selectedKelasId, async (kelasId) => {
-    if (!kelasId) return [];
+  // Dimuat via signal + fetch manual (bukan createResource) agar saat auto-save berjalan
+  // di latar belakang, pembacaan data TIDAK me-refresh atau me-replace seluruh halaman
+  // lewat Suspense global di App.tsx. Pembaruan terjadi in-place pada tabel.
+  const [studentsGrades, setStudentsGrades] = createSignal<NilaiMahasiswa[]>([]);
+  const [studentsGradesLoading, setStudentsGradesLoading] = createSignal(false);
+
+  const fetchStudentsGrades = async (silent = false) => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) {
+      setStudentsGrades([]);
+      return;
+    }
+    if (!silent) setStudentsGradesLoading(true);
     try {
       const list = await khsController.getNilaiMahasiswa(kelasId);
-      return (list || []).sort((a, b) => (a.nim || '').localeCompare(b.nim || '', 'id'));
+      const sorted = (list || []).sort((a, b) => (a.nim || '').localeCompare(b.nim || '', 'id'));
+      setStudentsGrades((prev) => {
+        if (!silent || prev.length === 0) return sorted;
+        // Pertahankan referensi objek saat pembaruan diam-diam agar baris tabel dan fokus input tidak hilang/reset
+        const prevMap = new Map(prev.map((s) => [s.krsId, s]));
+        return sorted.map((newStud) => {
+          const oldStud = prevMap.get(newStud.krsId);
+          if (oldStud) {
+            Object.assign(oldStud, newStud);
+            return oldStud;
+          }
+          return newStud;
+        });
+      });
     } catch {
-      return [];
+      if (!silent) {
+        toast.showToast('Gagal memuat nilai mahasiswa', 'error');
+      }
+    } finally {
+      if (!silent) setStudentsGradesLoading(false);
     }
+  };
+
+  createEffect(() => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) {
+      setStudentsGrades([]);
+      return;
+    }
+    void fetchStudentsGrades(false);
   });
+
+  const refetchStudentsGrades = (silent = false) => fetchStudentsGrades(silent);
 
   // 3b. Load sub-komponen definitions for selected class
   const [subComponents, { refetch: refetchSubComponents }] = createResource(selectedKelasId, async (kelasId) => {
@@ -1364,15 +1404,21 @@ export default function InputNilai() {
     const comps = validComponents();
     if (!list || !comps) return;
 
+    const savedKeys: string[] = [];
     const payload = list
       .map((stud) => ({
         krsId: stud.krsId,
         nilaiKomponenList: comps
-          .map((c) => ({
-            komponenNilaiId: c.id,
-            nilai: parseGradeInput(inputGrades()[`${stud.krsId}_${c.id}`]),
-          }))
-          .filter((v): v is { komponenNilaiId: number; nilai: number } => v.nilai !== null),
+          .map((c) => {
+            const rawVal = inputGrades()[`${stud.krsId}_${c.id}`];
+            const parsed = parseGradeInput(rawVal);
+            if (parsed !== null) {
+              savedKeys.push(`g:${stud.krsId}_${c.id}`);
+              return { komponenNilaiId: c.id, nilai: parsed };
+            }
+            return null;
+          })
+          .filter((v): v is { komponenNilaiId: number; nilai: number } => v !== null),
       }))
       .filter((item) => item.nilaiKomponenList.length > 0);
 
@@ -1384,8 +1430,13 @@ export default function InputNilai() {
           .flatMap((c) => subsByKomponen().get(c.id) || [])
           .map((sub) => {
             if (sub.id === undefined) return null;
-            const nilai = parseGradeInput(inputSubGrades()[`${stud.krsId}_${sub.id}`]);
-            return nilai === null ? null : { subKomponenNilaiId: sub.id, nilai };
+            const rawVal = inputSubGrades()[`${stud.krsId}_${sub.id}`];
+            const parsed = parseGradeInput(rawVal);
+            if (parsed !== null) {
+              savedKeys.push(`s:${stud.krsId}_${sub.id}`);
+              return { subKomponenNilaiId: sub.id, nilai: parsed };
+            }
+            return null;
           })
           .filter((v): v is { subKomponenNilaiId: number; nilai: number } => v !== null),
       }))
@@ -1405,7 +1456,11 @@ export default function InputNilai() {
       if (payload.length > 0) {
         await khsController.saveNilaiMahasiswa(kelasId, payload);
       }
-      clearDirty('s:', 'g:');
+      setDirtyKeys((prev) => {
+        const next = new Set(prev);
+        for (const k of savedKeys) next.delete(k);
+        return next;
+      });
       setAutoAggKeys(new Set<string>());
       setLastSavedAt(new Date());
       if (silent) {
@@ -1414,7 +1469,7 @@ export default function InputNilai() {
         toast.showToast('Nilai komponen berhasil disimpan.', 'success');
         setAutoSaveStatus('saved');
       }
-      refetchStudentsGrades();
+      await fetchStudentsGrades(silent);
     } catch (e: unknown) {
       if (silent) {
         setAutoSaveStatus('error');
@@ -1968,121 +2023,174 @@ export default function InputNilai() {
             </div>
           }
         >
-          <Show when={selectedRombelId() && currentRombel()}>
-            <div class="flex flex-col gap-3 mb-6">
-              <div class="bg-action-50 border border-brand-200 text-action p-4 rounded-2xl text-xs flex flex-wrap items-center justify-between gap-3 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
-                <div class="flex flex-col gap-0.5">
-                  <span class="font-bold text-sm">Mode Rombel: {currentRombel()?.namaGroup}</span>
-                  <span>
-                    Menampilkan {visibleStudents().length} dari {(studentsGrades() || []).length} mahasiswa KRS pada
-                    kelas ini.
-                  </span>
+          <Suspense fallback={<TableLoadingFallback />}>
+            <Show when={selectedRombelId() && currentRombel()}>
+              <div class="flex flex-col gap-3 mb-6">
+                <div class="bg-action-50 border border-brand-200 text-action p-4 rounded-2xl text-xs flex flex-wrap items-center justify-between gap-3 dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                  <div class="flex flex-col gap-0.5">
+                    <span class="font-bold text-sm">Mode Rombel: {currentRombel()?.namaGroup}</span>
+                    <span>
+                      Menampilkan {visibleStudents().length} dari {(studentsGrades() || []).length} mahasiswa KRS pada
+                      kelas ini.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRombelId(null)}
+                    class="px-3 py-1.5 rounded-full bg-white text-action border border-brand-300 font-semibold hover:bg-action-100 active:scale-95 transition-all dark:bg-secondary-800 dark:text-brand-300 dark:border-brand-700"
+                  >
+                    Tampilkan semua mahasiswa
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRombelId(null)}
-                  class="px-3 py-1.5 rounded-full bg-white text-action border border-brand-300 font-semibold hover:bg-action-100 active:scale-95 transition-all dark:bg-secondary-800 dark:text-brand-300 dark:border-brand-700"
-                >
-                  Tampilkan semua mahasiswa
-                </button>
-              </div>
-              <Show when={rombelNonKrs().length > 0}>
-                <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-xs flex flex-col gap-1 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
-                  <span class="font-bold">Peringatan: {rombelNonKrs().length} anggota rombel belum terdaftar KRS</span>
-                  <span>
-                    Mahasiswa berikut tidak memiliki KRS di kelas induk sehingga nilainya tidak dapat disimpan lewat
-                    halaman ini:
-                  </span>
-                  <span class="font-medium">
-                    {rombelNonKrs()
-                      .map((m) => m.mahasiswa?.nama || `#${m.mahasiswaId}`)
-                      .join(', ')}
-                  </span>
-                </div>
-              </Show>
-            </div>
-          </Show>
-
-          {/* Rekap Pra-Simpan */}
-          <div class="bg-white rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
-            <button
-              type="button"
-              onClick={() => setShowRekap((v) => !v)}
-              class="w-full flex items-center justify-between px-6 py-4 text-left active:scale-[0.995] transition-transform"
-            >
-              <span class="flex flex-wrap items-center gap-2">
-                <h3 class="font-bold text-secondary-800 dark:text-white text-sm">Rekap Pra-Simpan</h3>
-                <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
-                  {rekapOverall().lengkap}/{rekapOverall().total} lengkap
-                </span>
-                <span class="text-[11px] px-2 py-0.5 rounded-full bg-action-50 text-action font-semibold dark:bg-brand-900/30 dark:text-brand-300">
-                  Rentang {nilaiEnvelope().min}-{nilaiEnvelope().max}
-                </span>
-                <Show when={dirtyCount() > 0}>
-                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold dark:bg-amber-900/30 dark:text-amber-400">
-                    {dirtyCount()} sel belum disimpan
-                  </span>
-                </Show>
-              </span>
-              <span class="text-secondary-400 text-xs">{showRekap() ? '▲' : '▼'}</span>
-            </button>
-            <Show when={showRekap()}>
-              <div class="px-6 pb-6 flex flex-col gap-5 border-t border-secondary-100 dark:border-secondary-800 pt-4">
-                <Show when={!isClassLocked()}>
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800/50 p-3">
-                      <p class="text-[10px] uppercase tracking-wider text-secondary-400 font-bold">Mahasiswa</p>
-                      <p class="text-lg font-bold text-secondary-800 dark:text-white">{rekapOverall().total}</p>
-                    </div>
-                    <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 p-3">
-                      <p class="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">NA Lengkap</p>
-                      <p class="text-lg font-bold text-emerald-700 dark:text-emerald-400">{rekapOverall().lengkap}</p>
-                    </div>
-                    <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-3">
-                      <p class="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Belum Lengkap</p>
-                      <p class="text-lg font-bold text-amber-700 dark:text-amber-400">{rekapOverall().belum}</p>
-                    </div>
-                    <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800/50 p-3">
-                      <p class="text-[10px] uppercase tracking-wider text-secondary-400 font-bold">Dipilih</p>
-                      <p class="text-lg font-bold text-secondary-800 dark:text-white">{selectedCount()}</p>
-                    </div>
+                <Show when={rombelNonKrs().length > 0}>
+                  <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl text-xs flex flex-col gap-1 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800">
+                    <span class="font-bold">
+                      Peringatan: {rombelNonKrs().length} anggota rombel belum terdaftar KRS
+                    </span>
+                    <span>
+                      Mahasiswa berikut tidak memiliki KRS di kelas induk sehingga nilainya tidak dapat disimpan lewat
+                      halaman ini:
+                    </span>
+                    <span class="font-medium">
+                      {rombelNonKrs()
+                        .map((m) => m.mahasiswa?.nama || `#${m.mahasiswaId}`)
+                        .join(', ')}
+                    </span>
                   </div>
                 </Show>
+              </div>
+            </Show>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Rekap Pra-Simpan */}
+            <div class="bg-white rounded-2xl border border-secondary-100 dark:bg-secondary-900 dark:border-secondary-800">
+              <button
+                type="button"
+                onClick={() => setShowRekap((v) => !v)}
+                class="w-full flex items-center justify-between px-6 py-4 text-left active:scale-[0.995] transition-transform"
+              >
+                <span class="flex flex-wrap items-center gap-2">
+                  <h3 class="font-bold text-secondary-800 dark:text-white text-sm">Rekap Pra-Simpan</h3>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
+                    {rekapOverall().lengkap}/{rekapOverall().total} lengkap
+                  </span>
+                  <span class="text-[11px] px-2 py-0.5 rounded-full bg-action-50 text-action font-semibold dark:bg-brand-900/30 dark:text-brand-300">
+                    Rentang {nilaiEnvelope().min}-{nilaiEnvelope().max}
+                  </span>
+                  <Show when={dirtyCount() > 0}>
+                    <span class="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold dark:bg-amber-900/30 dark:text-amber-400">
+                      {dirtyCount()} sel belum disimpan
+                    </span>
+                  </Show>
+                </span>
+                <span class="text-secondary-400 text-xs">{showRekap() ? '▲' : '▼'}</span>
+              </button>
+              <Show when={showRekap()}>
+                <div class="px-6 pb-6 flex flex-col gap-5 border-t border-secondary-100 dark:border-secondary-800 pt-4">
                   <Show when={!isClassLocked()}>
-                    {/* Panel Per Komponen */}
-                    <div class="rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowPanelKomponen((v) => !v)}
-                        class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
-                      >
-                        <span class="flex flex-wrap items-center gap-2">
-                          <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">Per Komponen</h4>
-                          <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
-                            {rekapKomponen().length} komponen
-                          </span>
-                        </span>
-                        <span class="text-secondary-400 text-xs">{showPanelKomponen() ? '▲' : '▼'}</span>
-                      </button>
-                      <Show when={showPanelKomponen()}>
-                        <Show
-                          when={rekapKomponen().length > 0}
-                          fallback={<p class="text-xs text-secondary-400 italic">Belum ada komponen.</p>}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800/50 p-3">
+                        <p class="text-[10px] uppercase tracking-wider text-secondary-400 font-bold">Mahasiswa</p>
+                        <p class="text-lg font-bold text-secondary-800 dark:text-white">{rekapOverall().total}</p>
+                      </div>
+                      <div class="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 p-3">
+                        <p class="text-[10px] uppercase tracking-wider text-emerald-600 font-bold">NA Lengkap</p>
+                        <p class="text-lg font-bold text-emerald-700 dark:text-emerald-400">{rekapOverall().lengkap}</p>
+                      </div>
+                      <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-3">
+                        <p class="text-[10px] uppercase tracking-wider text-amber-600 font-bold">Belum Lengkap</p>
+                        <p class="text-lg font-bold text-amber-700 dark:text-amber-400">{rekapOverall().belum}</p>
+                      </div>
+                      <div class="rounded-xl bg-secondary-50 dark:bg-secondary-800/50 p-3">
+                        <p class="text-[10px] uppercase tracking-wider text-secondary-400 font-bold">Dipilih</p>
+                        <p class="text-lg font-bold text-secondary-800 dark:text-white">{selectedCount()}</p>
+                      </div>
+                    </div>
+                  </Show>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <Show when={!isClassLocked()}>
+                      {/* Panel Per Komponen */}
+                      <div class="rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4">
+                        <button
+                          type="button"
+                          onClick={() => setShowPanelKomponen((v) => !v)}
+                          class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
                         >
+                          <span class="flex flex-wrap items-center gap-2">
+                            <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">Per Komponen</h4>
+                            <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
+                              {rekapKomponen().length} komponen
+                            </span>
+                          </span>
+                          <span class="text-secondary-400 text-xs">{showPanelKomponen() ? '▲' : '▼'}</span>
+                        </button>
+                        <Show when={showPanelKomponen()}>
+                          <Show
+                            when={rekapKomponen().length > 0}
+                            fallback={<p class="text-xs text-secondary-400 italic">Belum ada komponen.</p>}
+                          >
+                            <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+                              <For each={rekapKomponen()}>
+                                {(k) => (
+                                  <div class="flex items-center justify-between gap-2 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
+                                    <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200 truncate">
+                                      {k.nama} ({k.bobot}%)
+                                    </span>
+                                    <span class="text-[11px] text-secondary-500 whitespace-nowrap">
+                                      {k.filled}/{k.total} terisi
+                                      <Show when={k.min !== null}>
+                                        {' '}
+                                        • {k.min}–{k.max}
+                                      </Show>
+                                    </span>
+                                  </div>
+                                )}
+                              </For>
+                            </div>
+                          </Show>
+                        </Show>
+                      </div>
+
+                      {/* Panel Per Mahasiswa */}
+                      <div class="rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4">
+                        <button
+                          type="button"
+                          onClick={() => setShowPanelMahasiswa((v) => !v)}
+                          class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
+                        >
+                          <span class="flex flex-wrap items-center gap-2">
+                            <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
+                              Per Mahasiswa (NA Live vs Tersimpan)
+                            </h4>
+                            <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
+                              {rekapOverall().lengkap}/{rekapOverall().total}
+                            </span>
+                          </span>
+                          <span class="text-secondary-400 text-xs">{showPanelMahasiswa() ? '▲' : '▼'}</span>
+                        </button>
+                        <Show when={showPanelMahasiswa()}>
                           <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
-                            <For each={rekapKomponen()}>
-                              {(k) => (
+                            <For each={rekapRows()}>
+                              {(r) => (
                                 <div class="flex items-center justify-between gap-2 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
-                                  <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200 truncate">
-                                    {k.nama} ({k.bobot}%)
+                                  <span class="flex flex-col">
+                                    <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200">
+                                      {r.nama}
+                                    </span>
+                                    <span class="text-[10px] text-secondary-400 font-mono">{r.nim}</span>
                                   </span>
-                                  <span class="text-[11px] text-secondary-500 whitespace-nowrap">
-                                    {k.filled}/{k.total} terisi
-                                    <Show when={k.min !== null}>
-                                      {' '}
-                                      • {k.min}–{k.max}
+                                  <span class="flex items-center gap-2 text-[11px] whitespace-nowrap">
+                                    <span class="text-secondary-500">
+                                      {r.live ?? '-'}
+                                      <Show when={r.liveHuruf}> ({r.liveHuruf})</Show>
+                                    </span>
+                                    <Show when={r.delta !== null && r.delta !== 0}>
+                                      <span
+                                        class={`font-bold ${(r.delta ?? 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}
+                                      >
+                                        {(r.delta ?? 0) > 0 ? '+' : ''}
+                                        {r.delta}
+                                      </span>
                                     </Show>
                                   </span>
                                 </div>
@@ -2090,391 +2198,354 @@ export default function InputNilai() {
                             </For>
                           </div>
                         </Show>
-                      </Show>
-                    </div>
+                      </div>
+                    </Show>
 
-                    {/* Panel Per Mahasiswa */}
-                    <div class="rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4">
+                    {/* Panel Komposisi Bobot */}
+                    <div
+                      class={`rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4 ${
+                        isClassLocked() ? 'md:col-span-3' : ''
+                      }`}
+                    >
                       <button
                         type="button"
-                        onClick={() => setShowPanelMahasiswa((v) => !v)}
+                        onClick={() => setShowBobot((v) => !v)}
                         class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
                       >
                         <span class="flex flex-wrap items-center gap-2">
                           <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
-                            Per Mahasiswa (NA Live vs Tersimpan)
+                            Komposisi Bobot Nilai (%)
                           </h4>
                           <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
-                            {rekapOverall().lengkap}/{rekapOverall().total}
+                            Total {totalBobot()}%
                           </span>
+                          <Show when={isClassLocked()}>
+                            <span class="px-2.5 py-1 bg-action-50 text-action border border-action-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark">
+                              ⊘ Dikunci
+                            </span>
+                          </Show>
                         </span>
-                        <span class="text-secondary-400 text-xs">{showPanelMahasiswa() ? '▲' : '▼'}</span>
+                        <span class="text-secondary-400 text-xs">{showBobot() ? '▲' : '▼'}</span>
                       </button>
-                      <Show when={showPanelMahasiswa()}>
-                        <div class="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
-                          <For each={rekapRows()}>
-                            {(r) => (
-                              <div class="flex items-center justify-between gap-2 rounded-lg border border-secondary-100 dark:border-secondary-800 px-3 py-2">
-                                <span class="flex flex-col">
-                                  <span class="text-xs font-semibold text-secondary-700 dark:text-secondary-200">
-                                    {r.nama}
-                                  </span>
-                                  <span class="text-[10px] text-secondary-400 font-mono">{r.nim}</span>
-                                </span>
-                                <span class="flex items-center gap-2 text-[11px] whitespace-nowrap">
-                                  <span class="text-secondary-500">
-                                    {r.live ?? '-'}
-                                    <Show when={r.liveHuruf}> ({r.liveHuruf})</Show>
-                                  </span>
-                                  <Show when={r.delta !== null && r.delta !== 0}>
-                                    <span
-                                      class={`font-bold ${(r.delta ?? 0) > 0 ? 'text-emerald-600' : 'text-rose-600'}`}
-                                    >
-                                      {(r.delta ?? 0) > 0 ? '+' : ''}
-                                      {r.delta}
-                                    </span>
-                                  </Show>
-                                </span>
-                              </div>
-                            )}
-                          </For>
+                      <Show when={showBobot()}>
+                        <div>
+                          <KomposisiBobotPanel
+                            editableComponents={editableComponents()}
+                            komponenIdAt={(idx) => components()?.[idx]?.id}
+                            expandedKomponenId={expandedKomponenId()}
+                            expandedSubs={expandedSubs()}
+                            isLocked={isClassLocked()}
+                            rencanaEvalsCount={rencanaEvals()?.length || 0}
+                            totalBobot={totalBobot()}
+                            onToggleExpand={(id) => setExpandedKomponenId(expandedKomponenId() === id ? null : id)}
+                            onUpdateField={updateComponentField}
+                            onRemove={removeComponent}
+                            onAdd={addComponent}
+                            onSave={handleSaveComponents}
+                            onImportFromRps={handleImportFromRps}
+                            onSaveSub={handleSaveSub}
+                          />
                         </div>
                       </Show>
                     </div>
-                  </Show>
-
-                  {/* Panel Komposisi Bobot */}
-                  <div
-                    class={`rounded-xl border border-secondary-100 dark:border-secondary-800 flex flex-col gap-3 p-4 ${
-                      isClassLocked() ? 'md:col-span-3' : ''
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setShowBobot((v) => !v)}
-                      class="w-full flex items-center justify-between text-left active:scale-[0.995] transition-transform"
-                    >
-                      <span class="flex flex-wrap items-center gap-2">
-                        <h4 class="text-xs font-bold text-secondary-700 dark:text-secondary-200">
-                          Komposisi Bobot Nilai (%)
-                        </h4>
-                        <span class="text-[11px] px-2 py-0.5 rounded-full bg-secondary-100 text-secondary-600 font-semibold dark:bg-secondary-800 dark:text-secondary-300">
-                          Total {totalBobot()}%
-                        </span>
-                        <Show when={isClassLocked()}>
-                          <span class="px-2.5 py-1 bg-action-50 text-action border border-action-200 text-[10px] font-bold rounded-lg flex items-center gap-1 dark:bg-action-ondark/30 dark:text-action dark:text-action-ondark">
-                            ⊘ Dikunci
-                          </span>
-                        </Show>
-                      </span>
-                      <span class="text-secondary-400 text-xs">{showBobot() ? '▲' : '▼'}</span>
-                    </button>
-                    <Show when={showBobot()}>
-                      <div>
-                        <KomposisiBobotPanel
-                          editableComponents={editableComponents()}
-                          komponenIdAt={(idx) => components()?.[idx]?.id}
-                          expandedKomponenId={expandedKomponenId()}
-                          expandedSubs={expandedSubs()}
-                          isLocked={isClassLocked()}
-                          rencanaEvalsCount={rencanaEvals()?.length || 0}
-                          totalBobot={totalBobot()}
-                          onToggleExpand={(id) => setExpandedKomponenId(expandedKomponenId() === id ? null : id)}
-                          onUpdateField={updateComponentField}
-                          onRemove={removeComponent}
-                          onAdd={addComponent}
-                          onSave={handleSaveComponents}
-                          onImportFromRps={handleImportFromRps}
-                          onSaveSub={handleSaveSub}
-                        />
-                      </div>
-                    </Show>
                   </div>
-                </div>
-              </div>
-            </Show>
-          </div>
-
-          {/* Student Grades Table */}
-          <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
-            <div class="flex flex-col gap-3 border-b pb-3">
-              <div class="flex justify-between items-center">
-                <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
-                <Show when={isClassLocked()}>
-                  <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
-                    Nilai Kelas Telah Dikunci (Selesai)
-                  </span>
-                </Show>
-              </div>
-
-              {/* Focus selector — mode fokus satu komponen agar tabel mudah dibaca */}
-              <Show when={(components()?.length || 0) > 1}>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Fokus Kolom</span>
-                  <button
-                    type="button"
-                    onClick={() => setFocusKomponenId(null)}
-                    class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
-                      focusKomponenId() === null
-                        ? 'bg-action text-white border-action'
-                        : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
-                    }`}
-                  >
-                    Semua Komponen
-                  </button>
-                  <For each={validComponents()}>
-                    {(c) => (
-                      <button
-                        type="button"
-                        onClick={() => setFocusKomponenId(c.id)}
-                        class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
-                          focusKomponenId() === c.id
-                            ? 'bg-action text-white border-action'
-                            : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
-                        }`}
-                      >
-                        {c.nama} ({c.bobot}%)
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </Show>
-
-              <Show when={!isClassLocked()}>
-                {/* Bulk nilai awal — hanya mengisi sel kosong mahasiswa terpilih */}
-                <div class="flex flex-wrap items-end gap-2 bg-secondary-50 border border-secondary-100 rounded-xl p-3 dark:bg-secondary-800/50 dark:border-secondary-700">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">
-                      Nilai Awal (0-{nilaiEnvelope().max})
-                    </span>
-                    <input
-                      type="text"
-                      inputmode="decimal"
-                      placeholder="0.00"
-                      value={bulkValue()}
-                      onInput={(e) => setBulkValue(e.currentTarget.value.replace(/[^0-9.,]/g, ''))}
-                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs w-24 text-center focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
-                    />
-                  </div>
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Komponen</span>
-                    <select
-                      value={bulkKomponenId() ?? ''}
-                      onChange={(e) => setBulkKomponenId(e.currentTarget.value ? Number(e.currentTarget.value) : null)}
-                      class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
-                    >
-                      <option value="">-- Pilih Komponen --</option>
-                      <For each={validComponents()}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleBulkApply}
-                    disabled={selectedCount() === 0}
-                    class="px-3 py-1.5 rounded-full bg-action text-white font-bold text-xs hover:bg-action-dark active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Terapkan ke Terpilih
-                  </button>
-                  <Show when={selectedCount() > 0}>
-                    <span class="text-[11px] font-semibold text-brand-700 dark:text-brand-300">
-                      {selectedCount()} mahasiswa dipilih
-                    </span>
-                    <button
-                      type="button"
-                      onClick={clearSelection}
-                      class="text-[11px] font-semibold text-secondary-500 hover:text-rose-600 underline"
-                    >
-                      Bersihkan seleksi
-                    </button>
-                  </Show>
                 </div>
               </Show>
             </div>
 
-            {/* M2 / M3 — Nilai Komponen & Sub-Komponen */}
-            <Show
-              when={(components()?.length || 0) > 0}
-              fallback={
-                <div class="text-center py-12 text-secondary-400 italic">
-                  Harap tentukan dan simpan komponen bobot nilai terlebih dahulu sebelum menginput nilai mahasiswa.
+            {/* Student Grades Table */}
+            <div class="bg-white p-6 rounded-2xl border border-secondary-100 flex flex-col gap-4 overflow-x-auto dark:bg-secondary-900 dark:border-secondary-800">
+              <div class="flex flex-col gap-3 border-b pb-3">
+                <div class="flex justify-between items-center">
+                  <h3 class="font-bold text-secondary-800 dark:text-white">Daftar Mahasiswa & Pengisian Nilai</h3>
+                  <Show when={isClassLocked()}>
+                    <span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-100 text-xs font-extrabold rounded-xl dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                      Nilai Kelas Telah Dikunci (Selesai)
+                    </span>
+                  </Show>
                 </div>
-              }
-            >
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
-                    <th class="p-3 w-10 text-center">
-                      <input
-                        type="checkbox"
-                        aria-label="Pilih semua mahasiswa"
-                        checked={allVisibleSelected()}
-                        onChange={toggleSelectAll}
-                        class="rounded border-secondary-300 text-action focus:ring-action-focus"
-                      />
-                    </th>
-                    <th class="p-3">Mahasiswa</th>
-                    <For each={displayComponents()}>
+
+                {/* Focus selector — mode fokus satu komponen agar tabel mudah dibaca */}
+                <Show when={(components()?.length || 0) > 1}>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Fokus Kolom</span>
+                    <button
+                      type="button"
+                      onClick={() => setFocusKomponenId(null)}
+                      class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
+                        focusKomponenId() === null
+                          ? 'bg-action text-white border-action'
+                          : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
+                      }`}
+                    >
+                      Semua Komponen
+                    </button>
+                    <For each={validComponents()}>
                       {(c) => (
-                        <th class="p-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setFocusKomponenId(c.id)}
+                          class={`px-3 py-1 rounded-full text-[11px] font-semibold border transition-all active:scale-95 ${
+                            focusKomponenId() === c.id
+                              ? 'bg-action text-white border-action'
+                              : 'bg-white text-secondary-600 border-secondary-200 hover:border-brand-400 dark:bg-secondary-800 dark:text-secondary-200 dark:border-secondary-700'
+                          }`}
+                        >
                           {c.nama} ({c.bobot}%)
-                          <Show when={componentHasSub(c.id)}>
-                            <span class="ml-1" title="Memiliki sub-komponen">
-                              [S]
-                            </span>
-                          </Show>
-                        </th>
+                        </button>
                       )}
                     </For>
-                    <th class="p-3 text-center">Nilai Akhir</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
-                  <For
-                    each={visibleStudents()}
-                    fallback={
-                      <tr>
-                        <td
-                          colspan={(displayComponents()?.length || 0) + 3}
-                          class="p-4 text-center text-secondary-400 italic"
-                        >
-                          Tidak ada mahasiswa terdaftar di kelas ini.
-                        </td>
-                      </tr>
-                    }
-                  >
-                    {(stud) => (
-                      <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
-                        <td class="p-3 text-center">
+                  </div>
+                </Show>
+
+                <Show when={!isClassLocked()}>
+                  {/* Bulk nilai awal — hanya mengisi sel kosong mahasiswa terpilih */}
+                  <div class="flex flex-wrap items-end gap-2 bg-secondary-50 border border-secondary-100 rounded-xl p-3 dark:bg-secondary-800/50 dark:border-secondary-700">
+                    <div class="flex flex-col gap-1">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">
+                        Nilai Awal (0-{nilaiEnvelope().max})
+                      </span>
+                      <input
+                        type="text"
+                        inputmode="decimal"
+                        placeholder="0.00"
+                        value={bulkValue()}
+                        onInput={(e) => setBulkValue(e.currentTarget.value.replace(/[^0-9.,]/g, ''))}
+                        class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs w-24 text-center focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                      />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-secondary-400">Komponen</span>
+                      <select
+                        value={bulkKomponenId() ?? ''}
+                        onChange={(e) =>
+                          setBulkKomponenId(e.currentTarget.value ? Number(e.currentTarget.value) : null)
+                        }
+                        class="border border-secondary-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-action text-secondary-900 dark:border-secondary-700 dark:text-white dark:bg-secondary-900"
+                      >
+                        <option value="">-- Pilih Komponen --</option>
+                        <For each={validComponents()}>{(c) => <option value={c.id}>{c.nama}</option>}</For>
+                      </select>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleBulkApply}
+                      disabled={selectedCount() === 0}
+                      class="px-3 py-1.5 rounded-full bg-action text-white font-bold text-xs hover:bg-action-dark active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Terapkan ke Terpilih
+                    </button>
+                    <Show when={selectedCount() > 0}>
+                      <span class="text-[11px] font-semibold text-brand-700 dark:text-brand-300">
+                        {selectedCount()} mahasiswa dipilih
+                      </span>
+                      <button
+                        type="button"
+                        onClick={clearSelection}
+                        class="text-[11px] font-semibold text-secondary-500 hover:text-rose-600 underline"
+                      >
+                        Bersihkan seleksi
+                      </button>
+                    </Show>
+                  </div>
+                </Show>
+              </div>
+
+              {/* M2 / M3 — Nilai Komponen & Sub-Komponen */}
+              <Show
+                when={(components()?.length || 0) > 0}
+                fallback={
+                  <div class="text-center py-12 text-secondary-400 italic">
+                    Harap tentukan dan simpan komponen bobot nilai terlebih dahulu sebelum menginput nilai mahasiswa.
+                  </div>
+                }
+              >
+                <Show
+                  when={!studentsGradesLoading()}
+                  fallback={
+                    <div class="py-12 flex flex-col items-center justify-center gap-2 text-secondary-400">
+                      <div class="w-6 h-6 border-2 border-action border-t-transparent rounded-full animate-spin" />
+                      <span class="text-xs font-medium">Memuat data nilai mahasiswa...</span>
+                    </div>
+                  }
+                >
+                  <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr class="border-b border-secondary-100 bg-secondary-50/50 text-secondary-400 dark:text-secondary-200 uppercase tracking-wider font-bold dark:border-secondary-800 dark:bg-secondary-800">
+                        <th class="p-3 w-10 text-center">
                           <input
                             type="checkbox"
-                            aria-label={`Pilih ${stud.nama}`}
-                            checked={isKrsSelected(stud.krsId)}
-                            onChange={() => toggleKrsSelected(stud.krsId)}
+                            aria-label="Pilih semua mahasiswa"
+                            checked={allVisibleSelected()}
+                            onChange={toggleSelectAll}
                             class="rounded border-secondary-300 text-action focus:ring-action-focus"
                           />
-                        </td>
-                        <td class="p-3">
-                          <div class="flex items-center gap-2">
-                            <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
-                            <div class="flex flex-col">
-                              <span class="font-bold text-sm text-secondary-800 dark:text-white">{stud.nama}</span>
-                              <span class="text-[11px] text-secondary-400">NIM: {stud.nim}</span>
-                            </div>
-                          </div>
-                        </td>
+                        </th>
+                        <th class="p-3">Mahasiswa</th>
                         <For each={displayComponents()}>
                           {(c) => (
-                            <td class="p-3 text-center align-top">
-                              <Show
-                                when={componentHasSub(c.id)}
-                                fallback={
-                                  <input
-                                    type="text"
-                                    placeholder="0.00"
-                                    disabled={isClassLocked()}
-                                    value={
-                                      inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
-                                        ? inputGrades()[`${stud.krsId}_${c.id}`]
-                                        : ''
-                                    }
-                                    onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
-                                    class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
-                                      isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
-                                        ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                        : isDirty(`g:${stud.krsId}_${c.id}`)
-                                          ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                                          : 'border-secondary-200 focus:border-action focus:ring-action-focus/20 dark:border-secondary-700'
-                                    }`}
-                                  />
-                                }
-                              >
-                                <div class="flex flex-col items-center gap-1">
+                            <th class="p-3 text-center">
+                              {c.nama} ({c.bobot}%)
+                              <Show when={componentHasSub(c.id)}>
+                                <span class="ml-1" title="Memiliki sub-komponen">
+                                  [S]
+                                </span>
+                              </Show>
+                            </th>
+                          )}
+                        </For>
+                        <th class="p-3 text-center">Nilai Akhir</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 text-secondary-600 dark:text-secondary-200 font-medium">
+                      <For
+                        each={visibleStudents()}
+                        fallback={
+                          <tr>
+                            <td
+                              colspan={(displayComponents()?.length || 0) + 3}
+                              class="p-4 text-center text-secondary-400 italic"
+                            >
+                              Tidak ada mahasiswa terdaftar di kelas ini.
+                            </td>
+                          </tr>
+                        }
+                      >
+                        {(stud) => (
+                          <tr class="hover:bg-secondary-50/20 dark:hover:bg-secondary-800/20">
+                            <td class="p-3 text-center">
+                              <input
+                                type="checkbox"
+                                aria-label={`Pilih ${stud.nama}`}
+                                checked={isKrsSelected(stud.krsId)}
+                                onChange={() => toggleKrsSelected(stud.krsId)}
+                                class="rounded border-secondary-300 text-action focus:ring-action-focus"
+                              />
+                            </td>
+                            <td class="p-3">
+                              <div class="flex items-center gap-2">
+                                <StudentAvatar foto={stud.foto} nama={stud.nama} nim={stud.nim} size="sm" />
+                                <div class="flex flex-col">
+                                  <span class="font-bold text-sm text-secondary-800 dark:text-white">{stud.nama}</span>
+                                  <span class="text-[11px] text-secondary-400">NIM: {stud.nim}</span>
+                                </div>
+                              </div>
+                            </td>
+                            <For each={displayComponents()}>
+                              {(c) => (
+                                <td class="p-3 text-center align-top">
                                   <Show
-                                    when={overrideL1Key() === `${stud.krsId}_${c.id}`}
+                                    when={componentHasSub(c.id)}
                                     fallback={
-                                      <span
-                                        class={`text-sm font-bold cursor-pointer select-none rounded px-1 hover:bg-secondary-100 dark:hover:bg-secondary-800 ${
-                                          isDirty(`g:${stud.krsId}_${c.id}`)
-                                            ? 'text-amber-600 dark:text-amber-400'
-                                            : 'text-secondary-800 dark:text-white'
-                                        }`}
-                                        title="Double-click untuk override nilai komponen"
-                                        onDblClick={() => beginL1Override(stud.krsId, c.id)}
-                                      >
-                                        {komponenAggLabel(stud.krsId, c.id, c.bobot)}
-                                      </span>
-                                    }
-                                  >
-                                    <div class="flex items-center gap-1">
                                       <input
                                         type="text"
                                         placeholder="0.00"
                                         disabled={isClassLocked()}
-                                        ref={(el) => el?.focus()}
-                                        value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
+                                        value={
+                                          inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
+                                            ? inputGrades()[`${stud.krsId}_${c.id}`]
+                                            : ''
+                                        }
                                         onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
-                                        onBlur={() => setOverrideL1Key(null)}
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Enter') setOverrideL1Key(null);
-                                          if (e.key === 'Escape') resetL1ToAuto(stud.krsId, c.id);
-                                        }}
-                                        class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
+                                        class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                           isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
                                             ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                            : 'border-brand-400 focus:border-action focus:ring-action-focus/20 dark:border-brand-700'
+                                            : isDirty(`g:${stud.krsId}_${c.id}`)
+                                              ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
+                                              : 'border-secondary-200 focus:border-action focus:ring-action-focus/20 dark:border-secondary-700'
                                         }`}
                                       />
+                                    }
+                                  >
+                                    <div class="flex flex-col items-center gap-1">
+                                      <Show
+                                        when={overrideL1Key() === `${stud.krsId}_${c.id}`}
+                                        fallback={
+                                          <span
+                                            class={`text-sm font-bold cursor-pointer select-none rounded px-1 hover:bg-secondary-100 dark:hover:bg-secondary-800 ${
+                                              isDirty(`g:${stud.krsId}_${c.id}`)
+                                                ? 'text-amber-600 dark:text-amber-400'
+                                                : 'text-secondary-800 dark:text-white'
+                                            }`}
+                                            title="Double-click untuk override nilai komponen"
+                                            onDblClick={() => beginL1Override(stud.krsId, c.id)}
+                                          >
+                                            {komponenAggLabel(stud.krsId, c.id, c.bobot)}
+                                          </span>
+                                        }
+                                      >
+                                        <div class="flex items-center gap-1">
+                                          <input
+                                            type="text"
+                                            placeholder="0.00"
+                                            disabled={isClassLocked()}
+                                            ref={(el) => el?.focus()}
+                                            value={inputGrades()[`${stud.krsId}_${c.id}`] ?? ''}
+                                            onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
+                                            onBlur={() => setOverrideL1Key(null)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter') setOverrideL1Key(null);
+                                              if (e.key === 'Escape') resetL1ToAuto(stud.krsId, c.id);
+                                            }}
+                                            class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
+                                              isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
+                                                ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
+                                                : 'border-brand-400 focus:border-action focus:ring-action-focus/20 dark:border-brand-700'
+                                            }`}
+                                          />
+                                          <button
+                                            type="button"
+                                            disabled={isClassLocked()}
+                                            onMouseDown={(e) => {
+                                              e.preventDefault();
+                                              resetL1ToAuto(stud.krsId, c.id);
+                                            }}
+                                            title="Kembali ke agregat sub-komponen"
+                                            class="text-action hover:text-action text-sm font-bold px-1"
+                                          >
+                                            ↩
+                                          </button>
+                                        </div>
+                                      </Show>
                                       <button
                                         type="button"
                                         disabled={isClassLocked()}
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          resetL1ToAuto(stud.krsId, c.id);
-                                        }}
-                                        title="Kembali ke agregat sub-komponen"
-                                        class="text-action hover:text-action text-sm font-bold px-1"
+                                        onClick={() => openSubPopup(stud, c)}
+                                        title="Input nilai sub-komponen"
+                                        class="px-2.5 py-1 rounded-full bg-action-50 text-action border border-brand-200 text-[10px] font-semibold hover:bg-action-100 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800"
                                       >
-                                        ↩
+                                        Input Sub [S]
                                       </button>
                                     </div>
                                   </Show>
-                                  <button
-                                    type="button"
-                                    disabled={isClassLocked()}
-                                    onClick={() => openSubPopup(stud, c)}
-                                    title="Input nilai sub-komponen"
-                                    class="px-2.5 py-1 rounded-full bg-action-50 text-action border border-brand-200 text-[10px] font-semibold hover:bg-action-100 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800"
-                                  >
-                                    Input Sub [S]
-                                  </button>
-                                </div>
+                                </td>
+                              )}
+                            </For>
+                            <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white sticky right-0 bg-white dark:bg-secondary-900">
+                              <Show
+                                when={getDynamicFinalGrade(stud)}
+                                fallback={
+                                  <Show when={stud.nilaiAngka} fallback="-">
+                                    {stud.nilaiAngka} ({stud.nilaiHuruf})
+                                  </Show>
+                                }
+                              >
+                                {(res) => (
+                                  <span>
+                                    {res().score} ({res().huruf})
+                                  </span>
+                                )}
                               </Show>
                             </td>
-                          )}
-                        </For>
-                        <td class="p-3 text-center font-extrabold text-secondary-800 dark:text-white sticky right-0 bg-white dark:bg-secondary-900">
-                          <Show
-                            when={getDynamicFinalGrade(stud)}
-                            fallback={
-                              <Show when={stud.nilaiAngka} fallback="-">
-                                {stud.nilaiAngka} ({stud.nilaiHuruf})
-                              </Show>
-                            }
-                          >
-                            {(res) => (
-                              <span>
-                                {res().score} ({res().huruf})
-                              </span>
-                            )}
-                          </Show>
-                        </td>
-                      </tr>
-                    )}
-                  </For>
-                </tbody>
-              </table>
-            </Show>
-          </div>
+                          </tr>
+                        )}
+                      </For>
+                    </tbody>
+                  </table>
+                </Show>
+              </Show>
+            </div>
+          </Suspense>
         </Show>
       </div>
 
