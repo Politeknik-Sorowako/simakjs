@@ -265,7 +265,16 @@ export default function Yudisium() {
                   </div>
                   <form onSubmit={handleStudentSubmit} class="flex flex-col gap-4">
                     <div class="flex flex-col gap-1.5">
-                      <label class="text-xs font-bold text-secondary-700">Judul Tugas Akhir / Skripsi</label>
+                      <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-secondary-700 dark:text-secondary-300">
+                          Judul Tugas Akhir / Skripsi
+                        </label>
+                        <Show when={judulTa()}>
+                          <span class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            ✓ Terkoneksi Modul TA
+                          </span>
+                        </Show>
+                      </div>
                       <textarea
                         rows="3"
                         placeholder="Tulis judul TA Anda secara lengkap..."
@@ -273,6 +282,10 @@ export default function Yudisium() {
                         onInput={(e) => setJudulTa(e.currentTarget.value)}
                         class="border border-secondary-200 rounded-xl p-3 text-xs focus:outline-none focus:border-action resize-none text-secondary-900 dark:border-secondary-700 dark:text-white"
                       />
+                      <p class="text-[11px] text-secondary-400">
+                        Mahasiswa yang telah dinyatakan lulus Tugas Akhir akan otomatis terisi judul resminya dari modul
+                        Tugas Akhir.
+                      </p>
                     </div>
 
                     <div class="flex flex-col gap-1.5">

@@ -195,7 +195,7 @@ export default function TugasAkhirPage() {
   const [sidangActiveTab, setSidangActiveTab] = createSignal<'daftar' | 'jadwal' | 'nilai' | 'hasil'>('daftar');
 
   // Form Pendaftaran Sidang
-  const [daftarJenisSidang, setDaftarJenisSidang] = createSignal<'proposal' | 'akhir'>('proposal');
+  const [daftarJenisSidang, setDaftarJenisSidang] = createSignal<'proposal' | 'kemajuan' | 'akhir'>('proposal');
   const [daftarBerkasProposalUrl, setDaftarBerkasProposalUrl] = createSignal('');
   const [daftarBuktiKompensasiUrl, setDaftarBuktiKompensasiUrl] = createSignal('');
   const [daftarBuktiPlagiasiUrl, setDaftarBuktiPlagiasiUrl] = createSignal('');
@@ -2890,7 +2890,11 @@ export default function TugasAkhirPage() {
                         <div class="p-4 bg-white dark:bg-canvas-dark rounded-2xl border border-hairline dark:border-hairline-dark space-y-2">
                           <div class="flex items-center justify-between">
                             <span class="text-caption font-bold text-ink dark:text-pearl">
-                              {s.jenisSidang === 'proposal' ? 'Sidang Proposal (Sempro)' : 'Sidang Akhir (Pendadaran)'}
+                              {s.jenisSidang === 'proposal'
+                                ? 'Sidang Proposal (Sempro)'
+                                : s.jenisSidang === 'kemajuan'
+                                  ? 'Sidang Kemajuan (Semhas)'
+                                  : 'Sidang Akhir (Pendadaran)'}
                             </span>
                             <Badge
                               variant={
@@ -2976,10 +2980,13 @@ export default function TugasAkhirPage() {
                       <label class="text-fine font-semibold text-secondary-500">Jenis Sidang:</label>
                       <select
                         value={daftarJenisSidang()}
-                        onChange={(e) => setDaftarJenisSidang(e.currentTarget.value as 'proposal' | 'akhir')}
+                        onChange={(e) =>
+                          setDaftarJenisSidang(e.currentTarget.value as 'proposal' | 'kemajuan' | 'akhir')
+                        }
                         class="border border-hairline dark:border-hairline-dark rounded-xl px-2.5 py-1 text-fine bg-white dark:bg-canvas-dark text-ink dark:text-pearl"
                       >
-                        <option value="proposal">Sidang Proposal</option>
+                        <option value="proposal">Sidang Proposal (Sempro)</option>
+                        <option value="kemajuan">Sidang Kemajuan (Semhas)</option>
                         <option value="akhir">Sidang Akhir (Pendadaran)</option>
                       </select>
                     </div>
@@ -2987,8 +2994,12 @@ export default function TugasAkhirPage() {
 
                   <div class="p-3 bg-action/5 rounded-xl border border-action/20 text-fine text-action">
                     Pastikan seluruh pembimbing telah memberikan ACC{' '}
-                    {daftarJenisSidang() === 'proposal' ? 'Sidang Proposal' : 'Sidang Akhir'} sebelum mengajukan
-                    pendaftaran.
+                    {daftarJenisSidang() === 'proposal'
+                      ? 'Sidang Proposal'
+                      : daftarJenisSidang() === 'kemajuan'
+                        ? 'Sidang Kemajuan'
+                        : 'Sidang Akhir'}{' '}
+                    sebelum mengajukan pendaftaran.
                   </div>
 
                   <div>
