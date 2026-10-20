@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray } from 'drizzle-orm';
 import {
   dosen,
   mahasiswa,
+  pengajuanYudisium,
   periodeAkademik,
   programStudi,
   tugasAkhir,
@@ -337,6 +338,47 @@ export class TugasAkhirSidangService {
             kategori: 'umum',
             nama: 'Presentasi & Penguasaan Materi Ilmiah',
             bobot: 30,
+            isIndividu: true,
+            urutan: 4,
+          },
+        ];
+      }
+
+      if (jenisSidang === 'kemajuan') {
+        return [
+          {
+            id: 151,
+            kode: 'K.1',
+            kategori: 'umum',
+            nama: 'Kemajuan Pengerjaan Alat / Prototipe (Fisik / Desain)',
+            bobot: 35,
+            isIndividu: false,
+            urutan: 1,
+          },
+          {
+            id: 152,
+            kode: 'K.2',
+            kategori: 'umum',
+            nama: 'Kesesuaian dengan Metodologi & Jadwal Pelaksanaan',
+            bobot: 20,
+            isIndividu: false,
+            urutan: 2,
+          },
+          {
+            id: 153,
+            kode: 'K.3',
+            kategori: 'umum',
+            nama: 'Draft Naskah Laporan Kemajuan (Bab 1 s/d Bab 4)',
+            bobot: 20,
+            isIndividu: false,
+            urutan: 3,
+          },
+          {
+            id: 154,
+            kode: 'K.4',
+            kategori: 'umum',
+            nama: 'Presentasi Kemajuan & Pemahaman Solusi Kendala',
+            bobot: 25,
             isIndividu: true,
             urutan: 4,
           },
@@ -752,6 +794,42 @@ export class TugasAkhirSidangService {
         olehUserId: user.id,
       });
 
+      // Sinkronisasi otomatis ke pengajuan_yudisium untuk seluruh anggota tim saat TA lulus
+      if (nextTaStatus === 'lulus') {
+        const anggotaList = await tx
+          .select({ mahasiswaId: tugasAkhirAnggota.mahasiswaId })
+          .from(tugasAkhirAnggota)
+          .where(and(eq(tugasAkhirAnggota.tugasAkhirId, taId), eq(tugasAkhirAnggota.statusKonfirmasi, 'diterima')));
+
+        for (const ang of anggotaList) {
+          const [existingYudisium] = await tx
+            .select({ id: pengajuanYudisium.id })
+            .from(pengajuanYudisium)
+            .where(eq(pengajuanYudisium.mahasiswaId, ang.mahasiswaId))
+            .limit(1);
+
+          if (existingYudisium) {
+            await tx
+              .update(pengajuanYudisium)
+              .set({
+                judulTa: ta.judul,
+                updatedAt: new Date(),
+              })
+              .where(eq(pengajuanYudisium.id, existingYudisium.id));
+          } else {
+            await tx.insert(pengajuanYudisium).values({
+              mahasiswaId: ang.mahasiswaId,
+              judulTa: ta.judul,
+              skorToefl: 450,
+              bebasPerpustakaan: false,
+              bebasLab: false,
+              buktiPembayaranWisuda: false,
+              status: 'diajukan',
+            });
+          }
+        }
+      }
+
       return finalizedSidang;
     });
   }
@@ -952,6 +1030,41 @@ export class TugasAkhirSidangService {
             alasan: 'Seluruh dewan penguji telah menyetujui revisi naskah akhir (Revisi Tuntas).',
             olehUserId: user.id,
           });
+
+          // Sinkronisasi otomatis ke pengajuan_yudisium untuk seluruh anggota tim
+          const [taRow] = await tx.select().from(tugasAkhir).where(eq(tugasAkhir.id, taId)).limit(1);
+          const anggotaList = await tx
+            .select({ mahasiswaId: tugasAkhirAnggota.mahasiswaId })
+            .from(tugasAkhirAnggota)
+            .where(and(eq(tugasAkhirAnggota.tugasAkhirId, taId), eq(tugasAkhirAnggota.statusKonfirmasi, 'diterima')));
+
+          for (const ang of anggotaList) {
+            const [existingYudisium] = await tx
+              .select({ id: pengajuanYudisium.id })
+              .from(pengajuanYudisium)
+              .where(eq(pengajuanYudisium.mahasiswaId, ang.mahasiswaId))
+              .limit(1);
+
+            if (existingYudisium) {
+              await tx
+                .update(pengajuanYudisium)
+                .set({
+                  judulTa: taRow?.judul || '',
+                  updatedAt: new Date(),
+                })
+                .where(eq(pengajuanYudisium.id, existingYudisium.id));
+            } else {
+              await tx.insert(pengajuanYudisium).values({
+                mahasiswaId: ang.mahasiswaId,
+                judulTa: taRow?.judul || '',
+                skorToefl: 450,
+                bebasPerpustakaan: false,
+                bebasLab: false,
+                buktiPembayaranWisuda: false,
+                status: 'diajukan',
+              });
+            }
+          }
         }
       }
 
