@@ -43,8 +43,10 @@ export class KhsController {
       }
     }
 
+    const isMahasiswa = hasRole(user, ['mahasiswa']);
+
     try {
-      const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
+      const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId, isMahasiswa);
       const response: Record<string, unknown> = { blocked: false, ...khs };
 
       // Nomor semester aktif (berbasis angkatan + periode − cuti), independen KRS.
@@ -108,8 +110,10 @@ export class KhsController {
       return { error: 'Mahasiswa dengan NIM tersebut tidak ditemukan.' };
     }
 
+    const isMahasiswa = hasRole(user, ['mahasiswa']);
+
     try {
-      const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId);
+      const khs = await KhsService.getKhs(targetMhsId, targetPeriodeId, isMahasiswa);
       const response: Record<string, unknown> = { blocked: false, ...khs };
 
       // Nomor semester aktif (berbasis angkatan + periode − cuti), independen KRS.
@@ -213,8 +217,10 @@ export class KhsController {
       }
     }
 
+    const isMahasiswa = hasRole(user, ['mahasiswa']);
+
     try {
-      return await KhsService.getTranskrip(targetMhsId);
+      return await KhsService.getTranskrip(targetMhsId, isMahasiswa);
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses Transkrip Nilai.' };
@@ -288,7 +294,8 @@ export class KhsController {
     }
 
     try {
-      return await KhsService.getRincianKomponen(targetMhsId, kelasKuliahId);
+      const isMahasiswa = hasRole(user, ['mahasiswa']);
+      return await KhsService.getRincianKomponen(targetMhsId, kelasKuliahId, isMahasiswa);
     } catch (err: unknown) {
       set.status = 400;
       return { error: err instanceof Error ? err.message : 'Gagal memproses rincian komponen.' };

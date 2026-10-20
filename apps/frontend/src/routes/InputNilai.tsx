@@ -27,7 +27,13 @@ import { rombelPraktikumController } from '../controllers/rombelPraktikumControl
 import { rpsController } from '../controllers/rpsController';
 import { systemController } from '../controllers/systemController';
 import { isHeaderRow } from '../utils/csv';
-import { type ExportColumn, exportToCSV, exportToExcelMultipleSheets, exportToPDF } from '../utils/export';
+import {
+  type ExportColumn,
+  exportToCSV,
+  exportToExcel,
+  exportToExcelMultipleSheets,
+  exportToPDF,
+} from '../utils/export';
 
 type ImportTemplate = 'akhir' | 'komponen' | 'sub';
 
@@ -85,6 +91,8 @@ export default function InputNilai() {
     grades: Record<string, string>;
     subGrades: Record<string, string>;
   }>({ grades: {}, subGrades: {} });
+  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [lastSavedAt, setLastSavedAt] = createSignal<Date | null>(null);
 
   // 1. Filter periode & program studi (default: periode aktif + prodi workspace admin)
   const workspace = useWorkspace();
@@ -1125,7 +1133,59 @@ export default function InputNilai() {
       });
 
       exportToCSV(rows, columns, `${exportFilename()}_template`);
-      toast.showToast('Template terisi berhasil diunduh.', 'success');
+      toast.showToast('Template terisi (CSV) berhasil diunduh.', 'success');
+    } catch (e: unknown) {
+      toast.showToast((e as Error).message || 'Gagal mengunduh template.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadExcelTemplate = async () => {
+    const kelasId = selectedKelasId();
+    if (!kelasId) return;
+    setIsExporting(true);
+    try {
+      const data = (await khsController.getNilaiMahasiswa(kelasId)) || [];
+      const comps = validComponents();
+      const method = importTemplate();
+      const columns: ExportColumn[] = [{ header: 'nim', accessor: 'nim' }];
+
+      if (method === 'akhir') {
+        columns.push({ header: 'nilai_akhir', accessor: 'nilai_akhir' });
+      } else if (method === 'sub') {
+        for (const c of comps) {
+          for (const s of subsByKomponen().get(c.id) || []) {
+            columns.push({ header: s.nama, accessor: `sub_${s.id}` });
+          }
+        }
+      } else {
+        for (const c of comps) {
+          columns.push({ header: c.nama, accessor: `komp_${c.id}` });
+        }
+      }
+
+      const rows = data.map((d) => {
+        const row: Record<string, string | number> = { nim: d.nim };
+        if (method === 'akhir') {
+          row.nilai_akhir = d.nilaiAngka ?? '';
+        } else if (method === 'sub') {
+          for (const c of comps) {
+            for (const s of subsByKomponen().get(c.id) || []) {
+              const raw = (d.nilaiSub || []).find((v) => v.subKomponenNilaiId === s.id);
+              row[`sub_${s.id}`] = raw ? String(raw.nilai) : '';
+            }
+          }
+        } else {
+          for (const c of comps) {
+            row[`komp_${c.id}`] = storedKomponenScore(d, c.id) ?? '';
+          }
+        }
+        return row;
+      });
+
+      exportToExcel(rows, columns, `${exportFilename()}_template`);
+      toast.showToast('Template terisi (Excel .xlsx) berhasil diunduh.', 'success');
     } catch (e: unknown) {
       toast.showToast((e as Error).message || 'Gagal mengunduh template.', 'error');
     } finally {
@@ -1296,10 +1356,10 @@ export default function InputNilai() {
     }
   };
 
-  // Save direct component grades (M2) — termasuk menimpa komponen yang memiliki sub.
-  const handleSaveKomponenOnly = async () => {
+  // Save direct component grades (M2) — silent mode untuk auto-save di latar belakang.
+  const handleSaveKomponenOnly = async (silent: boolean = false) => {
     const kelasId = selectedKelasId();
-    if (!kelasId) return;
+    if (!kelasId || isClassLocked()) return;
     const list = targetStudents();
     const comps = validComponents();
     if (!list || !comps) return;
@@ -1332,9 +1392,11 @@ export default function InputNilai() {
       .filter((item) => item.subNilaiList.length > 0);
 
     if (payload.length === 0 && payloadSub.length === 0) {
-      toast.showToast('Isi minimal satu nilai komponen.', 'error');
+      if (!silent) toast.showToast('Isi minimal satu nilai komponen.', 'error');
       return;
     }
+
+    if (silent) setAutoSaveStatus('saving');
 
     try {
       if (payloadSub.length > 0) {
@@ -1345,12 +1407,44 @@ export default function InputNilai() {
       }
       clearDirty('s:', 'g:');
       setAutoAggKeys(new Set<string>());
-      toast.showToast('Nilai komponen berhasil disimpan.', 'success');
+      setLastSavedAt(new Date());
+      if (silent) {
+        setAutoSaveStatus('saved');
+      } else {
+        toast.showToast('Nilai komponen berhasil disimpan.', 'success');
+        setAutoSaveStatus('saved');
+      }
       refetchStudentsGrades();
     } catch (e: unknown) {
-      toast.showToast((e as Error).message || 'Gagal menyimpan nilai komponen.', 'error');
+      if (silent) {
+        setAutoSaveStatus('error');
+      } else {
+        toast.showToast((e as Error).message || 'Gagal menyimpan nilai komponen.', 'error');
+      }
     }
   };
+
+  // Debounced auto-save timer (2.5 detik setelah ketikan terakhir)
+  let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
+  createEffect(() => {
+    const dirty = dirtyCount();
+    const locked = isClassLocked();
+    const kelasId = selectedKelasId();
+
+    if (locked || !kelasId || dirty === 0) {
+      if (autoSaveTimer) clearTimeout(autoSaveTimer);
+      return;
+    }
+
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      void handleSaveKomponenOnly(true);
+    }, 2500);
+  });
+
+  onCleanup(() => {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  });
 
   const importTemplateHeaders = createMemo(() => {
     const method = importTemplate();
@@ -1739,16 +1833,26 @@ export default function InputNilai() {
   const handleLockKelas = async () => {
     const id = selectedKelasId();
     if (!id) return;
-    if (
-      !confirm(
-        'Apakah Anda yakin ingin mengunci nilai kelas ini? Setelah dikunci, komponen dan nilai tidak dapat diubah kembali.',
-      )
-    )
-      return;
+
+    // Cek kelengkapan nilai mahasiswa
+    const students = visibleStudents() || [];
+    let incompleteCount = 0;
+    for (const stud of students) {
+      const finalRes = getDynamicFinalGrade(stud);
+      if (finalRes === null) incompleteCount++;
+    }
+
+    let confirmMsg =
+      'Apakah Anda yakin ingin mengunci & merilis nilai kelas ini? Setelah dikunci, nilai menjadi FINAL dan resmi dapat dilihat oleh mahasiswa di KHS/Transkrip.';
+    if (incompleteCount > 0) {
+      confirmMsg = `PERINGATAN: Terdapat ${incompleteCount} dari ${students.length} mahasiswa yang nilainya BELUM LENGKAP.\n\nJika dikunci sekarang, mahasiswa hanya dapat melihat nilai yang sudah difinalisasi. Apakah Anda yakin ingin tetap mengunci & merilis nilai kelas ini?`;
+    }
+
+    if (!confirm(confirmMsg)) return;
 
     try {
       await khsController.lockKelas(id);
-      toast.showToast('Nilai kelas berhasil dikunci!', 'success');
+      toast.showToast('Nilai kelas berhasil dikunci dan dirilis (FINAL)!', 'success');
       refetchStudentsGrades();
       refetchClasses();
     } catch (e: unknown) {
@@ -2426,7 +2530,12 @@ export default function InputNilai() {
                     disabled: isExporting() || isClassLocked(),
                   },
                   {
-                    label: 'Unduh Template',
+                    label: 'Unduh Template (Excel .xlsx)',
+                    onClick: handleDownloadExcelTemplate,
+                    disabled: isExporting() || isClassLocked(),
+                  },
+                  {
+                    label: 'Unduh Template (CSV .csv)',
                     onClick: handleDownloadTemplate,
                     disabled: isExporting() || isClassLocked(),
                   },
@@ -2457,6 +2566,9 @@ export default function InputNilai() {
                 when={!isClassLocked()}
                 fallback={
                   <>
+                    <span class="px-2.5 py-1 rounded-full text-fine font-bold bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-900/50 flex items-center gap-1.5">
+                      ✓ FINAL (Dirilis)
+                    </span>
                     <Show when={role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'}>
                       <Button variant="primary" size="sm" onClick={handleUnlockKelas}>
                         Buka Kunci
@@ -2470,20 +2582,46 @@ export default function InputNilai() {
                   </>
                 }
               >
+                <span class="px-2.5 py-1 rounded-full text-fine font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 flex items-center gap-1.5">
+                  ● DRAFT (Belum Dirilis)
+                </span>
                 <Button variant="danger" size="sm" onClick={handleLockKelas}>
-                  Kunci Nilai
+                  Kunci & Rilis Nilai Final
                 </Button>
               </Show>
             </div>
             <div class="flex flex-wrap items-center gap-2">
+              {/* Indikator Auto-Save */}
+              <Show when={!isClassLocked()}>
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-fine font-medium bg-secondary-100/70 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300">
+                  <Show when={autoSaveStatus() === 'saving'}>
+                    <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span>Menyimpan otomatis...</span>
+                  </Show>
+                  <Show when={autoSaveStatus() === 'saved'}>
+                    <span class="text-green-600 dark:text-green-400">✓</span>
+                    <span>
+                      Tersimpan {lastSavedAt() ? `pk ${lastSavedAt()!.toLocaleTimeString('id-ID')}` : 'otomatis'}
+                    </span>
+                  </Show>
+                  <Show when={autoSaveStatus() === 'error'}>
+                    <span class="text-rose-500">⚠</span>
+                    <span class="text-rose-600">Gagal simpan otomatis</span>
+                  </Show>
+                  <Show when={autoSaveStatus() === 'idle'}>
+                    <span>Auto-save aktif</span>
+                  </Show>
+                </div>
+              </Show>
+
               <Show when={!isClassLocked() && dirtyCount() > 0}>
                 <Button variant="danger" size="sm" onClick={handleDiscardChanges}>
                   Batalkan Perubahan
                 </Button>
               </Show>
               <Show when={!isClassLocked()}>
-                <Button variant="primary" size="sm" onClick={handleSaveKomponenOnly}>
-                  Simpan{selectedCount() > 0 ? ` (${selectedCount()})` : ''}
+                <Button variant="primary" size="sm" onClick={() => handleSaveKomponenOnly(false)}>
+                  Simpan Manual{selectedCount() > 0 ? ` (${selectedCount()})` : ''}
                 </Button>
               </Show>
             </div>

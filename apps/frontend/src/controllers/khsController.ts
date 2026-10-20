@@ -8,7 +8,9 @@ export interface KhsKrsItem {
   isApproved: boolean;
   useInGpa?: boolean;
   isRetake?: boolean;
-  kelasKuliah: { id: number; namaKelas: string };
+  isLocked?: boolean;
+  isFinal?: boolean;
+  kelasKuliah: { id: number; namaKelas: string; isLocked?: boolean };
   mataKuliah: { id: number; kode: string; nama: string; sksTotal: number };
 }
 
@@ -224,6 +226,7 @@ export interface RincianKomponenMahasiswa {
   nilaiAngka: string | null;
   nilaiHuruf: string | null;
   nilaiIndeks: string | null;
+  isReleased?: boolean;
   komponen: RincianKomponenItem[];
 }
 
