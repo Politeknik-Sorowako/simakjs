@@ -44,10 +44,13 @@ export const getKhsSchema = {
             isApproved: t.Optional(t.Boolean({ default: true })),
             useInGpa: t.Optional(t.Boolean({ default: true })),
             isRetake: t.Optional(t.Boolean({ default: false })),
+            isLocked: t.Optional(t.Boolean({ default: false })),
+            isFinal: t.Optional(t.Boolean({ default: true })),
             kelasKuliah: t.Optional(
               t.Object({
                 id: t.Optional(t.Integer({ default: 1 })),
                 namaKelas: t.Optional(t.String({ default: 'Kelas A' })),
+                isLocked: t.Optional(t.Boolean({ default: false })),
               }),
             ),
             mataKuliah: t.Optional(
@@ -115,7 +118,15 @@ export const getByNimSchema = {
             nilaiHuruf: t.Optional(t.Union([t.String(), t.Null()])),
             nilaiIndeks: t.Optional(t.Union([t.String(), t.Null()])),
             isApproved: t.Optional(t.Boolean()),
-            kelasKuliah: t.Optional(t.Object({ id: t.Optional(t.Integer()), namaKelas: t.Optional(t.String()) })),
+            isLocked: t.Optional(t.Boolean()),
+            isFinal: t.Optional(t.Boolean()),
+            kelasKuliah: t.Optional(
+              t.Object({
+                id: t.Optional(t.Integer()),
+                namaKelas: t.Optional(t.String()),
+                isLocked: t.Optional(t.Boolean()),
+              }),
+            ),
             mataKuliah: t.Optional(
               t.Object({
                 id: t.Optional(t.Integer()),
@@ -452,6 +463,7 @@ export const getRincianKomponenSchema = {
       nilaiAngka: t.Union([t.String(), t.Null()], { default: '85.5' }),
       nilaiHuruf: t.Union([t.String(), t.Null()], { default: 'A' }),
       nilaiIndeks: t.Union([t.String(), t.Null()], { default: '4.0' }),
+      isReleased: t.Optional(t.Boolean({ default: true })),
       komponen: t.Array(
         t.Object({
           nama: t.String({ default: 'UTS' }),

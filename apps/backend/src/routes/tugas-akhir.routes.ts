@@ -5,10 +5,13 @@ import {
   accRevisiSchema,
   accSidangSchema,
   createLogbookSchema,
+  createRubrikKriteriaSchema,
   createTugasAkhirSchema,
   daftarSidangSchema,
   deleteLogbookSchema,
+  deleteRubrikKriteriaSchema,
   finalisasiSidangSchema,
+  getRubrikKriteriaProdiSchema,
   getTugasAkhirSchema,
   inputNilaiSidangSchema,
   jadwalSidangSchema,
@@ -17,10 +20,12 @@ import {
   responUndanganSchema,
   reviewLogbookSchema,
   reviewTopikSchema,
+  salinTemplateRubrikSchema,
   sidangIdSchema,
   submitRevisiSidangSchema,
   tugasAkhirIdSchema,
   updateLogbookSchema,
+  updateRubrikKriteriaSchema,
   updateTugasAkhirSchema,
 } from '../schemas/tugas-akhir.schema';
 
@@ -28,6 +33,12 @@ export const tugasAkhirRoutes = new Elysia({ prefix: '/tugas-akhir' })
   .use(authMiddleware)
   .get('/', TugasAkhirController.getAll, getTugasAkhirSchema)
   .get('/sidang/rekap-kolektif', TugasAkhirController.getRekapKolektifSidang, rekapKolektifSidangSchema)
+  // Backlog 3: Manajemen Rubrik Kriteria per Program Studi
+  .get('/rubrik-kriteria', TugasAkhirController.getRubrikKriteriaByProdi, getRubrikKriteriaProdiSchema)
+  .post('/rubrik-kriteria', TugasAkhirController.createRubrikKriteria, createRubrikKriteriaSchema)
+  .post('/rubrik-kriteria/salin-template', TugasAkhirController.salinTemplateRubrik, salinTemplateRubrikSchema)
+  .put('/rubrik-kriteria/:rubrikId', TugasAkhirController.updateRubrikKriteria, updateRubrikKriteriaSchema)
+  .delete('/rubrik-kriteria/:rubrikId', TugasAkhirController.deleteRubrikKriteria, deleteRubrikKriteriaSchema)
   .get('/:id', TugasAkhirController.getById, tugasAkhirIdSchema)
   .post('/', TugasAkhirController.create, createTugasAkhirSchema)
   .put('/:id', TugasAkhirController.update, updateTugasAkhirSchema)

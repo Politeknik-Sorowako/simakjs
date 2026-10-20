@@ -4,6 +4,7 @@ import {
   dosen,
   mahasiswa,
   periodeAkademik,
+  sesiBimbingan,
   tugasAkhir,
   tugasAkhirAnggota,
   tugasAkhirLogbook,
@@ -344,6 +345,39 @@ export class TugasAkhirBimbinganService {
             })
             .returning();
           bkdId = newBkd.id;
+        }
+
+        // Sinkronisasi record ke tabel `sesi_bimbingan` untuk kredit BKD per sesi
+        if (bkdId) {
+          const [existingSesi] = await tx
+            .select({ id: sesiBimbingan.id })
+            .from(sesiBimbingan)
+            .where(and(eq(sesiBimbingan.bimbinganId, bkdId), eq(sesiBimbingan.pertemuanKe, logbookRow.pertemuanKe)))
+            .limit(1);
+
+          if (existingSesi) {
+            await tx
+              .update(sesiBimbingan)
+              .set({
+                tanggalBimbingan: logbookRow.tanggalBimbingan,
+                topikBimbingan: logbookRow.topik,
+                permasalahan: logbookRow.kendala || 'Progres tugas akhir',
+                solusi: input.catatanDosen?.trim() || 'Disetujui pembimbing',
+                statusBkd: true,
+                updatedAt: new Date(),
+              })
+              .where(eq(sesiBimbingan.id, existingSesi.id));
+          } else {
+            await tx.insert(sesiBimbingan).values({
+              bimbinganId: bkdId,
+              pertemuanKe: logbookRow.pertemuanKe,
+              tanggalBimbingan: logbookRow.tanggalBimbingan,
+              topikBimbingan: logbookRow.topik,
+              permasalahan: logbookRow.kendala || 'Progres tugas akhir',
+              solusi: input.catatanDosen?.trim() || 'Disetujui pembimbing',
+              statusBkd: true,
+            });
+          }
         }
       }
 

@@ -335,6 +335,54 @@ export const tugasAkhirController = {
     return res.data || [];
   },
 
+  // Backlog 3: Manajemen Rubrik Kriteria per Program Studi
+  async getRubrikKriteriaByProdi(programStudiId: number, jenisSidang?: string): Promise<RubrikKriteriaItem[]> {
+    const params = new URLSearchParams({ programStudiId: String(programStudiId) });
+    if (jenisSidang) params.set('jenisSidang', jenisSidang);
+    const res = await fetchApi<{ data: RubrikKriteriaItem[] }>(`/tugas-akhir/rubrik-kriteria?${params.toString()}`);
+    return res.data || [];
+  },
+
+  async createRubrikKriteria(payload: CreateRubrikKriteriaPayload): Promise<RubrikKriteriaItem> {
+    const res = await fetchApi<{ data: RubrikKriteriaItem; message: string }>('/tugas-akhir/rubrik-kriteria', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return res.data;
+  },
+
+  async updateRubrikKriteria(
+    rubrikId: number,
+    payload: Partial<CreateRubrikKriteriaPayload> & { isAktif?: boolean },
+  ): Promise<RubrikKriteriaItem> {
+    const res = await fetchApi<{ data: RubrikKriteriaItem; message: string }>(
+      `/tugas-akhir/rubrik-kriteria/${rubrikId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      },
+    );
+    return res.data;
+  },
+
+  async deleteRubrikKriteria(rubrikId: number): Promise<{ message: string; softDeleted?: boolean }> {
+    const res = await fetchApi<{ message: string; softDeleted?: boolean }>(`/tugas-akhir/rubrik-kriteria/${rubrikId}`, {
+      method: 'DELETE',
+    });
+    return res;
+  },
+
+  async salinTemplateRubrik(
+    programStudiId: number,
+    jenisSidang: 'proposal' | 'kemajuan' | 'akhir',
+  ): Promise<{ message: string; count: number }> {
+    const res = await fetchApi<{ message: string; count: number }>('/tugas-akhir/rubrik-kriteria/salin-template', {
+      method: 'POST',
+      body: JSON.stringify({ programStudiId, jenisSidang }),
+    });
+    return res;
+  },
+
   async inputNilaiSidang(id: number, sidangId: number, payload: InputNilaiSidangPayload): Promise<{ message: string }> {
     const res = await fetchApi<{ message: string }>(`/tugas-akhir/${id}/sidang/${sidangId}/nilai`, {
       method: 'POST',
@@ -631,6 +679,8 @@ export interface JadwalSidangPayload {
 
 export interface RubrikKriteriaItem {
   id: number;
+  programStudiId?: number;
+  jenisSidang?: 'proposal' | 'kemajuan' | 'akhir';
   kode?: string;
   nama?: string;
   namaKriteria?: string;
@@ -640,6 +690,19 @@ export interface RubrikKriteriaItem {
   bobotPersen?: number;
   isIndividu?: boolean;
   urutan: number;
+  isAktif?: boolean;
+}
+
+export interface CreateRubrikKriteriaPayload {
+  programStudiId: number;
+  jenisSidang: 'proposal' | 'kemajuan' | 'akhir';
+  kode: string;
+  nama: string;
+  kategori?: 'pembimbingan' | 'alat_mesin' | 'laporan' | 'umum';
+  deskripsi?: string | null;
+  bobot: number;
+  isIndividu?: boolean;
+  urutan?: number;
 }
 
 export interface InputNilaiSidangPayload {
