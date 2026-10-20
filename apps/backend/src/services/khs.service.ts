@@ -72,21 +72,26 @@ export class KhsService {
    * Rincian nilai per komponen untuk mahasiswa (read-only).
    * Mengembalikan NA + daftar komponen (nama, bobot, nilai L1 agregat).
    * TIDAK pernah menyertakan nilai/definisi sub-komponen.
+   * Bila diakses mahasiswa dan kelas belum berstatus final (isLocked=false), nilai komponen disembunyikan.
    */
-  static async getRincianKomponen(mahasiswaId: number, kelasKuliahId: number) {
+  static async getRincianKomponen(mahasiswaId: number, kelasKuliahId: number, isMahasiswaRole: boolean = false) {
     const [krsRecord] = await db
       .select({
         id: krs.id,
         nilaiAngka: krs.nilaiAngka,
         nilaiHuruf: krs.nilaiHuruf,
         nilaiIndeks: krs.nilaiIndeks,
+        isLocked: kelasKuliah.isLocked,
       })
       .from(krs)
+      .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
       .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.kelasKuliahId, kelasKuliahId)));
 
     if (!krsRecord) {
       throw new Error('KRS mahasiswa tidak ditemukan pada kelas ini.');
     }
+
+    const isReleased = krsRecord.isLocked;
 
     const components = await db
       .select({ id: komponenNilai.id, nama: komponenNilai.nama, bobot: komponenNilai.bobot })
@@ -127,6 +132,11 @@ export class KhsService {
     const subGrades = new Map(subRows.map((g) => [g.subKomponenNilaiId, parseFloat(g.nilai)]));
 
     const komponen = components.map((c) => {
+      // Jika diakses mahasiswa dan nilai belum dirilis (draft), sembunyikan nilai komponen
+      if (isMahasiswaRole && !isReleased) {
+        return { nama: c.nama, bobot: c.bobot, nilai: null };
+      }
+
       const subs = subDefsByKomponen.get(c.id) ?? [];
       let nilai: number | null = null;
       if (subs.length > 0) {
@@ -146,16 +156,17 @@ export class KhsService {
 
     return {
       krsId: krsRecord.id,
-      nilaiAngka: krsRecord.nilaiAngka,
-      nilaiHuruf: krsRecord.nilaiHuruf,
-      nilaiIndeks: krsRecord.nilaiIndeks,
+      nilaiAngka: isMahasiswaRole && !isReleased ? null : krsRecord.nilaiAngka,
+      nilaiHuruf: isMahasiswaRole && !isReleased ? null : krsRecord.nilaiHuruf,
+      nilaiIndeks: isMahasiswaRole && !isReleased ? null : krsRecord.nilaiIndeks,
+      isReleased,
       komponen,
     };
   }
 
-  static async getKhs(mahasiswaId: number, periodeId: string) {
+  static async getKhs(mahasiswaId: number, periodeId: string, isMahasiswaRole: boolean = false) {
     // Fetch KHS list
-    const krsList = await db
+    const rawKrsList = await db
       .select({
         id: krs.id,
         nilaiAngka: krs.nilaiAngka,
@@ -166,6 +177,7 @@ export class KhsService {
         kelasKuliah: {
           id: kelasKuliah.id,
           namaKelas: kelasKuliah.namaKelas,
+          isLocked: kelasKuliah.isLocked,
         },
         mataKuliah: {
           id: mataKuliah.id,
@@ -179,7 +191,22 @@ export class KhsService {
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(kelasKuliah.periodeId, periodeId), eq(krs.isApproved, true)));
 
-    // Calculate Semester Stats (pakai hanya attempt yang dihitung ke GPA, `useInGpa`).
+    // Bila pemanggil adalah mahasiswa dan kelas belum dikunci (Draft),
+    // sembunyikan nilai (tampilkan status draft) dan jangan sertakan dalam kalkulasi IP semester.
+    const krsList = rawKrsList.map((item) => {
+      const isClassFinal = item.kelasKuliah.isLocked;
+      const maskGrade = isMahasiswaRole && !isClassFinal;
+      return {
+        ...item,
+        isLocked: item.kelasKuliah.isLocked,
+        isFinal: isClassFinal,
+        nilaiAngka: maskGrade ? null : item.nilaiAngka,
+        nilaiHuruf: maskGrade ? null : item.nilaiHuruf,
+        nilaiIndeks: maskGrade ? null : item.nilaiIndeks,
+      };
+    });
+
+    // Calculate Semester Stats (pakai hanya attempt yang dihitung ke GPA, `useInGpa`, dan tidak dimask).
     let totalSks = 0;
     let weightedPoints = 0;
 
@@ -196,11 +223,13 @@ export class KhsService {
     const ipSemester = totalSks > 0 ? parseFloat((weightedPoints / totalSks).toFixed(2)) : 0.0;
 
     // Calculate Cumulative GPA (IPK) — hanya attempt yang `useInGpa=true`.
+    // Untuk mahasiswa, hanya kelas yang sudah berstatus final (isLocked=true) yang dihitung ke IPK.
     const allApprovedKrs = await db
       .select({
         nilaiIndeks: krs.nilaiIndeks,
         sksTotal: mataKuliah.sksTotal,
         useInGpa: krs.useInGpa,
+        isLocked: kelasKuliah.isLocked,
       })
       .from(krs)
       .innerJoin(kelasKuliah, eq(krs.kelasKuliahId, kelasKuliah.id))
@@ -212,6 +241,7 @@ export class KhsService {
 
     for (const item of allApprovedKrs) {
       if (!item.useInGpa) continue;
+      if (isMahasiswaRole && !item.isLocked) continue; // Jangan masukkan draft kelas ke IPK mahasiswa
       const sks = item.sksTotal;
       const index = item.nilaiIndeks ? parseFloat(item.nilaiIndeks) : null;
       if (index !== null) {
@@ -255,7 +285,7 @@ export class KhsService {
     };
   }
 
-  static async getTranskrip(mahasiswaId: number) {
+  static async getTranskrip(mahasiswaId: number, isMahasiswaRole: boolean = false) {
     const list = await db
       .select({
         id: krs.id,
@@ -264,6 +294,7 @@ export class KhsService {
         nilaiIndeks: krs.nilaiIndeks,
         useInGpa: krs.useInGpa,
         periodeId: kelasKuliah.periodeId,
+        isLocked: kelasKuliah.isLocked,
         mataKuliah: {
           id: mataKuliah.id,
           kode: mataKuliah.kode,
@@ -276,11 +307,14 @@ export class KhsService {
       .innerJoin(mataKuliah, eq(kelasKuliah.mataKuliahId, mataKuliah.id))
       .where(and(eq(krs.mahasiswaId, mahasiswaId), eq(krs.isApproved, true), isNotNull(krs.nilaiIndeks)));
 
+    // Jika mahasiswa, hanya masukkan nilai yang kelasnya sudah final (isLocked=true)
+    const filteredList = isMahasiswaRole ? list.filter((item) => item.isLocked) : list;
+
     // IPK hanya menghitung attempt yang `useInGpa=true`.
     let totalSks = 0;
     let weightedPoints = 0;
 
-    for (const item of list) {
+    for (const item of filteredList) {
       if (!item.useInGpa) continue;
       const sks = item.mataKuliah.sksTotal;
       const index = item.nilaiIndeks ? parseFloat(item.nilaiIndeks) : null;
@@ -313,8 +347,8 @@ export class KhsService {
 
     // Tandai attempt sebagai mengulang bila MK yang sama pernah diambil di periode lebih baru.
     const laterAttempt = new Set<number>();
-    if (list.length > 0) {
-      const mkIds = list.map((k) => k.mataKuliah.id);
+    if (filteredList.length > 0) {
+      const mkIds = filteredList.map((k) => k.mataKuliah.id);
       const dupMk = await db
         .selectDistinct({ mataKuliahId: mataKuliah.id, periodeId: kelasKuliah.periodeId })
         .from(krs)
@@ -326,7 +360,7 @@ export class KhsService {
         const cur = mkMaxPeriode.get(d.mataKuliahId);
         if (!cur || d.periodeId > cur) mkMaxPeriode.set(d.mataKuliahId, d.periodeId);
       }
-      for (const item of list) {
+      for (const item of filteredList) {
         if (mkMaxPeriode.get(item.mataKuliah.id) !== item.periodeId) {
           laterAttempt.add(item.id);
         }
@@ -338,7 +372,7 @@ export class KhsService {
     // Semester dihitung sekali per periodeId unik (memoize) agar tidak
     // memicu query DB redundan per mata kuliah (N+1).
     const semesterCache = new Map<string, number | null>();
-    for (const item of list) {
+    for (const item of filteredList) {
       if (!semesterCache.has(item.periodeId)) {
         semesterCache.set(
           item.periodeId,
@@ -347,7 +381,7 @@ export class KhsService {
       }
     }
 
-    const formattedList = list.map((item) => ({
+    const formattedList = filteredList.map((item) => ({
       id: item.id,
       nilaiAngka: item.nilaiAngka,
       nilaiHuruf: item.nilaiHuruf,

@@ -1240,23 +1240,45 @@ export default function Khs() {
                                     </Show>
                                   </td>
                                   <td class="p-3">{item.mataKuliah?.sksTotal}</td>
-                                  <td class="p-3">{item.nilaiAngka || '-'}</td>
                                   <td class="p-3">
-                                    <Show when={item.nilaiHuruf} fallback="-">
-                                      <span
-                                        class={`px-2 py-0.5 rounded text-fine font-bold ${
-                                          item.nilaiHuruf === 'A' || item.nilaiHuruf === 'B+' || item.nilaiHuruf === 'B'
-                                            ? 'bg-action-50 text-action border border-action-100'
-                                            : item.nilaiHuruf === 'C+' || item.nilaiHuruf === 'C'
-                                              ? 'bg-action-50 text-action border border-action-100'
-                                              : 'bg-rose-50 text-rose-600 border border-rose-100'
-                                        }`}
-                                      >
-                                        {item.nilaiHuruf}
-                                      </span>
+                                    <Show
+                                      when={item.isFinal !== false}
+                                      fallback={
+                                        <span class="px-2 py-0.5 rounded-full text-fine font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50">
+                                          Draft Penilaian
+                                        </span>
+                                      }
+                                    >
+                                      {item.nilaiAngka || '-'}
                                     </Show>
                                   </td>
-                                  <td class="p-3">{item.nilaiIndeks || '-'}</td>
+                                  <td class="p-3">
+                                    <Show
+                                      when={item.isFinal !== false}
+                                      fallback={<span class="text-secondary-400 italic text-fine">Belum Dirilis</span>}
+                                    >
+                                      <Show when={item.nilaiHuruf} fallback="-">
+                                        <span
+                                          class={`px-2 py-0.5 rounded text-fine font-bold ${
+                                            item.nilaiHuruf === 'A' ||
+                                            item.nilaiHuruf === 'B+' ||
+                                            item.nilaiHuruf === 'B'
+                                              ? 'bg-action-50 text-action border border-action-100'
+                                              : item.nilaiHuruf === 'C+' || item.nilaiHuruf === 'C'
+                                                ? 'bg-action-50 text-action border border-action-100'
+                                                : 'bg-rose-50 text-rose-600 border border-rose-100'
+                                          }`}
+                                        >
+                                          {item.nilaiHuruf}
+                                        </span>
+                                      </Show>
+                                    </Show>
+                                  </td>
+                                  <td class="p-3">
+                                    <Show when={item.isFinal !== false} fallback="-">
+                                      {item.nilaiIndeks || '-'}
+                                    </Show>
+                                  </td>
                                   <Show when={role() !== 'mahasiswa'}>
                                     <td class="p-3">
                                       <Show
@@ -1982,6 +2004,13 @@ export default function Khs() {
           <Show when={!rincianData.loading && rincianData()}>
             {(data) => (
               <div class="flex flex-col gap-4">
+                <Show when={data().isReleased === false}>
+                  <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 dark:bg-amber-950/40 dark:border-amber-900/50 dark:text-amber-300 text-xs flex items-center gap-2">
+                    <span class="font-bold">Perhatian:</span>
+                    <span>Nilai kelas ini masih berstatus DRAFT dan belum dirilis resmi oleh Dosen Pengampu.</span>
+                  </div>
+                </Show>
+
                 <div class="grid grid-cols-3 gap-3">
                   <div class="bg-secondary-50 dark:bg-secondary-800/60 rounded-xl p-3 text-center">
                     <span class="block text-fine uppercase font-bold text-secondary-400">Nilai Angka</span>

@@ -207,4 +207,193 @@ describe('KHS Display Test', () => {
     expect(first.mataKuliah?.sksTotal).toBe(3);
     expect(first.nilaiHuruf ?? first.nilaiIndeks).not.toBeNull();
   });
+
+  it('harus menyembunyikan nilai (status draft) bagi mahasiswa jika kelas belum dikunci', async () => {
+    await clearDatabase();
+    const adminToken = await getAuthToken('admin-test2@test.com', 'admin');
+    const studentToken = await getAuthToken('student-draft@test.com', 'mahasiswa');
+
+    const [prodi] = await db
+      .insert(programStudi)
+      .values({
+        kode: 'TM',
+        nama: 'Teknik Mesin',
+        jenjang: 'D3',
+      })
+      .returning();
+
+    const [dsn] = await db
+      .insert(dosen)
+      .values({
+        nip: '198201012010121002',
+        nama: 'Dosen Mesin',
+        email: 'dosenmesin@test.com',
+        programStudiId: prodi.id,
+        nik: '1234567890123457',
+        jenisKelamin: 'L',
+        tanggalLahir: '1982-01-01',
+      })
+      .returning();
+
+    const [mhs] = await db
+      .insert(mahasiswa)
+      .values({
+        nim: '654321',
+        nama: 'Mahasiswa Draft',
+        email: 'student-draft@test.com',
+        programStudiId: prodi.id,
+        namaIbuKandung: 'Ibu',
+        nik: '1234567890123458',
+        jenisKelamin: 'L',
+        tanggalLahir: '2001-01-01',
+        dosenPaId: dsn.id,
+      })
+      .returning();
+
+    const [periode] = await db
+      .insert(periodeAkademik)
+      .values({
+        id: '20253',
+        nama: 'Semester Ganjil 2025/2026',
+        tahunMulai: 2025,
+        tahunSelesai: 2026,
+        aktif: true,
+      })
+      .returning();
+
+    const [mk] = await db
+      .insert(mataKuliah)
+      .values({
+        kode: 'MK2',
+        nama: 'Kinematika',
+        sksTotal: 3,
+        programStudiId: prodi.id,
+        semesterDefault: 1,
+      })
+      .returning();
+
+    // Kelas dibuat dengan isLocked: false (DRAFT)
+    const [kelas] = await db
+      .insert(kelasKuliah)
+      .values({
+        mataKuliahId: mk.id,
+        periodeId: periode.id,
+        namaKelas: 'Kelas B',
+        isLocked: false,
+      })
+      .returning();
+
+    const [krsRecord] = await db
+      .insert(krs)
+      .values({
+        mahasiswaId: mhs.id,
+        kelasKuliahId: kelas.id,
+        isApproved: true,
+      })
+      .returning();
+
+    const [comp] = await db
+      .insert(komponenNilai)
+      .values({
+        kelasKuliahId: kelas.id,
+        nama: 'UAS',
+        bobot: 100,
+      })
+      .returning();
+
+    await db.insert(konversiNilai).values({
+      programStudiId: prodi.id,
+      nilaiHuruf: 'A',
+      bobotIndeks: '4.00',
+      nilaiMin: '80.00',
+      nilaiMax: '100.00',
+      predikat: 'Dengan Pujian',
+    });
+
+    // Dosen menginput nilai tetapi belum mengunci kelas
+    await app.handle(
+      new Request('http://localhost/yudisium/kelas/nilai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          kelasKuliahId: kelas.id,
+          nilaiList: [
+            {
+              krsId: krsRecord.id,
+              nilaiKomponenList: [{ komponenNilaiId: comp.id, nilai: 90.0 }],
+            },
+          ],
+        }),
+      }),
+    );
+
+    // 1. Dosen / Admin melihat KHS (harus melihat nilai asli & isFinal: false)
+    const adminKhsRes = await app.handle(
+      new Request(`http://localhost/khs/mahasiswa/${mhs.id}/periode/${periode.id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+    expect(adminKhsRes.status).toBe(200);
+    const adminKhs = await adminKhsRes.json();
+    expect(adminKhs.krsList[0].isFinal).toBe(false);
+    expect(adminKhs.krsList[0].nilaiHuruf).toBe('A');
+
+    // 2. Mahasiswa melihat KHS (harus dimask, nilaiHuruf = null, isFinal = false)
+    const studentKhsRes = await app.handle(
+      new Request(`http://localhost/khs/mahasiswa/${mhs.id}/periode/${periode.id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${studentToken}` },
+      }),
+    );
+    expect(studentKhsRes.status).toBe(200);
+    const studentKhs = await studentKhsRes.json();
+    expect(studentKhs.krsList[0].isFinal).toBe(false);
+    expect(studentKhs.krsList[0].nilaiHuruf).toBeNull();
+    expect(studentKhs.krsList[0].nilaiAngka).toBeNull();
+
+    // 3. Mahasiswa melihat Rincian Komponen (isReleased = false, nilai komponen = null)
+    const rincianRes = await app.handle(
+      new Request(`http://localhost/khs/rincian-komponen?kelasKuliahId=${kelas.id}&mahasiswaId=${mhs.id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${studentToken}` },
+      }),
+    );
+    expect(rincianRes.status).toBe(200);
+    const rincian = await rincianRes.json();
+    expect(rincian.isReleased).toBe(false);
+    expect(rincian.komponen[0].nilai).toBeNull();
+
+    // 4. Mahasiswa melihat Transkrip (karena masih draft, transkrip belum memuat MK ini)
+    const transkripRes = await app.handle(
+      new Request(`http://localhost/khs/mahasiswa/${mhs.id}/transkrip`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${studentToken}` },
+      }),
+    );
+    expect(transkripRes.status).toBe(200);
+    const transkrip = await transkripRes.json();
+    expect(transkrip.transkripList.length).toBe(0);
+
+    // 5. Setelah kelas dikunci (FINAL), mahasiswa melihat nilai utuh
+    await app.handle(
+      new Request(`http://localhost/yudisium/kelas/${kelas.id}/lock`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }),
+    );
+
+    const releasedKhsRes = await app.handle(
+      new Request(`http://localhost/khs/mahasiswa/${mhs.id}/periode/${periode.id}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${studentToken}` },
+      }),
+    );
+    const releasedKhs = await releasedKhsRes.json();
+    expect(releasedKhs.krsList[0].isFinal).toBe(true);
+    expect(releasedKhs.krsList[0].nilaiHuruf).toBe('A');
+  });
 });

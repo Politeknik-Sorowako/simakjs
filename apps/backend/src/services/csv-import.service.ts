@@ -48,15 +48,41 @@ const STATUS_KOMPEN_MAP: Record<string, string> = {
 };
 
 export class CsvImportService {
-  private static parseCsvLines(csvText: string): string[][] {
+  private static detectDelimiter(text: string): string {
+    const clean = text.replace(/^\uFEFF/, '');
+    const firstLine = clean.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
+    let inQuotes = false;
+    let commas = 0;
+    let semicolons = 0;
+    let tabs = 0;
+
+    for (let i = 0; i < firstLine.length; i++) {
+      const char = firstLine[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (!inQuotes) {
+        if (char === ',') commas++;
+        else if (char === ';') semicolons++;
+        else if (char === '\t') tabs++;
+      }
+    }
+
+    if (tabs > commas && tabs > semicolons) return '\t';
+    if (semicolons > commas) return ';';
+    return ',';
+  }
+
+  private static parseCsvLines(csvText: string, customDelimiter?: string): string[][] {
+    const cleanText = csvText.replace(/^\uFEFF/, '');
+    const delimiter = customDelimiter || this.detectDelimiter(cleanText);
     const lines: string[][] = [];
     let row: string[] = [];
     let inQuotes = false;
     let currentToken = '';
 
-    for (let i = 0; i < csvText.length; i++) {
-      const char = csvText[i];
-      const nextChar = csvText[i + 1];
+    for (let i = 0; i < cleanText.length; i++) {
+      const char = cleanText[i];
+      const nextChar = cleanText[i + 1];
 
       if (char === '"') {
         if (inQuotes && nextChar === '"') {
@@ -65,7 +91,7 @@ export class CsvImportService {
         } else {
           inQuotes = !inQuotes;
         }
-      } else if (char === ',' && !inQuotes) {
+      } else if (char === delimiter && !inQuotes) {
         row.push(currentToken.trim());
         currentToken = '';
       } else if ((char === '\r' || char === '\n') && !inQuotes) {
