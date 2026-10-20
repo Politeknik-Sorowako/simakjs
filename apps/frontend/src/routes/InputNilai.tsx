@@ -104,6 +104,27 @@ export default function InputNilai() {
   }>({ grades: {}, subGrades: {} });
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [lastSavedAt, setLastSavedAt] = createSignal<Date | null>(null);
+  const [saveMode, setSaveModeState] = createSignal<'auto' | 'manual'>(
+    (typeof window !== 'undefined' && (localStorage.getItem('simak_input_nilai_save_mode') as 'auto' | 'manual')) ||
+      'auto',
+  );
+
+  const setSaveMode = (mode: 'auto' | 'manual') => {
+    setSaveModeState(mode);
+    try {
+      localStorage.setItem('simak_input_nilai_save_mode', mode);
+    } catch {
+      /* ignore */
+    }
+    if (mode === 'manual') {
+      toast.showToast(
+        'Mode diubah ke Batch Save Manual. Nilai yang diubah tetap ditandai (highlight) sebelum disimpan.',
+        'info',
+      );
+    } else {
+      toast.showToast('Mode diubah ke Auto-Save. Perubahan akan disimpan otomatis berkala di latar belakang.', 'info');
+    }
+  };
 
   // 1. Filter periode & program studi (default: periode aktif + prodi workspace admin)
   const workspace = useWorkspace();
@@ -1489,14 +1510,15 @@ export default function InputNilai() {
     }
   };
 
-  // Debounced auto-save timer (2.5 detik setelah ketikan terakhir)
+  // Debounced auto-save timer (2.5 detik setelah ketikan terakhir, hanya aktif pada saveMode 'auto')
   let autoSaveTimer: ReturnType<typeof setTimeout> | undefined;
   createEffect(() => {
     const dirty = dirtyCount();
     const locked = isClassLocked();
     const kelasId = selectedKelasId();
+    const mode = saveMode();
 
-    if (locked || !kelasId || dirty === 0) {
+    if (mode !== 'auto' || locked || !kelasId || dirty === 0) {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);
       return;
     }
@@ -2463,24 +2485,32 @@ export default function InputNilai() {
                                   <Show
                                     when={componentHasSub(c.id)}
                                     fallback={
-                                      <input
-                                        type="text"
-                                        placeholder="0.00"
-                                        disabled={isClassLocked()}
-                                        value={
-                                          inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
-                                            ? inputGrades()[`${stud.krsId}_${c.id}`]
-                                            : ''
-                                        }
-                                        onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
-                                        class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
-                                          isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
-                                            ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                            : isDirty(`g:${stud.krsId}_${c.id}`)
-                                              ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600'
-                                              : 'border-secondary-200 focus:border-action focus:ring-action-focus/20 dark:border-secondary-700'
-                                        }`}
-                                      />
+                                      <div class="relative inline-block">
+                                        <input
+                                          type="text"
+                                          placeholder="0.00"
+                                          disabled={isClassLocked()}
+                                          value={
+                                            inputGrades()[`${stud.krsId}_${c.id}`] !== undefined
+                                              ? inputGrades()[`${stud.krsId}_${c.id}`]
+                                              : ''
+                                          }
+                                          onInput={(e) => handleGradeChange(stud.krsId, c.id, e.currentTarget.value)}
+                                          class={`border rounded-lg px-2 h-12 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
+                                            isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
+                                              ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
+                                              : isDirty(`g:${stud.krsId}_${c.id}`)
+                                                ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600 font-semibold text-amber-900 dark:text-amber-200'
+                                                : 'border-secondary-200 focus:border-action focus:ring-action-focus/20 dark:border-secondary-700'
+                                          }`}
+                                        />
+                                        <Show when={isDirty(`g:${stud.krsId}_${c.id}`)}>
+                                          <span
+                                            class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-secondary-900 shadow-xs pointer-events-none"
+                                            title="Nilai diubah belum disimpan"
+                                          />
+                                        </Show>
+                                      </div>
                                     }
                                   >
                                     <div class="flex flex-col items-center gap-1">
@@ -2500,7 +2530,7 @@ export default function InputNilai() {
                                           </span>
                                         }
                                       >
-                                        <div class="flex items-center gap-1">
+                                        <div class="relative inline-flex items-center gap-1">
                                           <input
                                             type="text"
                                             placeholder="0.00"
@@ -2516,9 +2546,17 @@ export default function InputNilai() {
                                             class={`border rounded-lg px-2 h-10 w-24 text-center text-sm focus:outline-none focus:ring-2 disabled:bg-secondary-50 disabled:text-secondary-400 text-secondary-900 dark:text-white dark:bg-secondary-900 ${
                                               isCellInvalid(inputGrades()[`${stud.krsId}_${c.id}`])
                                                 ? 'border-rose-400 bg-rose-50 focus:border-rose-500 focus:ring-rose-500/20 dark:bg-rose-950/30'
-                                                : 'border-brand-400 focus:border-action focus:ring-action-focus/20 dark:border-brand-700'
+                                                : isDirty(`g:${stud.krsId}_${c.id}`)
+                                                  ? 'border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500/20 dark:bg-amber-950/30 dark:border-amber-600 font-semibold text-amber-900 dark:text-amber-200'
+                                                  : 'border-brand-400 focus:border-action focus:ring-action-focus/20 dark:border-brand-700'
                                             }`}
                                           />
+                                          <Show when={isDirty(`g:${stud.krsId}_${c.id}`)}>
+                                            <span
+                                              class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white dark:ring-secondary-900 shadow-xs pointer-events-none"
+                                              title="Nilai diubah belum disimpan"
+                                            />
+                                          </Show>
                                           <button
                                             type="button"
                                             disabled={isClassLocked()}
@@ -2605,31 +2643,73 @@ export default function InputNilai() {
                 </span>
               </Show>
 
-              {/* Indikator Status Simpan (Auto-Save) */}
+              {/* Indikator & Switcher Mode Simpan: Auto-Save vs Batch Manual */}
               <Show when={!isClassLocked()}>
-                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-secondary-100/80 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300">
-                  <Show when={autoSaveStatus() === 'saving'}>
-                    <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span>Menyimpan otomatis...</span>
-                  </Show>
-                  <Show when={autoSaveStatus() === 'saved'}>
-                    <span class="text-green-600 dark:text-green-400">✓</span>
-                    <span>
-                      Tersimpan {lastSavedAt() ? `pk ${lastSavedAt()!.toLocaleTimeString('id-ID')}` : 'otomatis'}
-                    </span>
-                  </Show>
-                  <Show when={autoSaveStatus() === 'error'}>
-                    <span class="text-rose-500">⚠</span>
-                    <span class="text-rose-600">Gagal simpan otomatis</span>
-                  </Show>
-                  <Show when={autoSaveStatus() === 'idle'}>
-                    <span>Auto-save aktif</span>
-                  </Show>
+                <div class="inline-flex items-center rounded-full bg-secondary-100/90 dark:bg-secondary-800 p-0.5 border border-secondary-200/60 dark:border-secondary-700/60 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setSaveMode('auto')}
+                    title="Simpan otomatis berkala di latar belakang"
+                    class={`px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 ${
+                      saveMode() === 'auto'
+                        ? 'bg-white dark:bg-secondary-900 text-secondary-900 dark:text-white shadow-xs font-semibold'
+                        : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200'
+                    }`}
+                  >
+                    <span
+                      class={`w-1.5 h-1.5 rounded-full ${autoSaveStatus() === 'saving' ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`}
+                    />
+                    <span>Auto-Save</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSaveMode('manual')}
+                    title="Mode simpan manual (batch). Nilai yang berubah tetap di-highlight sebelum disimpan manual."
+                    class={`px-2.5 py-1 rounded-full font-medium transition-all flex items-center gap-1.5 ${
+                      saveMode() === 'manual'
+                        ? 'bg-white dark:bg-secondary-900 text-amber-700 dark:text-amber-300 shadow-xs font-semibold'
+                        : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200'
+                    }`}
+                  >
+                    <span>✋ Batch Manual</span>
+                  </button>
                 </div>
+
+                {/* Status Detail Simpan */}
+                <Show when={saveMode() === 'auto'}>
+                  <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-secondary-100/80 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300">
+                    <Show when={autoSaveStatus() === 'saving'}>
+                      <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span>Menyimpan otomatis...</span>
+                    </Show>
+                    <Show when={autoSaveStatus() === 'saved'}>
+                      <span class="text-green-600 dark:text-green-400">✓</span>
+                      <span>
+                        Tersimpan {lastSavedAt() ? `pk ${lastSavedAt()!.toLocaleTimeString('id-ID')}` : 'otomatis'}
+                      </span>
+                    </Show>
+                    <Show when={autoSaveStatus() === 'error'}>
+                      <span class="text-rose-500">⚠</span>
+                      <span class="text-rose-600">Gagal simpan otomatis</span>
+                    </Show>
+                    <Show when={autoSaveStatus() === 'idle'}>
+                      <span>Auto-save aktif</span>
+                    </Show>
+                  </div>
+                </Show>
+
+                <Show when={saveMode() === 'manual'}>
+                  <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50">
+                    <Show when={dirtyCount() > 0} fallback={<span>Siap menginput nilai</span>}>
+                      <span class="font-bold">{dirtyCount()} nilai berubah</span>
+                      <span class="text-[10px] opacity-75">(tekan Simpan / Ctrl+S)</span>
+                    </Show>
+                  </div>
+                </Show>
               </Show>
 
-              {/* Status Perubahan Belum Disimpan (Dirty) */}
-              <Show when={!isClassLocked() && dirtyCount() > 0}>
+              {/* Status Perubahan Belum Disimpan (Dirty) saat mode auto */}
+              <Show when={!isClassLocked() && dirtyCount() > 0 && saveMode() === 'auto'}>
                 <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                   {dirtyCount()} belum disimpan
                 </span>
@@ -2783,6 +2863,19 @@ export default function InputNilai() {
                             },
                           ]
                         : []),
+                      {
+                        separator: true,
+                      },
+                      {
+                        label: saveMode() === 'auto' ? '✓ Mode: Auto-Save (Aktif)' : 'Mode: Auto-Save',
+                        icon: '⚡',
+                        onClick: () => setSaveMode('auto'),
+                      },
+                      {
+                        label: saveMode() === 'manual' ? '✓ Mode: Batch Manual (Aktif)' : 'Mode: Batch Manual',
+                        icon: '✋',
+                        onClick: () => setSaveMode('manual'),
+                      },
                       {
                         separator: true,
                       },
