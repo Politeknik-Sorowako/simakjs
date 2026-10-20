@@ -1,5 +1,15 @@
 import { useSearchParams } from '@solidjs/router';
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createResource,
+  createSignal,
+  For,
+  onCleanup,
+  onMount,
+  Show,
+  Suspense,
+} from 'solid-js';
 import logoImg from '../assets/logo.png';
 import KomposisiBobotPanel from '../components/input-nilai/KomposisiBobotPanel';
 import SubNilaiPopup from '../components/input-nilai/SubNilaiPopup';
@@ -1501,6 +1511,22 @@ export default function InputNilai() {
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
   });
 
+  // Shortcut keyboard global: Ctrl+S / Cmd+S untuk Simpan Manual
+  onMount(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        e.preventDefault();
+        if (selectedKelasId() && !isClassLocked()) {
+          void handleSaveKomponenOnly(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    onCleanup(() => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+    });
+  });
+
   const importTemplateHeaders = createMemo(() => {
     const method = importTemplate();
     if (method === 'akhir') return ['nim', 'nilai_akhir'];
@@ -2551,120 +2577,37 @@ export default function InputNilai() {
 
       {/* Sticky action bar */}
       <Show when={selectedKelasId()}>
-        <div class="fixed bottom-0 left-0 right-0 z-40 print:hidden border-t border-secondary-200 bg-white/90 backdrop-blur px-4 py-3 dark:bg-secondary-900/90 dark:border-secondary-800">
+        <div class="fixed bottom-0 left-0 right-0 z-40 print:hidden border-t border-secondary-200 bg-white/95 backdrop-blur-md px-4 py-2.5 dark:bg-secondary-900/95 dark:border-secondary-800 shadow-lg">
           <div class="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-3">
+            {/* Status & Rekap Group */}
             <div class="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-secondary-600 dark:text-secondary-300">
-              <span class="px-2 py-0.5 rounded-full bg-secondary-100 dark:bg-secondary-800">
+              <span class="px-2.5 py-1 rounded-full bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-300">
                 {rekapOverall().lengkap}/{rekapOverall().total} NA lengkap
               </span>
-              <span class="px-2 py-0.5 rounded-full bg-secondary-100 dark:bg-secondary-800">
+              <span class="px-2.5 py-1 rounded-full bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-300">
                 Σ bobot {editableComponents().reduce((sum, item) => sum + item.bobot, 0)}%
               </span>
-              <span class="px-2 py-0.5 rounded-full bg-secondary-100 dark:bg-secondary-800">
+              <span class="px-2.5 py-1 rounded-full bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-300">
                 Rentang {nilaiEnvelope().min}-{nilaiEnvelope().max}
               </span>
-              <Show when={dirtyCount() > 0}>
-                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                  {dirtyCount()} belum disimpan
-                </span>
-              </Show>
-              <Show when={isClassLocked()}>
-                <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-                  Terkunci
-                </span>
-              </Show>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <DropdownMenu
-                position="right"
-                disabled={isExporting() || isClassLocked()}
-                triggerAriaLabel="Ekspor nilai"
-                triggerClass="px-4 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-secondary-100 hover:bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-200"
-                trigger={
-                  <>
-                    <span>Ekspor</span>
-                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </>
-                }
-                items={[
-                  {
-                    label: 'Ekspor Excel',
-                    onClick: handleExportXLSX,
-                    disabled: isExporting() || isClassLocked(),
-                    loading: isExporting(),
-                  },
-                  {
-                    label: 'Ekspor CSV',
-                    onClick: handleExportCSVFile,
-                    disabled: isExporting() || isClassLocked(),
-                  },
-                  {
-                    label: 'Unduh Template (Excel .xlsx)',
-                    onClick: handleDownloadExcelTemplate,
-                    disabled: isExporting() || isClassLocked(),
-                  },
-                  {
-                    label: 'Unduh Template (CSV .csv)',
-                    onClick: handleDownloadTemplate,
-                    disabled: isExporting() || isClassLocked(),
-                  },
-                ]}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={isExporting() || isClassLocked()}
-                onClick={() => setShowImportModal(true)}
-              >
-                Impor
-              </Button>
-              <Show when={role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'}>
-                <Button variant="secondary" size="sm" onClick={() => setShowLegacyImport(true)}>
-                  Impor Nilai Legacy
-                </Button>
-              </Show>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={isExporting() || isClassLocked()}
-                onClick={handleExportPDF}
-              >
-                Cetak
-              </Button>
+
+              {/* Status Rilis Kelas: DRAFT vs FINAL */}
               <Show
                 when={!isClassLocked()}
                 fallback={
-                  <>
-                    <span class="px-2.5 py-1 rounded-full text-fine font-bold bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-900/50 flex items-center gap-1.5">
-                      ✓ FINAL (Dirilis)
-                    </span>
-                    <Show when={role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'}>
-                      <Button variant="primary" size="sm" onClick={handleUnlockKelas}>
-                        Buka Kunci
-                      </Button>
-                    </Show>
-                    <Show when={role() !== 'admin' && role() !== 'prodi' && role() !== 'kaprodi'}>
-                      <span class="text-fine text-secondary-400 dark:text-secondary-300">
-                        Hubungi Admin/Prodi untuk membuka kunci.
-                      </span>
-                    </Show>
-                  </>
+                  <span class="px-2.5 py-1 rounded-full font-bold bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300 border border-green-200 dark:border-green-900/50 flex items-center gap-1.5">
+                    ✓ FINAL (Dirilis)
+                  </span>
                 }
               >
-                <span class="px-2.5 py-1 rounded-full text-fine font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 flex items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-full font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50 flex items-center gap-1.5">
                   ● DRAFT (Belum Dirilis)
                 </span>
-                <Button variant="danger" size="sm" onClick={handleLockKelas}>
-                  Kunci & Rilis Nilai Final
-                </Button>
               </Show>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              {/* Indikator Auto-Save */}
+
+              {/* Indikator Status Simpan (Auto-Save) */}
               <Show when={!isClassLocked()}>
-                <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-fine font-medium bg-secondary-100/70 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300">
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium bg-secondary-100/80 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300">
                   <Show when={autoSaveStatus() === 'saving'}>
                     <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                     <span>Menyimpan otomatis...</span>
@@ -2685,15 +2628,173 @@ export default function InputNilai() {
                 </div>
               </Show>
 
+              {/* Status Perubahan Belum Disimpan (Dirty) */}
               <Show when={!isClassLocked() && dirtyCount() > 0}>
-                <Button variant="danger" size="sm" onClick={handleDiscardChanges}>
-                  Batalkan Perubahan
-                </Button>
+                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  {dirtyCount()} belum disimpan
+                </span>
               </Show>
-              <Show when={!isClassLocked()}>
-                <Button variant="primary" size="sm" onClick={() => handleSaveKomponenOnly(false)}>
-                  Simpan Manual{selectedCount() > 0 ? ` (${selectedCount()})` : ''}
-                </Button>
+
+              {/* Status Terkunci */}
+              <Show when={isClassLocked()}>
+                <span class="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
+                  Terkunci
+                </span>
+              </Show>
+            </div>
+
+            {/* Action Buttons Group (Dropdowns) */}
+            <div class="flex flex-wrap items-center gap-2">
+              {/* 1. Dropdown Impor (Impor Nilai & Impor Nilai Legacy) */}
+              <DropdownMenu
+                position="right"
+                disabled={isClassLocked()}
+                triggerAriaLabel="Impor nilai"
+                triggerClass="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-secondary-100 hover:bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-200 flex items-center gap-1.5"
+                trigger={
+                  <>
+                    <span>Impor</span>
+                    <svg class="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                }
+                items={[
+                  {
+                    label: 'Impor Nilai (CSV / Excel / Tempel)',
+                    icon: '📂',
+                    onClick: () => setShowImportModal(true),
+                    disabled: isClassLocked(),
+                  },
+                  ...(role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'
+                    ? [
+                        {
+                          label: 'Impor Nilai Legacy (KHS)',
+                          icon: '📜',
+                          onClick: () => setShowLegacyImport(true),
+                          disabled: isClassLocked(),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+
+              {/* 2. Dropdown Ekspor & Cetak */}
+              <DropdownMenu
+                position="right"
+                disabled={isExporting()}
+                triggerAriaLabel="Ekspor dan cetak nilai"
+                triggerClass="px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed bg-secondary-100 hover:bg-secondary-200 text-secondary-700 dark:bg-secondary-800 dark:hover:bg-secondary-700 dark:text-secondary-200 flex items-center gap-1.5"
+                trigger={
+                  <>
+                    <span>Ekspor</span>
+                    <svg class="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </>
+                }
+                items={[
+                  {
+                    label: 'Cetak Dokumen Nilai (PDF)',
+                    icon: '🖨',
+                    onClick: handleExportPDF,
+                    disabled: isExporting(),
+                    loading: isExporting(),
+                  },
+                  {
+                    separator: true,
+                  },
+                  {
+                    label: 'Ekspor Excel (.xlsx)',
+                    icon: '📊',
+                    onClick: handleExportXLSX,
+                    disabled: isExporting(),
+                  },
+                  {
+                    label: 'Ekspor CSV (.csv)',
+                    icon: '📄',
+                    onClick: handleExportCSVFile,
+                    disabled: isExporting(),
+                  },
+                  {
+                    separator: true,
+                  },
+                  {
+                    label: 'Unduh Template Excel (.xlsx)',
+                    icon: '📥',
+                    onClick: handleDownloadExcelTemplate,
+                    disabled: isExporting(),
+                  },
+                  {
+                    label: 'Unduh Template CSV (.csv)',
+                    icon: '📥',
+                    onClick: handleDownloadTemplate,
+                    disabled: isExporting(),
+                  },
+                ]}
+              />
+
+              {/* 3. Tombol Simpan Manual & Kunci Rilis Dropdown Button */}
+              <Show
+                when={!isClassLocked()}
+                fallback={
+                  <Show
+                    when={role() === 'admin' || role() === 'prodi' || role() === 'kaprodi'}
+                    fallback={<span class="text-xs text-secondary-400 italic">Kelas Terkunci</span>}
+                  >
+                    <Button variant="primary" size="sm" onClick={handleUnlockKelas}>
+                      Buka Kunci Nilai
+                    </Button>
+                  </Show>
+                }
+              >
+                <div class="inline-flex items-center rounded-full shadow-sm bg-action p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveKomponenOnly(false)}
+                    title="Simpan Nilai Manual (Ctrl+S)"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-white text-xs font-semibold rounded-l-full hover:bg-action-focus active:scale-[0.98] transition-all focus:outline-none"
+                  >
+                    <span>Simpan Manual{selectedCount() > 0 ? ` (${selectedCount()})` : ''}</span>
+                    <span class="text-[10px] opacity-75 font-mono hidden sm:inline">(Ctrl+S)</span>
+                  </button>
+                  <DropdownMenu
+                    position="right"
+                    triggerAriaLabel="Aksi Simpan dan Kunci Nilai"
+                    triggerClass="px-2 py-1.5 text-white text-xs font-semibold rounded-r-full hover:bg-action-focus border-l border-white/25 active:scale-[0.98] transition-all focus:outline-none flex items-center justify-center"
+                    trigger={
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    }
+                    items={[
+                      {
+                        label: 'Simpan Manual (Ctrl+S)',
+                        icon: '💾',
+                        onClick: () => handleSaveKomponenOnly(false),
+                      },
+                      ...(dirtyCount() > 0
+                        ? [
+                            {
+                              label: 'Batalkan Perubahan',
+                              icon: '↩',
+                              onClick: handleDiscardChanges,
+                              danger: true,
+                            },
+                          ]
+                        : []),
+                      {
+                        separator: true,
+                      },
+                      {
+                        label: 'Kunci & Rilis Nilai Final',
+                        icon: '🔒',
+                        onClick: handleLockKelas,
+                        danger: true,
+                      },
+                    ]}
+                  />
+                </div>
               </Show>
             </div>
           </div>
