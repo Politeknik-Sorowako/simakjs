@@ -32,6 +32,13 @@ export function hitungDegradasiNilaiSikap(totalPoin: number): number {
   return Number((t * 1.0 + l * 0.25).toFixed(2));
 }
 
+export function konversiPoinKeSanksi(totalPoin: number): { tertulis: number; lisan: number } {
+  return {
+    tertulis: Math.floor(totalPoin / 4),
+    lisan: totalPoin % 4,
+  };
+}
+
 export type StatusPelanggaranSemester = 'Skorsing' | 'Coaching' | 'Awas' | 'Waspada' | '-';
 export type StatusPelanggaranAkumulatif = 'Darurat' | 'Gawat' | 'Awas' | 'Waspada' | 'Siaga';
 
@@ -410,12 +417,13 @@ export class PelanggaranService {
           (semesterAktif !== null && semesterAktif > 1 && s === semesterAktif - 1) ||
           (previousPeriodeId !== null && expectedPid === previousPeriodeId);
 
+        const sanksi = konversiPoinKeSanksi(data.poin);
         rekapPerSemester.push({
           semester: s,
           periodeId: expectedPid,
           poin: data.poin,
-          lisan: data.lisan,
-          tertulis: data.tertulis,
+          lisan: sanksi.lisan,
+          tertulis: sanksi.tertulis,
           predikat: hitungPredikatTxly(data.poin),
           degradasi: hitungDegradasiNilaiSikap(data.poin),
           statusSemester: hitungStatusPelanggaranSemester(data.poin),
@@ -429,12 +437,13 @@ export class PelanggaranService {
     for (const [pid, data] of perPeriodeMap.entries()) {
       if (coveredPeriodIds.has(pid)) continue;
       const sem = (await getSemester(pid)) ?? 0;
+      const sanksi = konversiPoinKeSanksi(data.poin);
       rekapPerSemester.push({
         semester: sem,
         periodeId: pid,
         poin: data.poin,
-        lisan: data.lisan,
-        tertulis: data.tertulis,
+        lisan: sanksi.lisan,
+        tertulis: sanksi.tertulis,
         predikat: hitungPredikatTxly(data.poin),
         degradasi: hitungDegradasiNilaiSikap(data.poin),
         statusSemester: hitungStatusPelanggaranSemester(data.poin),
@@ -462,9 +471,9 @@ export class PelanggaranService {
     // Hitung status akumulatif
     const statusAkumulatif = hitungStatusPelanggaranAkumulatif(totalPoin);
 
-    // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2
-    const tertulisSmtIni = activePeriodData?.tertulis || 0;
-    const totalTertulisKumulatif = list.filter((item) => item.jenisSanksi === 4).length;
+    // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2 (lisan 4 otomatis dikonversi menjadi tertulis 1)
+    const tertulisSmtIni = Math.floor(poinSemesterBerjalan / 4);
+    const totalTertulisKumulatif = Math.floor(totalPoin / 4);
     const jenjang = mhs.jenjang || 'D3';
     const batasTertulisKumulatif = jenjang === 'D4' ? 9 : 7;
     const isSkorsingSemester = tertulisSmtIni >= 4;
@@ -529,6 +538,7 @@ export class PelanggaranService {
 
     // Total poin (Lisan=1, Tertulis=4) untuk menurunkan degradasi sesuai formula BPA.
     const totalPoin = lisan * 1 + tertulis * 4;
+    const sanksi = konversiPoinKeSanksi(totalPoin);
     const degradasi = hitungDegradasiNilaiSikap(totalPoin);
     const am = Math.max(0, Number((4.0 - degradasi).toFixed(2)));
 
@@ -543,8 +553,8 @@ export class PelanggaranService {
       degradasi,
       sebutan,
       narasi: `${sebutan} (${am.toFixed(2).replace('.', ',')})`,
-      lisan,
-      tertulis,
+      lisan: sanksi.lisan,
+      tertulis: sanksi.tertulis,
       totalPoin,
     };
   }
@@ -984,23 +994,24 @@ export class PelanggaranService {
       for (const p of periodList) {
         if (!p.periodeId) continue;
         const sem = (await KhsService.hitungSemester(r.mahasiswaId, p.periodeId, r.angkatan, mhsCuti)) ?? 0;
+        const sanksi = konversiPoinKeSanksi(p.poin);
         poinPerSemester.push({
           semester: sem,
           periodeId: p.periodeId,
           poin: p.poin,
-          lisan: p.lisan,
-          tertulis: p.tertulis,
+          lisan: sanksi.lisan,
+          tertulis: sanksi.tertulis,
           predikat: hitungPredikatTxly(p.poin),
           statusSemester: hitungStatusPelanggaranSemester(p.poin),
         });
       }
       poinPerSemester.sort((a, b) => a.semester - b.semester);
 
-      // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2:
+      // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2 (lisan 4 otomatis dikonversi menjadi tertulis 1):
       // - Akumulasi peringatan Tertulis-4 dalam satu semester (tertulis >= 4)
       // - ATAU akumulasi peringatan tertulis ke-7 (D3) / ke-9 (D4) kumulatif sejak semester pertama
-      const tertulisSmtIni = targetPeriodEntry ? targetPeriodEntry.tertulis : 0;
-      const totalTertulisKumulatif = periodList.reduce((acc, p) => acc + p.tertulis, 0);
+      const tertulisSmtIni = Math.floor(poinSemesterBerjalan / 4);
+      const totalTertulisKumulatif = Math.floor(totalPoin / 4);
       const jenjang = r.jenjang || 'D3';
       const batasTertulisKumulatif = jenjang === 'D4' ? 9 : 7;
       const isSkorsingSemester = tertulisSmtIni >= 4;

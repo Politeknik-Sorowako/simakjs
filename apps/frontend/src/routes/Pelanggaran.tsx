@@ -2165,10 +2165,10 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               </td>
                               <td class="p-2.5 text-center font-mono">{sem.periodeId}</td>
                               <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400">
-                                {sem.lisan}
+                                {sem.poin !== undefined ? sem.poin % 4 : (sem.lisan ?? 0)}
                               </td>
                               <td class="p-2.5 text-center font-bold text-amber-600 dark:text-amber-400">
-                                {sem.tertulis}
+                                {sem.poin !== undefined ? Math.floor(sem.poin / 4) : (sem.tertulis ?? 0)}
                               </td>
                               <td class="p-2.5 text-center">
                                 <span class="px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">

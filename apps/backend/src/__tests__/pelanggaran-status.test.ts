@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { hitungStatusPelanggaranAkumulatif, hitungStatusPelanggaranSemester } from '../services/pelanggaran.service';
+import {
+  hitungStatusPelanggaranAkumulatif,
+  hitungStatusPelanggaranSemester,
+  konversiPoinKeSanksi,
+} from '../services/pelanggaran.service';
 
 describe('Klasifikasi Status Pelanggaran Berjenjang', () => {
   describe('hitungStatusPelanggaranSemester (Per Semester)', () => {
@@ -62,6 +66,38 @@ describe('Klasifikasi Status Pelanggaran Berjenjang', () => {
       expect(hitungStatusPelanggaranAkumulatif(28)).toBe('Darurat');
       expect(hitungStatusPelanggaranAkumulatif(32)).toBe('Darurat');
       expect(hitungStatusPelanggaranAkumulatif(50)).toBe('Darurat');
+    });
+  });
+
+  describe('konversiPoinKeSanksi (Konversi 4 Lisan = 1 Tertulis)', () => {
+    it('mengonversi 4 poin lisan menjadi 1 tertulis dan 0 lisan (sesuai predikat T1)', () => {
+      const sanksi = konversiPoinKeSanksi(4);
+      expect(sanksi.tertulis).toBe(1);
+      expect(sanksi.lisan).toBe(0);
+    });
+
+    it('mengonversi 7 poin menjadi 1 tertulis dan 3 lisan (sesuai predikat T1L3)', () => {
+      const sanksi = konversiPoinKeSanksi(7);
+      expect(sanksi.tertulis).toBe(1);
+      expect(sanksi.lisan).toBe(3);
+    });
+
+    it('mengonversi 14 poin menjadi 3 tertulis dan 2 lisan (sesuai predikat T3L2)', () => {
+      const sanksi = konversiPoinKeSanksi(14);
+      expect(sanksi.tertulis).toBe(3);
+      expect(sanksi.lisan).toBe(2);
+    });
+
+    it('mengonversi 0 poin menjadi 0 tertulis dan 0 lisan', () => {
+      const sanksi = konversiPoinKeSanksi(0);
+      expect(sanksi.tertulis).toBe(0);
+      expect(sanksi.lisan).toBe(0);
+    });
+
+    it('mengonversi 16 poin menjadi 4 tertulis (batas skorsing)', () => {
+      const sanksi = konversiPoinKeSanksi(16);
+      expect(sanksi.tertulis).toBe(4);
+      expect(sanksi.lisan).toBe(0);
     });
   });
 });
