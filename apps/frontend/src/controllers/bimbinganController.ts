@@ -153,6 +153,8 @@ export interface PoinSemesterItem {
   tertulis: number;
   predikat: string;
   degradasi?: number;
+  isBerjalan?: boolean;
+  isSemesterLalu?: boolean;
 }
 
 export interface StatusSkorsing {
@@ -168,6 +170,8 @@ export interface PelanggaranRekap {
   degradasiNilaiSikap?: number;
   poinSemesterBerjalan?: number;
   predikatSemesterBerjalan?: string;
+  poinSemesterLalu?: number;
+  predikatSemesterLalu?: string;
   semesterAktif?: number | null;
   jenjang?: string | null;
   statusSkorsing?: StatusSkorsing;
@@ -207,6 +211,9 @@ export interface MahasiswaTxlyItem {
   poinSemesterBerjalan?: number;
   predikatSemesterBerjalan?: string;
   jumlahPelanggaranSemesterBerjalan?: number;
+  poinSemesterLalu?: number;
+  predikatSemesterLalu?: string;
+  jumlahPelanggaranSemesterLalu?: number;
   poinPerSemester?: PoinSemesterItem[];
   statusSkorsing?: StatusSkorsing;
   jumlahPelanggaran: number;
