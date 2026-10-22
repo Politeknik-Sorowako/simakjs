@@ -235,6 +235,10 @@ export default function Pelanggaran() {
       header: 'Poin Smt Ini',
       accessor: (r) => `${r.poinSemesterBerjalan ?? 0} (${r.predikatSemesterBerjalan || '-'})`,
     },
+    {
+      header: 'Poin Smt Lalu',
+      accessor: (r) => `${r.poinSemesterLalu ?? 0} (${r.predikatSemesterLalu || '-'})`,
+    },
     { header: 'Akumulasi Poin', accessor: (r) => r.totalPoin },
     { header: 'Predikat Kumulatif', accessor: (r) => r.predikat },
     { header: 'Jumlah Pelanggaran', accessor: (r) => r.jumlahPelanggaran },
@@ -384,6 +388,7 @@ export default function Pelanggaran() {
   // Form State
   const [showModal, setShowModal] = createSignal(false);
   const [mahasiswaId, setMahasiswaId] = createSignal(0);
+  const [formPeriodeId, setFormPeriodeId] = createSignal<string>('');
   const [tanggal, setTanggal] = createSignal('');
   const [jenisPelanggaran, setJenisPelanggaran] = createSignal('');
   const [keterangan, setKeterangan] = createSignal('');
@@ -391,6 +396,13 @@ export default function Pelanggaran() {
   const [pelapor, setPelapor] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
+
+  // Status Kedisiplinan Real-Time Mahasiswa Terpilih pada Form Modal
+  const selectedStudentDiscipline = createMemo(() => {
+    const mId = mahasiswaId();
+    if (!mId) return null;
+    return mahasiswaTxlyList()?.find((m) => m.mahasiswaId === mId) || null;
+  });
 
   // Hapus Pelanggaran State
   const [deleteTarget, setDeleteTarget] = createSignal<IPelanggaran | null>(null);
@@ -568,6 +580,8 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     const firstStudent = mahasiswaList()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
     setTanggal(getTodayString());
+    const activePer = (periodeList() || []).find((p) => p.aktif);
+    setFormPeriodeId(activePer ? activePer.id : (periodeList() || [])[0]?.id || '');
     setJenisPelanggaran('');
     setKeterangan('');
     setPasalId(null);
@@ -596,6 +610,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     setMahasiswaId(item.mahasiswaId);
     ensureStudentLoaded(item.mahasiswaId);
     setTanggal(item.tanggal);
+    setFormPeriodeId(item.periodeId || '');
     setJenisPelanggaran(item.jenisPelanggaran);
     setKeterangan(item.keterangan);
     setPasalId(item.pasalId && item.pasalId > 0 ? item.pasalId : null);
@@ -619,6 +634,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
       const payload = {
         mahasiswaId: mahasiswaId(),
         tanggal: tanggal(),
+        periodeId: formPeriodeId() || undefined,
         jenisPelanggaran: jenisPelanggaran(),
         keterangan: keterangan(),
         pasalId: pasalId() && pasalId()! > 0 ? pasalId() : null,
@@ -662,6 +678,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     | 'prodiNama'
     | 'semester'
     | 'poinSemesterBerjalan'
+    | 'poinSemesterLalu'
     | 'totalPoin'
     | 'jumlahPelanggaran';
   const [mhsTxlySortField, setMhsTxlySortField] = createSignal<MhsTxlySortField>('predikat');
@@ -714,6 +731,8 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
         cmp = a.totalPoin - b.totalPoin;
       } else if (field === 'poinSemesterBerjalan') {
         cmp = (a.poinSemesterBerjalan || 0) - (b.poinSemesterBerjalan || 0);
+      } else if (field === 'poinSemesterLalu') {
+        cmp = (a.poinSemesterLalu || 0) - (b.poinSemesterLalu || 0);
       } else if (field === 'jumlahPelanggaran') {
         cmp = a.jumlahPelanggaran - b.jumlahPelanggaran;
       } else if (field === 'semester') {
@@ -733,7 +752,12 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     } else {
       setMhsTxlySortField(field);
       setMhsTxlySortDir(
-        field === 'predikat' || field === 'totalPoin' || field === 'poinSemesterBerjalan' ? 'desc' : 'asc',
+        field === 'predikat' ||
+          field === 'totalPoin' ||
+          field === 'poinSemesterBerjalan' ||
+          field === 'poinSemesterLalu'
+          ? 'desc'
+          : 'asc',
       );
     }
   };
@@ -1761,6 +1785,16 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               : ''}
                           </button>
                         </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('poinSemesterLalu')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-action"
+                            onClick={() => toggleMhsTxlySort('poinSemesterLalu')}
+                          >
+                            Poin Smt Lalu{' '}
+                            {mhsTxlySortField() === 'poinSemesterLalu' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
                         <th scope="col" aria-sort={mhsTxlySortAria('totalPoin')} class="p-3 text-center">
                           <button
                             type="button"
@@ -1835,6 +1869,14 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               </span>
                               <span class="text-fine font-semibold text-secondary-500 dark:text-secondary-400 ml-1">
                                 ({item.predikatSemesterBerjalan || '-'})
+                              </span>
+                            </td>
+                            <td class="p-3 text-center">
+                              <span class="font-bold text-secondary-800 dark:text-white">
+                                {item.poinSemesterLalu ?? 0}
+                              </span>
+                              <span class="text-fine font-semibold text-secondary-500 dark:text-secondary-400 ml-1">
+                                ({item.predikatSemesterLalu || '-'})
                               </span>
                             </td>
                             <td class="p-3 text-center">
@@ -1951,6 +1993,15 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                   </span>
                 </div>
                 <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Poin Smt Lalu</span>
+                  <span class="font-bold text-secondary-900 dark:text-white text-base">
+                    {selectedMhsDetail()?.poinSemesterLalu ?? 0}{' '}
+                    <span class="text-caption font-normal text-secondary-500">
+                      ({selectedMhsDetail()?.predikatSemesterLalu || '-'})
+                    </span>
+                  </span>
+                </div>
+                <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
                   <span class="text-fine uppercase text-secondary-400 font-semibold">Akumulasi Poin</span>
                   <span class="font-bold text-rose-600 dark:text-rose-400 text-base">
                     {selectedMhsDetail()?.totalPoin}{' '}
@@ -2049,8 +2100,10 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         }
                       >
                         {(sem) => {
-                          const isCurrent =
-                            selectedMhsDetail()?.semester && sem.semester === selectedMhsDetail()?.semester;
+                          const currentMhs = selectedMhsDetail();
+                          const mhsSem = typeof currentMhs?.semester === 'number' ? currentMhs.semester : null;
+                          const isCurrent = sem.isBerjalan ?? (mhsSem !== null && sem.semester === mhsSem);
+                          const isPast = sem.isSemesterLalu ?? (mhsSem !== null && sem.semester === mhsSem - 1);
                           const isSkorsingSem = sem.tertulis >= 4;
                           const isMendekatiSem = sem.tertulis === 3;
                           return (
@@ -2058,7 +2111,9 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               class={`transition-colors ${
                                 isCurrent
                                   ? 'bg-action-50/20 font-semibold dark:bg-brand-950/20'
-                                  : 'hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40'
+                                  : isPast
+                                    ? 'bg-secondary-50/20 dark:bg-secondary-800/20'
+                                    : 'hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40'
                               }`}
                             >
                               <td class="p-2.5 text-center">
@@ -2067,6 +2122,11 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                                   <Show when={isCurrent}>
                                     <span class="px-1.5 py-0.5 rounded text-fine font-bold bg-action-100 text-action dark:bg-brand-900/50 dark:text-brand-300">
                                       Berjalan
+                                    </span>
+                                  </Show>
+                                  <Show when={isPast && !isCurrent}>
+                                    <span class="px-1.5 py-0.5 rounded text-fine font-bold bg-secondary-200 text-secondary-700 dark:bg-secondary-700 dark:text-secondary-200">
+                                      Smt Lalu
                                     </span>
                                   </Show>
                                 </div>
@@ -2321,13 +2381,75 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               />
             </div>
 
-            {/* Tanggal */}
-            <Input
-              label="Tanggal Pelanggaran"
-              type="date"
-              value={tanggal()}
-              onInput={(e) => setTanggal(e.currentTarget.value)}
-            />
+            {/* Status Kedisiplinan Real-Time Mahasiswa Terpilih */}
+            <Show when={selectedStudentDiscipline()}>
+              {(sd) => (
+                <div class="p-3 bg-secondary-50/80 rounded-xl border border-secondary-200 flex flex-col gap-2 dark:bg-secondary-800/60 dark:border-secondary-700">
+                  <div class="flex items-center justify-between text-fine font-bold text-secondary-500 uppercase">
+                    <span>Status Kedisiplinan Mahasiswa Saat Ini</span>
+                    <span class="font-mono text-secondary-700 dark:text-secondary-300">
+                      {sd().prodiNama ? `${sd().prodiNama} · ` : ''}Sem. {sd().semester || '-'}
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
+                      <span class="text-fine text-secondary-400">Poin Smt Ini</span>
+                      <span class="font-bold text-secondary-900 dark:text-white text-caption">
+                        {sd().poinSemesterBerjalan ?? 0}{' '}
+                        <span class="font-normal text-secondary-500">({sd().predikatSemesterBerjalan || '-'})</span>
+                      </span>
+                    </div>
+                    <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
+                      <span class="text-fine text-secondary-400">Akumulasi Poin</span>
+                      <span class="font-bold text-rose-600 dark:text-rose-400 text-caption">
+                        {sd().totalPoin} <span class="font-normal text-rose-500">({sd().predikat})</span>
+                      </span>
+                    </div>
+                    <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
+                      <span class="text-fine text-secondary-400">Status Sanksi</span>
+                      <span
+                        class={`font-bold text-caption ${
+                          sd().statusSkorsing?.isSkorsing
+                            ? 'text-rose-600'
+                            : sd().statusSkorsing?.isMendekati
+                              ? 'text-amber-600'
+                              : 'text-emerald-600'
+                        }`}
+                      >
+                        {sd().statusSkorsing?.isSkorsing
+                          ? '🔴 Skorsing'
+                          : sd().statusSkorsing?.isMendekati
+                            ? '⚠️ Waspada'
+                            : '🟢 Aman'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Show>
+
+            {/* Baris Tanggal & Pilihan Periode Semester */}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Tanggal Pelanggaran"
+                type="date"
+                value={tanggal()}
+                onInput={(e) => setTanggal(e.currentTarget.value)}
+              />
+
+              <div class="flex flex-col gap-1">
+                <SearchableSelect
+                  label="Periode Semester"
+                  placeholder="Pilih periode akademik..."
+                  value={formPeriodeId()}
+                  options={(periodeList() || []).map((p) => ({
+                    label: `${p.nama} (${p.id})${p.aktif ? ' — Berjalan' : ''}`,
+                    value: p.id,
+                  }))}
+                  onChange={(val) => setFormPeriodeId(String(val))}
+                />
+              </div>
+            </div>
 
             {/* Pasal BPA (opsional) */}
             <SearchableSelect
@@ -2340,6 +2462,30 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               }))}
               onChange={handlePasalChange}
             />
+
+            {/* Peringatan Dini Dampak Sanksi Jika Tertulis Dipilih */}
+            <Show
+              when={
+                selectedPasal()?.jenisSanksi === 4 &&
+                selectedStudentDiscipline() &&
+                (selectedStudentDiscipline()?.statusSkorsing?.isMendekati ||
+                  selectedStudentDiscipline()?.statusSkorsing?.isSkorsing)
+              }
+            >
+              <div class="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-caption flex items-start gap-2 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200">
+                <span class="text-base" aria-hidden="true">
+                  ⚠️
+                </span>
+                <div>
+                  <strong>Peringatan Ambang Skorsing (Pasal 32):</strong> Mahasiswa ini saat ini berstatus{' '}
+                  <span class="font-bold underline">
+                    {selectedStudentDiscipline()?.statusSkorsing?.isSkorsing ? 'SKORSING' : 'WASPADA (Mendekati Batas)'}
+                  </span>
+                  . Penambahan sanksi <strong>Peringatan Tertulis (+4 poin)</strong> ini akan meningkatkan akumulasi
+                  tertulis. Pastikan telah dikoordinasikan dengan Dosen PA/Komisi Disiplin.
+                </div>
+              </div>
+            </Show>
 
             {/* Info pasal terpilih */}
             <Show when={selectedPasal()}>

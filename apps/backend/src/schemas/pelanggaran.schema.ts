@@ -58,6 +58,8 @@ export const getPelanggaranMahasiswaSchema = {
       degradasiNilaiSikap: t.Number(),
       poinSemesterBerjalan: t.Optional(t.Integer()),
       predikatSemesterBerjalan: t.Optional(t.String()),
+      poinSemesterLalu: t.Optional(t.Integer()),
+      predikatSemesterLalu: t.Optional(t.String()),
       semesterAktif: t.Optional(t.Union([t.Integer(), t.Null()])),
       jenjang: t.Optional(t.Union([t.String(), t.Null()])),
       statusSkorsing: t.Optional(
@@ -77,6 +79,8 @@ export const getPelanggaranMahasiswaSchema = {
             tertulis: t.Integer(),
             predikat: t.String(),
             degradasi: t.Number(),
+            isBerjalan: t.Optional(t.Boolean()),
+            isSemesterLalu: t.Optional(t.Boolean()),
           }),
         ),
       ),
@@ -160,6 +164,9 @@ export const getMahasiswaPredikatSchema = {
         poinSemesterBerjalan: t.Optional(t.Integer()),
         predikatSemesterBerjalan: t.Optional(t.String()),
         jumlahPelanggaranSemesterBerjalan: t.Optional(t.Integer()),
+        poinSemesterLalu: t.Optional(t.Integer()),
+        predikatSemesterLalu: t.Optional(t.String()),
+        jumlahPelanggaranSemesterLalu: t.Optional(t.Integer()),
         poinPerSemester: t.Optional(
           t.Array(
             t.Object({
