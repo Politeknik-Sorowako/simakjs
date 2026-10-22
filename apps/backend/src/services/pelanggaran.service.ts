@@ -839,11 +839,11 @@ export class PelanggaranService {
     const resolvedPeriodeSql = sql<string>`COALESCE(
       ${pelanggaran.periodeId},
       CASE
-        WHEN CAST(SUBSTRING(${pelanggaran.tanggal} FROM 6 FOR 2) AS INTEGER) >= 8
-          THEN CONCAT(SUBSTRING(${pelanggaran.tanggal} FROM 1 FOR 4), '1')
-        WHEN CAST(SUBSTRING(${pelanggaran.tanggal} FROM 6 FOR 2) AS INTEGER) = 1
-          THEN CONCAT(CAST(CAST(SUBSTRING(${pelanggaran.tanggal} FROM 1 FOR 4) AS INTEGER) - 1 AS TEXT), '1')
-        ELSE CONCAT(CAST(CAST(SUBSTRING(${pelanggaran.tanggal} FROM 1 FOR 4) AS INTEGER) - 1 AS TEXT), '2')
+        WHEN EXTRACT(MONTH FROM ${pelanggaran.tanggal}) >= 8
+          THEN CONCAT(CAST(EXTRACT(YEAR FROM ${pelanggaran.tanggal}) AS INTEGER), '1')
+        WHEN EXTRACT(MONTH FROM ${pelanggaran.tanggal}) = 1
+          THEN CONCAT(CAST(EXTRACT(YEAR FROM ${pelanggaran.tanggal}) - 1 AS INTEGER), '1')
+        ELSE CONCAT(CAST(EXTRACT(YEAR FROM ${pelanggaran.tanggal}) - 1 AS INTEGER), '2')
       END
     )`;
 
