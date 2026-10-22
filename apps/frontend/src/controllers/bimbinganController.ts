@@ -145,6 +145,9 @@ export interface Pelanggaran {
   createdAt?: string;
 }
 
+export type StatusPelanggaranSemester = 'Skorsing' | 'Coaching' | 'Awas' | 'Waspada' | '-';
+export type StatusPelanggaranAkumulatif = 'Darurat' | 'Gawat' | 'Awas' | 'Waspada' | 'Siaga';
+
 export interface PoinSemesterItem {
   semester: number;
   periodeId: string;
@@ -153,6 +156,7 @@ export interface PoinSemesterItem {
   tertulis: number;
   predikat: string;
   degradasi?: number;
+  statusSemester?: StatusPelanggaranSemester;
   isBerjalan?: boolean;
   isSemesterLalu?: boolean;
 }
@@ -168,10 +172,13 @@ export interface PelanggaranRekap {
   totalPoin: number;
   predikat: string;
   degradasiNilaiSikap?: number;
+  statusAkumulatif?: StatusPelanggaranAkumulatif;
   poinSemesterBerjalan?: number;
   predikatSemesterBerjalan?: string;
+  statusSemesterBerjalan?: StatusPelanggaranSemester;
   poinSemesterLalu?: number;
   predikatSemesterLalu?: string;
+  statusSemesterLalu?: StatusPelanggaranSemester;
   semesterAktif?: number | null;
   jenjang?: string | null;
   statusSkorsing?: StatusSkorsing;
@@ -208,11 +215,14 @@ export interface MahasiswaTxlyItem {
   semester?: number | null;
   totalPoin: number;
   totalPoinKumulatif?: number;
+  statusAkumulatif?: StatusPelanggaranAkumulatif;
   poinSemesterBerjalan?: number;
   predikatSemesterBerjalan?: string;
+  statusSemesterBerjalan?: StatusPelanggaranSemester;
   jumlahPelanggaranSemesterBerjalan?: number;
   poinSemesterLalu?: number;
   predikatSemesterLalu?: string;
+  statusSemesterLalu?: StatusPelanggaranSemester;
   jumlahPelanggaranSemesterLalu?: number;
   poinPerSemester?: PoinSemesterItem[];
   statusSkorsing?: StatusSkorsing;
