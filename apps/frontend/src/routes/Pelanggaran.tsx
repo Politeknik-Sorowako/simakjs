@@ -16,6 +16,8 @@ import {
   bimbinganController,
   Pelanggaran as IPelanggaran,
   MahasiswaTxlyItem,
+  StatusPelanggaranAkumulatif,
+  StatusPelanggaranSemester,
 } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
@@ -25,6 +27,22 @@ import { systemController } from '../controllers/systemController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn, exportToExcel, exportToPDF } from '../utils/export';
 import { fmtTanggal, formatMahasiswaOption, getTodayString } from '../utils/format';
+
+export function getStatusPelanggaranSemester(poin: number): StatusPelanggaranSemester {
+  if (poin >= 16) return 'Skorsing';
+  if (poin >= 8) return 'Coaching';
+  if (poin >= 4) return 'Awas';
+  if (poin >= 1) return 'Waspada';
+  return '-';
+}
+
+export function getStatusPelanggaranAkumulatif(totalPoin: number): StatusPelanggaranAkumulatif {
+  if (totalPoin >= 28) return 'Darurat';
+  if (totalPoin >= 24) return 'Gawat';
+  if (totalPoin >= 16) return 'Awas';
+  if (totalPoin >= 8) return 'Waspada';
+  return 'Siaga';
+}
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -244,13 +262,11 @@ export default function Pelanggaran() {
     { header: 'Jumlah Pelanggaran', accessor: (r) => r.jumlahPelanggaran },
     { header: 'Degradasi Mutu Sikap', accessor: (r) => `-${r.degradasiNilaiSikap}` },
     {
-      header: 'Status Evaluasi Pasal 32',
-      accessor: (r) =>
-        r.statusSkorsing?.isSkorsing
-          ? `SKORSING: ${r.statusSkorsing.alasan || 'Memenuhi kriteria'}`
-          : r.statusSkorsing?.isMendekati
-            ? 'Waspada (Mendekati Batas Skorsing)'
-            : 'Aman',
+      header: 'Status Akumulatif',
+      accessor: (r) => {
+        const s = r.statusAkumulatif || getStatusPelanggaranAkumulatif(r.totalPoin);
+        return s;
+      },
     },
   ];
 
@@ -1825,7 +1841,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             {mhsTxlySortField() === 'jumlahPelanggaran' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
                           </button>
                         </th>
-                        <th class="p-3 text-center">Status BPA Pasal 32</th>
+                        <th class="p-3 text-center">Status Akumulatif</th>
                         <th class="p-3 text-center">Degradasi Mutu</th>
                         <th class="p-3 text-center">Aksi</th>
                       </tr>
@@ -1893,33 +1909,45 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                               {item.jumlahPelanggaran}
                             </td>
                             <td class="p-3 text-center">
-                              <Show
-                                when={item.statusSkorsing?.isSkorsing}
-                                fallback={
-                                  <Show
-                                    when={item.statusSkorsing?.isMendekati}
-                                    fallback={
-                                      <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-fine font-semibold dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
-                                        Aman
-                                      </span>
-                                    }
-                                  >
-                                    <span
-                                      class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
-                                      title="Sisa 1 peringatan tertulis menuju ambang batas Skorsing (Pasal 32)"
-                                    >
-                                      <span>⚠️</span> Waspada
+                              {(() => {
+                                const st = item.statusAkumulatif || getStatusPelanggaranAkumulatif(item.totalPoin);
+                                if (st === 'Darurat') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-rose-600 text-white border border-rose-700 text-fine font-bold inline-flex items-center gap-1 justify-center shadow-sm">
+                                      <span>🚨</span> Darurat
                                     </span>
-                                  </Show>
+                                  );
                                 }
-                              >
-                                <span
-                                  class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
-                                  title={item.statusSkorsing?.alasan || 'Memenuhi kriteria skorsing'}
-                                >
-                                  <span>🔴</span> Skorsing
-                                </span>
-                              </Show>
+                                if (st === 'Gawat') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800">
+                                      <span>🔴</span> Gawat
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Awas') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                                      <span>🟠</span> Awas
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Waspada') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-yellow-950/60 dark:text-yellow-300 dark:border-yellow-800">
+                                      <span>🟡</span> Waspada
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Siaga') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-fine font-semibold inline-flex items-center gap-1 justify-center dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800">
+                                      <span>🔵</span> Siaga
+                                    </span>
+                                  );
+                                }
+                                return <span class="text-secondary-400 font-mono">-</span>;
+                              })()}
                             </td>
                             <td class="p-3 text-center font-bold text-rose-600 dark:text-rose-400">
                               -{item.degradasiNilaiSikap}
@@ -2015,20 +2043,25 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                   </span>
                 </div>
                 <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
-                  <span class="text-fine uppercase text-secondary-400 font-semibold">Status Pasal 32</span>
-                  <Show
-                    when={selectedMhsDetail()?.statusSkorsing?.isSkorsing}
-                    fallback={
-                      <Show
-                        when={selectedMhsDetail()?.statusSkorsing?.isMendekati}
-                        fallback={<span class="font-bold text-emerald-600 text-base">Aman</span>}
-                      >
-                        <span class="font-bold text-amber-600 text-base">⚠️ Waspada</span>
-                      </Show>
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Status Akumulatif</span>
+                  {(() => {
+                    const st =
+                      selectedMhsDetail()?.statusAkumulatif ||
+                      getStatusPelanggaranAkumulatif(selectedMhsDetail()?.totalPoin ?? 0);
+                    if (st === 'Darurat') {
+                      return <span class="font-bold text-rose-600 text-base">🚨 Darurat</span>;
                     }
-                  >
-                    <span class="font-bold text-rose-600 text-base">🔴 Skorsing</span>
-                  </Show>
+                    if (st === 'Gawat') {
+                      return <span class="font-bold text-rose-500 text-base">🔴 Gawat</span>;
+                    }
+                    if (st === 'Awas') {
+                      return <span class="font-bold text-amber-600 text-base">🟠 Awas</span>;
+                    }
+                    if (st === 'Waspada') {
+                      return <span class="font-bold text-yellow-600 text-base">🟡 Waspada</span>;
+                    }
+                    return <span class="font-bold text-sky-600 text-base">🔵 Siaga</span>;
+                  })()}
                 </div>
               </div>
             </div>
@@ -2085,7 +2118,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                         <th class="p-2.5 text-center">Poin Semester</th>
                         <th class="p-2.5 text-center">Predikat TXLY</th>
                         <th class="p-2.5 text-center">Degradasi Sikap</th>
-                        <th class="p-2.5 text-center">Evaluasi Skorsing (Pasal 32)</th>
+                        <th class="p-2.5 text-center">Status Semester</th>
                       </tr>
                     </thead>
                     <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
@@ -2104,8 +2137,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                           const mhsSem = typeof currentMhs?.semester === 'number' ? currentMhs.semester : null;
                           const isCurrent = sem.isBerjalan ?? (mhsSem !== null && sem.semester === mhsSem);
                           const isPast = sem.isSemesterLalu ?? (mhsSem !== null && sem.semester === mhsSem - 1);
-                          const isSkorsingSem = sem.tertulis >= 4;
-                          const isMendekatiSem = sem.tertulis === 3;
+                          const semStatus = sem.statusSemester || getStatusPelanggaranSemester(sem.poin);
                           return (
                             <tr
                               class={`transition-colors ${
@@ -2155,33 +2187,49 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                                   : (Math.floor(sem.poin / 4) * 1.0 + (sem.poin % 4) * 0.25).toFixed(2)}
                               </td>
                               <td class="p-2.5 text-center">
-                                <Show
-                                  when={isSkorsingSem}
-                                  fallback={
-                                    <Show
-                                      when={isMendekatiSem}
-                                      fallback={
-                                        <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-fine font-semibold dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
-                                          Aman
-                                        </span>
-                                      }
-                                    >
+                                {(() => {
+                                  if (semStatus === 'Skorsing') {
+                                    return (
                                       <span
-                                        class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-fine font-bold dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
-                                        title="Tercatat 3 peringatan tertulis (sisa 1 tertulis menuju Skorsing)"
+                                        class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
+                                        title="Poin semester ≥ 16 (setara ≥ 4 Peringatan Tertulis)"
                                       >
-                                        ⚠️ 3/4 Tertulis
+                                        🔴 Skorsing
                                       </span>
-                                    </Show>
+                                    );
                                   }
-                                >
-                                  <span
-                                    class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
-                                    title="Memenuhi syarat Skorsing (≥ 4 Peringatan Tertulis dalam 1 semester)"
-                                  >
-                                    🔴 Skorsing (≥ 4 Tertulis)
-                                  </span>
-                                </Show>
+                                  if (semStatus === 'Coaching') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 text-fine font-semibold dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+                                        title="Poin semester ≥ 8 (setara ≥ 2 Peringatan Tertulis)"
+                                      >
+                                        🟣 Coaching
+                                      </span>
+                                    );
+                                  }
+                                  if (semStatus === 'Awas') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-fine font-semibold dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                                        title="Poin semester ≥ 4 (setara ≥ 1 Peringatan Tertulis)"
+                                      >
+                                        🟠 Awas
+                                      </span>
+                                    );
+                                  }
+                                  if (semStatus === 'Waspada') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 text-fine font-semibold dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800"
+                                        title="Poin semester ≥ 1 (ada pelanggaran)"
+                                      >
+                                        🟡 Waspada
+                                      </span>
+                                    );
+                                  }
+                                  return <span class="text-secondary-400 font-mono text-fine">-</span>;
+                                })()}
                               </td>
                             </tr>
                           );
@@ -2406,22 +2454,23 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                       </span>
                     </div>
                     <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
-                      <span class="text-fine text-secondary-400">Status Sanksi</span>
-                      <span
-                        class={`font-bold text-caption ${
-                          sd().statusSkorsing?.isSkorsing
-                            ? 'text-rose-600'
-                            : sd().statusSkorsing?.isMendekati
-                              ? 'text-amber-600'
-                              : 'text-emerald-600'
-                        }`}
-                      >
-                        {sd().statusSkorsing?.isSkorsing
-                          ? '🔴 Skorsing'
-                          : sd().statusSkorsing?.isMendekati
-                            ? '⚠️ Waspada'
-                            : '🟢 Aman'}
-                      </span>
+                      <span class="text-fine text-secondary-400">Status Akumulatif</span>
+                      {(() => {
+                        const st = sd().statusAkumulatif || getStatusPelanggaranAkumulatif(sd().totalPoin ?? 0);
+                        if (st === 'Darurat') {
+                          return <span class="font-bold text-caption text-rose-600">🚨 Darurat</span>;
+                        }
+                        if (st === 'Gawat') {
+                          return <span class="font-bold text-caption text-rose-500">🔴 Gawat</span>;
+                        }
+                        if (st === 'Awas') {
+                          return <span class="font-bold text-caption text-amber-600">🟠 Awas</span>;
+                        }
+                        if (st === 'Waspada') {
+                          return <span class="font-bold text-caption text-yellow-600">🟡 Waspada</span>;
+                        }
+                        return <span class="font-bold text-caption text-sky-600">🔵 Siaga</span>;
+                      })()}
                     </div>
                   </div>
                 </div>

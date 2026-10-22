@@ -32,6 +32,25 @@ export function hitungDegradasiNilaiSikap(totalPoin: number): number {
   return Number((t * 1.0 + l * 0.25).toFixed(2));
 }
 
+export type StatusPelanggaranSemester = 'Skorsing' | 'Coaching' | 'Awas' | 'Waspada' | '-';
+export type StatusPelanggaranAkumulatif = 'Darurat' | 'Gawat' | 'Awas' | 'Waspada' | 'Siaga';
+
+export function hitungStatusPelanggaranSemester(poin: number): StatusPelanggaranSemester {
+  if (poin >= 16) return 'Skorsing';
+  if (poin >= 8) return 'Coaching';
+  if (poin >= 4) return 'Awas';
+  if (poin >= 1) return 'Waspada';
+  return '-';
+}
+
+export function hitungStatusPelanggaranAkumulatif(totalPoin: number): StatusPelanggaranAkumulatif {
+  if (totalPoin >= 28) return 'Darurat';
+  if (totalPoin >= 24) return 'Gawat';
+  if (totalPoin >= 16) return 'Awas';
+  if (totalPoin >= 8) return 'Waspada';
+  return 'Siaga';
+}
+
 export function resolvePeriodeIdFromTanggal(tanggalStr: string): string {
   const d = new Date(tanggalStr);
   const year = d.getFullYear();
@@ -399,6 +418,7 @@ export class PelanggaranService {
           tertulis: data.tertulis,
           predikat: hitungPredikatTxly(data.poin),
           degradasi: hitungDegradasiNilaiSikap(data.poin),
+          statusSemester: hitungStatusPelanggaranSemester(data.poin),
           isBerjalan,
           isSemesterLalu,
         });
@@ -417,6 +437,7 @@ export class PelanggaranService {
         tertulis: data.tertulis,
         predikat: hitungPredikatTxly(data.poin),
         degradasi: hitungDegradasiNilaiSikap(data.poin),
+        statusSemester: hitungStatusPelanggaranSemester(data.poin),
         isBerjalan: activePeriodeId !== null && pid === activePeriodeId,
         isSemesterLalu: previousPeriodeId !== null && pid === previousPeriodeId,
       });
@@ -430,11 +451,16 @@ export class PelanggaranService {
     const activePeriodData = activePeriodeId ? perPeriodeMap.get(activePeriodeId) : null;
     const poinSemesterBerjalan = activePeriodData?.poin || 0;
     const predikatSemesterBerjalan = hitungPredikatTxly(poinSemesterBerjalan);
+    const statusSemesterBerjalan = hitungStatusPelanggaranSemester(poinSemesterBerjalan);
 
     // Hitung poin semester lalu
     const prevPeriodData = previousPeriodeId ? perPeriodeMap.get(previousPeriodeId) : null;
     const poinSemesterLalu = prevPeriodData?.poin || 0;
     const predikatSemesterLalu = hitungPredikatTxly(poinSemesterLalu);
+    const statusSemesterLalu = hitungStatusPelanggaranSemester(poinSemesterLalu);
+
+    // Hitung status akumulatif
+    const statusAkumulatif = hitungStatusPelanggaranAkumulatif(totalPoin);
 
     // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2
     const tertulisSmtIni = activePeriodData?.tertulis || 0;
@@ -461,10 +487,13 @@ export class PelanggaranService {
       totalPoin,
       predikat: hitungPredikatTxly(totalPoin),
       degradasiNilaiSikap: hitungDegradasiNilaiSikap(totalPoin),
+      statusAkumulatif,
       poinSemesterBerjalan,
       predikatSemesterBerjalan,
+      statusSemesterBerjalan,
       poinSemesterLalu,
       predikatSemesterLalu,
+      statusSemesterLalu,
       semesterAktif,
       jenjang,
       statusSkorsing: {
@@ -962,6 +991,7 @@ export class PelanggaranService {
           lisan: p.lisan,
           tertulis: p.tertulis,
           predikat: hitungPredikatTxly(p.poin),
+          statusSemester: hitungStatusPelanggaranSemester(p.poin),
         });
       }
       poinPerSemester.sort((a, b) => a.semester - b.semester);
@@ -1001,11 +1031,14 @@ export class PelanggaranService {
         semester,
         totalPoin,
         totalPoinKumulatif: totalPoin,
+        statusAkumulatif: hitungStatusPelanggaranAkumulatif(totalPoin),
         poinSemesterBerjalan,
         predikatSemesterBerjalan,
+        statusSemesterBerjalan: hitungStatusPelanggaranSemester(poinSemesterBerjalan),
         jumlahPelanggaranSemesterBerjalan,
         poinSemesterLalu,
         predikatSemesterLalu,
+        statusSemesterLalu: hitungStatusPelanggaranSemester(poinSemesterLalu),
         jumlahPelanggaranSemesterLalu,
         poinPerSemester,
         statusSkorsing: {
