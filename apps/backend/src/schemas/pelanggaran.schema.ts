@@ -56,6 +56,30 @@ export const getPelanggaranMahasiswaSchema = {
       totalPoin: t.Integer(),
       predikat: t.String(),
       degradasiNilaiSikap: t.Number(),
+      poinSemesterBerjalan: t.Optional(t.Integer()),
+      predikatSemesterBerjalan: t.Optional(t.String()),
+      semesterAktif: t.Optional(t.Union([t.Integer(), t.Null()])),
+      jenjang: t.Optional(t.Union([t.String(), t.Null()])),
+      statusSkorsing: t.Optional(
+        t.Object({
+          isSkorsing: t.Boolean(),
+          alasan: t.Union([t.String(), t.Null()]),
+          isMendekati: t.Boolean(),
+        }),
+      ),
+      rekapPerSemester: t.Optional(
+        t.Array(
+          t.Object({
+            semester: t.Integer(),
+            periodeId: t.String(),
+            poin: t.Integer(),
+            lisan: t.Integer(),
+            tertulis: t.Integer(),
+            predikat: t.String(),
+            degradasi: t.Number(),
+          }),
+        ),
+      ),
       pelanggaranList: t.Array(
         t.Object({
           id: t.Integer(),
@@ -75,6 +99,8 @@ export const getPelanggaranMahasiswaSchema = {
           nomorPasal: t.Union([t.String(), t.Null()]),
           bunyiPasal: t.Union([t.String(), t.Null()]),
           pelapor: t.Union([t.String(), t.Null()]),
+          periodeId: t.Optional(t.Union([t.String(), t.Null()])),
+          semester: t.Optional(t.Union([t.Integer(), t.Null()])),
           createdAt: t.Date(),
         }),
       ),
@@ -127,8 +153,32 @@ export const getMahasiswaPredikatSchema = {
         angkatan: t.Union([t.String(), t.Null()]),
         programStudiId: t.Union([t.Integer(), t.Null()]),
         prodiNama: t.Union([t.String(), t.Null()]),
+        jenjang: t.Optional(t.Union([t.String(), t.Null()])),
         semester: t.Union([t.Integer(), t.Null()]),
         totalPoin: t.Integer(),
+        totalPoinKumulatif: t.Optional(t.Integer()),
+        poinSemesterBerjalan: t.Optional(t.Integer()),
+        predikatSemesterBerjalan: t.Optional(t.String()),
+        jumlahPelanggaranSemesterBerjalan: t.Optional(t.Integer()),
+        poinPerSemester: t.Optional(
+          t.Array(
+            t.Object({
+              semester: t.Integer(),
+              periodeId: t.String(),
+              poin: t.Integer(),
+              lisan: t.Integer(),
+              tertulis: t.Integer(),
+              predikat: t.String(),
+            }),
+          ),
+        ),
+        statusSkorsing: t.Optional(
+          t.Object({
+            isSkorsing: t.Boolean(),
+            alasan: t.Union([t.String(), t.Null()]),
+            isMendekati: t.Boolean(),
+          }),
+        ),
         jumlahPelanggaran: t.Integer(),
         predikat: t.String(),
         degradasiNilaiSikap: t.Number(),

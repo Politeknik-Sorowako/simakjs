@@ -140,8 +140,25 @@ export interface Pelanggaran {
   nomorPasal?: string | null;
   bunyiPasal?: string | null;
   periodeId?: string | null;
+  semester?: number | null;
   dibuatOleh?: number | null;
   createdAt?: string;
+}
+
+export interface PoinSemesterItem {
+  semester: number;
+  periodeId: string;
+  poin: number;
+  lisan: number;
+  tertulis: number;
+  predikat: string;
+  degradasi?: number;
+}
+
+export interface StatusSkorsing {
+  isSkorsing: boolean;
+  alasan: string | null;
+  isMendekati: boolean;
 }
 
 export interface PelanggaranRekap {
@@ -149,6 +166,12 @@ export interface PelanggaranRekap {
   totalPoin: number;
   predikat: string;
   degradasiNilaiSikap?: number;
+  poinSemesterBerjalan?: number;
+  predikatSemesterBerjalan?: string;
+  semesterAktif?: number | null;
+  jenjang?: string | null;
+  statusSkorsing?: StatusSkorsing;
+  rekapPerSemester?: PoinSemesterItem[];
 }
 
 export interface RekapPelanggaran {
@@ -177,8 +200,15 @@ export interface MahasiswaTxlyItem {
   angkatan?: string | null;
   programStudiId?: number | null;
   prodiNama?: string | null;
+  jenjang?: string | null;
   semester?: number | null;
   totalPoin: number;
+  totalPoinKumulatif?: number;
+  poinSemesterBerjalan?: number;
+  predikatSemesterBerjalan?: string;
+  jumlahPelanggaranSemesterBerjalan?: number;
+  poinPerSemester?: PoinSemesterItem[];
+  statusSkorsing?: StatusSkorsing;
   jumlahPelanggaran: number;
   predikat: string;
   degradasiNilaiSikap: number;
