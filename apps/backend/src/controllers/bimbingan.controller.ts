@@ -464,13 +464,22 @@ export class BimbinganController {
       } catch (e) {}
 
       let poinPelanggaran = 0;
-      let pelanggaranPredikat = 'T0L0';
+      let pelanggaranPredikat = '-';
       let degradasiNilaiSikap = 0;
+      let statusAkumulatif = 'Siaga';
+      let poinSemesterBerjalan = 0;
+      let predikatSemesterBerjalan = '-';
+      let statusSemesterBerjalan = '-';
+
       try {
         const pelDetail = await PelanggaranService.getPelanggaranByMahasiswa(mhsId);
         poinPelanggaran = pelDetail.totalPoin;
         pelanggaranPredikat = pelDetail.predikat;
         degradasiNilaiSikap = pelDetail.degradasiNilaiSikap ?? 0;
+        statusAkumulatif = pelDetail.statusAkumulatif || 'Siaga';
+        poinSemesterBerjalan = pelDetail.poinSemesterBerjalan ?? 0;
+        predikatSemesterBerjalan = pelDetail.predikatSemesterBerjalan || '-';
+        statusSemesterBerjalan = pelDetail.statusSemesterBerjalan || '-';
       } catch (e) {}
 
       const activePeriode = await BimbinganService.getActivePeriode();
@@ -501,6 +510,10 @@ export class BimbinganController {
         poinPelanggaran,
         pelanggaranPredikat,
         degradasiNilaiSikap,
+        statusAkumulatif,
+        poinSemesterBerjalan,
+        predikatSemesterBerjalan,
+        statusSemesterBerjalan,
         ipk,
         ipsSemesterLalu,
       };

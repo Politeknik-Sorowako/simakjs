@@ -297,6 +297,10 @@ export const bimbinganController = {
     poinPelanggaran: number;
     pelanggaranPredikat?: string;
     degradasiNilaiSikap?: number;
+    statusAkumulatif?: StatusPelanggaranAkumulatif;
+    poinSemesterBerjalan?: number;
+    predikatSemesterBerjalan?: string;
+    statusSemesterBerjalan?: StatusPelanggaranSemester;
     ipk: number;
     ipsSemesterLalu: number;
   }> {
@@ -305,6 +309,10 @@ export const bimbinganController = {
       poinPelanggaran: number;
       pelanggaranPredikat?: string;
       degradasiNilaiSikap?: number;
+      statusAkumulatif?: StatusPelanggaranAkumulatif;
+      poinSemesterBerjalan?: number;
+      predikatSemesterBerjalan?: string;
+      statusSemesterBerjalan?: StatusPelanggaranSemester;
       ipk: number;
       ipsSemesterLalu: number;
     }>(`/bimbingan/mahasiswa/${mhsId}/akademik-summary`);
