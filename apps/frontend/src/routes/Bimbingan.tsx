@@ -10,6 +10,8 @@ import {
   bimbinganController,
   PelanggaranRekap,
   SesiBimbingan,
+  StatusPelanggaranAkumulatif,
+  StatusPelanggaranSemester,
 } from '../controllers/bimbinganController';
 import { dosenController } from '../controllers/dosenController';
 import { kategoriBimbinganController } from '../controllers/kategoriBimbinganController';
@@ -288,32 +290,159 @@ export default function Bimbingan() {
     }
   };
 
-  // Helper formatting predikat pelanggaran TXLY
-  const formatPelanggaranTxly = (poin?: number, predikat?: string) => {
-    const p = poin || 0;
-    if (predikat && predikat.startsWith('T') && predikat.includes('L')) {
-      const match = predikat.match(/T(\d+)L(\d+)/);
-      if (match) {
-        const t = parseInt(match[1], 10);
-        const l = parseInt(match[2], 10);
-        return {
-          label: `(Tertulis: ${t}, Lisan: ${l})`,
-          predikat: `T${t}L${l}`,
-          t,
-          l,
-          poin: p,
-        };
+  // Helper formatting predikat & rincian sanksi pelanggaran (menghilangkan nilai T/L yang bernilai 0)
+  const formatRincianSanksi = (poin?: number, predikatInput?: string) => {
+    const p = Math.max(0, poin || 0);
+    let t = Math.floor(p / 4);
+    let l = p % 4;
+
+    if (predikatInput) {
+      const matchTL = predikatInput.match(/^T(\d+)L(\d+)$/);
+      const matchT = predikatInput.match(/^T(\d+)$/);
+      const matchL = predikatInput.match(/^L(\d+)$/);
+      if (matchTL) {
+        t = parseInt(matchTL[1], 10);
+        l = parseInt(matchTL[2], 10);
+      } else if (matchT) {
+        t = parseInt(matchT[1], 10);
+        l = 0;
+      } else if (matchL) {
+        t = 0;
+        l = parseInt(matchL[1], 10);
       }
     }
-    const t = Math.floor(p / 4);
-    const l = p % 4;
+
+    const parts: string[] = [];
+    if (t > 0) parts.push(`Tertulis: ${t}`);
+    if (l > 0) parts.push(`Lisan: ${l}`);
+
+    let predikat = '-';
+    if (t > 0 && l > 0) {
+      predikat = `T${t}L${l}`;
+    } else if (t > 0) {
+      predikat = `T${t}`;
+    } else if (l > 0) {
+      predikat = `L${l}`;
+    }
+
     return {
-      label: `(Tertulis: ${t}, Lisan: ${l})`,
-      predikat: `T${t}L${l}`,
       t,
       l,
       poin: p,
+      predikat,
+      label: parts.length > 0 ? `(${parts.join(', ')})` : '',
     };
+  };
+
+  const getStatusPelanggaranSemester = (poin: number): StatusPelanggaranSemester => {
+    if (poin >= 16) return 'Skorsing';
+    if (poin >= 8) return 'Coaching';
+    if (poin >= 4) return 'Awas';
+    if (poin >= 1) return 'Waspada';
+    return '-';
+  };
+
+  const getStatusPelanggaranAkumulatif = (totalPoin: number): StatusPelanggaranAkumulatif => {
+    if (totalPoin >= 28) return 'Darurat';
+    if (totalPoin >= 24) return 'Gawat';
+    if (totalPoin >= 16) return 'Awas';
+    if (totalPoin >= 8) return 'Waspada';
+    return 'Siaga';
+  };
+
+  const renderBadgeStatusSemester = (status?: StatusPelanggaranSemester) => {
+    if (status === 'Skorsing') {
+      return (
+        <span
+          class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
+          title="Poin semester ≥ 16"
+        >
+          🔴 Skorsing
+        </span>
+      );
+    }
+    if (status === 'Coaching') {
+      return (
+        <span
+          class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 text-fine font-semibold dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+          title="Poin semester ≥ 8"
+        >
+          🟣 Coaching
+        </span>
+      );
+    }
+    if (status === 'Awas') {
+      return (
+        <span
+          class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-fine font-semibold dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+          title="Poin semester ≥ 4"
+        >
+          🟠 Awas
+        </span>
+      );
+    }
+    if (status === 'Waspada') {
+      return (
+        <span
+          class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 text-fine font-semibold dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800"
+          title="Poin semester ≥ 1"
+        >
+          🟡 Waspada
+        </span>
+      );
+    }
+    return <span class="text-secondary-400 font-mono text-fine">-</span>;
+  };
+
+  const renderBadgeStatusAkumulatif = (status?: StatusPelanggaranAkumulatif) => {
+    if (status === 'Darurat') {
+      return (
+        <span
+          class="px-2.5 py-0.5 rounded-full bg-rose-600 text-white border border-rose-700 text-fine font-bold inline-flex items-center gap-1 justify-center shadow-sm"
+          title="Total Poin ≥ 28"
+        >
+          <span>🚨</span> Darurat
+        </span>
+      );
+    }
+    if (status === 'Gawat') {
+      return (
+        <span
+          class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
+          title="Total Poin ≥ 24"
+        >
+          <span>🔴</span> Gawat
+        </span>
+      );
+    }
+    if (status === 'Awas') {
+      return (
+        <span
+          class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800"
+          title="Total Poin ≥ 16"
+        >
+          <span>🟠</span> Awas
+        </span>
+      );
+    }
+    if (status === 'Waspada') {
+      return (
+        <span
+          class="px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-yellow-950/60 dark:text-yellow-300 dark:border-yellow-800"
+          title="Total Poin ≥ 8"
+        >
+          <span>🟡</span> Waspada
+        </span>
+      );
+    }
+    return (
+      <span
+        class="px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-fine font-semibold inline-flex items-center gap-1 justify-center dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800"
+        title="Total Poin < 8"
+      >
+        <span>🔵</span> Siaga
+      </span>
+    );
   };
 
   // Fetch Program Studi & Kategori List
@@ -1175,42 +1304,138 @@ export default function Bimbingan() {
                           </button>
                         </div>
                         <div class="grid grid-cols-2 gap-3 text-caption">
-                          {/* Card Pelanggaran dengan Format TXLY BPA */}
-                          <div class="p-3 bg-rose-50/90 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
-                            <div class="flex items-center justify-between">
-                              <span class="text-fine text-rose-600 font-bold uppercase tracking-wider">
-                                Pelanggaran
+                          {/* Card Pelanggaran: Semester Saat Ini & Total Akumulasi (Tiering Badge) */}
+                          <div class="col-span-2 p-3.5 bg-rose-50/90 border border-rose-100 rounded-xl flex flex-col gap-2.5 dark:bg-rose-950/20 dark:border-rose-900/40">
+                            {/* Header Card */}
+                            <div class="flex items-center justify-between border-b border-rose-100/70 pb-2 dark:border-rose-900/40">
+                              <span class="text-fine text-rose-700 dark:text-rose-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                                <span>⚖️</span> Pelanggaran Mahasiswa
                               </span>
-                              <span class="text-fine font-bold px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded border border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800">
-                                {
-                                  formatPelanggaranTxly(
-                                    akademikSummary()?.poinPelanggaran,
-                                    akademikSummary()?.pelanggaranPredikat,
-                                  ).predikat
-                                }
-                              </span>
+                              {(() => {
+                                const totalP = akademikSummary()?.poinPelanggaran || 0;
+                                const stAkum =
+                                  akademikSummary()?.statusAkumulatif || getStatusPelanggaranAkumulatif(totalP);
+                                return renderBadgeStatusAkumulatif(stAkum);
+                              })()}
                             </div>
-                            <span class="text-base font-bold text-rose-700 dark:text-rose-400">
-                              {
-                                formatPelanggaranTxly(
-                                  akademikSummary()?.poinPelanggaran,
-                                  akademikSummary()?.pelanggaranPredikat,
-                                ).label
-                              }
-                            </span>
-                            <span class="text-fine text-rose-500 font-medium dark:text-rose-400/80">
-                              {akademikSummary()?.poinPelanggaran || 0} Poin (-
-                              {(
-                                akademikSummary()?.degradasiNilaiSikap ??
-                                formatPelanggaranTxly(akademikSummary()?.poinPelanggaran).t * 1.0 +
-                                  formatPelanggaranTxly(akademikSummary()?.poinPelanggaran).l * 0.25
-                              ).toFixed(2)}{' '}
-                              Mutu)
-                            </span>
+
+                            {/* Dua Dimensi: Semester Saat Ini & Total Akumulasi */}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-caption">
+                              {/* Dimensi 1: Semester Saat Ini */}
+                              <div class="p-2.5 bg-white/70 rounded-lg border border-rose-100/60 flex flex-col gap-1 dark:bg-secondary-900/60 dark:border-rose-900/30">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-fine text-secondary-500 font-semibold dark:text-secondary-400">
+                                    Semester Saat Ini
+                                  </span>
+                                  {(() => {
+                                    const pSem = akademikSummary()?.poinSemesterBerjalan || 0;
+                                    const stSem =
+                                      akademikSummary()?.statusSemesterBerjalan || getStatusPelanggaranSemester(pSem);
+                                    return renderBadgeStatusSemester(stSem);
+                                  })()}
+                                </div>
+                                <div class="flex items-baseline gap-1.5">
+                                  <span class="text-base font-bold text-rose-700 dark:text-rose-400">
+                                    {akademikSummary()?.poinSemesterBerjalan || 0} Poin
+                                  </span>
+                                  <Show
+                                    when={
+                                      formatRincianSanksi(
+                                        akademikSummary()?.poinSemesterBerjalan,
+                                        akademikSummary()?.predikatSemesterBerjalan,
+                                      ).predikat !== '-'
+                                    }
+                                  >
+                                    <span class="text-fine font-bold px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded border border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800">
+                                      {
+                                        formatRincianSanksi(
+                                          akademikSummary()?.poinSemesterBerjalan,
+                                          akademikSummary()?.predikatSemesterBerjalan,
+                                        ).predikat
+                                      }
+                                    </span>
+                                  </Show>
+                                </div>
+                                <Show
+                                  when={
+                                    formatRincianSanksi(
+                                      akademikSummary()?.poinSemesterBerjalan,
+                                      akademikSummary()?.predikatSemesterBerjalan,
+                                    ).label
+                                  }
+                                >
+                                  <span class="text-fine text-rose-600 font-medium dark:text-rose-400">
+                                    {
+                                      formatRincianSanksi(
+                                        akademikSummary()?.poinSemesterBerjalan,
+                                        akademikSummary()?.predikatSemesterBerjalan,
+                                      ).label
+                                    }
+                                  </span>
+                                </Show>
+                              </div>
+
+                              {/* Dimensi 2: Total Akumulasi */}
+                              <div class="p-2.5 bg-white/70 rounded-lg border border-rose-100/60 flex flex-col gap-1 dark:bg-secondary-900/60 dark:border-rose-900/30">
+                                <div class="flex items-center justify-between">
+                                  <span class="text-fine text-secondary-500 font-semibold dark:text-secondary-400">
+                                    Total Akumulasi
+                                  </span>
+                                  <Show
+                                    when={
+                                      formatRincianSanksi(
+                                        akademikSummary()?.poinPelanggaran,
+                                        akademikSummary()?.pelanggaranPredikat,
+                                      ).predikat !== '-'
+                                    }
+                                  >
+                                    <span class="text-fine font-bold px-1.5 py-0.2 bg-rose-100 text-rose-700 rounded border border-rose-200 dark:bg-rose-900/50 dark:text-rose-300 dark:border-rose-800">
+                                      {
+                                        formatRincianSanksi(
+                                          akademikSummary()?.poinPelanggaran,
+                                          akademikSummary()?.pelanggaranPredikat,
+                                        ).predikat
+                                      }
+                                    </span>
+                                  </Show>
+                                </div>
+                                <div class="flex items-baseline gap-1.5 flex-wrap">
+                                  <span class="text-base font-bold text-rose-700 dark:text-rose-400">
+                                    {akademikSummary()?.poinPelanggaran || 0} Poin
+                                  </span>
+                                  <Show
+                                    when={
+                                      formatRincianSanksi(
+                                        akademikSummary()?.poinPelanggaran,
+                                        akademikSummary()?.pelanggaranPredikat,
+                                      ).label
+                                    }
+                                  >
+                                    <span class="text-fine font-bold text-rose-600 dark:text-rose-400">
+                                      {
+                                        formatRincianSanksi(
+                                          akademikSummary()?.poinPelanggaran,
+                                          akademikSummary()?.pelanggaranPredikat,
+                                        ).label
+                                      }
+                                    </span>
+                                  </Show>
+                                </div>
+                                <span class="text-fine text-rose-500 font-medium dark:text-rose-400/80">
+                                  Degradasi Mutu: -
+                                  {(
+                                    akademikSummary()?.degradasiNilaiSikap ??
+                                    formatRincianSanksi(akademikSummary()?.poinPelanggaran).t * 1.0 +
+                                      formatRincianSanksi(akademikSummary()?.poinPelanggaran).l * 0.25
+                                  ).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+
                             <button
                               type="button"
                               onClick={() => setShowPelanggaranDetail(true)}
-                              class="mt-1 self-start px-2 py-1 rounded-lg text-fine font-bold text-rose-600 bg-rose-100 hover:bg-rose-200 active:scale-95 transition-all dark:text-rose-300 dark:bg-rose-900/50 dark:hover:bg-rose-900"
+                              class="self-start px-2.5 py-1 rounded-lg text-fine font-bold text-rose-600 bg-rose-100 hover:bg-rose-200 active:scale-95 transition-all dark:text-rose-300 dark:bg-rose-900/50 dark:hover:bg-rose-900"
                             >
                               Lihat Detail →
                             </button>
@@ -1519,20 +1744,34 @@ export default function Bimbingan() {
               >
                 {(detail: () => PelanggaranRekap) => (
                   <div class="flex flex-col gap-4">
-                    <div class="grid grid-cols-3 gap-3 text-caption">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-caption">
                       <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
                         <span class="text-fine text-rose-600 font-bold uppercase">Total Poin</span>
                         <span class="text-base font-bold text-rose-700 dark:text-rose-400">{detail().totalPoin}</span>
                       </div>
                       <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
                         <span class="text-fine text-rose-600 font-bold uppercase">Predikat</span>
-                        <span class="text-base font-bold text-rose-700 dark:text-rose-400">{detail().predikat}</span>
+                        <span class="text-base font-bold text-rose-700 dark:text-rose-400">
+                          {formatRincianSanksi(detail().totalPoin, detail().predikat).predikat}
+                        </span>
+                        <Show when={formatRincianSanksi(detail().totalPoin, detail().predikat).label}>
+                          <span class="text-fine text-rose-500 font-medium dark:text-rose-400/80">
+                            {formatRincianSanksi(detail().totalPoin, detail().predikat).label}
+                          </span>
+                        </Show>
                       </div>
                       <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-0.5 dark:bg-rose-950/20 dark:border-rose-900/40">
                         <span class="text-fine text-rose-600 font-bold uppercase">Jumlah</span>
                         <span class="text-base font-bold text-rose-700 dark:text-rose-400">
                           {detail().pelanggaranList.length} Pelanggaran
                         </span>
+                      </div>
+                      <div class="p-3 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-1 justify-center items-start dark:bg-rose-950/20 dark:border-rose-900/40">
+                        <span class="text-fine text-rose-600 font-bold uppercase">Status Akumulatif</span>
+                        {(() => {
+                          const st = detail().statusAkumulatif || getStatusPelanggaranAkumulatif(detail().totalPoin);
+                          return renderBadgeStatusAkumulatif(st);
+                        })()}
                       </div>
                     </div>
 
