@@ -16,6 +16,8 @@ import {
   bimbinganController,
   Pelanggaran as IPelanggaran,
   MahasiswaTxlyItem,
+  StatusPelanggaranAkumulatif,
+  StatusPelanggaranSemester,
 } from '../controllers/bimbinganController';
 import { Mahasiswa, mahasiswaController } from '../controllers/mahasiswaController';
 import { pasalController } from '../controllers/pasalController';
@@ -25,6 +27,22 @@ import { systemController } from '../controllers/systemController';
 import { usePagination } from '../hooks/usePagination';
 import { ExportColumn, exportToExcel, exportToPDF } from '../utils/export';
 import { fmtTanggal, formatMahasiswaOption, getTodayString } from '../utils/format';
+
+export function getStatusPelanggaranSemester(poin: number): StatusPelanggaranSemester {
+  if (poin >= 16) return 'Skorsing';
+  if (poin >= 8) return 'Coaching';
+  if (poin >= 4) return 'Awas';
+  if (poin >= 1) return 'Waspada';
+  return '-';
+}
+
+export function getStatusPelanggaranAkumulatif(totalPoin: number): StatusPelanggaranAkumulatif {
+  if (totalPoin >= 28) return 'Darurat';
+  if (totalPoin >= 24) return 'Gawat';
+  if (totalPoin >= 16) return 'Awas';
+  if (totalPoin >= 8) return 'Waspada';
+  return 'Siaga';
+}
 
 export default function Pelanggaran() {
   const auth = useAuth();
@@ -229,11 +247,27 @@ export default function Pelanggaran() {
     { header: 'NIM', accessor: (r) => r.nim },
     { header: 'Nama Mahasiswa', accessor: (r) => r.nama },
     { header: 'Program Studi', accessor: (r) => r.prodiNama || '-' },
+    { header: 'Jenjang', accessor: (r) => r.jenjang || '-' },
     { header: 'Semester', accessor: (r) => (r.semester ? `Semester ${r.semester}` : '-') },
+    {
+      header: 'Poin Smt Ini',
+      accessor: (r) => `${r.poinSemesterBerjalan ?? 0} (${r.predikatSemesterBerjalan || '-'})`,
+    },
+    {
+      header: 'Poin Smt Lalu',
+      accessor: (r) => `${r.poinSemesterLalu ?? 0} (${r.predikatSemesterLalu || '-'})`,
+    },
+    { header: 'Akumulasi Poin', accessor: (r) => r.totalPoin },
+    { header: 'Predikat Kumulatif', accessor: (r) => r.predikat },
     { header: 'Jumlah Pelanggaran', accessor: (r) => r.jumlahPelanggaran },
-    { header: 'Predikat TXLY', accessor: (r) => r.predikat },
-    { header: 'Total Poin', accessor: (r) => r.totalPoin },
     { header: 'Degradasi Mutu Sikap', accessor: (r) => `-${r.degradasiNilaiSikap}` },
+    {
+      header: 'Status Akumulatif',
+      accessor: (r) => {
+        const s = r.statusAkumulatif || getStatusPelanggaranAkumulatif(r.totalPoin);
+        return s;
+      },
+    },
   ];
 
   const handleExportMhsTxlyExcel = () => {
@@ -370,6 +404,7 @@ export default function Pelanggaran() {
   // Form State
   const [showModal, setShowModal] = createSignal(false);
   const [mahasiswaId, setMahasiswaId] = createSignal(0);
+  const [formPeriodeId, setFormPeriodeId] = createSignal<string>('');
   const [tanggal, setTanggal] = createSignal('');
   const [jenisPelanggaran, setJenisPelanggaran] = createSignal('');
   const [keterangan, setKeterangan] = createSignal('');
@@ -377,6 +412,13 @@ export default function Pelanggaran() {
   const [pelapor, setPelapor] = createSignal('');
   const [errorMsg, setErrorMsg] = createSignal('');
   const [editPelanggaranId, setEditPelanggaranId] = createSignal<number | null>(null);
+
+  // Status Kedisiplinan Real-Time Mahasiswa Terpilih pada Form Modal
+  const selectedStudentDiscipline = createMemo(() => {
+    const mId = mahasiswaId();
+    if (!mId) return null;
+    return mahasiswaTxlyList()?.find((m) => m.mahasiswaId === mId) || null;
+  });
 
   // Hapus Pelanggaran State
   const [deleteTarget, setDeleteTarget] = createSignal<IPelanggaran | null>(null);
@@ -554,6 +596,8 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     const firstStudent = mahasiswaList()?.[0]?.id || 0;
     setMahasiswaId(firstStudent);
     setTanggal(getTodayString());
+    const activePer = (periodeList() || []).find((p) => p.aktif);
+    setFormPeriodeId(activePer ? activePer.id : (periodeList() || [])[0]?.id || '');
     setJenisPelanggaran('');
     setKeterangan('');
     setPasalId(null);
@@ -582,6 +626,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
     setMahasiswaId(item.mahasiswaId);
     ensureStudentLoaded(item.mahasiswaId);
     setTanggal(item.tanggal);
+    setFormPeriodeId(item.periodeId || '');
     setJenisPelanggaran(item.jenisPelanggaran);
     setKeterangan(item.keterangan);
     setPasalId(item.pasalId && item.pasalId > 0 ? item.pasalId : null);
@@ -605,6 +650,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
       const payload = {
         mahasiswaId: mahasiswaId(),
         tanggal: tanggal(),
+        periodeId: formPeriodeId() || undefined,
         jenisPelanggaran: jenisPelanggaran(),
         keterangan: keterangan(),
         pasalId: pasalId() && pasalId()! > 0 ? pasalId() : null,
@@ -641,7 +687,16 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
   const [mhsTxlySearch, setMhsTxlySearch] = createSignal('');
   const [mhsTxlyProdi, setMhsTxlyProdi] = createSignal<number | undefined>(undefined);
   const [mhsTxlyPredikat, setMhsTxlyPredikat] = createSignal<string | undefined>(undefined);
-  type MhsTxlySortField = 'predikat' | 'nama' | 'nim' | 'prodiNama' | 'semester' | 'jumlahPelanggaran';
+  type MhsTxlySortField =
+    | 'predikat'
+    | 'nama'
+    | 'nim'
+    | 'prodiNama'
+    | 'semester'
+    | 'poinSemesterBerjalan'
+    | 'poinSemesterLalu'
+    | 'totalPoin'
+    | 'jumlahPelanggaran';
   const [mhsTxlySortField, setMhsTxlySortField] = createSignal<MhsTxlySortField>('predikat');
   const [mhsTxlySortDir, setMhsTxlySortDir] = createSignal<'asc' | 'desc'>('desc');
   const mhsTxlySortAria = (field: MhsTxlySortField): 'ascending' | 'descending' | 'none' =>
@@ -687,9 +742,13 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
     return [...rows].sort((a, b) => {
       let cmp = 0;
-      if (field === 'predikat') {
+      if (field === 'predikat' || field === 'totalPoin') {
         // Urutkan berdasarkan total poin / akumulasi sanksi tertinggi
         cmp = a.totalPoin - b.totalPoin;
+      } else if (field === 'poinSemesterBerjalan') {
+        cmp = (a.poinSemesterBerjalan || 0) - (b.poinSemesterBerjalan || 0);
+      } else if (field === 'poinSemesterLalu') {
+        cmp = (a.poinSemesterLalu || 0) - (b.poinSemesterLalu || 0);
       } else if (field === 'jumlahPelanggaran') {
         cmp = a.jumlahPelanggaran - b.jumlahPelanggaran;
       } else if (field === 'semester') {
@@ -708,12 +767,20 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
       setMhsTxlySortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setMhsTxlySortField(field);
-      setMhsTxlySortDir(field === 'predikat' ? 'desc' : 'asc');
+      setMhsTxlySortDir(
+        field === 'predikat' ||
+          field === 'totalPoin' ||
+          field === 'poinSemesterBerjalan' ||
+          field === 'poinSemesterLalu'
+          ? 'desc'
+          : 'asc',
+      );
     }
   };
 
   // Modal Riwayat Mahasiswa (klik item dari tab mahasiswa TXLY)
   const [selectedMhsDetail, setSelectedMhsDetail] = createSignal<MahasiswaTxlyItem | null>(null);
+  const [modalTab, setModalTab] = createSignal<'rekap' | 'riwayat'>('rekap');
   const [mhsViolationsDetail, { refetch: refetchMhsViolationsDetail }] = createResource(
     () => selectedMhsDetail()?.mahasiswaId,
     async (mhsId) => {
@@ -724,6 +791,7 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
   const openMahasiswaDetail = (item: MahasiswaTxlyItem) => {
     setSelectedMhsDetail(item);
+    setModalTab('rekap');
     modalRiwayatPagination.resetPage();
   };
 
@@ -1719,14 +1787,38 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             Semester {mhsTxlySortField() === 'semester' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
                           </button>
                         </th>
-                        <th scope="col" aria-sort={mhsTxlySortAria('jumlahPelanggaran')} class="p-3 text-center">
+                        <th scope="col" aria-sort={mhsTxlySortAria('poinSemesterBerjalan')} class="p-3 text-center">
                           <button
                             type="button"
                             class="cursor-pointer select-none hover:text-action"
-                            onClick={() => toggleMhsTxlySort('jumlahPelanggaran')}
+                            onClick={() => toggleMhsTxlySort('poinSemesterBerjalan')}
                           >
-                            Jumlah Pelanggaran{' '}
-                            {mhsTxlySortField() === 'jumlahPelanggaran' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                            Poin Smt Ini{' '}
+                            {mhsTxlySortField() === 'poinSemesterBerjalan'
+                              ? mhsTxlySortDir() === 'asc'
+                                ? '▲'
+                                : '▼'
+                              : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('poinSemesterLalu')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-action"
+                            onClick={() => toggleMhsTxlySort('poinSemesterLalu')}
+                          >
+                            Poin Smt Lalu{' '}
+                            {mhsTxlySortField() === 'poinSemesterLalu' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('totalPoin')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-action"
+                            onClick={() => toggleMhsTxlySort('totalPoin')}
+                          >
+                            Akumulasi Poin{' '}
+                            {mhsTxlySortField() === 'totalPoin' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
                           </button>
                         </th>
                         <th scope="col" aria-sort={mhsTxlySortAria('predikat')} class="p-3 text-center">
@@ -1739,7 +1831,17 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             {mhsTxlySortField() === 'predikat' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
                           </button>
                         </th>
-                        <th class="p-3 text-center">Total Poin</th>
+                        <th scope="col" aria-sort={mhsTxlySortAria('jumlahPelanggaran')} class="p-3 text-center">
+                          <button
+                            type="button"
+                            class="cursor-pointer select-none hover:text-action"
+                            onClick={() => toggleMhsTxlySort('jumlahPelanggaran')}
+                          >
+                            Jumlah Pelanggaran{' '}
+                            {mhsTxlySortField() === 'jumlahPelanggaran' ? (mhsTxlySortDir() === 'asc' ? '▲' : '▼') : ''}
+                          </button>
+                        </th>
+                        <th class="p-3 text-center">Status Akumulatif</th>
                         <th class="p-3 text-center">Degradasi Mutu</th>
                         <th class="p-3 text-center">Aksi</th>
                       </tr>
@@ -1777,18 +1879,75 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                             <td class="p-3 whitespace-nowrap font-mono">{item.nim}</td>
                             <td class="p-3">{item.prodiNama}</td>
                             <td class="p-3 text-center font-bold">{item.semester ? `Sem. ${item.semester}` : '-'}</td>
-                            <td class="p-3 text-center font-bold text-secondary-700 dark:text-secondary-300">
-                              {item.jumlahPelanggaran}
+                            <td class="p-3 text-center">
+                              <span class="font-bold text-secondary-800 dark:text-white">
+                                {item.poinSemesterBerjalan ?? 0}
+                              </span>
+                              <span class="text-fine font-semibold text-secondary-500 dark:text-secondary-400 ml-1">
+                                ({item.predikatSemesterBerjalan || '-'})
+                              </span>
                             </td>
                             <td class="p-3 text-center">
-                              <span class="px-2.5 py-1 rounded-lg bg-action-50 text-action border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
-                                {item.predikat}
+                              <span class="font-bold text-secondary-800 dark:text-white">
+                                {item.poinSemesterLalu ?? 0}
+                              </span>
+                              <span class="text-fine font-semibold text-secondary-500 dark:text-secondary-400 ml-1">
+                                ({item.predikatSemesterLalu || '-'})
                               </span>
                             </td>
                             <td class="p-3 text-center">
                               <span class="px-2 py-0.5 bg-rose-50 text-rose-600 rounded border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
                                 {item.totalPoin}
                               </span>
+                            </td>
+                            <td class="p-3 text-center">
+                              <span class="px-2.5 py-1 rounded-lg bg-action-50 text-action border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                                {item.predikat}
+                              </span>
+                            </td>
+                            <td class="p-3 text-center font-bold text-secondary-700 dark:text-secondary-300">
+                              {item.jumlahPelanggaran}
+                            </td>
+                            <td class="p-3 text-center">
+                              {(() => {
+                                const st = item.statusAkumulatif || getStatusPelanggaranAkumulatif(item.totalPoin);
+                                if (st === 'Darurat') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-rose-600 text-white border border-rose-700 text-fine font-bold inline-flex items-center gap-1 justify-center shadow-sm">
+                                      <span>🚨</span> Darurat
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Gawat') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800">
+                                      <span>🔴</span> Gawat
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Awas') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                                      <span>🟠</span> Awas
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Waspada') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 text-fine font-bold inline-flex items-center gap-1 justify-center dark:bg-yellow-950/60 dark:text-yellow-300 dark:border-yellow-800">
+                                      <span>🟡</span> Waspada
+                                    </span>
+                                  );
+                                }
+                                if (st === 'Siaga') {
+                                  return (
+                                    <span class="px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-fine font-semibold inline-flex items-center gap-1 justify-center dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800">
+                                      <span>🔵</span> Siaga
+                                    </span>
+                                  );
+                                }
+                                return <span class="text-secondary-400 font-mono">-</span>;
+                              })()}
                             </td>
                             <td class="p-3 text-center font-bold text-rose-600 dark:text-rose-400">
                               -{item.degradasiNilaiSikap}
@@ -1824,13 +1983,14 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
           </div>
         </Show>
 
-        {/* Modal Riwayat Pelanggaran Mahasiswa (Klik Item Mahasiswa TXLY) */}
+        {/* Modal Riwayat Pelanggaran Mahasiswa (Klik Item Mahasiswa TXLY) — Diperlebar (full width) */}
         <Modal
           show={!!selectedMhsDetail()}
           onClose={() => setSelectedMhsDetail(null)}
-          title={`Riwayat Pelanggaran: ${selectedMhsDetail()?.nama || ''} (${selectedMhsDetail()?.nim || ''})`}
+          title={`Detail Kedisiplinan: ${selectedMhsDetail()?.nama || ''} (${selectedMhsDetail()?.nim || ''})`}
+          maxWidth="full"
         >
-          <div class="flex flex-col gap-5 max-w-4xl">
+          <div class="flex flex-col gap-5 w-full">
             {/* Student Summary Card */}
             <div class="p-4 rounded-xl bg-secondary-50 border border-secondary-200/80 flex flex-wrap items-center justify-between gap-4 dark:bg-secondary-800 dark:border-secondary-700">
               <div class="flex items-center gap-3">
@@ -1843,134 +2003,371 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
                 <div>
                   <h4 class="font-bold text-secondary-800 dark:text-white text-base">{selectedMhsDetail()?.nama}</h4>
                   <p class="text-caption text-secondary-500 dark:text-secondary-300">
-                    NIM: {selectedMhsDetail()?.nim} · {selectedMhsDetail()?.prodiNama} ·{' '}
-                    {selectedMhsDetail()?.semester ? `Semester ${selectedMhsDetail()?.semester}` : ''}
+                    NIM: {selectedMhsDetail()?.nim} · {selectedMhsDetail()?.prodiNama}{' '}
+                    {selectedMhsDetail()?.jenjang ? `(${selectedMhsDetail()?.jenjang})` : ''} ·{' '}
+                    {selectedMhsDetail()?.semester ? `Semester ${selectedMhsDetail()?.semester} (Berjalan)` : ''}
                   </p>
                 </div>
               </div>
 
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-3">
                 <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
-                  <span class="text-fine uppercase text-secondary-400 font-semibold">Predikat</span>
-                  <span class="font-bold text-action dark:text-brand-400 text-base">
-                    {selectedMhsDetail()?.predikat}
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Poin Smt Ini</span>
+                  <span class="font-bold text-secondary-900 dark:text-white text-base">
+                    {selectedMhsDetail()?.poinSemesterBerjalan ?? 0}{' '}
+                    <span class="text-caption font-normal text-secondary-500">
+                      ({selectedMhsDetail()?.predikatSemesterBerjalan || '-'})
+                    </span>
                   </span>
                 </div>
                 <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
-                  <span class="text-fine uppercase text-secondary-400 font-semibold">Total Poin</span>
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Poin Smt Lalu</span>
+                  <span class="font-bold text-secondary-900 dark:text-white text-base">
+                    {selectedMhsDetail()?.poinSemesterLalu ?? 0}{' '}
+                    <span class="text-caption font-normal text-secondary-500">
+                      ({selectedMhsDetail()?.predikatSemesterLalu || '-'})
+                    </span>
+                  </span>
+                </div>
+                <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Akumulasi Poin</span>
                   <span class="font-bold text-rose-600 dark:text-rose-400 text-base">
-                    {selectedMhsDetail()?.totalPoin}
+                    {selectedMhsDetail()?.totalPoin}{' '}
+                    <span class="text-caption font-normal text-rose-500">({selectedMhsDetail()?.predikat})</span>
                   </span>
                 </div>
                 <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
-                  <span class="text-fine uppercase text-secondary-400 font-semibold">Degradasi Mutu</span>
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Degradasi Sikap</span>
                   <span class="font-bold text-rose-600 dark:text-rose-400 text-base">
                     -{selectedMhsDetail()?.degradasiNilaiSikap}
                   </span>
                 </div>
+                <div class="flex flex-col items-center px-3 py-1 bg-white rounded-lg border border-secondary-200 dark:bg-secondary-900 dark:border-secondary-700">
+                  <span class="text-fine uppercase text-secondary-400 font-semibold">Status Akumulatif</span>
+                  {(() => {
+                    const st =
+                      selectedMhsDetail()?.statusAkumulatif ||
+                      getStatusPelanggaranAkumulatif(selectedMhsDetail()?.totalPoin ?? 0);
+                    if (st === 'Darurat') {
+                      return <span class="font-bold text-rose-600 text-base">🚨 Darurat</span>;
+                    }
+                    if (st === 'Gawat') {
+                      return <span class="font-bold text-rose-500 text-base">🔴 Gawat</span>;
+                    }
+                    if (st === 'Awas') {
+                      return <span class="font-bold text-amber-600 text-base">🟠 Awas</span>;
+                    }
+                    if (st === 'Waspada') {
+                      return <span class="font-bold text-yellow-600 text-base">🟡 Waspada</span>;
+                    }
+                    return <span class="font-bold text-sky-600 text-base">🔵 Siaga</span>;
+                  })()}
+                </div>
               </div>
             </div>
 
-            {/* Violation Records Table Header & Actions */}
-            <div>
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                <h5 class="text-caption uppercase font-bold text-secondary-500 dark:text-secondary-300">
-                  Daftar Pelanggaran Terdaftar ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
-                </h5>
-                <div class="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={handleExportDetailExcel}
-                    class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
-                    title="Ekspor riwayat pelanggaran ke Excel (.xlsx)"
-                  >
-                    <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleExportDetailPDF}
-                    class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
-                    title="Ekspor riwayat pelanggaran ke PDF (.pdf)"
-                  >
-                    <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
-                  </Button>
+            {/* Banner Alasan Skorsing jika ada */}
+            <Show when={selectedMhsDetail()?.statusSkorsing?.isSkorsing && selectedMhsDetail()?.statusSkorsing?.alasan}>
+              <div class="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-caption font-semibold flex items-center gap-2 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-200">
+                <span class="text-base" aria-hidden="true">
+                  ⚠️
+                </span>
+                <div>
+                  <strong>Peringatan Skorsing (Pasal 32 ayat 2):</strong> {selectedMhsDetail()?.statusSkorsing?.alasan}
                 </div>
               </div>
-              <Show
-                when={!mhsViolationsDetail.loading}
-                fallback={<div class="py-8 text-center text-secondary-400">Memuat riwayat pelanggaran...</div>}
+            </Show>
+
+            {/* Tab Switcher di Dalam Modal */}
+            <div class="flex items-center gap-2 border-b border-secondary-200 dark:border-secondary-700">
+              <button
+                type="button"
+                onClick={() => setModalTab('rekap')}
+                class={`px-4 py-2 font-semibold text-caption border-b-2 transition-all flex items-center gap-1.5 ${
+                  modalTab() === 'rekap'
+                    ? 'border-action text-action dark:border-brand-400 dark:text-brand-400'
+                    : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:text-secondary-400 dark:hover:text-secondary-200'
+                }`}
               >
-                <Show
-                  when={(mhsViolationsDetail()?.pelanggaranList || []).length > 0}
-                  fallback={
-                    <div class="py-8 text-center text-secondary-400 text-caption">
-                      Tidak ada catatan pelanggaran untuk mahasiswa ini.
-                    </div>
-                  }
-                >
-                  <div class="overflow-x-auto border border-secondary-100 rounded-xl dark:border-secondary-800">
-                    <table class="w-full text-left text-caption border-collapse">
-                      <thead class="sticky top-0 bg-secondary-50 text-secondary-500 font-bold uppercase border-b border-secondary-200 dark:bg-secondary-800 dark:text-secondary-300 dark:border-secondary-700">
-                        <tr>
-                          <th class="p-2.5">Tanggal</th>
-                          <th class="p-2.5">Pasal</th>
-                          <th class="p-2.5">Pelanggaran</th>
-                          <th class="p-2.5">Sanksi</th>
-                          <th class="p-2.5">Pelapor</th>
-                          <th class="p-2.5">Keterangan</th>
-                          <th class="p-2.5 text-center">Aksi</th>
-                        </tr>
-                      </thead>
-                      <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
-                        <For each={paginatedModalRiwayat()}>
-                          {(v) => (
-                            <tr class="hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40">
-                              <td class="p-2.5 whitespace-nowrap">{new Date(v.tanggal).toLocaleDateString('id-ID')}</td>
-                              <td class="p-2.5 font-bold">{v.nomorPasal || '-'}</td>
-                              <td class="p-2.5">{v.jenisPelanggaran}</td>
-                              <td class="p-2.5">
-                                <span
-                                  class={`px-2 py-0.5 rounded border text-fine font-bold ${
-                                    v.jenisSanksi === 4
-                                      ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
-                                      : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
-                                  }`}
-                                >
-                                  {v.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
+                <span>📊</span> Rekapitulasi Per Semester & Evaluasi Pasal 32
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('riwayat')}
+                class={`px-4 py-2 font-semibold text-caption border-b-2 transition-all flex items-center gap-1.5 ${
+                  modalTab() === 'riwayat'
+                    ? 'border-action text-action dark:border-brand-400 dark:text-brand-400'
+                    : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:text-secondary-400 dark:hover:text-secondary-200'
+                }`}
+              >
+                <span>📋</span> Daftar Riwayat Pelanggaran ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
+              </button>
+            </div>
+
+            {/* TAB 1: Rekapitulasi Per Semester & Evaluasi Pasal 32 */}
+            <Show when={modalTab() === 'rekap'}>
+              <div class="flex flex-col gap-4">
+                <div class="overflow-x-auto border border-secondary-100 rounded-xl dark:border-secondary-800">
+                  <table class="w-full text-left text-caption border-collapse">
+                    <thead class="sticky top-0 bg-secondary-50 text-secondary-500 font-bold uppercase border-b border-secondary-200 dark:bg-secondary-800 dark:text-secondary-300 dark:border-secondary-700">
+                      <tr>
+                        <th class="p-2.5 text-center">Semester</th>
+                        <th class="p-2.5 text-center">Periode Akademik</th>
+                        <th class="p-2.5 text-center">Peringatan Lisan (Poin 1)</th>
+                        <th class="p-2.5 text-center">Peringatan Tertulis (Poin 4)</th>
+                        <th class="p-2.5 text-center">Poin Semester</th>
+                        <th class="p-2.5 text-center">Predikat TXLY</th>
+                        <th class="p-2.5 text-center">Degradasi Sikap</th>
+                        <th class="p-2.5 text-center">Status Semester</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                      <For
+                        each={mhsViolationsDetail()?.rekapPerSemester || selectedMhsDetail()?.poinPerSemester || []}
+                        fallback={
+                          <tr>
+                            <td colspan={8} class="p-6 text-center text-secondary-400">
+                              Belum ada catatan pelanggaran per semester untuk mahasiswa ini.
+                            </td>
+                          </tr>
+                        }
+                      >
+                        {(sem) => {
+                          const currentMhs = selectedMhsDetail();
+                          const mhsSem = typeof currentMhs?.semester === 'number' ? currentMhs.semester : null;
+                          const isCurrent = sem.isBerjalan ?? (mhsSem !== null && sem.semester === mhsSem);
+                          const isPast = sem.isSemesterLalu ?? (mhsSem !== null && sem.semester === mhsSem - 1);
+                          const semStatus = sem.statusSemester || getStatusPelanggaranSemester(sem.poin);
+                          return (
+                            <tr
+                              class={`transition-colors ${
+                                isCurrent
+                                  ? 'bg-action-50/20 font-semibold dark:bg-brand-950/20'
+                                  : isPast
+                                    ? 'bg-secondary-50/20 dark:bg-secondary-800/20'
+                                    : 'hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40'
+                              }`}
+                            >
+                              <td class="p-2.5 text-center">
+                                <div class="inline-flex items-center gap-1.5">
+                                  <span>Semester {sem.semester || '-'}</span>
+                                  <Show when={isCurrent}>
+                                    <span class="px-1.5 py-0.5 rounded text-fine font-bold bg-action-100 text-action dark:bg-brand-900/50 dark:text-brand-300">
+                                      Berjalan
+                                    </span>
+                                  </Show>
+                                  <Show when={isPast && !isCurrent}>
+                                    <span class="px-1.5 py-0.5 rounded text-fine font-bold bg-secondary-200 text-secondary-700 dark:bg-secondary-700 dark:text-secondary-200">
+                                      Smt Lalu
+                                    </span>
+                                  </Show>
+                                </div>
+                              </td>
+                              <td class="p-2.5 text-center font-mono">{sem.periodeId}</td>
+                              <td class="p-2.5 text-center font-bold text-emerald-600 dark:text-emerald-400">
+                                {sem.poin !== undefined ? sem.poin % 4 : (sem.lisan ?? 0)}
+                              </td>
+                              <td class="p-2.5 text-center font-bold text-amber-600 dark:text-amber-400">
+                                {sem.poin !== undefined ? Math.floor(sem.poin / 4) : (sem.tertulis ?? 0)}
+                              </td>
+                              <td class="p-2.5 text-center">
+                                <span class="px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-100 font-bold dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
+                                  {sem.poin}
                                 </span>
                               </td>
-                              <td class="p-2.5 text-secondary-500">{v.pelapor || '-'}</td>
-                              <td class="p-2.5 max-w-xs truncate" title={v.keterangan}>
-                                {v.keterangan}
+                              <td class="p-2.5 text-center">
+                                <span class="px-2 py-0.5 rounded bg-action-50 text-action border border-brand-100 font-bold dark:bg-brand-900/30 dark:text-brand-300 dark:border-brand-800">
+                                  {sem.predikat}
+                                </span>
                               </td>
-                              <td class="p-2.5 text-center whitespace-nowrap">
-                                <Button
-                                  variant="secondary"
-                                  onClick={() => openSpPrint(v)}
-                                  class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
-                                  title="Cetak SP di jendela baru"
-                                >
-                                  <span>📄</span> Cetak SP
-                                </Button>
+                              <td class="p-2.5 text-center font-bold text-rose-600 dark:text-rose-400">
+                                -
+                                {sem.degradasi !== undefined
+                                  ? sem.degradasi
+                                  : (Math.floor(sem.poin / 4) * 1.0 + (sem.poin % 4) * 0.25).toFixed(2)}
+                              </td>
+                              <td class="p-2.5 text-center">
+                                {(() => {
+                                  if (semStatus === 'Skorsing') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-200 text-fine font-bold dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800"
+                                        title="Poin semester ≥ 16 (setara ≥ 4 Peringatan Tertulis)"
+                                      >
+                                        🔴 Skorsing
+                                      </span>
+                                    );
+                                  }
+                                  if (semStatus === 'Coaching') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200 text-fine font-semibold dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800"
+                                        title="Poin semester ≥ 8 (setara ≥ 2 Peringatan Tertulis)"
+                                      >
+                                        🟣 Coaching
+                                      </span>
+                                    );
+                                  }
+                                  if (semStatus === 'Awas') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 text-fine font-semibold dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                                        title="Poin semester ≥ 4 (setara ≥ 1 Peringatan Tertulis)"
+                                      >
+                                        🟠 Awas
+                                      </span>
+                                    );
+                                  }
+                                  if (semStatus === 'Waspada') {
+                                    return (
+                                      <span
+                                        class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200 text-fine font-semibold dark:bg-yellow-950/40 dark:text-yellow-300 dark:border-yellow-800"
+                                        title="Poin semester ≥ 1 (ada pelanggaran)"
+                                      >
+                                        🟡 Waspada
+                                      </span>
+                                    );
+                                  }
+                                  return <span class="text-secondary-400 font-mono text-fine">-</span>;
+                                })()}
                               </td>
                             </tr>
-                          )}
-                        </For>
-                      </tbody>
-                    </table>
+                          );
+                        }}
+                      </For>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Box Ketentuan Skorsing BPA Pasal 32 */}
+                <div class="p-4 rounded-xl bg-secondary-50 border border-secondary-200 dark:bg-secondary-800/60 dark:border-secondary-700 text-caption text-secondary-600 dark:text-secondary-300 flex flex-col gap-2">
+                  <div class="font-bold text-secondary-800 dark:text-white flex items-center gap-1.5">
+                    <span>📖</span> Ketentuan Skorsing — BPA Pasal 32 ayat 2:
                   </div>
-                  <Pagination
-                    currentPage={modalRiwayatPagination.page()}
-                    totalPages={totalModalRiwayatPages()}
-                    total={modalRiwayatList().length}
-                    limit={modalRiwayatPagination.limit()}
-                    pageOptions={[5, 10, 20]}
-                    onPageChange={modalRiwayatPagination.setPage}
-                    onLimitChange={modalRiwayatPagination.setLimit}
-                  />
+                  <ul class="list-disc list-inside space-y-1 text-fine text-secondary-600 dark:text-secondary-300">
+                    <li>
+                      <strong>Kriteria 1 (Semester Berjalan):</strong> Akumulasi peringatan Tertulis-4 (atau $\ge 4$
+                      peringatan tertulis) dalam satu semester $\implies$ Skorsing paling lama 1 minggu.
+                    </li>
+                    <li>
+                      <strong>Kriteria 2 (Kumulatif Sejak Semester Pertama):</strong> Akumulasi peringatan tertulis ke-7
+                      ($\ge 7$) selama masa perkuliahan <strong>Diploma Tiga (D3)</strong> dan peringatan tertulis ke-9
+                      ($\ge 9$) selama masa perkuliahan <strong>Sarjana Terapan (D4)</strong> $\implies$ Skorsing paling
+                      lama 1 minggu.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </Show>
+
+            {/* TAB 2: Violation Records Table Header & Actions (TABEL LAMA DIJAGA LENGKAP) */}
+            <Show when={modalTab() === 'riwayat'}>
+              <div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                  <h5 class="text-caption uppercase font-bold text-secondary-500 dark:text-secondary-300">
+                    Daftar Pelanggaran Terdaftar ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
+                  </h5>
+                  <div class="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={handleExportDetailExcel}
+                      class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
+                      title="Ekspor riwayat pelanggaran ke Excel (.xlsx)"
+                    >
+                      <span aria-hidden="true">📊</span> <span class="hidden sm:inline">Ekspor Excel</span>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={handleExportDetailPDF}
+                      class="flex items-center gap-1.5 py-1 px-2.5 text-fine font-semibold"
+                      title="Ekspor riwayat pelanggaran ke PDF (.pdf)"
+                    >
+                      <span aria-hidden="true">📄</span> <span class="hidden sm:inline">Ekspor PDF</span>
+                    </Button>
+                  </div>
+                </div>
+                <Show
+                  when={!mhsViolationsDetail.loading}
+                  fallback={<div class="py-8 text-center text-secondary-400">Memuat riwayat pelanggaran...</div>}
+                >
+                  <Show
+                    when={(mhsViolationsDetail()?.pelanggaranList || []).length > 0}
+                    fallback={
+                      <div class="py-8 text-center text-secondary-400 text-caption">
+                        Tidak ada catatan pelanggaran untuk mahasiswa ini.
+                      </div>
+                    }
+                  >
+                    <div class="overflow-x-auto border border-secondary-100 rounded-xl dark:border-secondary-800">
+                      <table class="w-full text-left text-caption border-collapse">
+                        <thead class="sticky top-0 bg-secondary-50 text-secondary-500 font-bold uppercase border-b border-secondary-200 dark:bg-secondary-800 dark:text-secondary-300 dark:border-secondary-700">
+                          <tr>
+                            <th class="p-2.5">Tanggal</th>
+                            <th class="p-2.5">Semester</th>
+                            <th class="p-2.5">Pasal</th>
+                            <th class="p-2.5">Pelanggaran</th>
+                            <th class="p-2.5">Sanksi</th>
+                            <th class="p-2.5">Pelapor</th>
+                            <th class="p-2.5">Keterangan</th>
+                            <th class="p-2.5 text-center">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-secondary-50 dark:divide-secondary-800">
+                          <For each={paginatedModalRiwayat()}>
+                            {(v) => (
+                              <tr class="hover:bg-secondary-50/40 dark:hover:bg-secondary-800/40">
+                                <td class="p-2.5 whitespace-nowrap">
+                                  {new Date(v.tanggal).toLocaleDateString('id-ID')}
+                                </td>
+                                <td class="p-2.5 font-bold whitespace-nowrap">
+                                  {v.semester ? `Sem. ${v.semester}` : v.periodeId || '-'}
+                                </td>
+                                <td class="p-2.5 font-bold">{v.nomorPasal || '-'}</td>
+                                <td class="p-2.5">{v.jenisPelanggaran}</td>
+                                <td class="p-2.5">
+                                  <span
+                                    class={`px-2 py-0.5 rounded border text-fine font-bold ${
+                                      v.jenisSanksi === 4
+                                        ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800'
+                                        : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                                    }`}
+                                  >
+                                    {v.jenisSanksi === 4 ? 'Tertulis (-1.00)' : 'Lisan (-0.25)'}
+                                  </span>
+                                </td>
+                                <td class="p-2.5 text-secondary-500">{v.pelapor || '-'}</td>
+                                <td class="p-2.5 max-w-xs truncate" title={v.keterangan}>
+                                  {v.keterangan}
+                                </td>
+                                <td class="p-2.5 text-center whitespace-nowrap">
+                                  <Button
+                                    variant="secondary"
+                                    onClick={() => openSpPrint(v)}
+                                    class="py-1 px-2.5 text-fine font-semibold flex items-center justify-center gap-1 mx-auto"
+                                    title="Cetak SP di jendela baru"
+                                  >
+                                    <span>📄</span> Cetak SP
+                                  </Button>
+                                </td>
+                              </tr>
+                            )}
+                          </For>
+                        </tbody>
+                      </table>
+                    </div>
+                    <Pagination
+                      currentPage={modalRiwayatPagination.page()}
+                      totalPages={totalModalRiwayatPages()}
+                      total={modalRiwayatList().length}
+                      limit={modalRiwayatPagination.limit()}
+                      pageOptions={[5, 10, 20]}
+                      onPageChange={modalRiwayatPagination.setPage}
+                      onLimitChange={modalRiwayatPagination.setLimit}
+                    />
+                  </Show>
                 </Show>
-              </Show>
-            </div>
+              </div>
+            </Show>
 
             <div class="flex justify-end pt-2">
               <Button variant="secondary" onClick={() => setSelectedMhsDetail(null)}>
@@ -2032,13 +2429,76 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               />
             </div>
 
-            {/* Tanggal */}
-            <Input
-              label="Tanggal Pelanggaran"
-              type="date"
-              value={tanggal()}
-              onInput={(e) => setTanggal(e.currentTarget.value)}
-            />
+            {/* Status Kedisiplinan Real-Time Mahasiswa Terpilih */}
+            <Show when={selectedStudentDiscipline()}>
+              {(sd) => (
+                <div class="p-3 bg-secondary-50/80 rounded-xl border border-secondary-200 flex flex-col gap-2 dark:bg-secondary-800/60 dark:border-secondary-700">
+                  <div class="flex items-center justify-between text-fine font-bold text-secondary-500 uppercase">
+                    <span>Status Kedisiplinan Mahasiswa Saat Ini</span>
+                    <span class="font-mono text-secondary-700 dark:text-secondary-300">
+                      {sd().prodiNama ? `${sd().prodiNama} · ` : ''}Sem. {sd().semester || '-'}
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
+                      <span class="text-fine text-secondary-400">Poin Smt Ini</span>
+                      <span class="font-bold text-secondary-900 dark:text-white text-caption">
+                        {sd().poinSemesterBerjalan ?? 0}{' '}
+                        <span class="font-normal text-secondary-500">({sd().predikatSemesterBerjalan || '-'})</span>
+                      </span>
+                    </div>
+                    <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
+                      <span class="text-fine text-secondary-400">Akumulasi Poin</span>
+                      <span class="font-bold text-rose-600 dark:text-rose-400 text-caption">
+                        {sd().totalPoin} <span class="font-normal text-rose-500">({sd().predikat})</span>
+                      </span>
+                    </div>
+                    <div class="p-2 bg-white rounded-lg border border-secondary-100 flex flex-col items-center dark:bg-secondary-900 dark:border-secondary-800">
+                      <span class="text-fine text-secondary-400">Status Akumulatif</span>
+                      {(() => {
+                        const st = sd().statusAkumulatif || getStatusPelanggaranAkumulatif(sd().totalPoin ?? 0);
+                        if (st === 'Darurat') {
+                          return <span class="font-bold text-caption text-rose-600">🚨 Darurat</span>;
+                        }
+                        if (st === 'Gawat') {
+                          return <span class="font-bold text-caption text-rose-500">🔴 Gawat</span>;
+                        }
+                        if (st === 'Awas') {
+                          return <span class="font-bold text-caption text-amber-600">🟠 Awas</span>;
+                        }
+                        if (st === 'Waspada') {
+                          return <span class="font-bold text-caption text-yellow-600">🟡 Waspada</span>;
+                        }
+                        return <span class="font-bold text-caption text-sky-600">🔵 Siaga</span>;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Show>
+
+            {/* Baris Tanggal & Pilihan Periode Semester */}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="Tanggal Pelanggaran"
+                type="date"
+                value={tanggal()}
+                onInput={(e) => setTanggal(e.currentTarget.value)}
+              />
+
+              <div class="flex flex-col gap-1">
+                <SearchableSelect
+                  label="Periode Semester"
+                  placeholder="Pilih periode akademik..."
+                  value={formPeriodeId()}
+                  options={(periodeList() || []).map((p) => ({
+                    label: `${p.nama} (${p.id})${p.aktif ? ' — Berjalan' : ''}`,
+                    value: p.id,
+                  }))}
+                  onChange={(val) => setFormPeriodeId(String(val))}
+                />
+              </div>
+            </div>
 
             {/* Pasal BPA (opsional) */}
             <SearchableSelect
@@ -2051,6 +2511,30 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
               }))}
               onChange={handlePasalChange}
             />
+
+            {/* Peringatan Dini Dampak Sanksi Jika Tertulis Dipilih */}
+            <Show
+              when={
+                selectedPasal()?.jenisSanksi === 4 &&
+                selectedStudentDiscipline() &&
+                (selectedStudentDiscipline()?.statusSkorsing?.isMendekati ||
+                  selectedStudentDiscipline()?.statusSkorsing?.isSkorsing)
+              }
+            >
+              <div class="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-caption flex items-start gap-2 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200">
+                <span class="text-base" aria-hidden="true">
+                  ⚠️
+                </span>
+                <div>
+                  <strong>Peringatan Ambang Skorsing (Pasal 32):</strong> Mahasiswa ini saat ini berstatus{' '}
+                  <span class="font-bold underline">
+                    {selectedStudentDiscipline()?.statusSkorsing?.isSkorsing ? 'SKORSING' : 'WASPADA (Mendekati Batas)'}
+                  </span>
+                  . Penambahan sanksi <strong>Peringatan Tertulis (+4 poin)</strong> ini akan meningkatkan akumulasi
+                  tertulis. Pastikan telah dikoordinasikan dengan Dosen PA/Komisi Disiplin.
+                </div>
+              </div>
+            </Show>
 
             {/* Info pasal terpilih */}
             <Show when={selectedPasal()}>

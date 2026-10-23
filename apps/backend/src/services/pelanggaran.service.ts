@@ -5,6 +5,7 @@ import {
   notifications,
   pasalPelanggaran,
   pelanggaran,
+  pengajuanCuti,
   periodeAkademik,
   programStudi,
   userProdiScopes,
@@ -29,6 +30,59 @@ export function hitungDegradasiNilaiSikap(totalPoin: number): number {
   const l = totalPoin % 4;
   // Sesuai BPA Politeknik Sorowako: Lisan = -0.25, Tertulis = -1.00
   return Number((t * 1.0 + l * 0.25).toFixed(2));
+}
+
+export function konversiPoinKeSanksi(totalPoin: number): { tertulis: number; lisan: number } {
+  return {
+    tertulis: Math.floor(totalPoin / 4),
+    lisan: totalPoin % 4,
+  };
+}
+
+export type StatusPelanggaranSemester = 'Skorsing' | 'Coaching' | 'Awas' | 'Waspada' | '-';
+export type StatusPelanggaranAkumulatif = 'Darurat' | 'Gawat' | 'Awas' | 'Waspada' | 'Siaga';
+
+export function hitungStatusPelanggaranSemester(poin: number): StatusPelanggaranSemester {
+  if (poin >= 16) return 'Skorsing';
+  if (poin >= 8) return 'Coaching';
+  if (poin >= 4) return 'Awas';
+  if (poin >= 1) return 'Waspada';
+  return '-';
+}
+
+export function hitungStatusPelanggaranAkumulatif(totalPoin: number): StatusPelanggaranAkumulatif {
+  if (totalPoin >= 28) return 'Darurat';
+  if (totalPoin >= 24) return 'Gawat';
+  if (totalPoin >= 16) return 'Awas';
+  if (totalPoin >= 8) return 'Waspada';
+  return 'Siaga';
+}
+
+export function resolvePeriodeIdFromTanggal(tanggalStr: string): string {
+  const d = new Date(tanggalStr);
+  const year = d.getFullYear();
+  const month = d.getMonth() + 1; // 1-12
+  // Bulan 8-12: Semester Ganjil (tahun ajaran YYYY/YYYY+1 -> kode YYYY1)
+  // Bulan 1: Lanjutan Ganjil (tahun ajaran YYYY-1/YYYY -> kode (YYYY-1)1)
+  // Bulan 2-7: Semester Genap (tahun ajaran YYYY-1/YYYY -> kode (YYYY-1)2)
+  if (month >= 8) {
+    return `${year}1`;
+  }
+  if (month === 1) {
+    return `${year - 1}1`;
+  }
+  return `${year - 1}2`;
+}
+
+export function getPreviousPeriodeId(periodeId: string | null): string | null {
+  if (!periodeId || periodeId.length < 5) return null;
+  const year = parseInt(periodeId.slice(0, 4), 10);
+  const term = periodeId.slice(4, 5);
+  if (isNaN(year)) return null;
+  if (term === '1') {
+    return `${year - 1}2`;
+  }
+  return `${year}1`;
 }
 
 export class PelanggaranService {
@@ -84,12 +138,16 @@ export class PelanggaranService {
 
     let targetPeriodeId = data.periodeId?.trim() || null;
     if (!targetPeriodeId) {
-      const [activePeriod] = await db
-        .select({ id: periodeAkademik.id })
-        .from(periodeAkademik)
-        .where(eq(periodeAkademik.aktif, true));
-      if (activePeriod) {
-        targetPeriodeId = activePeriod.id;
+      if (data.tanggal) {
+        targetPeriodeId = resolvePeriodeIdFromTanggal(data.tanggal);
+      } else {
+        const [activePeriod] = await db
+          .select({ id: periodeAkademik.id })
+          .from(periodeAkademik)
+          .where(eq(periodeAkademik.aktif, true));
+        if (activePeriod) {
+          targetPeriodeId = activePeriod.id;
+        }
       }
     }
 
@@ -227,6 +285,32 @@ export class PelanggaranService {
   }
 
   static async getPelanggaranByMahasiswa(mahasiswaId: number) {
+    const [mhs] = await db
+      .select({
+        id: mahasiswa.id,
+        nim: mahasiswa.nim,
+        nama: mahasiswa.nama,
+        foto: mahasiswa.foto,
+        angkatan: mahasiswa.angkatan,
+        programStudiId: mahasiswa.programStudiId,
+        prodiNama: programStudi.nama,
+        jenjang: programStudi.jenjang,
+        dosenPaId: mahasiswa.dosenPaId,
+      })
+      .from(mahasiswa)
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .where(eq(mahasiswa.id, mahasiswaId));
+
+    if (!mhs) {
+      throw new Error('Mahasiswa tidak ditemukan.');
+    }
+
+    const [activePeriode] = await db
+      .select({ id: periodeAkademik.id })
+      .from(periodeAkademik)
+      .where(eq(periodeAkademik.aktif, true));
+    const activePeriodeId = activePeriode?.id || null;
+
     const list = await db
       .select({
         id: pelanggaran.id,
@@ -247,6 +331,7 @@ export class PelanggaranService {
         pelapor: pelanggaran.pelapor,
         nomorPasal: pasalPelanggaran.nomorPasal,
         bunyiPasal: pasalPelanggaran.bunyiPasal,
+        periodeId: pelanggaran.periodeId,
         createdAt: pelanggaran.createdAt,
       })
       .from(pelanggaran)
@@ -256,13 +341,176 @@ export class PelanggaranService {
       .where(eq(pelanggaran.mahasiswaId, mahasiswaId))
       .orderBy(desc(pelanggaran.tanggal));
 
+    // Petakan semester untuk setiap pelanggaran berdasarkan periodeId & angkatan mahasiswa
+    const semesterMemo = new Map<string, number | null>();
+    const getSemester = async (pid: string | null) => {
+      if (!pid) return null;
+      if (semesterMemo.has(pid)) return semesterMemo.get(pid)!;
+      const sem = await KhsService.hitungSemester(mahasiswaId, pid, mhs.angkatan);
+      semesterMemo.set(pid, sem);
+      return sem;
+    };
+
+    const semesterAktif = activePeriodeId ? await getSemester(activePeriodeId) : null;
+
+    const enrichedList = [];
+    // Akumulasi per periode untuk rekap per semester
+    const perPeriodeMap = new Map<
+      string,
+      {
+        periodeId: string;
+        lisan: number;
+        tertulis: number;
+        poin: number;
+      }
+    >();
+
+    const previousPeriodeId = getPreviousPeriodeId(activePeriodeId);
+
+    for (const item of list) {
+      const pid = item.periodeId || resolvePeriodeIdFromTanggal(item.tanggal);
+      const sem = await getSemester(pid);
+      enrichedList.push({
+        ...item,
+        bobotPoin: Number(item.bobotPoin),
+        periodeId: pid,
+        semester: sem,
+      });
+
+      const existing = perPeriodeMap.get(pid) || { periodeId: pid, lisan: 0, tertulis: 0, poin: 0 };
+      if (item.jenisSanksi === 1) existing.lisan += 1;
+      else if (item.jenisSanksi === 4) existing.tertulis += 1;
+      existing.poin += Number(item.bobotPoin);
+      perPeriodeMap.set(pid, existing);
+    }
+
+    // Hitung rentang semester 1 s.d. semester berjalan (atau semester tertinggi yang tercatat)
+    let maxSemester = semesterAktif || 1;
+    for (const pid of perPeriodeMap.keys()) {
+      const s = await getSemester(pid);
+      if (s && s > maxSemester) maxSemester = s;
+    }
+
+    const angkatanTahun = mhs.angkatan ? parseInt(mhs.angkatan, 10) : NaN;
+    const coveredPeriodIds = new Set<string>();
+
+    // Susun rekapitulasi tiap semester secara berurutan
+    const rekapPerSemester = [];
+    if (!isNaN(angkatanTahun) && maxSemester >= 1) {
+      for (let s = 1; s <= maxSemester; s++) {
+        const term = s % 2 === 1 ? '1' : '2';
+        const year = angkatanTahun + Math.floor((s - 1) / 2);
+        const expectedPid = `${year}${term}`;
+        coveredPeriodIds.add(expectedPid);
+
+        const data = perPeriodeMap.get(expectedPid) || {
+          periodeId: expectedPid,
+          lisan: 0,
+          tertulis: 0,
+          poin: 0,
+        };
+
+        const isBerjalan =
+          (semesterAktif !== null && s === semesterAktif) ||
+          (activePeriodeId !== null && expectedPid === activePeriodeId);
+        const isSemesterLalu =
+          (semesterAktif !== null && semesterAktif > 1 && s === semesterAktif - 1) ||
+          (previousPeriodeId !== null && expectedPid === previousPeriodeId);
+
+        const sanksi = konversiPoinKeSanksi(data.poin);
+        rekapPerSemester.push({
+          semester: s,
+          periodeId: expectedPid,
+          poin: data.poin,
+          lisan: sanksi.lisan,
+          tertulis: sanksi.tertulis,
+          predikat: hitungPredikatTxly(data.poin),
+          degradasi: hitungDegradasiNilaiSikap(data.poin),
+          statusSemester: hitungStatusPelanggaranSemester(data.poin),
+          isBerjalan,
+          isSemesterLalu,
+        });
+      }
+    }
+
+    // Tambahkan periode lain jika ada yang di luar formula standar (misal pergeseran cuti)
+    for (const [pid, data] of perPeriodeMap.entries()) {
+      if (coveredPeriodIds.has(pid)) continue;
+      const sem = (await getSemester(pid)) ?? 0;
+      const sanksi = konversiPoinKeSanksi(data.poin);
+      rekapPerSemester.push({
+        semester: sem,
+        periodeId: pid,
+        poin: data.poin,
+        lisan: sanksi.lisan,
+        tertulis: sanksi.tertulis,
+        predikat: hitungPredikatTxly(data.poin),
+        degradasi: hitungDegradasiNilaiSikap(data.poin),
+        statusSemester: hitungStatusPelanggaranSemester(data.poin),
+        isBerjalan: activePeriodeId !== null && pid === activePeriodeId,
+        isSemesterLalu: previousPeriodeId !== null && pid === previousPeriodeId,
+      });
+    }
+
+    rekapPerSemester.sort((a, b) => a.semester - b.semester);
+
     const totalPoin = list.reduce((acc, item) => acc + Number(item.bobotPoin), 0);
 
+    // Hitung poin semester berjalan
+    const activePeriodData = activePeriodeId ? perPeriodeMap.get(activePeriodeId) : null;
+    const poinSemesterBerjalan = activePeriodData?.poin || 0;
+    const predikatSemesterBerjalan = hitungPredikatTxly(poinSemesterBerjalan);
+    const statusSemesterBerjalan = hitungStatusPelanggaranSemester(poinSemesterBerjalan);
+
+    // Hitung poin semester lalu
+    const prevPeriodData = previousPeriodeId ? perPeriodeMap.get(previousPeriodeId) : null;
+    const poinSemesterLalu = prevPeriodData?.poin || 0;
+    const predikatSemesterLalu = hitungPredikatTxly(poinSemesterLalu);
+    const statusSemesterLalu = hitungStatusPelanggaranSemester(poinSemesterLalu);
+
+    // Hitung status akumulatif
+    const statusAkumulatif = hitungStatusPelanggaranAkumulatif(totalPoin);
+
+    // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2 (lisan 4 otomatis dikonversi menjadi tertulis 1)
+    const tertulisSmtIni = Math.floor(poinSemesterBerjalan / 4);
+    const totalTertulisKumulatif = Math.floor(totalPoin / 4);
+    const jenjang = mhs.jenjang || 'D3';
+    const batasTertulisKumulatif = jenjang === 'D4' ? 9 : 7;
+    const isSkorsingSemester = tertulisSmtIni >= 4;
+    const isSkorsingKumulatif = totalTertulisKumulatif >= batasTertulisKumulatif;
+    const isSkorsing = isSkorsingSemester || isSkorsingKumulatif;
+
+    let alasanSkorsing: string | null = null;
+    if (isSkorsingSemester && isSkorsingKumulatif) {
+      alasanSkorsing = `Akumulasi ≥ 4 Tertulis di semester ini & ≥ ${batasTertulisKumulatif} Tertulis kumulatif (${jenjang}) (Pasal 32 ayat 2)`;
+    } else if (isSkorsingSemester) {
+      alasanSkorsing = 'Akumulasi ≥ 4 Peringatan Tertulis dalam Satu Semester (Pasal 32 ayat 2)';
+    } else if (isSkorsingKumulatif) {
+      alasanSkorsing = `Akumulasi ≥ ${batasTertulisKumulatif} Peringatan Tertulis Kumulatif Jenjang ${jenjang} (Pasal 32 ayat 2)`;
+    }
+
+    const isMendekati = !isSkorsing && (tertulisSmtIni === 3 || totalTertulisKumulatif === batasTertulisKumulatif - 1);
+
     return {
-      pelanggaranList: list.map((item) => ({ ...item, bobotPoin: Number(item.bobotPoin) })),
+      pelanggaranList: enrichedList,
       totalPoin,
       predikat: hitungPredikatTxly(totalPoin),
       degradasiNilaiSikap: hitungDegradasiNilaiSikap(totalPoin),
+      statusAkumulatif,
+      poinSemesterBerjalan,
+      predikatSemesterBerjalan,
+      statusSemesterBerjalan,
+      poinSemesterLalu,
+      predikatSemesterLalu,
+      statusSemesterLalu,
+      semesterAktif,
+      jenjang,
+      statusSkorsing: {
+        isSkorsing,
+        alasan: alasanSkorsing,
+        isMendekati,
+      },
+      rekapPerSemester,
     };
   }
 
@@ -290,6 +538,7 @@ export class PelanggaranService {
 
     // Total poin (Lisan=1, Tertulis=4) untuk menurunkan degradasi sesuai formula BPA.
     const totalPoin = lisan * 1 + tertulis * 4;
+    const sanksi = konversiPoinKeSanksi(totalPoin);
     const degradasi = hitungDegradasiNilaiSikap(totalPoin);
     const am = Math.max(0, Number((4.0 - degradasi).toFixed(2)));
 
@@ -304,8 +553,8 @@ export class PelanggaranService {
       degradasi,
       sebutan,
       narasi: `${sebutan} (${am.toFixed(2).replace('.', ',')})`,
-      lisan,
-      tertulis,
+      lisan: sanksi.lisan,
+      tertulis: sanksi.tertulis,
       totalPoin,
     };
   }
@@ -531,6 +780,7 @@ export class PelanggaranService {
       pasalId?: number | null;
       jenisSanksi?: number;
       pelapor?: string | null;
+      periodeId?: string | null;
     }>,
   ) {
     if (data.jenisSanksi !== undefined && data.jenisSanksi !== 1 && data.jenisSanksi !== 4) {
@@ -590,7 +840,7 @@ export class PelanggaranService {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    // 3. Agregasi pelanggaran per mahasiswa
+    // 3. Agregasi pelanggaran kumulatif per mahasiswa
     const rows = await db
       .select({
         mahasiswaId: mahasiswa.id,
@@ -600,6 +850,7 @@ export class PelanggaranService {
         angkatan: mahasiswa.angkatan,
         programStudiId: mahasiswa.programStudiId,
         prodiNama: programStudi.nama,
+        jenjang: programStudi.jenjang,
         totalPoin: sql<number>`COALESCE(SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)), 0)`,
         jumlahPelanggaran: count(pelanggaran.id),
       })
@@ -615,22 +866,98 @@ export class PelanggaranService {
         mahasiswa.angkatan,
         mahasiswa.programStudiId,
         programStudi.nama,
+        programStudi.jenjang,
       )
       .orderBy(sql`SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)) DESC`);
 
-    // 4. Hitung semester untuk SELURUH baris dalam SATU query (hindari N+1).
-    // Matematika semester tetap di KhsService.hitungSemester; di sini hanya memetakan.
-    const angkatanById = new Map<number, string | null>();
-    if (targetPeriodeId) {
-      for (const r of rows) {
-        if (r.angkatan) angkatanById.set(r.mahasiswaId, r.angkatan);
-      }
+    if (rows.length === 0) return [];
+
+    const mahasiswaIds = rows.map((r) => r.mahasiswaId);
+
+    // 4. Agregasi per periode untuk seluruh mahasiswa dalam SATU query (hindari N+1)
+    const resolvedPeriodeSql = sql<string>`COALESCE(
+      ${pelanggaran.periodeId},
+      CASE
+        WHEN EXTRACT(MONTH FROM ${pelanggaran.tanggal}) >= 8
+          THEN CONCAT(CAST(EXTRACT(YEAR FROM ${pelanggaran.tanggal}) AS INTEGER), '1')
+        WHEN EXTRACT(MONTH FROM ${pelanggaran.tanggal}) = 1
+          THEN CONCAT(CAST(EXTRACT(YEAR FROM ${pelanggaran.tanggal}) - 1 AS INTEGER), '1')
+        ELSE CONCAT(CAST(EXTRACT(YEAR FROM ${pelanggaran.tanggal}) - 1 AS INTEGER), '2')
+      END
+    )`;
+
+    const perPeriodeRows = await db
+      .select({
+        mahasiswaId: pelanggaran.mahasiswaId,
+        periodeId: resolvedPeriodeSql,
+        poin: sql<number>`COALESCE(SUM(COALESCE(${pelanggaran.jenisSanksi}, 1)), 0)`,
+        lisan: sql<number>`COALESCE(SUM(CASE WHEN ${pelanggaran.jenisSanksi} = 1 THEN 1 ELSE 0 END), 0)`,
+        tertulis: sql<number>`COALESCE(SUM(CASE WHEN ${pelanggaran.jenisSanksi} = 4 THEN 1 ELSE 0 END), 0)`,
+        count: count(pelanggaran.id),
+      })
+      .from(pelanggaran)
+      .innerJoin(mahasiswa, eq(pelanggaran.mahasiswaId, mahasiswa.id))
+      .where(whereClause)
+      .groupBy(pelanggaran.mahasiswaId, resolvedPeriodeSql);
+
+    const perPeriodeByMhs = new Map<
+      number,
+      Array<{
+        periodeId: string | null;
+        poin: number;
+        lisan: number;
+        tertulis: number;
+        count: number;
+      }>
+    >();
+
+    for (const p of perPeriodeRows) {
+      const list = perPeriodeByMhs.get(p.mahasiswaId) || [];
+      list.push({
+        periodeId: p.periodeId,
+        poin: Number(p.poin),
+        lisan: Number(p.lisan),
+        tertulis: Number(p.tertulis),
+        count: Number(p.count),
+      });
+      perPeriodeByMhs.set(p.mahasiswaId, list);
     }
+
+    // 5. Ambil data cuti dalam SATU batch query untuk kalkulasi nomor semester in-memory
+    const angkatanById = new Map<number, string | null>();
+    for (const r of rows) {
+      if (r.angkatan) angkatanById.set(r.mahasiswaId, r.angkatan);
+    }
+
+    const cutiRows = await db
+      .select({
+        mahasiswaId: pengajuanCuti.mahasiswaId,
+        mulai: pengajuanCuti.semesterMulaiCuti,
+        berakhir: pengajuanCuti.semesterBerakhirCuti,
+      })
+      .from(pengajuanCuti)
+      .where(
+        and(
+          inArray(pengajuanCuti.mahasiswaId, mahasiswaIds),
+          inArray(pengajuanCuti.status, ['disetujui_pa', 'disetujui_keuangan', 'disetujui_prodi', 'kembali_aktif']),
+        ),
+      );
+
+    const cutiByMahasiswa = new Map<number, Array<{ mulai: string | null; berakhir: string | null }>>();
+    for (const c of cutiRows) {
+      const list = cutiByMahasiswa.get(c.mahasiswaId) || [];
+      list.push(c);
+      cutiByMahasiswa.set(c.mahasiswaId, list);
+    }
+
+    // Hitung semester berjalan saat ini untuk tiap mahasiswa
     const semesterById = targetPeriodeId
-      ? await KhsService.hitungSemesterBatch([...angkatanById.keys()], targetPeriodeId, angkatanById)
+      ? await KhsService.hitungSemesterBatch(mahasiswaIds, targetPeriodeId, angkatanById)
       : new Map<number, number | null>();
 
-    // 5. Susun predikat TXLY per mahasiswa
+    const previousPeriodeId = getPreviousPeriodeId(targetPeriodeId);
+
+    // 6. Susun predikat TXLY, rincian per semester, dan evaluasi Skorsing Pasal 32
     const result = [];
     for (const r of rows) {
       const totalPoin = Number(r.totalPoin);
@@ -647,6 +974,61 @@ export class PelanggaranService {
       }
 
       const semester = semesterById.get(r.mahasiswaId) ?? null;
+      const periodList = perPeriodeByMhs.get(r.mahasiswaId) || [];
+      const mhsCuti = cutiByMahasiswa.get(r.mahasiswaId) || [];
+
+      // Poin semester berjalan
+      const targetPeriodEntry = targetPeriodeId ? periodList.find((p) => p.periodeId === targetPeriodeId) : null;
+      const poinSemesterBerjalan = targetPeriodEntry ? targetPeriodEntry.poin : 0;
+      const predikatSemesterBerjalan = hitungPredikatTxly(poinSemesterBerjalan);
+      const jumlahPelanggaranSemesterBerjalan = targetPeriodEntry ? targetPeriodEntry.count : 0;
+
+      // Poin semester lalu
+      const prevPeriodEntry = previousPeriodeId ? periodList.find((p) => p.periodeId === previousPeriodeId) : null;
+      const poinSemesterLalu = prevPeriodEntry ? prevPeriodEntry.poin : 0;
+      const predikatSemesterLalu = hitungPredikatTxly(poinSemesterLalu);
+      const jumlahPelanggaranSemesterLalu = prevPeriodEntry ? prevPeriodEntry.count : 0;
+
+      // Susun breakdown poin per semester
+      const poinPerSemester = [];
+      for (const p of periodList) {
+        if (!p.periodeId) continue;
+        const sem = (await KhsService.hitungSemester(r.mahasiswaId, p.periodeId, r.angkatan, mhsCuti)) ?? 0;
+        const sanksi = konversiPoinKeSanksi(p.poin);
+        poinPerSemester.push({
+          semester: sem,
+          periodeId: p.periodeId,
+          poin: p.poin,
+          lisan: sanksi.lisan,
+          tertulis: sanksi.tertulis,
+          predikat: hitungPredikatTxly(p.poin),
+          statusSemester: hitungStatusPelanggaranSemester(p.poin),
+        });
+      }
+      poinPerSemester.sort((a, b) => a.semester - b.semester);
+
+      // Evaluasi aturan Skorsing BPA Pasal 32 ayat 2 (lisan 4 otomatis dikonversi menjadi tertulis 1):
+      // - Akumulasi peringatan Tertulis-4 dalam satu semester (tertulis >= 4)
+      // - ATAU akumulasi peringatan tertulis ke-7 (D3) / ke-9 (D4) kumulatif sejak semester pertama
+      const tertulisSmtIni = Math.floor(poinSemesterBerjalan / 4);
+      const totalTertulisKumulatif = Math.floor(totalPoin / 4);
+      const jenjang = r.jenjang || 'D3';
+      const batasTertulisKumulatif = jenjang === 'D4' ? 9 : 7;
+      const isSkorsingSemester = tertulisSmtIni >= 4;
+      const isSkorsingKumulatif = totalTertulisKumulatif >= batasTertulisKumulatif;
+      const isSkorsing = isSkorsingSemester || isSkorsingKumulatif;
+
+      let alasan: string | null = null;
+      if (isSkorsingSemester && isSkorsingKumulatif) {
+        alasan = `Akumulasi ≥ 4 Tertulis di semester ini & ≥ ${batasTertulisKumulatif} Tertulis kumulatif (${jenjang}) (Pasal 32 ayat 2)`;
+      } else if (isSkorsingSemester) {
+        alasan = 'Akumulasi ≥ 4 Peringatan Tertulis dalam Satu Semester (Pasal 32 ayat 2)';
+      } else if (isSkorsingKumulatif) {
+        alasan = `Akumulasi ≥ ${batasTertulisKumulatif} Peringatan Tertulis Kumulatif Jenjang ${jenjang} (Pasal 32 ayat 2)`;
+      }
+
+      const isMendekati =
+        !isSkorsing && (tertulisSmtIni === 3 || totalTertulisKumulatif === batasTertulisKumulatif - 1);
 
       result.push({
         mahasiswaId: r.mahasiswaId,
@@ -656,8 +1038,25 @@ export class PelanggaranService {
         angkatan: r.angkatan,
         programStudiId: r.programStudiId,
         prodiNama: r.prodiNama || '-',
+        jenjang: r.jenjang || null,
         semester,
         totalPoin,
+        totalPoinKumulatif: totalPoin,
+        statusAkumulatif: hitungStatusPelanggaranAkumulatif(totalPoin),
+        poinSemesterBerjalan,
+        predikatSemesterBerjalan,
+        statusSemesterBerjalan: hitungStatusPelanggaranSemester(poinSemesterBerjalan),
+        jumlahPelanggaranSemesterBerjalan,
+        poinSemesterLalu,
+        predikatSemesterLalu,
+        statusSemesterLalu: hitungStatusPelanggaranSemester(poinSemesterLalu),
+        jumlahPelanggaranSemesterLalu,
+        poinPerSemester,
+        statusSkorsing: {
+          isSkorsing,
+          alasan,
+          isMendekati,
+        },
         jumlahPelanggaran: Number(r.jumlahPelanggaran),
         predikat,
         degradasiNilaiSikap: hitungDegradasiNilaiSikap(totalPoin),

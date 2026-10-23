@@ -140,8 +140,31 @@ export interface Pelanggaran {
   nomorPasal?: string | null;
   bunyiPasal?: string | null;
   periodeId?: string | null;
+  semester?: number | null;
   dibuatOleh?: number | null;
   createdAt?: string;
+}
+
+export type StatusPelanggaranSemester = 'Skorsing' | 'Coaching' | 'Awas' | 'Waspada' | '-';
+export type StatusPelanggaranAkumulatif = 'Darurat' | 'Gawat' | 'Awas' | 'Waspada' | 'Siaga';
+
+export interface PoinSemesterItem {
+  semester: number;
+  periodeId: string;
+  poin: number;
+  lisan: number;
+  tertulis: number;
+  predikat: string;
+  degradasi?: number;
+  statusSemester?: StatusPelanggaranSemester;
+  isBerjalan?: boolean;
+  isSemesterLalu?: boolean;
+}
+
+export interface StatusSkorsing {
+  isSkorsing: boolean;
+  alasan: string | null;
+  isMendekati: boolean;
 }
 
 export interface PelanggaranRekap {
@@ -149,6 +172,17 @@ export interface PelanggaranRekap {
   totalPoin: number;
   predikat: string;
   degradasiNilaiSikap?: number;
+  statusAkumulatif?: StatusPelanggaranAkumulatif;
+  poinSemesterBerjalan?: number;
+  predikatSemesterBerjalan?: string;
+  statusSemesterBerjalan?: StatusPelanggaranSemester;
+  poinSemesterLalu?: number;
+  predikatSemesterLalu?: string;
+  statusSemesterLalu?: StatusPelanggaranSemester;
+  semesterAktif?: number | null;
+  jenjang?: string | null;
+  statusSkorsing?: StatusSkorsing;
+  rekapPerSemester?: PoinSemesterItem[];
 }
 
 export interface RekapPelanggaran {
@@ -177,8 +211,21 @@ export interface MahasiswaTxlyItem {
   angkatan?: string | null;
   programStudiId?: number | null;
   prodiNama?: string | null;
+  jenjang?: string | null;
   semester?: number | null;
   totalPoin: number;
+  totalPoinKumulatif?: number;
+  statusAkumulatif?: StatusPelanggaranAkumulatif;
+  poinSemesterBerjalan?: number;
+  predikatSemesterBerjalan?: string;
+  statusSemesterBerjalan?: StatusPelanggaranSemester;
+  jumlahPelanggaranSemesterBerjalan?: number;
+  poinSemesterLalu?: number;
+  predikatSemesterLalu?: string;
+  statusSemesterLalu?: StatusPelanggaranSemester;
+  jumlahPelanggaranSemesterLalu?: number;
+  poinPerSemester?: PoinSemesterItem[];
+  statusSkorsing?: StatusSkorsing;
   jumlahPelanggaran: number;
   predikat: string;
   degradasiNilaiSikap: number;

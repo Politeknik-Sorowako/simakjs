@@ -6,7 +6,7 @@ interface ModalProps {
   title?: string;
   onClose?: () => void;
   children: JSX.Element;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 }
 
 const maxWidthClasses = {
@@ -14,6 +14,8 @@ const maxWidthClasses = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  '2xl': 'max-w-6xl',
+  full: 'max-w-7xl w-full',
 };
 
 export function Modal(props: ModalProps) {
