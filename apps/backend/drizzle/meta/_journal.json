@@ -666,6 +666,20 @@
       "when": 1789940000000,
       "tag": "0095_pengumuman_modal_on_login_and_quick_menu",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1789950000000,
+      "tag": "0096_wadir_direktur_user_roles",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1789960000000,
+      "tag": "0097_pelanggaran_tindak_lanjut",
+      "breakpoints": true
     }
   ]
 }

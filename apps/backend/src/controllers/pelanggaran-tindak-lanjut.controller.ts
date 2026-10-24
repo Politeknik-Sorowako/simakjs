@@ -25,6 +25,7 @@ export class PelanggaranTindakLanjutController {
         limit: query?.limit ? parseInt(query.limit, 10) : 20,
       });
     } catch (e: unknown) {
+      console.error('[PelanggaranTindakLanjutController.list] Error:', e);
       set.status = 500;
       return { error: e instanceof Error ? e.message : 'Terjadi kesalahan sistem.' };
     }
