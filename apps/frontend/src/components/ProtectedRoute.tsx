@@ -19,6 +19,9 @@ interface ProtectedRouteProps {
     | 'instruktur'
     | 'kemahasiswaan'
     | 'lppm'
+    | 'wadir1'
+    | 'wadir3'
+    | 'direktur'
   )[];
 }
 

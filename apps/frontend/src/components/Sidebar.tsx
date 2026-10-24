@@ -203,6 +203,8 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
    * daftar roles.
    */
   const canSetPembimbing = () => auth.hasRole(['admin', 'super_admin', 'prodi', 'kaprodi']);
+  const canTindakLanjutSp = () =>
+    auth.hasRole(['admin', 'super_admin', 'kemahasiswaan', 'kaprodi', 'wadir1', 'wadir3', 'direktur']);
   const notGuest = () => !auth.hasRole(['guest']);
   const isMahasiswaOrMore = () => !isCalonMhs() && notGuest();
 
@@ -1540,6 +1542,25 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                       />
                     </svg>
                     Kedisiplinan
+                  </A>
+                </Show>
+                <Show when={canTindakLanjutSp()}>
+                  <A
+                    href="/pelanggaran/tindak-lanjut"
+                    onClick={() => props.onClose()}
+                    activeClass="text-action-ondark font-semibold"
+                    inactiveClass="hover:text-white text-secondary-200"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-table transition-colors duration-150"
+                  >
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Tindak Lanjut SP
                   </A>
                 </Show>
                 <Show when={isMahasiswa()}>

@@ -35,7 +35,10 @@ export interface User {
     | 'plp'
     | 'instruktur'
     | 'kemahasiswaan'
-    | 'lppm';
+    | 'lppm'
+    | 'wadir1'
+    | 'wadir3'
+    | 'direktur';
   roles?: User['role'][];
   mustChangePassword?: boolean;
   theme?: string;

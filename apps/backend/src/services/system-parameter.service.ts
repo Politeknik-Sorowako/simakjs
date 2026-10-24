@@ -171,6 +171,52 @@ const DEFAULT_PARAMS: Record<string, { value: string; type: ParamType; descripti
     description:
       'Blokir semua aksi tulis ke Feeder PDDIKTI (Insert/Update/Delete). Jika aktif (true), aplikasi hanya mengizinkan operasi baca (Get* / GetToken).',
   },
+  // ─── Tindak Lanjut Pelanggaran & Pembinaan Mahasiswa (BPA) ─────────────
+  SP_NOTIF_ADMIN_ENABLED: {
+    value: 'true',
+    type: 'boolean',
+    description: 'Kirim notifikasi lonceng ke Admin untuk setiap pencatatan surat peringatan/pelanggaran baru',
+  },
+  SP_LV1_SEMESTER_T: {
+    value: '1',
+    type: 'number',
+    description: 'Ambang batas T semester untuk Level 1: Coaching Mahasiswa (persetujuan Kaprodi)',
+  },
+  SP_LV2_SEMESTER_T: {
+    value: '2',
+    type: 'number',
+    description:
+      'Ambang batas T semester untuk Level 2: Coaching Mahasiswa (disetujui Kaprodi, Wadir 1, Wadir 3 disertai Pemanggilan Ortu)',
+  },
+  SP_LV2_AKUMULASI_T: {
+    value: '5',
+    type: 'number',
+    description:
+      'Ambang batas T akumulatif untuk Level 2: Coaching Mahasiswa (disetujui Kaprodi, Wadir 1, Wadir 3 disertai Pemanggilan Ortu)',
+  },
+  SP_LV3_SEMESTER_T: {
+    value: '3',
+    type: 'number',
+    description:
+      'Ambang batas T semester untuk Level 3: Coaching Mahasiswa (disetujui Kaprodi, Wadir 1, Wadir 3, Direktur)',
+  },
+  SP_LV3_AKUMULASI_T_LIST: {
+    value: '6,8',
+    type: 'string',
+    description: 'Daftar nilai T akumulatif untuk Level 3 (dipisahkan tanda koma, misal: 6,8)',
+  },
+  SP_LV4_SEMESTER_T: {
+    value: '4',
+    type: 'number',
+    description:
+      'Ambang batas T semester untuk Level 4: Coaching Mahasiswa + Sidang Komisi Disiplin (disetujui Kaprodi, Wadir 1, Wadir 3, Direktur)',
+  },
+  SP_LV4_AKUMULASI_T_LIST: {
+    value: '7,9',
+    type: 'string',
+    description:
+      'Daftar nilai T akumulatif untuk Level 4: Coaching Mahasiswa + Sidang Komisi Disiplin (dipisahkan tanda koma, misal: 7,9)',
+  },
 };
 
 /** Parameter yang nilainya bersifat rahasia (di-mask pada respons API). */

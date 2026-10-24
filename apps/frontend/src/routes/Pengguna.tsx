@@ -25,6 +25,9 @@ const SINGLE_ROLE_ONLY = ['super_admin', 'mahasiswa', 'guest', 'calon_mahasiswa'
 const fallbackRoleOptions: { value: string; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'kaprodi', label: 'Kaprodi' },
+  { value: 'wadir1', label: 'Wadir 1' },
+  { value: 'wadir3', label: 'Wadir 3' },
+  { value: 'direktur', label: 'Direktur' },
   { value: 'prodi', label: 'Admin Prodi' },
   { value: 'dosen', label: 'Dosen' },
   { value: 'plp', label: 'PLP / Teknisi Lab' },

@@ -13,7 +13,10 @@ export type UserRole =
   | 'plp'
   | 'instruktur'
   | 'kemahasiswaan'
-  | 'lppm';
+  | 'lppm'
+  | 'wadir1'
+  | 'wadir3'
+  | 'direktur';
 
 export interface UserPayload {
   id: number;

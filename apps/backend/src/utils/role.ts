@@ -31,6 +31,9 @@ export const MULTI_ROLE_ALLOWED: UserRole[] = [
   'instruktur',
   'kemahasiswaan',
   'lppm',
+  'wadir1',
+  'wadir3',
+  'direktur',
 ];
 
 export const VALID_ROLE_COMBINATIONS: Record<UserRole, { single: boolean }> = Object.fromEntries(
@@ -79,6 +82,9 @@ export const STAFF_ROLES: UserRole[] = [
   'instruktur',
   'kemahasiswaan',
   'lppm',
+  'wadir1',
+  'wadir3',
+  'direktur',
 ];
 
 export function isStaff(user: { role: UserRole } | null | undefined): boolean {
@@ -109,4 +115,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   calon_mahasiswa: 'Calon Mahasiswa',
   kemahasiswaan: 'Kemahasiswaan',
   lppm: 'LPPM',
+  wadir1: 'Wadir 1',
+  wadir3: 'Wadir 3',
+  direktur: 'Direktur',
 };

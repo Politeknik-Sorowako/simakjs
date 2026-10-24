@@ -12,6 +12,25 @@ function extractKode(raw: string): string {
   return m ? m[0] : raw.trim();
 }
 
+function formatDocType(docType?: string | null): string {
+  switch (docType) {
+    case 'KHS':
+      return 'Kartu Hasil Studi (KHS)';
+    case 'SKPI':
+      return 'Surat Keterangan Pendamping Ijazah (SKPI)';
+    case 'TRANSKRIP':
+      return 'Transkrip Akademik';
+    case 'TL_COACHING':
+      return 'Formulir Coaching & Pembinaan Mahasiswa';
+    case 'TL_PEMANGGILAN_ORTU':
+      return 'Berita Acara Pembinaan & Pemanggilan Orang Tua';
+    case 'TL_BA_KOMDIS':
+      return 'Berita Acara Sidang Komisi Disiplin';
+    default:
+      return docType || '-';
+  }
+}
+
 export default function VerifikasiDokumen() {
   const params = useParams<{ uuid: string }>();
   const navigate = useNavigate();
@@ -200,7 +219,7 @@ export default function VerifikasiDokumen() {
                   title="Dokumen Valid & Asli"
                   subtitle="Tanda tangan digital dokumen ini terverifikasi dan diterbitkan oleh Politeknik Sorowako."
                   data={() => ({
-                    'Jenis Dokumen': res().docType || '-',
+                    'Jenis Dokumen': formatDocType(res().docType),
                     Nama: res().namaMask || '-',
                     NIM: res().nimMask || '-',
                     'Program Studi': res().prodi || '-',
