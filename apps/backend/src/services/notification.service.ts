@@ -100,6 +100,7 @@ export class NotificationService {
           u.role === 'super_admin' ||
           u.role === 'direktur' ||
           u.role === 'wadir1' ||
+          u.role === 'wadir2' ||
           u.role === 'wadir3' ||
           u.role === 'kemahasiswaan';
 

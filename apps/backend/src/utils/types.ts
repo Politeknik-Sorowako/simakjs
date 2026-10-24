@@ -15,6 +15,7 @@ export type UserRole =
   | 'kemahasiswaan'
   | 'lppm'
   | 'wadir1'
+  | 'wadir2'
   | 'wadir3'
   | 'direktur';
 

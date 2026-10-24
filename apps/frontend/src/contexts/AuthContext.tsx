@@ -37,6 +37,7 @@ export interface User {
     | 'kemahasiswaan'
     | 'lppm'
     | 'wadir1'
+    | 'wadir2'
     | 'wadir3'
     | 'direktur';
   roles?: User['role'][];
