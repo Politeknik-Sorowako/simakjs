@@ -139,6 +139,7 @@ function TabParameter() {
   const krsBlockEnabled = () => boolValue('BLOCK_KRS_JIKA_TANGGUNGAN', 'false');
   const registrationEnabled = () => boolValue('REGISTRATION_ENABLED', 'true');
   const loginTurnstileEnabled = () => boolValue('LOGIN_TURNSTILE_ENABLED', 'false');
+  const spNotifAdminEnabled = () => boolValue('SP_NOTIF_ADMIN_ENABLED', 'true');
 
   const saveBoolParam = async (key: string, label: string, enabled: () => boolean) => {
     setSavingKey(key);
@@ -402,6 +403,96 @@ function TabParameter() {
         </Card>
       </div>
 
+      {/* Notifikasi SP ke Admin */}
+      <div class="mb-6">
+        <ToggleCard
+          title="Notifikasi Peringatan (SP) ke Admin"
+          parameterKey="SP_NOTIF_ADMIN_ENABLED"
+          description="Jika aktif, setiap penerbitan Surat Peringatan (Lisan maupun Tertulis) akan mengirimkan notifikasi lonceng ke seluruh pengguna dengan role Admin."
+          enabled={spNotifAdminEnabled()}
+          saving={savingKey() === 'SP_NOTIF_ADMIN_ENABLED'}
+          onToggle={(val) => setField('SP_NOTIF_ADMIN_ENABLED', val)}
+          onSave={() => saveBoolParam('SP_NOTIF_ADMIN_ENABLED', 'Notifikasi SP ke Admin', spNotifAdminEnabled)}
+          trueLabel="Ya — Kirim ke Admin"
+          falseLabel="Tidak — Hanya Staff/Prodi"
+        />
+      </div>
+
+      {/* Bagian Parameter Alur Tindak Lanjut SP & Pembinaan BPA */}
+      <div class="mb-6">
+        <div class="mb-3">
+          <h2 class="text-sm font-semibold uppercase tracking-wider text-secondary-500 dark:text-secondary-400">
+            Parameter Alur Tindak Lanjut SP & Pembinaan Berjenjang (BPA)
+          </h2>
+          <p class="text-xs text-secondary-500 dark:text-secondary-400">
+            Pengaturan ambang batas Peringatan Tertulis (T) per semester dan akumulasi untuk eskalasi pembinaan
+            berjenjang (Coaching, Pemanggilan Orang Tua, dan Sidang Komisi Disiplin).
+          </p>
+        </div>
+        <div class="space-y-3">
+          <For
+            each={(params() || []).filter((p) =>
+              [
+                'SP_LV1_SEMESTER_T',
+                'SP_LV2_SEMESTER_T',
+                'SP_LV2_AKUMULASI_T',
+                'SP_LV3_SEMESTER_T',
+                'SP_LV3_AKUMULASI_T_LIST',
+                'SP_LV4_SEMESTER_T',
+                'SP_LV4_AKUMULASI_T_LIST',
+              ].includes(p.key),
+            )}
+          >
+            {(p) => (
+              <Card>
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-sm font-semibold text-secondary-800 dark:text-secondary-100">
+                        {p.key}
+                      </span>
+                      <Badge variant="info">{TYPE_LABEL[p.paramType] || p.paramType}</Badge>
+                    </div>
+                    <p class="mt-1 text-xs text-secondary-500 dark:text-secondary-400">{p.description}</p>
+                    <p class="mt-0.5 text-xs text-secondary-400">Default: {p.defaultValue || '—'}</p>
+                  </div>
+
+                  <div class="flex items-center gap-2 shrink-0">
+                    <Show
+                      when={p.paramType === 'string'}
+                      fallback={
+                        <Input
+                          type="number"
+                          value={valueFor(p)}
+                          onInput={(e) => setField(p.key, e.currentTarget.value)}
+                          class="w-24 text-center font-mono"
+                        />
+                      }
+                    >
+                      <Input
+                        type="text"
+                        value={valueFor(p)}
+                        onInput={(e) => setField(p.key, e.currentTarget.value)}
+                        class="w-36 text-center font-mono"
+                      />
+                    </Show>
+                    <Button size="sm" loading={savingKey() === p.key} disabled={!hasChanges(p)} onClick={() => save(p)}>
+                      Simpan
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </For>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <h2 class="text-sm font-semibold uppercase tracking-wider text-secondary-500 dark:text-secondary-400">
+          Parameter Sistem Lainnya
+        </h2>
+      </div>
+
       <div class="space-y-3">
         <For
           each={(params() || []).filter(
@@ -412,6 +503,14 @@ function TabParameter() {
               p.key !== 'BLOCK_KRS_JIKA_TANGGUNGAN' &&
               p.key !== 'SESSION_DURATION_MINUTES' &&
               p.key !== 'SESSION_EPOCH' &&
+              p.key !== 'SP_NOTIF_ADMIN_ENABLED' &&
+              p.key !== 'SP_LV1_SEMESTER_T' &&
+              p.key !== 'SP_LV2_SEMESTER_T' &&
+              p.key !== 'SP_LV2_AKUMULASI_T' &&
+              p.key !== 'SP_LV3_SEMESTER_T' &&
+              p.key !== 'SP_LV3_AKUMULASI_T_LIST' &&
+              p.key !== 'SP_LV4_SEMESTER_T' &&
+              p.key !== 'SP_LV4_AKUMULASI_T_LIST' &&
               // Parameter boolean/string ber-UI khusus (toggle khusus / tab Kop Surat).
               p.key !== 'LOGIN_TURNSTILE_ENABLED' &&
               p.key !== 'surat_kop_global' &&

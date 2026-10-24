@@ -22,7 +22,7 @@ import { SkpiService } from './skpi.service';
 
 export const TENANT_SIMAK = 'simak';
 
-export type DocType = 'KHS' | 'TRANSKRIP' | 'SKPI';
+export type DocType = 'KHS' | 'TRANSKRIP' | 'SKPI' | 'TL_COACHING' | 'TL_PEMANGGILAN_ORTU' | 'TL_BA_KOMDIS';
 
 export interface SignKhsInput {
   mhsId: number;
@@ -230,6 +230,45 @@ export class DocumentSignatureService {
     };
 
     return DocumentSignatureService.persistSignedSnapshot({ docType: 'SKPI', refId, payload, signer, withQr });
+  }
+
+  /**
+   * Menandatangani berkas dokumen tindak lanjut pembinaan / sidang komisi disiplin.
+   * refId per-approver: `tl:<tlId>:<approverRole>`.
+   */
+  static async signTindakLanjut(
+    tlId: number,
+    docType: 'TL_COACHING' | 'TL_PEMANGGILAN_ORTU' | 'TL_BA_KOMDIS',
+    approverRole: string,
+    signer: { userId: number; nama: string; jabatan: string | null },
+    snapshotPayload: Record<string, unknown>,
+    opts: { withQr?: boolean } = {},
+  ): Promise<SignResult> {
+    const withQr = opts.withQr ?? true;
+    const refId = `tl:${tlId}:${approverRole}`;
+
+    const payload: Record<string, unknown> = {
+      tenant: TENANT_SIMAK,
+      docType,
+      refId,
+      tlId,
+      approverRole,
+      signer: { nama: signer.nama, jabatan: signer.jabatan },
+      snapshot: snapshotPayload,
+      audit: { repository: TENANT_SIMAK },
+    };
+
+    return DocumentSignatureService.persistSignedSnapshot({
+      docType,
+      refId,
+      payload,
+      signer: {
+        userId: signer.userId,
+        nama: signer.nama,
+        jabatan: signer.jabatan,
+      },
+      withQr,
+    });
   }
 
   /**

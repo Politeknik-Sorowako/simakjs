@@ -31,6 +31,9 @@ export const roleEnum = pgEnum('user_role', [
   'instruktur',
   'kemahasiswaan',
   'lppm',
+  'wadir1',
+  'wadir3',
+  'direktur',
 ]);
 
 export const applicationStatusEnum = pgEnum('application_status', [
@@ -866,6 +869,90 @@ export const pelanggaran = pgTable(
     mahasiswaIdIdx: index('idx_pelanggaran_mahasiswa_id').on(t.mahasiswaId),
   }),
 );
+
+export const pelanggaranTindakLanjut = pgTable(
+  'pelanggaran_tindak_lanjut',
+  {
+    id: serial('id').primaryKey(),
+    mahasiswaId: integer('mahasiswa_id')
+      .notNull()
+      .references(() => mahasiswa.id, { onDelete: 'cascade' }),
+    periodeId: varchar('periode_id', { length: 5 })
+      .notNull()
+      .references(() => periodeAkademik.id, { onDelete: 'cascade' }),
+    tingkat: varchar('tingkat', { length: 20 }).notNull(), // LEVEL_1 | LEVEL_2 | LEVEL_3 | LEVEL_4
+    pemicuTipe: varchar('pemicu_tipe', { length: 20 }).notNull(), // SEMESTER | AKUMULASI
+    pemicuTNilai: integer('pemicu_t_nilai').notNull(),
+    status: varchar('status', { length: 30 }).default('MENUNGGU_FORM').notNull(),
+    formCoaching: jsonb('form_coaching').$type<Record<string, unknown>>(),
+    suratPemanggilanOrtu: jsonb('surat_pemanggilan_ortu').$type<Record<string, unknown>>(),
+    beritaAcaraSidang: jsonb('berita_acara_sidang').$type<Record<string, unknown>>(),
+    formDiisiOleh: integer('form_diisi_oleh').references(() => users.id, { onDelete: 'set null' }),
+    formDiisiAt: timestamp('form_diisi_at'),
+    alasanBatal: text('alasan_batal'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    uqMhsPeriodeTingkat: unique('uq_tl_mhs_periode_tingkat').on(t.mahasiswaId, t.periodeId, t.tingkat),
+    statusIdx: index('idx_tl_status').on(t.status),
+    periodeIdx: index('idx_tl_periode').on(t.periodeId),
+  }),
+);
+
+export const pelanggaranTindakLanjutPersetujuan = pgTable(
+  'pelanggaran_tindak_lanjut_persetujuan',
+  {
+    id: serial('id').primaryKey(),
+    tindakLanjutId: integer('tindak_lanjut_id')
+      .notNull()
+      .references(() => pelanggaranTindakLanjut.id, { onDelete: 'cascade' }),
+    approverRole: varchar('approver_role', { length: 20 }).notNull(), // kaprodi | wadir1 | wadir3 | direktur
+    urutan: integer('urutan').notNull(), // 1, 2, 3, 4
+    status: varchar('status', { length: 20 }).default('MENUNGGU').notNull(), // MENUNGGU | DISETUJUI | DITOLAK
+    metode: varchar('metode', { length: 10 }), // TTE | MANUAL
+    approverUserId: integer('approver_user_id').references(() => users.id, { onDelete: 'set null' }),
+    approverNama: varchar('approver_nama', { length: 255 }),
+    catatan: text('catatan'),
+    signatureUuid: uuid('signature_uuid'),
+    dokumenScanUrl: text('dokumen_scan_url'),
+    decidedAt: timestamp('decided_at'),
+  },
+  (t) => ({
+    uqTlRole: unique('uq_tlp_tl_role').on(t.tindakLanjutId, t.approverRole),
+    statusIdx: index('idx_tlp_status').on(t.status),
+  }),
+);
+
+export const pelanggaranTindakLanjutRelations = relations(pelanggaranTindakLanjut, ({ one, many }) => ({
+  mahasiswa: one(mahasiswa, {
+    fields: [pelanggaranTindakLanjut.mahasiswaId],
+    references: [mahasiswa.id],
+  }),
+  periode: one(periodeAkademik, {
+    fields: [pelanggaranTindakLanjut.periodeId],
+    references: [periodeAkademik.id],
+  }),
+  formDiisiOlehUser: one(users, {
+    fields: [pelanggaranTindakLanjut.formDiisiOleh],
+    references: [users.id],
+  }),
+  persetujuanList: many(pelanggaranTindakLanjutPersetujuan),
+}));
+
+export const pelanggaranTindakLanjutPersetujuanRelations = relations(pelanggaranTindakLanjutPersetujuan, ({ one }) => ({
+  tindakLanjut: one(pelanggaranTindakLanjut, {
+    fields: [pelanggaranTindakLanjutPersetujuan.tindakLanjutId],
+    references: [pelanggaranTindakLanjut.id],
+  }),
+  approverUser: one(users, {
+    fields: [pelanggaranTindakLanjutPersetujuan.approverUserId],
+    references: [users.id],
+  }),
+}));
 
 export const kategoriBimbinganRelations = relations(kategoriBimbingan, ({ many }) => ({
   bimbinganList: many(bimbingan),
