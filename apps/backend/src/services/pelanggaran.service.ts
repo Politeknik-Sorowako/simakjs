@@ -14,6 +14,9 @@ import {
 } from '../models/schema';
 import { db } from '../utils/db';
 import { KhsService } from './khs.service';
+import { NotificationService } from './notification.service';
+import { PelanggaranTindakLanjutService } from './pelanggaran-tindak-lanjut.service';
+import { SystemParameterService } from './system-parameter.service';
 
 export function hitungPredikatTxly(totalPoin: number): string {
   if (totalPoin <= 0) return '-';
@@ -166,7 +169,7 @@ export class PelanggaranService {
       })
       .returning();
 
-    // Trigger notifikasi peringatan pelanggaran (SP) ke Dosen PA & Kaprodi / Admin Prodi
+    // Trigger notifikasi peringatan pelanggaran (SP) ke Dosen PA, Kaprodi, dan Admin
     try {
       await this.sendPeringatanNotification({
         mahasiswa: mhs,
@@ -176,6 +179,15 @@ export class PelanggaranService {
       });
     } catch (notifErr) {
       console.error('[PelanggaranService] Gagal mengirim notifikasi peringatan:', notifErr);
+    }
+
+    // Evaluasi otomatis alur pembinaan / tindak lanjut SP berjenjang BPA
+    if (newPelanggaran.periodeId) {
+      try {
+        await PelanggaranTindakLanjutService.evaluasiEskalasi(newPelanggaran.mahasiswaId, newPelanggaran.periodeId);
+      } catch (eskalasiErr) {
+        console.error('[PelanggaranService] Gagal evaluasi eskalasi tindak lanjut:', eskalasiErr);
+      }
     }
 
     return newPelanggaran;
@@ -196,92 +208,43 @@ export class PelanggaranService {
       .where(eq(pelanggaran.mahasiswaId, mhs.id));
 
     const totalPoin = allViolations.reduce((acc, v) => acc + (v.jenisSanksi || 1), 0);
+    const predikatT = Math.floor(totalPoin / 4);
+    const sisaLisan = totalPoin % 4;
 
-    // Tentukan Tingkat Peringatan / SP sesuai ketentuan BPA
-    let tingkatSp = 'Peringatan Lisan';
-    if (totalPoin >= 75) {
-      tingkatSp = 'Surat Peringatan 3 (SP-3 / Diberhentikan)';
-    } else if (totalPoin >= 50) {
-      tingkatSp = 'Surat Peringatan 2 (SP-2 / Skorsing)';
-    } else if (totalPoin >= 25) {
-      tingkatSp = 'Surat Peringatan 1 (SP-1)';
-    } else if (pel.jenisSanksi === 4) {
-      tingkatSp = 'Peringatan Tertulis';
-    }
+    const jenisLabel = pel.jenisSanksi === 4 ? 'Peringatan Tertulis' : 'Peringatan Lisan';
+    const predikatStr =
+      predikatT > 0 && sisaLisan > 0 ? `T${predikatT}L${sisaLisan}` : predikatT > 0 ? `T${predikatT}` : `L${sisaLisan}`;
 
     const title = `Notifikasi Peringatan Pelanggaran - ${mhs.nama} (${mhs.nim})`;
-    const message = `Telah diterbitkan ${tingkatSp} untuk mahasiswa ${mhs.nama} (NIM: ${mhs.nim}) atas pasal pelanggaran ${namaPasal}. Dilaporkan oleh: ${namaPelapor}.`;
+    const message = `Telah diterbitkan ${jenisLabel} untuk mahasiswa ${mhs.nama} (NIM: ${mhs.nim}) atas pasal ${namaPasal}. Akumulasi: ${predikatStr} (${totalPoin} Poin). Dilaporkan oleh: ${namaPelapor}.`;
     const link = '/pelanggaran';
 
     const recipientUserIds = new Set<number>();
 
     // 1. Dosen PA
-    if (mhs.dosenPaId) {
-      const [dosenRow] = await db.select({ email: dosen.email }).from(dosen).where(eq(dosen.id, mhs.dosenPaId));
-      if (dosenRow?.email) {
-        const [dosenUser] = await db.select({ id: users.id }).from(users).where(eq(users.email, dosenRow.email));
-        if (dosenUser) {
-          recipientUserIds.add(dosenUser.id);
-        }
-      }
-    }
+    const paUserId = await NotificationService.resolveDosenPaUserId(mhs.dosenPaId);
+    if (paUserId) recipientUserIds.add(paUserId);
 
-    // 2. Kaprodi & Admin Prodi yang memiliki scope program studi sama
+    // 2. Kaprodi & Admin Prodi sesuai scope prodi mahasiswa
     if (mhs.programStudiId) {
-      // Ambil user yang memiliki role kaprodi atau prodi (baik via multi-role user_roles maupun primary users.role)
-      const prodiRoleUserIds = await db
-        .selectDistinct({ userId: userRoles.userId })
-        .from(userRoles)
-        .where(inArray(userRoles.role, ['kaprodi', 'prodi']));
-
-      const candidateIds = prodiRoleUserIds.map((r) => r.userId);
-
-      const prodiStaffUsers = await db
-        .select({
-          id: users.id,
-          role: users.role,
-          isGlobalScope: users.isGlobalScope,
-          prodiIds: users.prodiIds,
-        })
-        .from(users)
-        .where(
-          candidateIds.length > 0
-            ? or(inArray(users.id, candidateIds), inArray(users.role, ['kaprodi', 'prodi']))
-            : inArray(users.role, ['kaprodi', 'prodi']),
-        );
-
-      // Ambil data userProdiScopes untuk prodi ini
-      const scopedRows = await db
-        .select({ userId: userProdiScopes.userId })
-        .from(userProdiScopes)
-        .where(eq(userProdiScopes.programStudiId, mhs.programStudiId));
-
-      const scopedUserIds = new Set(scopedRows.map((s) => s.userId));
-
-      for (const u of prodiStaffUsers) {
-        const isGlobal = u.isGlobalScope;
-        const inProdiIds = Array.isArray(u.prodiIds) && u.prodiIds.includes(mhs.programStudiId);
-        const inScopedTable = scopedUserIds.has(u.id);
-
-        if (isGlobal || inProdiIds || inScopedTable) {
-          recipientUserIds.add(u.id);
-        }
-      }
+      const prodiStaffIds = await NotificationService.resolveUserIdsByRoles(['kaprodi', 'prodi'], {
+        programStudiId: mhs.programStudiId,
+      });
+      for (const id of prodiStaffIds) recipientUserIds.add(id);
     }
 
-    // Insert notifikasi ke database
-    for (const userId of recipientUserIds) {
-      try {
-        await db.insert(notifications).values({
-          userId,
-          title: title.slice(0, 255),
-          message,
-          link,
-        });
-      } catch (notifErr) {
-        console.error(`[PelanggaranService] Gagal membuat notifikasi untuk user ${userId}:`, notifErr);
-      }
+    // 3. Notifikasi ke Admin jika SP_NOTIF_ADMIN_ENABLED aktif
+    const notifAdminEnabled = await SystemParameterService.getBoolean('SP_NOTIF_ADMIN_ENABLED');
+    if (notifAdminEnabled) {
+      const adminIds = await NotificationService.resolveUserIdsByRoles(['admin']);
+      for (const id of adminIds) recipientUserIds.add(id);
     }
+
+    await NotificationService.notify(recipientUserIds, {
+      title,
+      message,
+      link,
+    });
   }
 
   static async getPelanggaranByMahasiswa(mahasiswaId: number) {
