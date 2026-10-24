@@ -138,6 +138,7 @@ export class PelanggaranTindakLanjutController {
             mahasiswaId: detail.mahasiswaId,
             nim: detail.nim,
             nama: detail.namaMahasiswa,
+            prodi: detail.prodiNama,
             tingkat: detail.tingkat,
             periodeId: detail.periodeId,
             formCoaching: detail.formCoaching,

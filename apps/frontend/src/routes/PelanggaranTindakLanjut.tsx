@@ -1,3 +1,4 @@
+import QRCode from 'qrcode';
 import { createMemo, createResource, createSignal, For, onMount, Show } from 'solid-js';
 import KopSurat, { KOPI_FALLBACK } from '../components/cetak/KopSurat';
 import { MainLayout } from '../components/MainLayout';
@@ -5,8 +6,10 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { MarkdownViewer } from '../components/ui/MarkdownViewer';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
+import { RichMarkdownEditor } from '../components/ui/RichMarkdownEditor';
 import { type UserRole, useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -143,8 +146,49 @@ export default function PelanggaranTindakLanjut() {
     }
   };
 
+  // Cache Data URL QR Code TTE
+  const [qrMap, setQrMap] = createSignal<Record<string, string>>({});
+
+  const formatRoleTitle = (role?: string | null): string => {
+    switch (role?.toLowerCase()) {
+      case 'kaprodi':
+        return 'Ketua Program Studi';
+      case 'wadir1':
+        return 'Wakil Direktur 1 (Akademik)';
+      case 'wadir3':
+        return 'Wakil Direktur 3 (Kemahasiswaan)';
+      case 'direktur':
+        return 'Direktur';
+      case 'kemahasiswaan':
+        return 'Bagian Kemahasiswaan';
+      default:
+        return role ? role.toUpperCase() : '-';
+    }
+  };
+
+  const loadQrsForKasus = async (k: KasusTindakLanjut) => {
+    const list = k.persetujuanList || [];
+    const origin = window.location.origin;
+    const updates: Record<string, string> = {};
+    for (const p of list) {
+      if (p.signatureUuid && !qrMap()[p.signatureUuid]) {
+        try {
+          const verifyUrl = `${origin}/v/${p.signatureUuid}`;
+          const dataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 240 });
+          updates[p.signatureUuid] = dataUrl;
+        } catch (e: unknown) {
+          console.error('Gagal generate QR TTE:', e);
+        }
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      setQrMap((prev) => ({ ...prev, ...updates }));
+    }
+  };
+
   const openDetail = (k: KasusTindakLanjut) => {
     setSelectedKasus(k);
+    void loadQrsForKasus(k);
     setShowDetailModal(true);
   };
 
@@ -175,6 +219,7 @@ export default function PelanggaranTindakLanjut() {
 
   const openPrintModal = (k: KasusTindakLanjut) => {
     setSelectedKasus(k);
+    void loadQrsForKasus(k);
     setShowPrintModal(true);
   };
 
@@ -507,23 +552,78 @@ export default function PelanggaranTindakLanjut() {
 
                 {/* Form Data Summary */}
                 <Show when={k().formData}>
-                  <div class="border border-secondary-200 dark:border-secondary-700 rounded-xl p-4 space-y-3">
+                  <div class="border border-secondary-200 dark:border-secondary-700 rounded-xl p-4 space-y-4">
                     <h4 class="text-sm font-bold text-secondary-800 dark:text-secondary-100">
                       Rincian Form Pembinaan & Berita Acara
                     </h4>
-                    <div class="space-y-2 text-xs">
-                      <For each={Object.entries(k().formData || {})}>
-                        {([key, val]) => (
-                          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-1 border-b border-secondary-100 dark:border-secondary-800 pb-1.5">
-                            <span class="font-semibold text-secondary-600 dark:text-secondary-400 uppercase tracking-wider">
-                              {key}:
-                            </span>
-                            <span class="text-secondary-800 dark:text-secondary-200 sm:text-right max-w-md">
-                              {String(val)}
-                            </span>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-secondary-50/50 dark:bg-secondary-800/20 p-3 rounded-lg border border-secondary-100 dark:border-secondary-800">
+                      <div>
+                        <span class="text-secondary-500 block">Tanggal Pelaksanaan:</span>
+                        <span class="font-semibold text-secondary-800 dark:text-secondary-100">
+                          {String(k().formData?.tanggalPelaksanaan || '-')}
+                        </span>
+                      </div>
+                      <div>
+                        <span class="text-secondary-500 block">Konselor / Tim Pembina:</span>
+                        <span class="font-semibold text-secondary-800 dark:text-secondary-100">
+                          {String(k().formData?.namaKonselor || '-')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="space-y-3 text-xs">
+                      <div>
+                        <span class="font-bold uppercase tracking-wider text-secondary-700 dark:text-secondary-300 block mb-1">
+                          Permasalahan & Pelanggaran yang Dibahas:
+                        </span>
+                        <div class="p-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900/60">
+                          <MarkdownViewer
+                            content={String(k().formData?.ringkasanMasalah || '— Belum diisi —')}
+                            class="text-xs leading-relaxed"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <span class="font-bold uppercase tracking-wider text-secondary-700 dark:text-secondary-300 block mb-1">
+                          Hasil Coaching & Kesepakatan Pembinaan:
+                        </span>
+                        <div class="p-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900/60">
+                          <MarkdownViewer
+                            content={String(k().formData?.hasilCoaching || '— Belum diisi —')}
+                            class="text-xs leading-relaxed"
+                          />
+                        </div>
+                      </div>
+
+                      <Show when={k().formData?.catatanOrtu}>
+                        <div>
+                          <span class="font-bold uppercase tracking-wider text-secondary-700 dark:text-secondary-300 block mb-1">
+                            Catatan Pemanggilan Orang Tua:
+                          </span>
+                          <div class="p-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900/60">
+                            <MarkdownViewer
+                              content={String(k().formData?.catatanOrtu)}
+                              class="text-xs leading-relaxed"
+                            />
                           </div>
-                        )}
-                      </For>
+                        </div>
+                      </Show>
+
+                      <Show when={k().formData?.rekomendasiKomdis}>
+                        <div>
+                          <span class="font-bold uppercase tracking-wider text-secondary-700 dark:text-secondary-300 block mb-1">
+                            Rekomendasi Sidang Komisi Disiplin:
+                          </span>
+                          <div class="p-3 rounded-lg border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-900/60">
+                            <MarkdownViewer
+                              content={String(k().formData?.rekomendasiKomdis)}
+                              class="text-xs leading-relaxed"
+                            />
+                          </div>
+                        </div>
+                      </Show>
                     </div>
                   </div>
                 </Show>
@@ -533,10 +633,10 @@ export default function PelanggaranTindakLanjut() {
                   <h4 class="text-sm font-bold text-secondary-800 dark:text-secondary-100">
                     Alur Persetujuan & Penandatanganan
                   </h4>
-                  <div class="space-y-2">
+                  <div class="space-y-3">
                     <For each={k().persetujuanList || []}>
                       {(p) => (
-                        <div class="flex items-start gap-3 p-3 rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800/30">
+                        <div class="flex items-start gap-3 p-3.5 rounded-xl border border-secondary-200 dark:border-secondary-700 bg-white dark:bg-secondary-800/30">
                           <div
                             class={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                               p.status === 'DISETUJUI_TTE' || p.status === 'DISETUJUI_MANUAL'
@@ -548,10 +648,10 @@ export default function PelanggaranTindakLanjut() {
                           >
                             {p.urutan}
                           </div>
-                          <div class="flex-1 text-xs space-y-0.5">
+                          <div class="flex-1 text-xs space-y-1">
                             <div class="flex items-center justify-between">
                               <span class="font-bold text-secondary-800 dark:text-secondary-100 uppercase">
-                                {p.roleTarget || p.approverRole}
+                                {formatRoleTitle(p.roleTarget || p.approverRole)}
                               </span>
                               <Badge
                                 variant={
@@ -570,17 +670,45 @@ export default function PelanggaranTindakLanjut() {
                             <Show when={p.namaPenandatangan || p.approverNama}>
                               <p class="text-secondary-600 dark:text-secondary-400">
                                 Oleh: {p.namaPenandatangan || p.approverNama} (
-                                {p.jabatanPenandatangan || p.roleTarget || p.approverRole})
+                                {p.jabatanPenandatangan || formatRoleTitle(p.roleTarget || p.approverRole)})
                               </p>
                             </Show>
                             <Show when={p.catatan}>
-                              <p class="text-secondary-500 italic mt-1">Catatan: "{p.catatan}"</p>
-                            </Show>
-                            <Show when={p.signatureUuid}>
-                              <p class="font-mono text-secondary-400 text-fine mt-1">TTE UUID: {p.signatureUuid}</p>
+                              <p class="text-secondary-500 italic">Catatan: "{p.catatan}"</p>
                             </Show>
                             <Show when={p.respondedAt}>
                               <p class="text-secondary-400 text-fine">Waktu: {fmtTanggal(p.respondedAt!)}</p>
+                            </Show>
+                            <Show when={(p.status === 'DISETUJUI_TTE' || p.status === 'DISETUJUI') && p.signatureUuid}>
+                              <div class="mt-2 flex items-center gap-3 p-2 rounded-lg bg-secondary-50 dark:bg-secondary-800/60 border border-secondary-200 dark:border-secondary-700">
+                                <Show
+                                  when={qrMap()[p.signatureUuid!]}
+                                  fallback={
+                                    <div class="w-12 h-12 flex items-center justify-center bg-white dark:bg-secondary-900 animate-pulse rounded">
+                                      <span class="text-[8px] text-secondary-400">QR...</span>
+                                    </div>
+                                  }
+                                >
+                                  <img
+                                    src={qrMap()[p.signatureUuid!]}
+                                    width="48"
+                                    height="48"
+                                    alt="QR TTE"
+                                    class="rounded bg-white p-0.5"
+                                  />
+                                </Show>
+                                <div class="text-[11px] space-y-0.5">
+                                  <span class="font-bold text-action block">TTE Terverifikasi Resmi</span>
+                                  <a
+                                    href={`/v/${p.signatureUuid}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    class="font-mono text-fine text-action underline truncate block max-w-xs hover:opacity-80"
+                                  >
+                                    UUID: {p.signatureUuid}
+                                  </a>
+                                </div>
+                              </div>
                             </Show>
                           </div>
                         </div>
@@ -598,7 +726,7 @@ export default function PelanggaranTindakLanjut() {
           isOpen={showFormModal()}
           onClose={() => setShowFormModal(false)}
           title={`Form Pembinaan: ${selectedKasus()?.namaMahasiswa} (${selectedKasus()?.tingkat})`}
-          maxWidth="lg"
+          maxWidth="2xl"
         >
           <div class="space-y-4">
             <p class="text-xs text-secondary-500 dark:text-secondary-400">
@@ -606,82 +734,74 @@ export default function PelanggaranTindakLanjut() {
               secara otomatis ke rantai persetujuan berjenjang.
             </p>
 
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                  Tanggal Pelaksanaan Coaching / Sidang
-                </label>
-                <Input
-                  type="date"
-                  value={formDataState().tanggalPelaksanaan || ''}
-                  onInput={(e) => setFormDataState((prev) => ({ ...prev, tanggalPelaksanaan: e.currentTarget.value }))}
-                />
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
+                    Tanggal Pelaksanaan Coaching / Sidang
+                  </label>
+                  <Input
+                    type="date"
+                    value={formDataState().tanggalPelaksanaan || ''}
+                    onInput={(e) =>
+                      setFormDataState((prev) => ({ ...prev, tanggalPelaksanaan: e.currentTarget.value }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
+                    Nama Konselor / Tim Pembina
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Nama staf kemahasiswaan / tim pembina"
+                    value={formDataState().namaKonselor || ''}
+                    onInput={(e) => setFormDataState((prev) => ({ ...prev, namaKonselor: e.currentTarget.value }))}
+                  />
+                </div>
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                  Nama Konselor / Tim Pembina
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Nama staf kemahasiswaan / tim pembina"
-                  value={formDataState().namaKonselor || ''}
-                  onInput={(e) => setFormDataState((prev) => ({ ...prev, namaKonselor: e.currentTarget.value }))}
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                  Permasalahan & Pelanggaran yang Dibahas
-                </label>
-                <textarea
-                  rows={3}
-                  class="w-full rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                  placeholder="Tuliskan ringkasan pokok permasalahan..."
+                <RichMarkdownEditor
+                  label="Permasalahan & Pelanggaran yang Dibahas"
+                  placeholder="Uraikan kronologi masalah, pasal BPA yang dilanggar, bukti-bukti, dan latar belakang pembinaan..."
                   value={formDataState().ringkasanMasalah || ''}
-                  onInput={(e) => setFormDataState((prev) => ({ ...prev, ringkasanMasalah: e.currentTarget.value }))}
+                  onInput={(val) => setFormDataState((prev) => ({ ...prev, ringkasanMasalah: val }))}
+                  rows={4}
                 />
               </div>
 
               <div>
-                <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                  Hasil Coaching / Kesepakatan Pembinaan
-                </label>
-                <textarea
-                  rows={3}
-                  class="w-full rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                  placeholder="Komitmen perbaikan sikap, rencana tindak lanjut..."
+                <RichMarkdownEditor
+                  label="Hasil Coaching / Kesepakatan Pembinaan"
+                  placeholder="Komitmen perbaikan sikap mahasiswa, rencana aksi tindak lanjut, target pembinaan, serta konsekuensi lanjutan..."
                   value={formDataState().hasilCoaching || ''}
-                  onInput={(e) => setFormDataState((prev) => ({ ...prev, hasilCoaching: e.currentTarget.value }))}
+                  onInput={(val) => setFormDataState((prev) => ({ ...prev, hasilCoaching: val }))}
+                  rows={4}
                 />
               </div>
 
               <Show when={selectedKasus()?.tingkat === 'LEVEL_2'}>
                 <div>
-                  <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                    Catatan Pemanggilan Orang Tua
-                  </label>
-                  <textarea
-                    rows={2}
-                    class="w-full rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                    placeholder="Waktu kehadiran orang tua, nomor surat pemanggilan, respon wali..."
+                  <RichMarkdownEditor
+                    label="Catatan Pemanggilan Orang Tua"
+                    placeholder="Waktu kehadiran orang tua/wali, nomor surat pemanggilan, tanggapan/komitmen wali mahasiswa..."
                     value={formDataState().catatanOrtu || ''}
-                    onInput={(e) => setFormDataState((prev) => ({ ...prev, catatanOrtu: e.currentTarget.value }))}
+                    onInput={(val) => setFormDataState((prev) => ({ ...prev, catatanOrtu: val }))}
+                    rows={3}
                   />
                 </div>
               </Show>
 
               <Show when={selectedKasus()?.tingkat === 'LEVEL_4'}>
                 <div>
-                  <label class="block text-xs font-semibold text-secondary-700 dark:text-secondary-300 mb-1">
-                    Nomor & Rekomendasi Berita Acara Sidang Komisi Disiplin
-                  </label>
-                  <textarea
-                    rows={3}
-                    class="w-full rounded-xl border border-secondary-200 bg-white px-3 py-2 text-xs text-secondary-800 dark:bg-secondary-900 dark:border-secondary-700 dark:text-secondary-100"
-                    placeholder="Nomor BA Komdis, rekomendasi sanksi, susunan tim sidang..."
+                  <RichMarkdownEditor
+                    label="Nomor & Rekomendasi Berita Acara Sidang Komisi Disiplin"
+                    placeholder="Nomor surat BA Komdis, susunan tim sidang, rekomendasi sanksi, dan klausul persetujuan..."
                     value={formDataState().rekomendasiKomdis || ''}
-                    onInput={(e) => setFormDataState((prev) => ({ ...prev, rekomendasiKomdis: e.currentTarget.value }))}
+                    onInput={(val) => setFormDataState((prev) => ({ ...prev, rekomendasiKomdis: val }))}
+                    rows={3}
                   />
                 </div>
               </Show>
@@ -814,7 +934,7 @@ export default function PelanggaranTindakLanjut() {
           isOpen={showPrintModal()}
           onClose={() => setShowPrintModal(false)}
           title={`Cetak Dokumen Resmi: ${selectedKasus()?.tingkat}`}
-          maxWidth="lg"
+          maxWidth="2xl"
         >
           <Show when={selectedKasus()}>
             {(k) => (
@@ -828,7 +948,7 @@ export default function PelanggaranTindakLanjut() {
                       window.print();
                     }}
                   >
-                    Cetak Lembar Dokumen
+                    🖨️ Cetak Lembar Dokumen
                   </Button>
                 </div>
 
@@ -881,18 +1001,24 @@ export default function PelanggaranTindakLanjut() {
                       <h5 class="font-bold uppercase tracking-wide text-secondary-800">
                         I. Ringkasan Pelanggaran & Pembahasan
                       </h5>
-                      <p class="mt-1 p-2 border border-secondary-200 rounded min-h-[50px] bg-secondary-50/50">
-                        {String(k().formData?.ringkasanMasalah || '— Belum diisi —')}
-                      </p>
+                      <div class="mt-1 p-3 border border-secondary-200 rounded-lg min-h-[50px] bg-secondary-50/30">
+                        <MarkdownViewer
+                          content={String(k().formData?.ringkasanMasalah || '— Belum diisi —')}
+                          class="text-xs print:text-[11px] leading-relaxed prose-sm"
+                        />
+                      </div>
                     </div>
 
                     <div>
                       <h5 class="font-bold uppercase tracking-wide text-secondary-800">
                         II. Hasil Coaching & Komitmen Pembinaan
                       </h5>
-                      <p class="mt-1 p-2 border border-secondary-200 rounded min-h-[50px] bg-secondary-50/50">
-                        {String(k().formData?.hasilCoaching || '— Belum diisi —')}
-                      </p>
+                      <div class="mt-1 p-3 border border-secondary-200 rounded-lg min-h-[50px] bg-secondary-50/30">
+                        <MarkdownViewer
+                          content={String(k().formData?.hasilCoaching || '— Belum diisi —')}
+                          class="text-xs print:text-[11px] leading-relaxed prose-sm"
+                        />
+                      </div>
                     </div>
 
                     <Show when={k().tingkat === 'LEVEL_2' && k().formData?.catatanOrtu}>
@@ -900,9 +1026,12 @@ export default function PelanggaranTindakLanjut() {
                         <h5 class="font-bold uppercase tracking-wide text-secondary-800">
                           III. Catatan Pemanggilan Orang Tua / Wali
                         </h5>
-                        <p class="mt-1 p-2 border border-secondary-200 rounded min-h-[40px] bg-secondary-50/50">
-                          {String(k().formData?.catatanOrtu || '—')}
-                        </p>
+                        <div class="mt-1 p-3 border border-secondary-200 rounded-lg min-h-[40px] bg-secondary-50/30">
+                          <MarkdownViewer
+                            content={String(k().formData?.catatanOrtu || '—')}
+                            class="text-xs print:text-[11px] leading-relaxed prose-sm"
+                          />
+                        </div>
                       </div>
                     </Show>
 
@@ -911,9 +1040,12 @@ export default function PelanggaranTindakLanjut() {
                         <h5 class="font-bold uppercase tracking-wide text-secondary-800">
                           III. Rekomendasi Sidang Komisi Disiplin
                         </h5>
-                        <p class="mt-1 p-2 border border-secondary-200 rounded min-h-[40px] bg-secondary-50/50">
-                          {String(k().formData?.rekomendasiKomdis || '—')}
-                        </p>
+                        <div class="mt-1 p-3 border border-secondary-200 rounded-lg min-h-[40px] bg-secondary-50/30">
+                          <MarkdownViewer
+                            content={String(k().formData?.rekomendasiKomdis || '—')}
+                            class="text-xs print:text-[11px] leading-relaxed prose-sm"
+                          />
+                        </div>
                       </div>
                     </Show>
                   </div>
@@ -926,37 +1058,69 @@ export default function PelanggaranTindakLanjut() {
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-xs">
                       <For each={k().persetujuanList || []}>
                         {(p) => (
-                          <div class="flex flex-col items-center justify-between border border-secondary-200 p-2 rounded min-h-[140px]">
-                            <span class="font-bold uppercase text-fine">{p.roleTarget || p.approverRole}</span>
+                          <div class="flex flex-col items-center justify-between border border-secondary-300 p-3 rounded-lg min-h-[190px] bg-white">
+                            <span class="font-bold uppercase text-[11px] tracking-wide text-secondary-800">
+                              {formatRoleTitle(p.roleTarget || p.approverRole)}
+                            </span>
                             <div class="my-2 flex flex-col items-center justify-center">
                               <Show
                                 when={(p.status === 'DISETUJUI_TTE' || p.status === 'DISETUJUI') && p.signatureUuid}
                                 fallback={
                                   <Show
                                     when={p.status === 'DISETUJUI_MANUAL'}
-                                    fallback={<span class="text-fine text-secondary-400 italic">Menunggu</span>}
+                                    fallback={
+                                      <div class="h-20 flex items-center justify-center">
+                                        <span class="text-fine text-secondary-400 italic">(Menunggu Persetujuan)</span>
+                                      </div>
+                                    }
                                   >
-                                    <span class="text-fine text-success-700 font-semibold border-b border-secondary-900 pb-0.5">
-                                      (Disetujui Manual)
-                                    </span>
+                                    <div class="h-20 flex flex-col items-center justify-center">
+                                      <span class="text-fine text-success-700 font-semibold border-b border-secondary-900 pb-0.5">
+                                        (Disetujui Manual)
+                                      </span>
+                                    </div>
                                   </Show>
                                 }
                               >
-                                <div class="p-1 border border-secondary-400 rounded bg-white">
-                                  {/* QR Code Placeholder / Info */}
-                                  <div class="w-16 h-16 flex flex-col items-center justify-center bg-secondary-50 text-fine text-[8px] text-center font-mono">
-                                    <span>TTE VALID</span>
-                                    <span class="truncate w-14">{p.signatureUuid?.slice(0, 8)}</span>
-                                  </div>
-                                </div>
+                                <Show
+                                  when={qrMap()[p.signatureUuid!]}
+                                  fallback={
+                                    <div class="w-20 h-20 flex items-center justify-center bg-secondary-50 animate-pulse rounded">
+                                      <span class="text-[9px] text-secondary-400">QR Code...</span>
+                                    </div>
+                                  }
+                                >
+                                  <img
+                                    src={qrMap()[p.signatureUuid!]}
+                                    width="88"
+                                    height="88"
+                                    alt="QR Verifikasi TTE"
+                                    class="mx-auto"
+                                  />
+                                </Show>
+                                <span class="text-[9px] font-semibold text-action mt-1">✓ TTE Terverifikasi</span>
                               </Show>
                             </div>
-                            <span class="text-fine font-semibold border-t border-secondary-300 pt-1 w-full truncate">
-                              {p.namaPenandatangan || p.approverNama || '( .......................... )'}
-                            </span>
+                            <div class="text-center w-full pt-1 border-t border-secondary-300">
+                              <p class="font-bold text-[11px] underline truncate">
+                                {p.namaPenandatangan || p.approverNama || '( .......................... )'}
+                              </p>
+                              <p class="text-[10px] text-secondary-600 truncate">
+                                {p.jabatanPenandatangan || formatRoleTitle(p.roleTarget || p.approverRole)}
+                              </p>
+                            </div>
                           </div>
                         )}
                       </For>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-secondary-200 text-center text-[10px] text-secondary-500 space-y-0.5">
+                      <p class="font-semibold text-secondary-700">Dokumen ditandatangani digital (QR Signed-Hash)</p>
+                      <p>
+                        Keaslian tanda tangan digital dapat diverifikasi dengan memindai QR Code di atas atau melalui
+                        tautan resmi:{' '}
+                        <span class="font-mono text-secondary-600">{window.location.origin}/v/[UUID]</span>
+                      </p>
                     </div>
                   </div>
                 </div>
