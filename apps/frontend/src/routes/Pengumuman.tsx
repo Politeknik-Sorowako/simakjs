@@ -7,6 +7,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { PengumumanItem, pengumumanController } from '../controllers/pengumumanController';
 import { usePagination } from '../hooks/usePagination';
@@ -256,33 +257,14 @@ export default function Pengumuman() {
 
         {/* Tab & Filter Navigation Bar */}
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-secondary-200 dark:border-secondary-800 pb-3">
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveTab('feed')}
-              class={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                activeTab() === 'feed'
-                  ? 'bg-secondary-900 text-white dark:bg-white dark:text-secondary-900 shadow-xs'
-                  : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
-              }`}
-            >
-              📢 Pengumuman Untuk Anda
-            </button>
-
-            <Show when={canManage()}>
-              <button
-                type="button"
-                onClick={() => setActiveTab('manage')}
-                class={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  activeTab() === 'manage'
-                    ? 'bg-secondary-900 text-white dark:bg-white dark:text-secondary-900 shadow-xs'
-                    : 'text-secondary-600 dark:text-secondary-400 hover:bg-secondary-100 dark:hover:bg-secondary-800'
-                }`}
-              >
-                ⚙️ Kelola Pengumuman
-              </button>
-            </Show>
-          </div>
+          <Tabs
+            active={activeTab()}
+            onChange={setActiveTab}
+            tabs={[
+              { key: 'feed', label: '📢 Pengumuman Untuk Anda' },
+              ...(canManage() ? [{ key: 'manage' as const, label: '⚙️ Kelola Pengumuman' }] : []),
+            ]}
+          />
 
           <div class="flex items-center gap-2">
             <Show when={activeTab() === 'manage'}>

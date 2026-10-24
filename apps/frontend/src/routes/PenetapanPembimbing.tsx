@@ -6,6 +6,7 @@ import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { Table } from '../components/ui/Table';
+import { Tabs } from '../components/ui/Tabs';
 import { useToast } from '../contexts/ToastContext';
 import { dosenController } from '../controllers/dosenController';
 import { type PembimbingItem, type PembimbingJenis, pembimbingController } from '../controllers/pembimbingController';
@@ -467,39 +468,15 @@ export default function PenetapanPembimbing() {
           <div class="flex flex-col gap-3">
             <p class="text-caption text-secondary-500">{SLOTS.find((s) => s.key === modalSlot())?.hint}</p>
 
-            <div
-              role="tablist"
+            <Tabs
+              active={internal() ? 'dosen' : 'eksternal'}
+              onChange={(key) => setInternal(key === 'dosen')}
               aria-label="Sumber pembimbing"
-              class="inline-flex rounded-full border border-hairline bg-pearl p-1 dark:border-secondary-700 dark:bg-secondary-800"
-            >
-              <For
-                each={
-                  [
-                    { key: 'dosen', label: 'Dosen Kampus' },
-                    { key: 'eksternal', label: 'Pembimbing Lapangan' },
-                  ] as const
-                }
-              >
-                {(opt) => {
-                  const aktif = () => (opt.key === 'dosen' ? internal() : !internal());
-                  return (
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={aktif()}
-                      onClick={() => setInternal(opt.key === 'dosen')}
-                      class={`min-h-[40px] rounded-full px-4 text-caption font-medium transition-colors active:scale-95 ${
-                        aktif()
-                          ? 'bg-action text-white dark:bg-action dark:text-white'
-                          : 'text-secondary-700 hover:text-action dark:text-secondary-200 dark:hover:text-action-ondark'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                }}
-              </For>
-            </div>
+              tabs={[
+                { key: 'dosen', label: 'Dosen Kampus' },
+                { key: 'eksternal', label: 'Pembimbing Lapangan' },
+              ]}
+            />
 
             <Show when={internal()}>
               <label class="flex flex-col gap-1 text-caption font-medium text-secondary-600 dark:text-secondary-300">
@@ -557,39 +534,15 @@ export default function PenetapanPembimbing() {
               Menetapkan <strong>{SLOTS.find((s) => s.key === bulkSlot())?.label}</strong> ke seluruh mahasiswa pada
               halaman ini ({list()?.total ?? 0} mahasiswa terlihat di halaman ini).
             </p>
-            <div
-              role="tablist"
-              aria-label="Sumber pembimbing massal"
-              class="inline-flex rounded-full border border-hairline bg-pearl p-1 dark:border-secondary-700 dark:bg-secondary-800"
-            >
-              <For
-                each={
-                  [
-                    { key: 'dosen', label: 'Dosen Kampus' },
-                    { key: 'eksternal', label: 'Pembimbing Lapangan' },
-                  ] as const
-                }
-              >
-                {(opt) => {
-                  const aktif = () => (opt.key === 'dosen' ? bulkInternal() : !bulkInternal());
-                  return (
-                    <button
-                      type="button"
-                      role="tab"
-                      aria-selected={aktif()}
-                      onClick={() => setBulkInternal(opt.key === 'dosen')}
-                      class={`min-h-[40px] rounded-full px-4 text-caption font-medium transition-colors active:scale-95 ${
-                        aktif()
-                          ? 'bg-action text-white dark:bg-action dark:text-white'
-                          : 'text-secondary-700 hover:text-action dark:text-secondary-200 dark:hover:text-action-ondark'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                }}
-              </For>
-            </div>
+            <Tabs
+              ariaLabel="Sumber pembimbing massal"
+              active={bulkInternal() ? 'dosen' : 'eksternal'}
+              onChange={(key) => setBulkInternal(key === 'dosen')}
+              tabs={[
+                { key: 'dosen', label: 'Dosen Kampus' },
+                { key: 'eksternal', label: 'Pembimbing Lapangan' },
+              ]}
+            />
 
             <Show when={bulkInternal()}>
               <select

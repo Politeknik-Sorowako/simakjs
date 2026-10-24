@@ -1,6 +1,7 @@
 import { createSignal, Show } from 'solid-js';
 import { getAbsoluteStorageUrl } from '../../utils/api';
 import { MarkdownViewer } from './MarkdownViewer';
+import { Tabs } from './Tabs';
 
 interface RichMarkdownEditorProps {
   value: string;
@@ -222,21 +223,17 @@ export function RichMarkdownEditor(props: RichMarkdownEditorProps) {
         </label>
       </div>
 
-      <div class="flex items-center gap-0.5">
-        <button
-          type="button"
-          class={`px-2 py-1 rounded-md text-fine font-bold transition-all ${tab() === 'write' ? 'bg-action text-white' : 'text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-700'}`}
-          onClick={() => setTab('write')}
-        >
-          Tulis
-        </button>
-        <button
-          type="button"
-          class={`px-2 py-1 rounded-md text-fine font-bold transition-all ${tab() === 'preview' ? 'bg-action text-white' : 'text-secondary-500 hover:bg-secondary-100 dark:hover:bg-secondary-700'}`}
-          onClick={() => setTab('preview')}
-        >
-          Pratinjau
-        </button>
+      <div class="flex items-center gap-1.5">
+        <Tabs<'write' | 'preview'>
+          size="sm"
+          ariaLabel="Mode editor markdown"
+          active={tab()}
+          onChange={setTab}
+          tabs={[
+            { key: 'write', label: 'Tulis' },
+            { key: 'preview', label: 'Pratinjau' },
+          ]}
+        />
         <button
           type="button"
           data-testid="rme-fullscreen-toggle"

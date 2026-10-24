@@ -4,6 +4,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { Tabs } from '../components/ui/Tabs';
 import { useToast } from '../contexts/ToastContext';
 import { cplMataKuliahController } from '../controllers/cplMataKuliahController';
 import { cpmkController } from '../controllers/cpmkController';
@@ -100,13 +101,16 @@ export default function BobotPenilaianObe() {
           </Show>
         </div>
 
-        <div class="flex gap-2">
-          <Button variant={activeTab() === 'cpl-mk' ? 'primary' : 'secondary'} onClick={() => setActiveTab('cpl-mk')}>
-            CPL → MK (Top-Down)
-          </Button>
-          <Button variant={activeTab() === 'cpmk-mk' ? 'primary' : 'secondary'} onClick={() => setActiveTab('cpmk-mk')}>
-            CPMK → MK (Bottom-Up)
-          </Button>
+        <div class="mb-2">
+          <Tabs
+            size="lg"
+            active={activeTab()}
+            onChange={setActiveTab}
+            tabs={[
+              { key: 'cpl-mk', label: 'CPL → MK (Top-Down)' },
+              { key: 'cpmk-mk', label: 'CPMK → MK (Bottom-Up)' },
+            ]}
+          />
         </div>
 
         <Show when={activeTab() === 'cpl-mk'}>

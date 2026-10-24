@@ -1,5 +1,6 @@
 import { createEffect, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { khsController, PengajuanYudisium } from '../controllers/khsController';
@@ -434,27 +435,15 @@ export default function Yudisium() {
         <Show when={role() === 'admin' || role() === 'dosen' || role() === 'prodi'}>
           {/* Tab Switcher (Only for admin) */}
           <Show when={role() === 'admin'}>
-            <div class="flex gap-2 border-b border-secondary-100 pb-3 mb-6 dark:border-secondary-800">
-              <button
-                onClick={() => setActiveTab('pengajuan')}
-                class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  activeTab() === 'pengajuan'
-                    ? 'bg-action text-white'
-                    : 'bg-white border border-secondary-200 text-secondary-600 hover:bg-secondary-50'
-                }`}
-              >
-                Daftar Pengajuan
-              </button>
-              <button
-                onClick={() => setActiveTab('predikat')}
-                class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                  activeTab() === 'predikat'
-                    ? 'bg-action text-white'
-                    : 'bg-white border border-secondary-200 text-secondary-600 hover:bg-secondary-50'
-                }`}
-              >
-                Pengaturan Skala Predikat Kelulusan
-              </button>
+            <div class="mb-6">
+              <Tabs
+                active={activeTab()}
+                onChange={setActiveTab}
+                tabs={[
+                  { key: 'pengajuan', label: 'Daftar Pengajuan' },
+                  { key: 'predikat', label: 'Pengaturan Skala Predikat Kelulusan' },
+                ]}
+              />
             </div>
           </Show>
 

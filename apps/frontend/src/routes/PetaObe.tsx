@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Table } from '../components/ui/Table';
+import { Tabs } from '../components/ui/Tabs';
 import { bahanKajianController } from '../controllers/bahanKajianController';
 import { cplController } from '../controllers/cplController';
 import { cpmkCplMappingController } from '../controllers/cpmkCplMappingController';
@@ -86,26 +87,16 @@ export default function PetaObe() {
             />
           </div>
           <Show when={prodiFilter()}>
-            <div class="flex gap-2 bg-slate-800 rounded-xl p-1">
-              <button
-                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'pl-cpl' ? 'bg-action text-white' : 'text-secondary-300 hover:text-white'}`}
-                onClick={() => setActiveTab('pl-cpl')}
-              >
-                PL ⟷ CPL
-              </button>
-              <button
-                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'bk-cpl' ? 'bg-action text-white' : 'text-secondary-300 hover:text-white'}`}
-                onClick={() => setActiveTab('bk-cpl')}
-              >
-                BK ⟷ CPL
-              </button>
-              <button
-                class={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab() === 'cpmk-cpl' ? 'bg-action text-white' : 'text-secondary-300 hover:text-white'}`}
-                onClick={() => setActiveTab('cpmk-cpl')}
-              >
-                CPMK ⟷ CPL
-              </button>
-            </div>
+            <Tabs
+              size="lg"
+              active={activeTab()}
+              onChange={setActiveTab}
+              tabs={[
+                { key: 'pl-cpl', label: 'PL ⟷ CPL' },
+                { key: 'bk-cpl', label: 'BK ⟷ CPL' },
+                { key: 'cpmk-cpl', label: 'CPMK ⟷ CPL' },
+              ]}
+            />
           </Show>
           <Show when={activeTab() === 'cpmk-cpl' && prodiFilter()}>
             <div class="w-64">

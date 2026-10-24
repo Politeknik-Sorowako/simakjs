@@ -5,6 +5,7 @@ import TabRekaman from '../components/skpi/TabRekaman';
 import TabVerifikasi from '../components/skpi/TabVerifikasi';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { skpiController } from '../controllers/skpiController';
@@ -85,22 +86,16 @@ export default function Skpi() {
           </p>
 
           <Show when={tabs().length > 1}>
-            <div class="mt-4 flex flex-wrap items-center gap-2">
-              <For each={tabs()}>
-                {(tab) => (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    class={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                      effectiveTab() === tab
-                        ? 'bg-action text-white'
-                        : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'
-                    }`}
-                  >
-                    {TAB_LABEL[tab]}
-                  </button>
-                )}
-              </For>
+            <div class="mt-4">
+              <Tabs
+                size="md"
+                active={effectiveTab()}
+                onChange={setActiveTab}
+                tabs={tabs().map((tab) => ({
+                  key: tab,
+                  label: TAB_LABEL[tab],
+                }))}
+              />
             </div>
           </Show>
         </div>

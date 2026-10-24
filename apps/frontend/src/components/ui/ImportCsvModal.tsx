@@ -4,6 +4,7 @@ import { fetchApi } from '../../utils/api';
 import { detectDelimiter, parseCsv } from '../../utils/csv';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { Tabs } from './Tabs';
 
 interface ImportCsvModalProps {
   show: boolean;
@@ -247,29 +248,16 @@ export function ImportCsvModal(props: ImportCsvModalProps) {
         </Show>
 
         {/* Tab Navigasi */}
-        <div class="flex border-b border-secondary-200 dark:border-secondary-700">
-          <button
-            type="button"
-            onClick={() => setActiveTab('upload')}
-            class={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-              activeTab() === 'upload'
-                ? 'border-action text-action dark:text-action-ondark'
-                : 'border-transparent text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300'
-            }`}
-          >
-            Unggah File (.xlsx / .csv)
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('paste')}
-            class={`px-4 py-2 text-xs font-bold border-b-2 transition-all ${
-              activeTab() === 'paste'
-                ? 'border-action text-action dark:text-action-ondark'
-                : 'border-transparent text-secondary-500 hover:text-secondary-700 dark:hover:text-secondary-300'
-            }`}
-          >
-            Tempel dari Spreadsheet (Ctrl+V)
-          </button>
+        <div class="mb-1">
+          <Tabs
+            size="sm"
+            active={activeTab()}
+            onChange={setActiveTab}
+            tabs={[
+              { key: 'upload', label: 'Unggah File (.xlsx / .csv)' },
+              { key: 'paste', label: 'Tempel dari Spreadsheet (Ctrl+V)' },
+            ]}
+          />
         </div>
 
         <form onSubmit={handleSubmit} class="flex flex-col gap-4">

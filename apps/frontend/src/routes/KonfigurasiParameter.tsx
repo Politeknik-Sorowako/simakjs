@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
+import { Tabs } from '../components/ui/Tabs';
 import { type SystemParameter, systemController } from '../controllers/systemController';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -625,23 +626,12 @@ export default function KonfigurasiParameter() {
         </div>
 
         {/* Tab bar pill */}
-        <div class="mb-6 inline-flex rounded-full border border-secondary-200 bg-secondary-100/60 p-1 dark:border-secondary-700 dark:bg-secondary-900">
-          <For each={TABS}>
-            {(t) => (
-              <button
-                type="button"
-                onClick={() => setTab(t.key)}
-                class={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
-                  tab() === t.key
-                    ? 'bg-white text-action dark:bg-secondary-800 dark:text-brand-400'
-                    : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400'
-                }`}
-                title={t.desc}
-              >
-                {t.label}
-              </button>
-            )}
-          </For>
+        <div class="mb-6">
+          <Tabs
+            active={tab()}
+            onChange={setTab}
+            tabs={TABS.map((t) => ({ key: t.key, label: t.label, title: t.desc }))}
+          />
         </div>
 
         <Show

@@ -9,6 +9,7 @@ import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { CutiRequest, cutiController, LampiranStatus, MahasiswaCuti } from '../controllers/cutiController';
@@ -500,21 +501,13 @@ export default function ManajemenCuti() {
           </p>
         </div>
 
-        <div class="flex gap-1 border-b border-secondary-200 dark:border-secondary-700">
-          <For each={visibleTabs()}>
-            {(tab) => (
-              <button
-                onClick={() => setActiveTab(tab.key)}
-                class={`px-5 py-3 text-sm font-semibold transition-colors duration-150 rounded-t-lg border-b-2 -mb-px ${
-                  activeTab() === tab.key
-                    ? 'border-action text-action bg-action-50/50'
-                    : 'border-transparent text-secondary-500 hover:text-secondary-700 hover:border-secondary-300'
-                }`}
-              >
-                {tab.label}
-              </button>
-            )}
-          </For>
+        <div class="mb-4">
+          <Tabs
+            size="lg"
+            active={activeTab()}
+            onChange={setActiveTab}
+            tabs={visibleTabs().map((t) => ({ key: t.key, label: t.label }))}
+          />
         </div>
 
         {/* ===================== TAB: INPUT CUTI ===================== */}

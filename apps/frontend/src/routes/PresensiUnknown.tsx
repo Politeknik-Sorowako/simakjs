@@ -3,6 +3,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
+import { Tabs } from '../components/ui/Tabs';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { PresensiUnknownItem, presensiController } from '../controllers/presensiController';
@@ -210,36 +211,18 @@ export default function PresensiUnknown() {
           </p>
         </div>
 
-        <div class="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setTab('perkuliahan');
-              setPage(1);
-            }}
-            class={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              tab() === 'perkuliahan'
-                ? 'bg-action text-white'
-                : 'bg-secondary-100 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300'
-            }`}
-          >
-            Perkuliahan
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab('praktikum');
-              setPage(1);
-            }}
-            class={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-              tab() === 'praktikum'
-                ? 'bg-action text-white'
-                : 'bg-secondary-100 text-secondary-600 dark:bg-secondary-800 dark:text-secondary-300'
-            }`}
-          >
-            Praktikum
-          </button>
-        </div>
+        <Tabs
+          size="lg"
+          active={tab()}
+          onChange={(newTab) => {
+            setTab(newTab);
+            setPage(1);
+          }}
+          tabs={[
+            { key: 'perkuliahan', label: 'Perkuliahan' },
+            { key: 'praktikum', label: 'Praktikum' },
+          ]}
+        />
 
         <div class="bg-white border border-secondary-100 rounded-2xl p-6 dark:bg-secondary-900 dark:border-secondary-800">
           <div class="flex flex-wrap gap-4 items-center mb-4">

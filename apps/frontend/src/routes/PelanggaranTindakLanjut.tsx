@@ -10,6 +10,7 @@ import { MarkdownViewer } from '../components/ui/MarkdownViewer';
 import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { RichMarkdownEditor } from '../components/ui/RichMarkdownEditor';
+import { Tabs } from '../components/ui/Tabs';
 import { type UserRole, useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -317,42 +318,15 @@ export default function PelanggaranTindakLanjut() {
 
         {/* Filter & Tabs */}
         <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-secondary-200 dark:border-secondary-800 pb-3">
-          {/* Tab Navigation Pill */}
-          <div class="inline-flex rounded-full border border-secondary-200 bg-secondary-100/60 p-1 dark:border-secondary-700 dark:bg-secondary-900">
-            <button
-              type="button"
-              onClick={() => setActiveTab('perlu_tindakan')}
-              class={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
-                activeTab() === 'perlu_tindakan'
-                  ? 'bg-white text-action dark:bg-secondary-800 dark:text-brand-400 shadow-sm'
-                  : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400'
-              }`}
-            >
-              Perlu Tindakan Saya
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('semua')}
-              class={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
-                activeTab() === 'semua'
-                  ? 'bg-white text-action dark:bg-secondary-800 dark:text-brand-400 shadow-sm'
-                  : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400'
-              }`}
-            >
-              Semua Kasus
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('selesai')}
-              class={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
-                activeTab() === 'selesai'
-                  ? 'bg-white text-action dark:bg-secondary-800 dark:text-brand-400 shadow-sm'
-                  : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400'
-              }`}
-            >
-              Selesai Ditandatangani
-            </button>
-          </div>
+          <Tabs
+            active={activeTab()}
+            onChange={setActiveTab}
+            tabs={[
+              { key: 'perlu_tindakan', label: 'Perlu Tindakan Saya' },
+              { key: 'semua', label: 'Semua Kasus' },
+              { key: 'selesai', label: 'Selesai Ditandatangani' },
+            ]}
+          />
 
           {/* Level Filter */}
           <div class="flex items-center gap-2">
