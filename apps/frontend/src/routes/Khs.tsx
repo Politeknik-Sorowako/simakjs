@@ -5,6 +5,7 @@ import { MainLayout } from '../components/MainLayout';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { SearchableSelect, type SelectOption } from '../components/ui/SearchableSelect';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -626,36 +627,17 @@ export default function Khs() {
             </p>
           </div>
 
-          <div class="flex gap-2">
-            <button
-              onClick={() => setActiveTab('khs')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'khs' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
-            >
-              KHS Semester
-            </button>
-            <button
-              onClick={() => setActiveTab('transkrip')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'transkrip' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
-            >
-              Transkrip Nilai
-            </button>
-            <Show when={role() === 'admin'}>
-              <button
-                onClick={() => setActiveTab('konversi')}
-                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'konversi' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
-              >
-                Aturan Konversi Nilai
-              </button>
-            </Show>
-            <Show when={canSignMassal()}>
-              <button
-                onClick={() => setActiveTab('ttd')}
-                class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${activeTab() === 'ttd' ? 'bg-action text-white' : 'bg-secondary-100 text-secondary-600 hover:bg-secondary-200'}`}
-              >
-                TTD Massal
-              </button>
-            </Show>
-          </div>
+          <Tabs
+            size="lg"
+            active={activeTab()}
+            onChange={setActiveTab}
+            tabs={[
+              { key: 'khs', label: 'KHS Semester' },
+              { key: 'transkrip', label: 'Transkrip Nilai' },
+              ...(role() === 'admin' ? [{ key: 'konversi' as const, label: 'Aturan Konversi Nilai' }] : []),
+              ...(canSignMassal() ? [{ key: 'ttd' as const, label: 'TTD Massal' }] : []),
+            ]}
+          />
         </div>
 
         {/* Admin/Dosen Student Selector */}

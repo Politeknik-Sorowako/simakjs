@@ -1,6 +1,7 @@
 import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from 'solid-js';
 import { MainLayout } from '../../components/MainLayout';
 import { ExportButtonGroup } from '../../components/reports/ExportButton';
+import { Tabs } from '../../components/ui/Tabs';
 import { periodeAkademikController } from '../../controllers/periodeAkademikController';
 import { presensiController, RekapKelasListItem, RekapMahasiswaListItem } from '../../controllers/presensiController';
 import { prodiController } from '../../controllers/prodiController';
@@ -260,51 +261,46 @@ export default function LaporanPresensiKelas() {
         </div>
 
         {/* Tab Navigation */}
-        <div class="flex border-b border-secondary-200 dark:border-secondary-800 text-base font-semibold">
-          <button
-            onClick={() => {
-              setActiveTab('kelas');
+        <div class="mb-2">
+          <Tabs
+            size="lg"
+            active={activeTab()}
+            onChange={(key) => {
+              setActiveTab(key);
               setSortField('rataPersentaseHadir');
               setSortOrder('desc');
             }}
-            class={`py-3 px-6 border-b-2 transition-colors duration-150 flex items-center gap-2 ${
-              activeTab() === 'kelas'
-                ? 'border-action text-action dark:text-brand-400'
-                : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:hover:text-white'
-            }`}
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0a2 2 0 012-2v-5a2 2 0 012-2h2a2 2 0 012 2v5a2 2 0 012 2m-6 0h6"
-              />
-            </svg>
-            Rekap per Kelas Kuliah
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('mahasiswa');
-              setSortField('rataPersentaseHadir');
-              setSortOrder('desc');
-            }}
-            class={`py-3 px-6 border-b-2 transition-colors duration-150 flex items-center gap-2 ${
-              activeTab() === 'mahasiswa'
-                ? 'border-action text-action dark:text-brand-400'
-                : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:hover:text-white'
-            }`}
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-              />
-            </svg>
-            Rekap per Mahasiswa
-          </button>
+            tabs={[
+              {
+                key: 'kelas',
+                label: 'Rekap per Kelas Kuliah',
+                icon: (
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0a2 2 0 012-2v-5a2 2 0 012-2h2a2 2 0 012 2v5a2 2 0 012 2m-6 0h6"
+                    />
+                  </svg>
+                ),
+              },
+              {
+                key: 'mahasiswa',
+                label: 'Rekap per Mahasiswa',
+                icon: (
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                ),
+              },
+            ]}
+          />
         </div>
 
         {/* Filters */}

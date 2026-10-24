@@ -10,6 +10,7 @@ import { Modal } from '../components/ui/Modal';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
+import { Tabs } from '../components/ui/Tabs';
 import { VerifiedBadge } from '../components/ui/VerifiedBadge';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -1172,42 +1173,18 @@ export default function BapPresensi() {
             </div>
           </Show>
         </div>
-
         {/* Main Tab Switcher */}
-        <div class="flex items-center gap-2 border-b border-secondary-200 dark:border-secondary-800 pb-3">
-          <button
-            type="button"
-            onClick={() => setMainTab('teori')}
-            class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
-              mainTab() === 'teori'
-                ? 'bg-action text-white'
-                : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
-            }`}
-          >
-            Kelas Teori
-          </button>
-          <button
-            type="button"
-            onClick={() => setMainTab('praktikum')}
-            class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
-              mainTab() === 'praktikum'
-                ? 'bg-action text-white'
-                : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
-            }`}
-          >
-            Rombel / Praktik
-          </button>
-          <button
-            type="button"
-            onClick={() => setMainTab('monitoring')}
-            class={`px-4 py-2 text-base font-semibold rounded-xl transition-all ${
-              mainTab() === 'monitoring'
-                ? 'bg-action text-white'
-                : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800'
-            }`}
-          >
-            📊 Monitoring Kesesuaian RPS
-          </button>
+        <div class="border-b border-secondary-200 dark:border-secondary-800 pb-3">
+          <Tabs
+            size="lg"
+            active={mainTab()}
+            onChange={setMainTab}
+            tabs={[
+              { key: 'teori', label: 'Kelas Teori' },
+              { key: 'praktikum', label: 'Rombel / Praktik' },
+              { key: 'monitoring', label: '📊 Monitoring Kesesuaian RPS' },
+            ]}
+          />
         </div>
 
         <Show when={mainTab() === 'teori'}>
@@ -2234,31 +2211,23 @@ export default function BapPresensi() {
           </p>
 
           {/* Tab Selector & Filter */}
-          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-secondary-50 dark:bg-secondary-800 p-2 rounded-xl">
-            <div class="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setAssignTab('krs')}
-                class={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors ${
-                  assignTab() === 'krs'
-                    ? 'bg-action text-white'
-                    : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
-                }`}
-              >
-                Mahasiswa Kelas Induk ({krsData()?.length || 0})
-              </button>
-              <button
-                type="button"
-                onClick={() => setAssignTab('all')}
-                class={`px-3 py-1.5 rounded-lg text-caption font-semibold transition-colors ${
-                  assignTab() === 'all'
-                    ? 'bg-action text-white'
-                    : 'text-secondary-600 dark:text-secondary-300 hover:bg-secondary-200/50 dark:hover:bg-secondary-700'
-                }`}
-              >
-                Lintas Kelas (Semua Mhs)
-              </button>
-            </div>
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <Tabs
+              size="sm"
+              active={assignTab()}
+              onChange={setAssignTab}
+              tabs={[
+                {
+                  key: 'krs',
+                  label: 'Mahasiswa Kelas Induk',
+                  count: krsData()?.length || 0,
+                },
+                {
+                  key: 'all',
+                  label: 'Lintas Kelas (Semua Mhs)',
+                },
+              ]}
+            />
             <div class="text-caption font-bold text-action dark:text-brand-400 px-2">
               {assignedMhsSet().size} Mahasiswa Terpilih
             </div>

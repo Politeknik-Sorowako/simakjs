@@ -4,6 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
+import { Tabs } from '../components/ui/Tabs';
 import { LEVEL_LABELS, LevelState, rbacController, SYSTEM_ACTIONS } from '../controllers/rbacController';
 
 export default function KonfigurasiAksesRole() {
@@ -159,28 +160,15 @@ export default function KonfigurasiAksesRole() {
               pengguna.
             </p>
           </div>
-          <div class="flex items-center gap-2">
-            <button
-              class={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                tab() === 'matrix'
-                  ? 'bg-action text-white'
-                  : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
-              }`}
-              onClick={() => setTab('matrix')}
-            >
-              Matriks Akses
-            </button>
-            <button
-              class={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                tab() === 'role-types'
-                  ? 'bg-action text-white'
-                  : 'bg-secondary-100 text-secondary-700 dark:bg-secondary-800 dark:text-secondary-200'
-              }`}
-              onClick={() => setTab('role-types')}
-            >
-              Jenis Peran Pengguna
-            </button>
-          </div>
+          <Tabs
+            size="lg"
+            active={tab()}
+            onChange={setTab}
+            tabs={[
+              { key: 'matrix', label: 'Matriks Akses' },
+              { key: 'role-types', label: 'Jenis Peran Pengguna' },
+            ]}
+          />
         </div>
 
         <Show when={notice()}>

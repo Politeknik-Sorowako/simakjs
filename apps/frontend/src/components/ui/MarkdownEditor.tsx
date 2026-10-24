@@ -2,6 +2,7 @@ import { createSignal, Show } from 'solid-js';
 import { pengumumanController } from '../../controllers/pengumumanController';
 import { getAbsoluteStorageUrl } from '../../utils/api';
 import { MarkdownViewer } from './MarkdownViewer';
+import { Tabs } from './Tabs';
 
 interface MarkdownEditorProps {
   value: string;
@@ -57,30 +58,16 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       {/* Editor Header Toolbar */}
       <div class="flex items-center justify-between border-b border-secondary-200 dark:border-secondary-800 bg-secondary-50/70 dark:bg-secondary-800/40 px-3 py-2 flex-wrap gap-2">
         {/* Tab switchers */}
-        <div class="flex items-center gap-1 bg-secondary-200/60 dark:bg-secondary-800 p-0.5 rounded-lg text-xs font-medium">
-          <button
-            type="button"
-            onClick={() => setTab('write')}
-            class={`px-3 py-1 rounded-md transition-all ${
-              tab() === 'write'
-                ? 'bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white shadow-xs font-semibold'
-                : 'text-secondary-600 dark:text-secondary-400 hover:text-secondary-900 dark:hover:text-white'
-            }`}
-          >
-            Tulis
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('preview')}
-            class={`px-3 py-1 rounded-md transition-all ${
-              tab() === 'preview'
-                ? 'bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white shadow-xs font-semibold'
-                : 'text-secondary-600 dark:text-secondary-400 hover:text-secondary-900 dark:hover:text-white'
-            }`}
-          >
-            Pratinjau
-          </button>
-        </div>
+        <Tabs<'write' | 'preview'>
+          size="sm"
+          ariaLabel="Mode editor markdown"
+          active={tab()}
+          onChange={setTab}
+          tabs={[
+            { key: 'write', label: 'Tulis' },
+            { key: 'preview', label: 'Pratinjau' },
+          ]}
+        />
 
         {/* Toolbar formatting buttons (visible in write mode) */}
         <Show when={tab() === 'write'}>

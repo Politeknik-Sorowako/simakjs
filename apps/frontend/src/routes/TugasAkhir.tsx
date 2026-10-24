@@ -8,6 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { Table } from '../components/ui/Table';
+import { Tabs } from '../components/ui/Tabs';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -3018,51 +3019,17 @@ export default function TugasAkhirPage() {
             </div>
 
             {/* Navigation Tabs */}
-            <div class="flex border-b border-hairline dark:border-hairline-dark gap-2">
-              <button
-                type="button"
-                onClick={() => setSidangActiveTab('daftar')}
-                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
-                  sidangActiveTab() === 'daftar'
-                    ? 'border-action text-action'
-                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
-                }`}
-              >
-                1. Pendaftaran Sempro
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidangActiveTab('jadwal')}
-                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
-                  sidangActiveTab() === 'jadwal'
-                    ? 'border-action text-action'
-                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
-                }`}
-              >
-                2. Jadwal & Tim Penguji
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidangActiveTab('nilai')}
-                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
-                  sidangActiveTab() === 'nilai'
-                    ? 'border-action text-action'
-                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
-                }`}
-              >
-                3. Ruang Penilaian Penguji
-              </button>
-              <button
-                type="button"
-                onClick={() => setSidangActiveTab('hasil')}
-                class={`pb-2.5 px-3 text-caption font-semibold transition-colors border-b-2 ${
-                  sidangActiveTab() === 'hasil'
-                    ? 'border-action text-action'
-                    : 'border-transparent text-secondary-500 hover:text-ink dark:hover:text-pearl'
-                }`}
-              >
-                4. Hasil & Kelulusan
-              </button>
+            <div class="mb-2">
+              <Tabs
+                active={sidangActiveTab()}
+                onChange={setSidangActiveTab}
+                tabs={[
+                  { key: 'daftar', label: '1. Pendaftaran Sempro' },
+                  { key: 'jadwal', label: '2. Jadwal & Tim Penguji' },
+                  { key: 'nilai', label: '3. Ruang Penilaian Penguji' },
+                  { key: 'hasil', label: '4. Hasil & Kelulusan' },
+                ]}
+              />
             </div>
 
             {/* TAB 1: PENDAFTARAN SIDANG */}

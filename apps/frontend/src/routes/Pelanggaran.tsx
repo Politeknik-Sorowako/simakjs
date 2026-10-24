@@ -10,6 +10,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { StudentAvatar } from '../components/ui/StudentAvatar';
 import { Table } from '../components/ui/Table';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import {
@@ -941,38 +942,16 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
 
         {/* Staff tab switcher */}
         <Show when={isStaff()}>
-          <div class="flex gap-2">
-            <button
-              onClick={() => setViewTab('daftar')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
-                viewTab() === 'daftar'
-                  ? 'bg-action text-white'
-                  : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
-              }`}
-            >
-              Daftar Pelanggaran
-            </button>
-            <button
-              onClick={() => setViewTab('rekap')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
-                viewTab() === 'rekap'
-                  ? 'bg-action text-white'
-                  : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
-              }`}
-            >
-              Rekap & Predikat TXLY
-            </button>
-            <button
-              onClick={() => setViewTab('mahasiswa')}
-              class={`px-4 py-2 rounded-xl text-base font-bold transition-all ${
-                viewTab() === 'mahasiswa'
-                  ? 'bg-action text-white'
-                  : 'bg-white text-secondary-600 border border-secondary-200 hover:bg-secondary-50 dark:bg-secondary-900 dark:text-secondary-300 dark:border-secondary-800'
-              }`}
-            >
-              Daftar Mahasiswa TXLY
-            </button>
-          </div>
+          <Tabs
+            size="lg"
+            active={viewTab()}
+            onChange={setViewTab}
+            tabs={[
+              { key: 'daftar', label: 'Daftar Pelanggaran' },
+              { key: 'rekap', label: 'Rekap & Predikat TXLY' },
+              { key: 'mahasiswa', label: 'Daftar Mahasiswa TXLY' },
+            ]}
+          />
         </Show>
 
         {/* Student View */}
@@ -2079,29 +2058,22 @@ ${kg.email ? `<p style="text-align:center;margin:0;font-size:12px">Email: <a hre
             </Show>
 
             {/* Tab Switcher di Dalam Modal */}
-            <div class="flex items-center gap-2 border-b border-secondary-200 dark:border-secondary-700">
-              <button
-                type="button"
-                onClick={() => setModalTab('rekap')}
-                class={`px-4 py-2 font-semibold text-caption border-b-2 transition-all flex items-center gap-1.5 ${
-                  modalTab() === 'rekap'
-                    ? 'border-action text-action dark:border-brand-400 dark:text-brand-400'
-                    : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:text-secondary-400 dark:hover:text-secondary-200'
-                }`}
-              >
-                <span>📊</span> Rekapitulasi Per Semester & Evaluasi Pasal 32
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalTab('riwayat')}
-                class={`px-4 py-2 font-semibold text-caption border-b-2 transition-all flex items-center gap-1.5 ${
-                  modalTab() === 'riwayat'
-                    ? 'border-action text-action dark:border-brand-400 dark:text-brand-400'
-                    : 'border-transparent text-secondary-500 hover:text-secondary-800 dark:text-secondary-400 dark:hover:text-secondary-200'
-                }`}
-              >
-                <span>📋</span> Daftar Riwayat Pelanggaran ({mhsViolationsDetail()?.pelanggaranList?.length || 0})
-              </button>
+            <div class="mb-2">
+              <Tabs
+                active={modalTab()}
+                onChange={setModalTab}
+                tabs={[
+                  {
+                    key: 'rekap',
+                    label: '📊 Rekapitulasi Per Semester & Evaluasi Pasal 32',
+                  },
+                  {
+                    key: 'riwayat',
+                    label: '📋 Daftar Riwayat Pelanggaran',
+                    count: mhsViolationsDetail()?.pelanggaranList?.length || 0,
+                  },
+                ]}
+              />
             </div>
 
             {/* TAB 1: Rekapitulasi Per Semester & Evaluasi Pasal 32 */}

@@ -19,6 +19,7 @@ import { Pagination } from '../components/ui/Pagination';
 import { SortableHeader } from '../components/ui/SortableHeader';
 import { Table } from '../components/ui/Table';
 import { TableLoadingFallback } from '../components/ui/TableLoadingFallback';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -790,27 +791,15 @@ export default function Krs() {
 
         {/* Tab Switcher (For non-mahasiswa) */}
         <Show when={role() !== 'mahasiswa'}>
-          <div class="flex gap-2 border-b border-secondary-100 pb-3 dark:border-secondary-800">
-            <button
-              onClick={() => setActiveTab('kelola')}
-              class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab() === 'kelola'
-                  ? 'bg-action text-white'
-                  : 'bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700'
-              }`}
-            >
-              Kelola KRS
-            </button>
-            <button
-              onClick={() => setActiveTab('massal')}
-              class={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab() === 'massal'
-                  ? 'bg-action text-white'
-                  : 'bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 text-secondary-600 dark:text-secondary-300 hover:bg-secondary-50 dark:hover:bg-secondary-700'
-              }`}
-            >
-              Persetujuan Massal KRS
-            </button>
+          <div class="mb-4">
+            <Tabs
+              active={activeTab()}
+              onChange={setActiveTab}
+              tabs={[
+                { key: 'kelola', label: 'Kelola KRS' },
+                { key: 'massal', label: 'Persetujuan Massal KRS' },
+              ]}
+            />
           </div>
         </Show>
 

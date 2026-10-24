@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createResource, createSignal, For, Show } from 'solid-js';
 import { MainLayout } from '../components/MainLayout';
 import { Pagination } from '../components/ui/Pagination';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { mahasiswaController } from '../controllers/mahasiswaController';
 import { presensiController } from '../controllers/presensiController';
@@ -126,36 +127,22 @@ export default function KompensasiMahasiswa() {
                     </div>
                   </div>
 
-                  <div class="flex items-center gap-1 p-1 bg-secondary-100 rounded-full w-fit dark:bg-secondary-800">
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange('ketidakhadiran')}
-                      class={`flex items-center gap-2 px-4 py-2 rounded-full text-caption font-semibold transition-all ${
-                        activeTab() === 'ketidakhadiran'
-                          ? 'bg-white text-secondary-900 dark:bg-secondary-900 dark:text-white'
-                          : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200'
-                      }`}
-                    >
-                      Riwayat Ketidakhadiran
-                      <span class="px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-fine dark:bg-orange-900/40 dark:text-orange-300">
-                        {data().historyKompensasi.length}
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange('pelunasan')}
-                      class={`flex items-center gap-2 px-4 py-2 rounded-full text-caption font-semibold transition-all ${
-                        activeTab() === 'pelunasan'
-                          ? 'bg-white text-secondary-900 dark:bg-secondary-900 dark:text-white'
-                          : 'text-secondary-500 hover:text-secondary-700 dark:text-secondary-400 dark:hover:text-secondary-200'
-                      }`}
-                    >
-                      Riwayat Pelunasan
-                      <span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-fine dark:bg-emerald-900/40 dark:text-emerald-300">
-                        {data().payments.length}
-                      </span>
-                    </button>
-                  </div>
+                  <Tabs
+                    active={activeTab()}
+                    onChange={handleTabChange}
+                    tabs={[
+                      {
+                        key: 'ketidakhadiran',
+                        label: 'Riwayat Ketidakhadiran',
+                        count: data().historyKompensasi.length,
+                      },
+                      {
+                        key: 'pelunasan',
+                        label: 'Riwayat Pelunasan',
+                        count: data().payments.length,
+                      },
+                    ]}
+                  />
 
                   <Show when={activeTab() === 'ketidakhadiran'}>
                     <div class="rounded-2xl border border-secondary-100 bg-white p-6 dark:border-secondary-800 dark:bg-secondary-900">
