@@ -246,13 +246,16 @@ export class DocumentSignatureService {
   ): Promise<SignResult> {
     const withQr = opts.withQr ?? true;
     const refId = `tl:${tlId}:${approverRole}`;
-
     const payload: Record<string, unknown> = {
       tenant: TENANT_SIMAK,
       docType,
       refId,
       tlId,
       approverRole,
+      nama: snapshotPayload.nama,
+      nim: snapshotPayload.nim,
+      prodi: snapshotPayload.prodi,
+      periodeNama: snapshotPayload.periodeId,
       signer: { nama: signer.nama, jabatan: signer.jabatan },
       snapshot: snapshotPayload,
       audit: { repository: TENANT_SIMAK },
@@ -448,14 +451,21 @@ export class DocumentSignatureService {
     }
 
     const snap = row.payloadSnapshot as Record<string, unknown>;
+    const nested = (snap.snapshot as Record<string, unknown>) || {};
+    const rawNama = typeof snap.nama === 'string' ? snap.nama : (nested.nama as string | undefined);
+    const rawNim = typeof snap.nim === 'string' ? snap.nim : (nested.nim as string | undefined);
+    const rawProdi = typeof snap.prodi === 'string' ? snap.prodi : (nested.prodi as string | undefined);
+    const rawPeriode =
+      typeof snap.periodeNama === 'string' ? snap.periodeNama : (nested.periodeId as string | undefined);
+
     return {
       status: 'VALID',
       tenant: row.tenant,
       docType: row.docType,
-      namaMask: typeof snap.nama === 'string' ? maskNama(snap.nama) : undefined,
-      nimMask: typeof snap.nim === 'string' ? maskNim(snap.nim) : undefined,
-      prodi: typeof snap.prodi === 'string' ? snap.prodi : undefined,
-      periodeNama: typeof snap.periodeNama === 'string' ? snap.periodeNama : undefined,
+      namaMask: typeof rawNama === 'string' ? maskNama(rawNama) : undefined,
+      nimMask: typeof rawNim === 'string' ? maskNim(rawNim) : undefined,
+      prodi: typeof rawProdi === 'string' ? rawProdi : undefined,
+      periodeNama: typeof rawPeriode === 'string' ? rawPeriode : undefined,
       signerNama: row.signerNama,
       signerJabatan: row.signerJabatan,
       signedAtWITA: formatDateTimeInTimezone(row.signedAt),
