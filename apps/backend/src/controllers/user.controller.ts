@@ -3,7 +3,7 @@ import { roleEnum, userRoles, users } from '../models/schema';
 import { CsvImportService } from '../services/csv-import.service';
 import { db } from '../utils/db';
 import { validatePassword } from '../utils/password-policy';
-import { hasRole, validateRoleCombination } from '../utils/role';
+import { hasRole, MULTI_ROLE_ALLOWED, SINGLE_ROLE_ONLY, validateRoleCombination } from '../utils/role';
 import { AuthContext, UserRole } from '../utils/types';
 
 export class UserController {
@@ -259,21 +259,7 @@ export class UserController {
 
       // biome-ignore lint/suspicious/noExplicitAny: Elysia body type inference requires any
       const newRole = (body as any)?.role;
-      const validRoles = [
-        'super_admin',
-        'admin',
-        'kaprodi',
-        'dosen',
-        'prodi',
-        'keuangan',
-        'plp',
-        'instruktur',
-        'kemahasiswaan',
-        'lppm',
-        'mahasiswa',
-        'guest',
-        'calon_mahasiswa',
-      ];
+      const validRoles = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
       if (!newRole || !validRoles.includes(newRole)) {
         set.status = 400;
         return { error: 'Peran tidak valid' };
@@ -339,21 +325,7 @@ export class UserController {
         return { error: 'Field roles harus berupa array non-kosong' };
       }
 
-      const VALID_ROLES = [
-        'super_admin',
-        'admin',
-        'kaprodi',
-        'dosen',
-        'prodi',
-        'keuangan',
-        'plp',
-        'instruktur',
-        'kemahasiswaan',
-        'lppm',
-        'mahasiswa',
-        'guest',
-        'calon_mahasiswa',
-      ];
+      const VALID_ROLES = [...SINGLE_ROLE_ONLY, ...MULTI_ROLE_ALLOWED];
       const invalid = roles.filter((r) => !VALID_ROLES.includes(r as UserRole));
       if (invalid.length > 0) {
         set.status = 400;
