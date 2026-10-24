@@ -680,6 +680,13 @@
       "when": 1789960000000,
       "tag": "0097_pelanggaran_tindak_lanjut",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1789970000000,
+      "tag": "0098_add_wadir2_user_role",
+      "breakpoints": true
     }
   ]
 }

@@ -32,6 +32,7 @@ export const MULTI_ROLE_ALLOWED: UserRole[] = [
   'kemahasiswaan',
   'lppm',
   'wadir1',
+  'wadir2',
   'wadir3',
   'direktur',
 ];
@@ -83,6 +84,7 @@ export const STAFF_ROLES: UserRole[] = [
   'kemahasiswaan',
   'lppm',
   'wadir1',
+  'wadir2',
   'wadir3',
   'direktur',
 ];
@@ -116,6 +118,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   kemahasiswaan: 'Kemahasiswaan',
   lppm: 'LPPM',
   wadir1: 'Wadir 1',
+  wadir2: 'Wadir 2',
   wadir3: 'Wadir 3',
   direktur: 'Direktur',
 };

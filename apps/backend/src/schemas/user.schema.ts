@@ -1,28 +1,32 @@
 import { t } from 'elysia';
 
+export const userRoleItemSchema = t.Union(
+  [
+    t.Literal('super_admin'),
+    t.Literal('admin'),
+    t.Literal('kaprodi'),
+    t.Literal('dosen'),
+    t.Literal('mahasiswa'),
+    t.Literal('prodi'),
+    t.Literal('keuangan'),
+    t.Literal('guest'),
+    t.Literal('calon_mahasiswa'),
+    t.Literal('plp'),
+    t.Literal('instruktur'),
+    t.Literal('kemahasiswaan'),
+    t.Literal('lppm'),
+    t.Literal('wadir1'),
+    t.Literal('wadir2'),
+    t.Literal('wadir3'),
+    t.Literal('direktur'),
+  ],
+  { default: 'mahasiswa' },
+);
+
 export const userBody = t.Object({
   email: t.String({ format: 'email', default: 'user@test.com' }),
   nama: t.String({ default: 'Nama Pengguna' }),
-  role: t.Union(
-    [
-      t.Literal('admin'),
-      t.Literal('kaprodi'),
-      t.Literal('dosen'),
-      t.Literal('mahasiswa'),
-      t.Literal('prodi'),
-      t.Literal('keuangan'),
-      t.Literal('guest'),
-      t.Literal('calon_mahasiswa'),
-      t.Literal('plp'),
-      t.Literal('instruktur'),
-      t.Literal('kemahasiswaan'),
-      t.Literal('lppm'),
-      t.Literal('wadir1'),
-      t.Literal('wadir3'),
-      t.Literal('direktur'),
-    ],
-    { default: 'mahasiswa' },
-  ),
+  role: userRoleItemSchema,
   isActive: t.Optional(t.Boolean({ default: true })),
 });
 
@@ -139,23 +143,7 @@ export const updateRoleSchema = {
     id: t.Numeric(),
   }),
   body: t.Object({
-    role: t.Union(
-      [
-        t.Literal('admin'),
-        t.Literal('kaprodi'),
-        t.Literal('dosen'),
-        t.Literal('mahasiswa'),
-        t.Literal('prodi'),
-        t.Literal('keuangan'),
-        t.Literal('guest'),
-        t.Literal('calon_mahasiswa'),
-        t.Literal('plp'),
-        t.Literal('instruktur'),
-        t.Literal('kemahasiswaan'),
-        t.Literal('lppm'),
-      ],
-      { default: 'mahasiswa' },
-    ),
+    role: userRoleItemSchema,
   }),
   response: {
     200: t.Object({
@@ -181,23 +169,7 @@ export const updateUserRolesSchema = {
     id: t.Numeric(),
   }),
   body: t.Object({
-    roles: t.Array(
-      t.Union([
-        t.Literal('admin'),
-        t.Literal('kaprodi'),
-        t.Literal('dosen'),
-        t.Literal('mahasiswa'),
-        t.Literal('prodi'),
-        t.Literal('keuangan'),
-        t.Literal('guest'),
-        t.Literal('calon_mahasiswa'),
-        t.Literal('plp'),
-        t.Literal('instruktur'),
-        t.Literal('kemahasiswaan'),
-        t.Literal('lppm'),
-        t.Literal('super_admin'),
-      ]),
-    ),
+    roles: t.Array(userRoleItemSchema),
   }),
   response: {
     200: t.Object({

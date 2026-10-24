@@ -316,5 +316,61 @@ describe('RBAC Multi-Role (union semantics)', () => {
 
       expect(response.status).toBe(400);
     });
+
+    it('accepts wadir1, wadir2, wadir3, and direktur via multi-role endpoint', async () => {
+      const adminToken = await getAuthToken('admin-leadership@test.com', 'admin');
+      const hashed = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
+      const [target] = await db
+        .insert(users)
+        .values({
+          email: 'target-leadership@test.com',
+          password: hashed,
+          nama: 'Target Leadership',
+          role: 'dosen',
+          isActive: true,
+        })
+        .returning();
+
+      const response = await app.handle(
+        new Request(`http://localhost/users/${target.id}/roles`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roles: ['dosen', 'wadir1', 'wadir2', 'wadir3', 'direktur'] }),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const rows = await db.select().from(userRoles).where(eq(userRoles.userId, target.id));
+      expect(rows.map((r) => r.role).sort()).toEqual(['direktur', 'dosen', 'wadir1', 'wadir2', 'wadir3']);
+    });
+
+    it('accepts direktur and wadir roles via the single-role endpoint', async () => {
+      const adminToken = await getAuthToken('admin-direktur-single@test.com', 'admin');
+      const hashed = await Bun.password.hash('password123', { algorithm: 'bcrypt', cost: 10 });
+      const [target] = await db
+        .insert(users)
+        .values({
+          email: 'target-direktur-single@test.com',
+          password: hashed,
+          nama: 'Target Direktur Single',
+          role: 'dosen',
+          isActive: true,
+        })
+        .returning();
+
+      const response = await app.handle(
+        new Request(`http://localhost/users/${target.id}/role`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'direktur' }),
+        }),
+      );
+
+      expect(response.status).toBe(200);
+      const [updated] = await db.select().from(users).where(eq(users.id, target.id));
+      expect(updated.role).toBe('direktur');
+      const rows = await db.select().from(userRoles).where(eq(userRoles.userId, target.id));
+      expect(rows.map((r) => r.role)).toEqual(['direktur']);
+    });
   });
 });

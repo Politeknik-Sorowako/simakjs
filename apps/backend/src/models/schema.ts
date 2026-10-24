@@ -32,6 +32,7 @@ export const roleEnum = pgEnum('user_role', [
   'kemahasiswaan',
   'lppm',
   'wadir1',
+  'wadir2',
   'wadir3',
   'direktur',
 ]);

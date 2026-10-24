@@ -1528,6 +1528,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <Show when={isAdmin() || isDosen() || isMahasiswa() || isInstruktur()}>
                   <A
                     href="/pelanggaran"
+                    end={true}
                     onClick={() => props.onClose()}
                     activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
@@ -1750,6 +1751,7 @@ export function Sidebar(props: { isOpen: boolean; onClose: () => void; collapsed
                 <Show when={isAdmin()}>
                   <A
                     href="/admisi/manajemen"
+                    end={true}
                     onClick={() => props.onClose()}
                     activeClass="text-action-ondark font-semibold"
                     inactiveClass="hover:text-white text-secondary-200"
