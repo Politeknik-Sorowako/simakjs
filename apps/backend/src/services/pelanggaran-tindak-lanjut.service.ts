@@ -308,13 +308,13 @@ export class PelanggaranTindakLanjutService {
       .leftJoin(users, eq(pelanggaranTindakLanjut.formDiisiOleh, users.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    const [{ countVal }] = await db
+    const countResult = await db
       .select({ countVal: count(pelanggaranTindakLanjut.id) })
       .from(pelanggaranTindakLanjut)
       .innerJoin(mahasiswa, eq(pelanggaranTindakLanjut.mahasiswaId, mahasiswa.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    const total = Number(countVal || 0);
+    const total = Number(countResult[0]?.countVal || 0);
 
     // Fetch items
     const rows = await baseQuery.orderBy(desc(pelanggaranTindakLanjut.createdAt)).limit(limit).offset(offset);
