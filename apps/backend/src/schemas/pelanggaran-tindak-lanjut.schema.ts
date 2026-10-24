@@ -16,20 +16,23 @@ export const statusTindakLanjutEnum = t.Union([
 ]);
 
 export const submitFormBody = t.Object({
+  formData: t.Optional(t.Record(t.String(), t.Any())),
   formCoaching: t.Optional(t.Record(t.String(), t.Any())),
   suratPemanggilanOrtu: t.Optional(t.Record(t.String(), t.Any())),
   beritaAcaraSidang: t.Optional(t.Record(t.String(), t.Any())),
 });
 
 export const approveBody = t.Object({
-  metode: t.Union([t.Literal('TTE'), t.Literal('MANUAL')]),
+  metode: t.Optional(t.Union([t.Literal('TTE'), t.Literal('MANUAL')])),
+  tipe: t.Optional(t.Union([t.Literal('TTE'), t.Literal('MANUAL')])),
   catatan: t.Optional(t.String()),
   signatureUuid: t.Optional(t.String()),
   dokumenScanUrl: t.Optional(t.String()),
 });
 
 export const rejectBody = t.Object({
-  catatan: t.String({ minLength: 3 }),
+  catatan: t.Optional(t.String()),
+  alasan: t.Optional(t.String()),
 });
 
 export const batalBody = t.Object({

@@ -97,10 +97,11 @@ export class PelanggaranTindakLanjutController {
         return { error: 'ID kasus tidak valid.' };
       }
 
+      const metode: 'TTE' | 'MANUAL' = body.metode || body.tipe || 'TTE';
       let signatureUuid: string | undefined = body.signatureUuid;
 
       // Jika metode TTE, tanda tangani dokumen snapshot
-      if (body.metode === 'TTE') {
+      if (metode === 'TTE') {
         const detail = await PelanggaranTindakLanjutService.getById(user, id);
         const docType =
           detail.tingkat === 'LEVEL_4'
@@ -148,7 +149,7 @@ export class PelanggaranTindakLanjutController {
       }
 
       return await PelanggaranTindakLanjutService.approve(user, id, {
-        metode: body.metode,
+        metode,
         catatan: body.catatan,
         signatureUuid,
         dokumenScanUrl: body.dokumenScanUrl,
@@ -174,7 +175,8 @@ export class PelanggaranTindakLanjutController {
         return { error: 'ID kasus tidak valid.' };
       }
 
-      return await PelanggaranTindakLanjutService.reject(user, id, body.catatan);
+      const catatan = body.catatan || body.alasan || 'Permintaan revisi berkas';
+      return await PelanggaranTindakLanjutService.reject(user, id, catatan);
     } catch (e: unknown) {
       set.status = 400;
       return { error: e instanceof Error ? e.message : 'Gagal menolak/meminta revisi.' };

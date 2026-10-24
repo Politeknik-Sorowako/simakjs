@@ -1,21 +1,32 @@
-import { API_URL, fetchApi } from '../utils/api';
+import { fetchApi } from '../utils/api';
 
 export type TingkatTindakLanjut = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | 'LEVEL_4';
-export type StatusTindakLanjut = 'MENUNGGU_FORM' | 'DALAM_PROSES_PERSETUJUAN' | 'SELESAI' | 'DITOLAK' | 'DIBATALKAN';
-export type StatusPersetujuan = 'MENUNGGU' | 'DISETUJUI_TTE' | 'DISETUJUI_MANUAL' | 'DITOLAK';
+export type StatusTindakLanjut =
+  | 'MENUNGGU_FORM'
+  | 'DALAM_PROSES_PERSETUJUAN'
+  | 'MENUNGGU_PERSETUJUAN'
+  | 'SELESAI'
+  | 'DITOLAK'
+  | 'REVISI'
+  | 'DIBATALKAN';
+export type StatusPersetujuan = 'MENUNGGU' | 'DISETUJUI_TTE' | 'DISETUJUI_MANUAL' | 'DISETUJUI' | 'DITOLAK';
 
 export interface TindakLanjutPersetujuan {
   id: number;
   tindakLanjutId: number;
   urutan: number;
   roleTarget: string;
+  approverRole?: string;
   status: StatusPersetujuan;
   userId: number | null;
+  approverUserId?: number | null;
   namaPenandatangan: string | null;
+  approverNama?: string | null;
   jabatanPenandatangan: string | null;
   signatureUuid: string | null;
   catatan: string | null;
   respondedAt: string | null;
+  decidedAt?: string | null;
   createdAt: string;
 }
 
@@ -63,21 +74,26 @@ export const pelanggaranTindakLanjutController = {
     if (params?.page) q.set('page', params.page.toString());
     if (params?.limit) q.set('limit', params.limit.toString());
 
-    return fetchApi(`${API_URL}/pelanggaran/tindak-lanjut?${q.toString()}`);
+    return fetchApi(`/pelanggaran/tindak-lanjut?${q.toString()}`);
   },
 
   async getById(id: number): Promise<KasusTindakLanjut> {
-    return fetchApi(`${API_URL}/pelanggaran/tindak-lanjut/${id}`);
+    return fetchApi(`/pelanggaran/tindak-lanjut/${id}`);
   },
 
   async submitForm(
     id: number,
     formData: Record<string, unknown>,
   ): Promise<{ success: boolean; data: KasusTindakLanjut }> {
-    return fetchApi(`${API_URL}/pelanggaran/tindak-lanjut/${id}/form`, {
+    return fetchApi(`/pelanggaran/tindak-lanjut/${id}/form`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ formData }),
+      body: JSON.stringify({
+        formData,
+        formCoaching: formData,
+        suratPemanggilanOrtu: formData,
+        beritaAcaraSidang: formData,
+      }),
     });
   },
 
@@ -85,26 +101,35 @@ export const pelanggaranTindakLanjutController = {
     id: number,
     payload: { tipe: 'TTE' | 'MANUAL'; catatan?: string },
   ): Promise<{ success: boolean; data: KasusTindakLanjut; qrDataUrl?: string; verifyUrl?: string }> {
-    return fetchApi(`${API_URL}/pelanggaran/tindak-lanjut/${id}/approve`, {
+    return fetchApi(`/pelanggaran/tindak-lanjut/${id}/approve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        metode: payload.tipe,
+      }),
     });
   },
 
   async reject(id: number, alasan: string): Promise<{ success: boolean; data: KasusTindakLanjut }> {
-    return fetchApi(`${API_URL}/pelanggaran/tindak-lanjut/${id}/reject`, {
+    return fetchApi(`/pelanggaran/tindak-lanjut/${id}/reject`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ alasan }),
+      body: JSON.stringify({
+        alasan,
+        catatan: alasan,
+      }),
     });
   },
 
   async cancel(id: number, alasan: string): Promise<{ success: boolean; data: KasusTindakLanjut }> {
-    return fetchApi(`${API_URL}/pelanggaran/tindak-lanjut/${id}/batal`, {
+    return fetchApi(`/pelanggaran/tindak-lanjut/${id}/batal`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ alasan }),
+      body: JSON.stringify({
+        alasan,
+        catatan: alasan,
+      }),
     });
   },
 };

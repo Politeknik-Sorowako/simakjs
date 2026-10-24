@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, or, type SQL } from 'drizzle-orm';
 import {
   mahasiswa,
   pelanggaran,
@@ -12,6 +12,8 @@ import type { UserPayload, UserRole } from '../utils/types';
 import { NotificationService } from './notification.service';
 import { PelanggaranService } from './pelanggaran.service';
 import { SystemParameterService } from './system-parameter.service';
+
+type SafeAny = Record<string, unknown>;
 
 export type TingkatTindakLanjut = 'LEVEL_1' | 'LEVEL_2' | 'LEVEL_3' | 'LEVEL_4';
 
@@ -239,6 +241,43 @@ export class PelanggaranTindakLanjutService {
     const limit = Math.min(100, Math.max(1, params.limit || 20));
     const offset = (page - 1) * limit;
 
+    const conditions: SQL[] = [];
+
+    if (params.status && params.status.trim()) {
+      const s = params.status.trim();
+      if (s === 'DALAM_PROSES_PERSETUJUAN' || s === 'MENUNGGU_PERSETUJUAN') {
+        conditions.push(
+          or(
+            eq(pelanggaranTindakLanjut.status, 'MENUNGGU_PERSETUJUAN'),
+            eq(pelanggaranTindakLanjut.status, 'DALAM_PROSES_PERSETUJUAN'),
+          )!,
+        );
+      } else if (s === 'DITOLAK' || s === 'REVISI') {
+        conditions.push(
+          or(eq(pelanggaranTindakLanjut.status, 'REVISI'), eq(pelanggaranTindakLanjut.status, 'DITOLAK'))!,
+        );
+      } else {
+        conditions.push(eq(pelanggaranTindakLanjut.status, s));
+      }
+    }
+
+    if (params.tingkat && params.tingkat.trim()) {
+      conditions.push(eq(pelanggaranTindakLanjut.tingkat, params.tingkat.trim()));
+    }
+
+    if (params.periodeId && params.periodeId.trim()) {
+      conditions.push(eq(pelanggaranTindakLanjut.periodeId, params.periodeId.trim()));
+    }
+
+    // Scoping jika kaprodi / prodi non-global
+    const isGlobal =
+      user.role === 'admin' ||
+      user.role === 'super_admin' ||
+      user.role === 'direktur' ||
+      user.role === 'wadir1' ||
+      user.role === 'wadir3' ||
+      user.role === 'kemahasiswaan';
+
     // Base query
     const baseQuery = db
       .select({
@@ -253,27 +292,84 @@ export class PelanggaranTindakLanjutService {
         pemicuTipe: pelanggaranTindakLanjut.pemicuTipe,
         pemicuTNilai: pelanggaranTindakLanjut.pemicuTNilai,
         status: pelanggaranTindakLanjut.status,
+        formCoaching: pelanggaranTindakLanjut.formCoaching,
+        suratPemanggilanOrtu: pelanggaranTindakLanjut.suratPemanggilanOrtu,
+        beritaAcaraSidang: pelanggaranTindakLanjut.beritaAcaraSidang,
+        formDiisiOleh: pelanggaranTindakLanjut.formDiisiOleh,
+        namaSubmitter: users.nama,
         formDiisiAt: pelanggaranTindakLanjut.formDiisiAt,
+        alasanBatal: pelanggaranTindakLanjut.alasanBatal,
         createdAt: pelanggaranTindakLanjut.createdAt,
+        updatedAt: pelanggaranTindakLanjut.updatedAt,
       })
       .from(pelanggaranTindakLanjut)
       .innerJoin(mahasiswa, eq(pelanggaranTindakLanjut.mahasiswaId, mahasiswa.id))
-      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id));
+      .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(users, eq(pelanggaranTindakLanjut.formDiisiOleh, users.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
 
-    // Scoping jika kaprodi / prodi non-global
-    const isGlobal =
-      user.role === 'admin' ||
-      user.role === 'super_admin' ||
-      user.role === 'direktur' ||
-      user.role === 'wadir1' ||
-      user.role === 'wadir3' ||
-      user.role === 'kemahasiswaan';
+    const [{ countVal }] = await db
+      .select({ countVal: count(pelanggaranTindakLanjut.id) })
+      .from(pelanggaranTindakLanjut)
+      .innerJoin(mahasiswa, eq(pelanggaranTindakLanjut.mahasiswaId, mahasiswa.id))
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    const total = Number(countVal || 0);
 
     // Fetch items
     const rows = await baseQuery.orderBy(desc(pelanggaranTindakLanjut.createdAt)).limit(limit).offset(offset);
 
+    // Ambil persetujuan untuk seluruh baris yang dikembalikan
+    const ids = rows.map((r) => r.id);
+    const persetujuanList =
+      ids.length > 0
+        ? await db
+            .select()
+            .from(pelanggaranTindakLanjutPersetujuan)
+            .where(inArray(pelanggaranTindakLanjutPersetujuan.tindakLanjutId, ids))
+            .orderBy(pelanggaranTindakLanjutPersetujuan.urutan)
+        : [];
+
+    const persetujuanByTlId = new Map<number, typeof persetujuanList>();
+    for (const p of persetujuanList) {
+      const list = persetujuanByTlId.get(p.tindakLanjutId) || [];
+      list.push(p);
+      persetujuanByTlId.set(p.tindakLanjutId, list);
+    }
+
+    const mappedRows = rows.map((row) => {
+      const pList = persetujuanByTlId.get(row.id) || [];
+      const mappedPersetujuan = pList.map((p) => {
+        const mappedStatus =
+          p.status === 'DISETUJUI' ? (p.metode === 'MANUAL' ? 'DISETUJUI_MANUAL' : 'DISETUJUI_TTE') : p.status;
+        return {
+          ...p,
+          roleTarget: p.approverRole,
+          userId: p.approverUserId,
+          namaPenandatangan: p.approverNama,
+          respondedAt: p.decidedAt ? p.decidedAt.toISOString() : null,
+          status: mappedStatus,
+        };
+      });
+
+      const formData: Record<string, unknown> = {
+        ...(row.formCoaching || {}),
+        ...(row.suratPemanggilanOrtu || {}),
+        ...(row.beritaAcaraSidang || {}),
+      };
+
+      return {
+        ...row,
+        formData,
+        formSubmittedAt: row.formDiisiAt ? row.formDiisiAt.toISOString() : null,
+        formSubmittedByUserId: row.formDiisiOleh,
+        persetujuanList: mappedPersetujuan,
+      };
+    });
+
     return {
-      data: rows,
+      data: mappedRows,
+      total,
       page,
       limit,
     };
@@ -300,6 +396,7 @@ export class PelanggaranTindakLanjutService {
         suratPemanggilanOrtu: pelanggaranTindakLanjut.suratPemanggilanOrtu,
         beritaAcaraSidang: pelanggaranTindakLanjut.beritaAcaraSidang,
         formDiisiOleh: pelanggaranTindakLanjut.formDiisiOleh,
+        namaSubmitter: users.nama,
         formDiisiAt: pelanggaranTindakLanjut.formDiisiAt,
         alasanBatal: pelanggaranTindakLanjut.alasanBatal,
         createdAt: pelanggaranTindakLanjut.createdAt,
@@ -308,6 +405,7 @@ export class PelanggaranTindakLanjutService {
       .from(pelanggaranTindakLanjut)
       .innerJoin(mahasiswa, eq(pelanggaranTindakLanjut.mahasiswaId, mahasiswa.id))
       .leftJoin(programStudi, eq(mahasiswa.programStudiId, programStudi.id))
+      .leftJoin(users, eq(pelanggaranTindakLanjut.formDiisiOleh, users.id))
       .where(eq(pelanggaranTindakLanjut.id, id));
 
     if (!row) {
@@ -321,9 +419,31 @@ export class PelanggaranTindakLanjutService {
       .where(eq(pelanggaranTindakLanjutPersetujuan.tindakLanjutId, id))
       .orderBy(pelanggaranTindakLanjutPersetujuan.urutan);
 
+    const mappedPersetujuan = persetujuan.map((p) => {
+      const mappedStatus =
+        p.status === 'DISETUJUI' ? (p.metode === 'MANUAL' ? 'DISETUJUI_MANUAL' : 'DISETUJUI_TTE') : p.status;
+      return {
+        ...p,
+        roleTarget: p.approverRole,
+        userId: p.approverUserId,
+        namaPenandatangan: p.approverNama,
+        respondedAt: p.decidedAt ? p.decidedAt.toISOString() : null,
+        status: mappedStatus,
+      };
+    });
+
+    const formData: Record<string, unknown> = {
+      ...(row.formCoaching || {}),
+      ...(row.suratPemanggilanOrtu || {}),
+      ...(row.beritaAcaraSidang || {}),
+    };
+
     return {
       ...row,
-      persetujuanList: persetujuan,
+      formData,
+      formSubmittedAt: row.formDiisiAt ? row.formDiisiAt.toISOString() : null,
+      formSubmittedByUserId: row.formDiisiOleh,
+      persetujuanList: mappedPersetujuan,
     };
   }
 
@@ -338,6 +458,7 @@ export class PelanggaranTindakLanjutService {
       formCoaching?: Record<string, unknown>;
       suratPemanggilanOrtu?: Record<string, unknown>;
       beritaAcaraSidang?: Record<string, unknown>;
+      formData?: Record<string, unknown>;
     },
   ) {
     const [row] = await db.select().from(pelanggaranTindakLanjut).where(eq(pelanggaranTindakLanjut.id, id));
@@ -346,6 +467,34 @@ export class PelanggaranTindakLanjutService {
     if (row.status === 'SELESAI' || row.status === 'DIBATALKAN') {
       throw new Error(`Tidak dapat mengubah form pada kasus berstatus ${row.status}.`);
     }
+
+    const rawFormData = data.formData as Record<string, unknown> | undefined;
+    const formCoaching =
+      data.formCoaching ??
+      (rawFormData
+        ? {
+            tanggalPelaksanaan: rawFormData.tanggalPelaksanaan,
+            namaKonselor: rawFormData.namaKonselor,
+            ringkasanMasalah: rawFormData.ringkasanMasalah,
+            hasilCoaching: rawFormData.hasilCoaching,
+          }
+        : undefined);
+
+    const suratPemanggilanOrtu =
+      data.suratPemanggilanOrtu ??
+      (rawFormData?.catatanOrtu
+        ? {
+            catatanOrtu: rawFormData.catatanOrtu,
+          }
+        : undefined);
+
+    const beritaAcaraSidang =
+      data.beritaAcaraSidang ??
+      (rawFormData?.rekomendasiKomdis
+        ? {
+            rekomendasiKomdis: rawFormData.rekomendasiKomdis,
+          }
+        : undefined);
 
     // Tentukan approvers sesuai tingkat kasus
     let approverRoles: UserRole[] = [];
@@ -362,9 +511,9 @@ export class PelanggaranTindakLanjutService {
       await tx
         .update(pelanggaranTindakLanjut)
         .set({
-          formCoaching: data.formCoaching ?? row.formCoaching,
-          suratPemanggilanOrtu: data.suratPemanggilanOrtu ?? row.suratPemanggilanOrtu,
-          beritaAcaraSidang: data.beritaAcaraSidang ?? row.beritaAcaraSidang,
+          formCoaching: formCoaching ?? row.formCoaching,
+          suratPemanggilanOrtu: suratPemanggilanOrtu ?? row.suratPemanggilanOrtu,
+          beritaAcaraSidang: beritaAcaraSidang ?? row.beritaAcaraSidang,
           formDiisiOleh: user.id,
           formDiisiAt: new Date(),
           status: 'MENUNGGU_PERSETUJUAN',

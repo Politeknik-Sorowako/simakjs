@@ -88,13 +88,14 @@ export default function PelanggaranTindakLanjut() {
         }
 
         // Jika dalam proses persetujuan, cari langkah yang MENUNGGU
-        if (k.status === 'DALAM_PROSES_PERSETUJUAN' && k.persetujuanList) {
+        if ((k.status === 'DALAM_PROSES_PERSETUJUAN' || k.status === 'MENUNGGU_PERSETUJUAN') && k.persetujuanList) {
           const pendingStep = k.persetujuanList.find((p) => p.status === 'MENUNGGU');
           if (!pendingStep) return false;
 
           // Cek apakah user memiliki target role tersebut
           if (userRoles.includes('admin') || userRoles.includes('super_admin')) return true;
-          return userRoles.includes(pendingStep.roleTarget as UserRole);
+          const targetRole = pendingStep.roleTarget || pendingStep.approverRole;
+          return userRoles.includes(targetRole as UserRole);
         }
 
         return false;
@@ -128,10 +129,12 @@ export default function PelanggaranTindakLanjut() {
       case 'MENUNGGU_FORM':
         return <Badge variant="warning">Menunggu Form Pembinaan</Badge>;
       case 'DALAM_PROSES_PERSETUJUAN':
+      case 'MENUNGGU_PERSETUJUAN':
         return <Badge variant="info">Proses Persetujuan</Badge>;
       case 'SELESAI':
         return <Badge variant="success">Selesai / Ditandatangani</Badge>;
       case 'DITOLAK':
+      case 'REVISI':
         return <Badge variant="danger">Ditolak / Dikembalikan</Badge>;
       case 'DIBATALKAN':
         return <Badge variant="default">Dibatalkan</Badge>;
@@ -239,14 +242,16 @@ export default function PelanggaranTindakLanjut() {
   };
 
   const isCurrentPendingApprover = (k: KasusTindakLanjut): boolean => {
-    if (k.status !== 'DALAM_PROSES_PERSETUJUAN' || !k.persetujuanList) return false;
+    if ((k.status !== 'DALAM_PROSES_PERSETUJUAN' && k.status !== 'MENUNGGU_PERSETUJUAN') || !k.persetujuanList)
+      return false;
     const pendingStep = k.persetujuanList.find((p) => p.status === 'MENUNGGU');
     if (!pendingStep) return false;
     const currentUser = user();
     if (!currentUser) return false;
     const userRoles = currentUser.roles || [currentUser.role];
     if (userRoles.includes('admin') || userRoles.includes('super_admin')) return true;
-    return userRoles.includes(pendingStep.roleTarget as UserRole);
+    const targetRole = pendingStep.roleTarget || pendingStep.approverRole;
+    return userRoles.includes(targetRole as UserRole);
   };
 
   return (
@@ -385,10 +390,10 @@ export default function PelanggaranTindakLanjut() {
                                       ? 'bg-danger-50 text-danger-700 border border-danger-200 dark:bg-danger-950 dark:border-danger-800 dark:text-danger-300'
                                       : 'bg-secondary-100 text-secondary-600 border border-secondary-200 dark:bg-secondary-800 dark:text-secondary-400'
                                 }`}
-                                title={`Langkah ${step.urutan}: ${step.roleTarget} - ${step.status}`}
+                                title={`Langkah ${step.urutan}: ${step.roleTarget || step.approverRole || ''} - ${step.status}`}
                               >
                                 <span>
-                                  {step.urutan}. {step.roleTarget.toUpperCase()}
+                                  {step.urutan}. {(step.roleTarget || step.approverRole || '').toUpperCase()}
                                 </span>
                                 <Show when={step.status === 'DISETUJUI_TTE'}>
                                   <span class="font-bold text-success-600">✓ TTE</span>
@@ -412,8 +417,12 @@ export default function PelanggaranTindakLanjut() {
                         Detail
                       </Button>
 
-                      {/* Tombol isi form bagi Kemahasiswaan / Admin saat menunggu form */}
-                      <Show when={kasus.status === 'MENUNGGU_FORM' || kasus.status === 'DITOLAK'}>
+                      {/* Tombol isi form bagi Kemahasiswaan / Admin saat menunggu form atau revisi */}
+                      <Show
+                        when={
+                          kasus.status === 'MENUNGGU_FORM' || kasus.status === 'DITOLAK' || kasus.status === 'REVISI'
+                        }
+                      >
                         <Button size="sm" variant="primary" onClick={() => openFormModal(kasus)}>
                           Isi Form Pembinaan
                         </Button>
@@ -542,11 +551,13 @@ export default function PelanggaranTindakLanjut() {
                           <div class="flex-1 text-xs space-y-0.5">
                             <div class="flex items-center justify-between">
                               <span class="font-bold text-secondary-800 dark:text-secondary-100 uppercase">
-                                {p.roleTarget}
+                                {p.roleTarget || p.approverRole}
                               </span>
                               <Badge
                                 variant={
-                                  p.status === 'DISETUJUI_TTE' || p.status === 'DISETUJUI_MANUAL'
+                                  p.status === 'DISETUJUI_TTE' ||
+                                  p.status === 'DISETUJUI_MANUAL' ||
+                                  p.status === 'DISETUJUI'
                                     ? 'success'
                                     : p.status === 'DITOLAK'
                                       ? 'danger'
@@ -556,9 +567,10 @@ export default function PelanggaranTindakLanjut() {
                                 {p.status}
                               </Badge>
                             </div>
-                            <Show when={p.namaPenandatangan}>
+                            <Show when={p.namaPenandatangan || p.approverNama}>
                               <p class="text-secondary-600 dark:text-secondary-400">
-                                Oleh: {p.namaPenandatangan} ({p.jabatanPenandatangan || p.roleTarget})
+                                Oleh: {p.namaPenandatangan || p.approverNama} (
+                                {p.jabatanPenandatangan || p.roleTarget || p.approverRole})
                               </p>
                             </Show>
                             <Show when={p.catatan}>
@@ -915,10 +927,10 @@ export default function PelanggaranTindakLanjut() {
                       <For each={k().persetujuanList || []}>
                         {(p) => (
                           <div class="flex flex-col items-center justify-between border border-secondary-200 p-2 rounded min-h-[140px]">
-                            <span class="font-bold uppercase text-fine">{p.roleTarget}</span>
+                            <span class="font-bold uppercase text-fine">{p.roleTarget || p.approverRole}</span>
                             <div class="my-2 flex flex-col items-center justify-center">
                               <Show
-                                when={p.status === 'DISETUJUI_TTE' && p.signatureUuid}
+                                when={(p.status === 'DISETUJUI_TTE' || p.status === 'DISETUJUI') && p.signatureUuid}
                                 fallback={
                                   <Show
                                     when={p.status === 'DISETUJUI_MANUAL'}
@@ -940,7 +952,7 @@ export default function PelanggaranTindakLanjut() {
                               </Show>
                             </div>
                             <span class="text-fine font-semibold border-t border-secondary-300 pt-1 w-full truncate">
-                              {p.namaPenandatangan || '( .......................... )'}
+                              {p.namaPenandatangan || p.approverNama || '( .......................... )'}
                             </span>
                           </div>
                         )}
